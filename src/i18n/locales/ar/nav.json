@@ -101,20 +101,7 @@
     "delegations": "التفويضات",
     "system_settings": "إعدادات النظام",
     "system_wiki": "دليل النظام",
-    "groups": {
-        "personal_space": "مساحتي الشخصية",
-        "hotel_operations": "العمليات الفندقية",
-        "knowledge_sop": "المعرفة والأكاديمية",
-        "hr_staff": "الموارد البشرية والفريق",
-        "finance_revenue": "المالية والتجارية",
-        "administration": "الإدارة والتحليلات",
-        "favorites": "المفضلة والاختصارات",
-        "recents": "المزارة مؤخراً",
-        "training": "التدريب والتعلم",
-        "communication": "التواصل",
-        "admin": "الإدارة",
-        "settings": "الإعدادات"
-    },
+
     "my_training": "تدريبي",
     "my_certificates": "شهاداتي",
     "all_certificates": "جميع الشهادات",

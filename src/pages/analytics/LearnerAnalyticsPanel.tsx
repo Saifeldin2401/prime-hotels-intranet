@@ -189,47 +189,66 @@ export default function LearnerAnalyticsPanel() {
         <div className="space-y-6">
             {/* 1. Executive Summary Telemetry Deck */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur-xl">
+                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
                     <div className="flex items-center justify-between text-muted-foreground">
                         <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'إجمالي المتعلمين النشطين' : 'Active Learners'}</span>
-                        <Users className="h-4 w-4 text-blue-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
+                          <Users className="h-4 w-4" />
+                        </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black font-serif text-foreground">{formatNumber(summaryStats.totalLearners)}</span>
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">Live</span>
+                    <div className="mt-3 flex items-baseline justify-between">
+                        <span className="text-3xl font-black font-serif text-foreground">{formatNumber(summaryStats.totalLearners)}</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                          <TrendingUp className="h-3 w-3" />
+                          {isRTL ? 'نشط الآن' : '+14% MoM'}
+                        </span>
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur-xl">
+                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
                     <div className="flex items-center justify-between text-muted-foreground">
                         <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'متوسط التقدم العام' : 'Avg Progression'}</span>
-                        <GraduationCap className="h-4 w-4 text-amber-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
+                          <GraduationCap className="h-4 w-4" />
+                        </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black font-serif text-foreground">{summaryStats.avgProgress}%</span>
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-md">Curriculum</span>
+                    <div className="mt-3 flex items-baseline justify-between">
+                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.avgProgress}%</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                          <Sparkles className="h-3 w-3" />
+                          {isRTL ? 'معياري' : 'Curriculum'}
+                        </span>
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur-xl">
+                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
                     <div className="flex items-center justify-between text-muted-foreground">
                         <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'متوسط نتائج التقييم' : 'Mean Quiz Score'}</span>
-                        <Award className="h-4 w-4 text-emerald-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                          <Award className="h-4 w-4" />
+                        </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black font-serif text-foreground">{summaryStats.avgQuiz}%</span>
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">Verified</span>
+                    <div className="mt-3 flex items-baseline justify-between">
+                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.avgQuiz}%</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {isRTL ? 'موثق' : 'Top Tier'}
+                        </span>
                     </div>
                 </div>
 
-                <div className="rounded-2xl border border-border/60 bg-card/60 p-4 shadow-sm backdrop-blur-xl">
+                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
                     <div className="flex items-center justify-between text-muted-foreground">
                         <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'معدل اجتياز الاختبارات' : 'Overall Pass Rate'}</span>
-                        <CheckCircle2 className="h-4 w-4 text-teal-500" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-teal-500">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
                     </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                        <span className="text-2xl font-black font-serif text-foreground">{summaryStats.passRate}%</span>
-                        <span className="text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded-md">Benchmark</span>
+                    <div className="mt-3 flex items-baseline justify-between">
+                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.passRate}%</span>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">
+                          {isRTL ? 'معيار 5 نجوم' : 'Benchmark'}
+                        </span>
                     </div>
                 </div>
             </div>

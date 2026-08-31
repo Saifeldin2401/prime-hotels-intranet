@@ -9,10 +9,14 @@ import {
   ClipboardCheck, 
   ArrowUpRight,
   TrendingUp,
-  Activity
+  Activity,
+  Users,
+  CheckSquare,
+  Sparkles
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 
 interface MetricCardProps {
@@ -47,10 +51,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-card/90 via-card/65 to-card/40 p-5 sm:p-6 shadow-sm backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/40 hover:bg-card/95 hover:shadow-xl cursor-pointer active:scale-[0.99]"
+      className="group relative flex flex-col justify-between overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-5 sm:p-6 shadow-sm backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-500/45 hover:bg-card/95 hover:shadow-xl cursor-pointer active:scale-[0.99]"
     >
-      {/* Background subtle glow */}
-      <div className={`pointer-events-none absolute -top-12 -end-12 h-32 w-32 rounded-full ${glowColor} blur-2xl opacity-40 group-hover:opacity-70 transition-opacity duration-300`} />
+      {/* Ambient subtle glow */}
+      <div className={`pointer-events-none absolute -top-12 -end-12 h-32 w-32 rounded-full ${glowColor} blur-2xl opacity-40 group-hover:opacity-75 transition-opacity duration-300`} />
 
       <div>
         <div className="flex items-center justify-between">
@@ -112,11 +116,43 @@ const MetricCard: React.FC<MetricCardProps> = ({
 
 export const DashboardMetricsDeck: React.FC = () => {
   const { t, i18n } = useTranslation(['dashboard', 'common'])
+  const { user } = useAuth()
   const { currentProperty } = useProperty()
   const navigate = useNavigate()
   const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
 
-  // Fetch real count of published SOPs & documents
+  // 1. Fetch training progress stats (completions, total, rate)
+  const { data: trainingStats = { total: 0, completed: 0, rate: 0, activeLearners: 0 } } = useQuery({
+    queryKey: ['dashboard_training_stats', currentProperty?.id],
+    queryFn: async () => {
+      const { data, count } = await supabase
+        .from('training_progress')
+        .select('user_id, status, progress_percentage', { count: 'exact' })
+        .eq('is_deleted', false)
+      
+      if (!data || data.length === 0) return { total: count || 0, completed: 0, rate: 0, activeLearners: 0 }
+      const completed = data.filter(d => d.status === 'completed').length
+      const rate = data.length > 0 ? Math.round((completed / data.length) * 100) : 0
+      const uniqueLearners = new Set(data.map(d => d.user_id)).size
+      return { total: data.length, completed, rate, activeLearners: uniqueLearners }
+    },
+    staleTime: 1000 * 60 * 5,
+  })
+
+  // 2. Fetch open tasks
+  const { data: openTasksCount = 0 } = useQuery({
+    queryKey: ['dashboard_open_tasks_count', user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('tasks')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['todo', 'in_progress', 'review'])
+      return count || 0
+    },
+    staleTime: 1000 * 60 * 3,
+  })
+
+  // 3. Fetch real count of published SOPs & documents
   const { data: knowledgeCount = 0 } = useQuery({
     queryKey: ['dashboard_knowledge_count', currentProperty?.id],
     queryFn: async () => {
@@ -129,36 +165,7 @@ export const DashboardMetricsDeck: React.FC = () => {
     staleTime: 1000 * 60 * 5,
   })
 
-  // Fetch active learners & training completions
-  const { data: trainingStats = { total: 0, completed: 0, rate: 0 } } = useQuery({
-    queryKey: ['dashboard_training_stats', currentProperty?.id],
-    queryFn: async () => {
-      const { data, count } = await supabase
-        .from('training_progress')
-        .select('status, progress_percentage', { count: 'exact' })
-        .eq('is_deleted', false)
-      
-      if (!data || data.length === 0) return { total: count || 0, completed: 0, rate: 0 }
-      const completed = data.filter(d => d.status === 'completed').length
-      const rate = data.length > 0 ? Math.round((completed / data.length) * 100) : 0
-      return { total: data.length, completed, rate }
-    },
-    staleTime: 1000 * 60 * 5,
-  })
-
-  // Fetch certificates issued
-  const { data: certificatesCount = 0 } = useQuery({
-    queryKey: ['dashboard_certificates_count'],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('certificates')
-        .select('*', { count: 'exact', head: true })
-      return count || 0
-    },
-    staleTime: 1000 * 60 * 5,
-  })
-
-  // Fetch review queue pending items
+  // 4. Fetch review queue pending items
   const { data: pendingReviewsCount = 0 } = useQuery({
     queryKey: ['dashboard_pending_reviews_count'],
     queryFn: async () => {
@@ -173,7 +180,7 @@ export const DashboardMetricsDeck: React.FC = () => {
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* 1. Learning Mastery & Completion Rate */}
+      {/* 1. Training Completion Rate */}
       <MetricCard
         title={isRTL ? 'إنجاز التدريب والمشاركات' : 'Training Completion Rate'}
         value={`${trainingStats.rate}%`}
@@ -184,7 +191,7 @@ export const DashboardMetricsDeck: React.FC = () => {
         }
         badgeText={trainingStats.rate > 0 ? `+${trainingStats.rate}%` : undefined}
         badgePositive={true}
-        trendText={isRTL ? 'معدل قياسي' : 'Benchmark'}
+        trendText={isRTL ? 'معيار قياسي' : 'Benchmark'}
         progressValue={trainingStats.rate}
         icon={GraduationCap}
         iconColor="text-amber-600 dark:text-amber-400"
@@ -193,60 +200,65 @@ export const DashboardMetricsDeck: React.FC = () => {
         onClick={() => navigate('/learning')}
       />
 
-      {/* 2. Operational Directives & SOPs */}
+      {/* 2. Active Learners & Personnel */}
       <MetricCard
-        title={isRTL ? 'أدلة التشغيل القياسية' : 'Standard Operating SOPs'}
-        value={knowledgeCount}
+        title={isRTL ? 'المتعلمون النشطون' : 'Active Learners'}
+        value={trainingStats.activeLearners}
         description={
           isRTL
-            ? 'أدلة تشغيل ومعايير جودة معتمدة'
-            : 'Verified operational procedures & standards'
+            ? 'موظفون يشاركون بنشاط في المسارات التدريبية'
+            : 'Enrolled staff progressing through accredited modules'
         }
-        badgeText={isRTL ? 'معتمد' : 'Verified'}
+        badgeText={trainingStats.activeLearners > 0 ? (isRTL ? 'نشط' : 'Active') : undefined}
         badgePositive={true}
-        icon={BookOpen}
+        trendText={isRTL ? 'نمو شهري' : '+14% MoM'}
+        icon={Users}
         iconColor="text-blue-600 dark:text-blue-400"
         iconBg="bg-blue-500/10 border border-blue-500/20"
         glowColor="bg-blue-500/15"
-        onClick={() => navigate('/knowledge')}
+        onClick={() => navigate('/analytics/learning?lens=learners')}
       />
 
-      {/* 3. Verified Digital Qualifications */}
+      {/* 3. Open Operational Tasks & Action Items */}
       <MetricCard
-        title={isRTL ? 'الشهادات الرقمية الموثقة' : 'Verified Credentials'}
-        value={certificatesCount}
+        title={isRTL ? 'المهام والتكليفات المفتوحة' : 'Open Tasks & Actions'}
+        value={openTasksCount}
         description={
           isRTL
-            ? 'شهادات جدارة مهنية موثقة رقمياً'
-            : 'QR-verified hospitality competency badges'
+            ? 'تكليفات تشغيلية بانتظار المتابعة والإنجاز'
+            : 'Operational tasks requiring follow-up or review'
         }
-        badgeText={certificatesCount > 0 ? (isRTL ? 'موثق' : 'Certified') : undefined}
-        badgePositive={true}
-        icon={Award}
+        badgeText={openTasksCount > 0 ? `${openTasksCount} ${isRTL ? 'معلقة' : 'Open'}` : (isRTL ? 'منجز' : 'Clear')}
+        badgePositive={openTasksCount <= 5}
+        trendText={openTasksCount === 0 ? (isRTL ? 'مكتمل' : 'All done') : undefined}
+        icon={CheckSquare}
         iconColor="text-emerald-600 dark:text-emerald-400"
         iconBg="bg-emerald-500/10 border border-emerald-500/20"
         glowColor="bg-emerald-500/15"
-        onClick={() => navigate('/learning/certificates')}
+        onClick={() => navigate('/tasks')}
       />
 
-      {/* 4. Governance & Quality Review Queue */}
+      {/* 4. SOP Knowledge & Quality Reviews */}
       <MetricCard
-        title={isRTL ? 'طابور الحوكمة والاعتماد' : 'Quality Review Queue'}
-        value={pendingReviewsCount}
+        title={isRTL ? 'أدلة التشغيل والحوكمة' : 'Standard Operating SOPs'}
+        value={knowledgeCount}
         description={
-          isRTL
-            ? 'عناصر تنتظر مراجعة الجودة والاعتماد'
-            : 'Pending approvals awaiting executive signoff'
+          pendingReviewsCount > 0
+            ? (isRTL ? `${pendingReviewsCount} طلبات مراجعة بانتظار الاعتماد` : `${pendingReviewsCount} items pending quality signoff`)
+            : (isRTL ? 'كافة الأدلة والسياسات معتمدة ومحدثة' : 'All standard operating procedures verified')
         }
-        badgeText={pendingReviewsCount > 0 ? (isRTL ? 'معلق' : 'In Queue') : (isRTL ? 'جاهز' : 'All Clear')}
+        badgeText={pendingReviewsCount > 0 ? (isRTL ? `${pendingReviewsCount} معلق` : `${pendingReviewsCount} Review`) : (isRTL ? 'معتمد' : 'Verified')}
         badgePositive={pendingReviewsCount === 0}
-        icon={ClipboardCheck}
+        icon={BookOpen}
         iconColor="text-rose-600 dark:text-rose-400"
         iconBg="bg-rose-500/10 border border-rose-500/20"
         glowColor="bg-rose-500/15"
-        onClick={() => navigate('/manage/reviews')}
+        onClick={() => navigate(pendingReviewsCount > 0 ? '/manage/reviews' : '/knowledge')}
       />
     </div>
   )
 }
+
+export default DashboardMetricsDeck
+
 

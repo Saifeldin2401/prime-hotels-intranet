@@ -168,15 +168,19 @@ export function useUserDataLoader(
           if (user) setProfile(buildFallbackProfile(user))
         }
 
-        // ── Load roles, properties, departments in parallel ───────
+        // ── Load roles, organization memberships, and hotels in parallel ───────
         const rolesPromise = supabase.from('user_roles').select('*').eq('user_id', userId)
-        const propertiesPromise = supabase.from('user_properties').select('property_id, properties(*)').eq('user_id', userId)
-        const departmentsPromise = supabase.from('user_departments').select('department_id, departments(*)').eq('user_id', userId)
+        const membershipsPromise = supabase
+          .from('organization_memberships')
+          .select('*, hotel:hotels(*), department:departments(*)')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+        const hotelsPromise = supabase.from('hotels').select('*').eq('is_deleted', false)
 
-        const [rolesResult, propertiesResult, departmentsResult] = await Promise.allSettled([
+        const [rolesResult, membershipsResult, hotelsResult] = await Promise.allSettled([
           withTimeout(rolesPromise as any, 10000, 'Roles load'),
-          withTimeout(propertiesPromise as any, 10000, 'Properties load'),
-          withTimeout(departmentsPromise as any, 10000, 'Departments load'),
+          withTimeout(membershipsPromise as any, 10000, 'Memberships load'),
+          withTimeout(hotelsPromise as any, 10000, 'Hotels load'),
         ]) as [
           PromiseSettledResult<{ data?; error? }>,
           PromiseSettledResult<{ data?; error? }>,
@@ -185,51 +189,57 @@ export function useUserDataLoader(
 
         if (isStale()) { setRolesLoading(false); return }
 
-        // Handle roles
+        // Handle roles & memberships
+        let userRoles = [] as UserRole[]
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
             if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
             console.warn('Error loading roles:', rolesError)
-            setRolesError('Failed to load your account permissions. Please try again.')
-            setRolesLoading(false)
           } else {
-            setRoles(directRoles || [])
-            setRolesError(null)
-            setRolesLoading(false)
+            userRoles = directRoles || []
           }
-        } else {
-          console.warn('Roles loading failed or timed out.')
-          setRolesError('Failed to load your account permissions. Please try again.')
-          setRolesLoading(false)
         }
 
-        // Handle properties
-        if (propertiesResult.status === 'fulfilled') {
-          const { data: directProps, error: propertiesError } = propertiesResult.value
-          if (propertiesError) {
-            if (await handleQueryAuthError('Properties', propertiesError)) return
-            console.warn('Error loading properties:', propertiesError)
-          } else {
-            const props = directProps?.map((up) => up.properties).filter(Boolean) || []
-            setProperties(props)
+        // Map membership roles into user roles if user_roles is sparse
+        if (membershipsResult.status === 'fulfilled') {
+          const { data: memberships, error: membError } = membershipsResult.value
+          if (!membError && Array.isArray(memberships)) {
+            memberships.forEach((m: any) => {
+              const mappedRole = m.role === 'organization_owner' || m.role === 'organization_admin'
+                ? 'corporate_admin'
+                : m.role === 'training_manager'
+                ? 'training_manager'
+                : m.role === 'hotel_admin'
+                ? 'property_manager'
+                : m.role === 'department_manager'
+                ? 'department_head'
+                : 'learner'
+
+              if (!userRoles.some((r) => r.role === mappedRole)) {
+                userRoles.push({ id: m.id, user_id: userId, role: mappedRole as any })
+              }
+            })
           }
-        } else {
-          console.warn('Properties loading failed or timed out.')
         }
 
-        // Handle departments
-        if (departmentsResult.status === 'fulfilled') {
-          const { data: directDepts, error: departmentsError } = departmentsResult.value
-          if (departmentsError) {
-            if (await handleQueryAuthError('Departments', departmentsError)) return
-            console.warn('Error loading departments:', departmentsError)
-          } else {
-            const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
-            setDepartments(depts)
+        setRoles(userRoles)
+        setRolesError(null)
+        setRolesLoading(false)
+
+        // Handle hotels (properties alias)
+        if (hotelsResult.status === 'fulfilled') {
+          const { data: directHotels, error: hotelsError } = hotelsResult.value
+          if (!hotelsError && directHotels) {
+            setProperties(directHotels as any)
           }
-        } else {
-          console.warn('Departments loading failed or timed out.')
+        }
+
+        // Handle departments from memberships
+        if (membershipsResult.status === 'fulfilled') {
+          const { data: memberships } = membershipsResult.value
+          const depts = memberships?.map((m: any) => m.department).filter(Boolean) || []
+          setDepartments(depts)
         }
 
         lastUserDataRefreshRef.current = Date.now()

@@ -9,18 +9,22 @@ import {
   Download, 
   Printer, 
   RefreshCw, 
-  Sparkles,
-  Layers,
-  Calendar,
-  Building2
+  Sparkles, 
+  Layers, 
+  Calendar, 
+  Building2,
+  Filter,
+  Briefcase
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useTenant } from '@/contexts/TenantContext'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
 
 const LearnerAnalyticsPanel = lazy(() => import('./LearnerAnalyticsPanel'))
 const CourseAnalyticsPanel = lazy(() => import('./CourseAnalyticsPanel'))
@@ -37,10 +41,27 @@ export default function LearningAnalyticsHub() {
   const active: TabKey = (TABS as readonly string[]).includes(raw ?? '') ? (raw as TabKey) : 'learners'
   
   const { currentProperty } = useProperty()
-  const { currentOrganization } = useTenant()
+  const { currentOrganization, availableHotels } = useTenant()
   const queryClient = useQueryClient()
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedHotelFilter, setSelectedHotelFilter] = useState<string>('all')
+  const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('all')
   const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
+
+  // Fetch departments for filtering
+  const { data: departmentOptions = [] } = useQuery({
+    queryKey: ['analytics_filter_departments', currentOrganization?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name')
+      if (error) return []
+      return data || []
+    },
+    staleTime: 1000 * 60 * 10,
+  })
 
   const handleRefreshAll = async () => {
     setIsRefreshing(true)
@@ -57,10 +78,9 @@ export default function LearningAnalyticsHub() {
   }
 
   const handleExportCSV = () => {
-    // Generate simple client-side CSV trigger based on active tab
     const dateStr = new Date().toISOString().split('T')[0]
     const filename = `Altus_Analytics_${active}_${dateStr}.csv`
-    const csvContent = `data:text/csv;charset=utf-8,Report,${active}\nGenerated,${new Date().toISOString()}\nProperty,${currentProperty?.name || 'All Locations'}\n`
+    const csvContent = `data:text/csv;charset=utf-8,Report,${active}\nGenerated,${new Date().toISOString()}\nOrganization,${currentOrganization?.name || 'All'}\nLocation,${selectedHotelFilter === 'all' ? 'All Locations' : selectedHotelFilter}\nDepartment,${selectedDeptFilter === 'all' ? 'All Departments' : selectedDeptFilter}\n`
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement('a')
     link.setAttribute('href', encodedUri)
@@ -138,6 +158,48 @@ export default function LearningAnalyticsHub() {
         </div>
       </div>
 
+      {/* Scope Breakdown Filters */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-border/50 bg-card/60 p-3 backdrop-blur-xl">
+        <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+          <Filter className="h-4 w-4 text-amber-500" />
+          <span>{isRTL ? 'تصفية النطاق والتحليل:' : 'Scope & Filter Lens:'}</span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {/* Location / Hotel Filter */}
+          <div className="flex items-center gap-1.5">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={selectedHotelFilter} onValueChange={setSelectedHotelFilter}>
+              <SelectTrigger className="h-8 w-44 rounded-xl text-xs bg-background/80 border-border/60">
+                <SelectValue placeholder={isRTL ? 'كافة الفنادق' : 'All Hotels'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">{isRTL ? 'كافة الفنادق والمواقع' : 'Consolidated (All Locations)'}</SelectItem>
+                {(availableHotels || []).map((h) => (
+                  <SelectItem key={h.id} value={h.id} className="text-xs">{h.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Department Filter */}
+          <div className="flex items-center gap-1.5">
+            <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select value={selectedDeptFilter} onValueChange={setSelectedDeptFilter}>
+              <SelectTrigger className="h-8 w-44 rounded-xl text-xs bg-background/80 border-border/60">
+                <SelectValue placeholder={isRTL ? 'كافة الأقسام' : 'All Departments'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">{isRTL ? 'كافة الأقسام والقطاعات' : 'All Departments'}</SelectItem>
+                {departmentOptions.map((d) => (
+                  <SelectItem key={d.id} value={d.id} className="text-xs">{d.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
       {/* Lenses Tabs Navigation */}
       <Tabs
         value={active}
@@ -199,4 +261,5 @@ export default function LearningAnalyticsHub() {
     </div>
   )
 }
+
 

@@ -13,6 +13,7 @@ import {
   ReviewQueueWidget,
   AICopilotAssistantWidget,
   CertificationsAndSkillsWidget,
+  TasksWidget,
 } from './components'
 
 const containerVariants = {
@@ -57,19 +58,19 @@ export function Dashboard() {
         <DashboardHeroHeader />
       </motion.div>
 
-      {/* 2. Key Operational Performance Metrics Deck */}
+      {/* 2. Key Operational Performance Metrics Deck (Completion rates, Active learners, Open tasks, SOPs) */}
       <motion.div variants={itemVariants}>
         <DashboardMetricsDeck />
       </motion.div>
 
-      {/* 3. Core Operational Portals */}
+      {/* 3. Core Operational Quick Action Portals */}
       <motion.div variants={itemVariants}>
         <DashboardActionDeck />
       </motion.div>
 
       {/* 4. Executive Command Bento Grid */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Column (2/3): Primary Workflows & Content */}
+        {/* Left Column (2/3): Primary Workflows & Operational Content */}
         <div className="space-y-6 lg:col-span-2">
           {/* Active Training & Knowledge Library */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -77,11 +78,14 @@ export function Dashboard() {
             <RecentKnowledgeWidget />
           </div>
 
-          {/* Governance & Quality Review Queue */}
-          <ReviewQueueWidget />
+          {/* Action Items / Tasks & Quality Review Queue */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <TasksWidget focusMode="my_work" />
+            <ReviewQueueWidget />
+          </div>
         </div>
 
-        {/* Right Column (1/3): AI Copilot & Verified Credentials */}
+        {/* Right Column (1/3): AI Copilot & Verified Digital Credentials */}
         <div className="space-y-6">
           <AICopilotAssistantWidget />
           <CertificationsAndSkillsWidget />
@@ -92,4 +96,5 @@ export function Dashboard() {
 }
 
 export default Dashboard
+
 

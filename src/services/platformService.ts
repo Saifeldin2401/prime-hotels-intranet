@@ -220,72 +220,43 @@ export const platformService = {
   // 3. SECURE CROSS-TENANT IMPERSONATION ("ACT AS")
   // ============================================================================
   async startPlatformAccessSession(params: {
-    adminUserId: string
+    adminUserId?: string
     targetOrganizationId: string
     actingRole?: string
     accessReason: string
+    ttlMinutes?: number
   }): Promise<PlatformAccessSession> {
-    // 1. Close any existing active sessions for this admin
-    await supabase
-      .from('platform_access_sessions')
-      .update({ is_active: false, ended_at: new Date().toISOString() })
-      .eq('admin_user_id', params.adminUserId)
-      .eq('is_active', true)
-
-    // 2. Insert new session
-    const { data: session, error } = await supabase
-      .from('platform_access_sessions')
-      .insert({
-        admin_user_id: params.adminUserId,
-        target_organization_id: params.targetOrganizationId,
-        acting_role: params.actingRole || 'organization_admin',
-        access_reason: params.accessReason,
-        is_active: true,
-        started_at: new Date().toISOString()
-      })
-      .select('*, target_organization:organizations(*)')
-      .single()
-
-    if (error) throw error
-
-    // 3. Log explicit entry audit log
-    await this.logPlatformAction({
-      action: 'enter_tenant_session',
-      resourceType: 'platform_access_session',
-      resourceId: session.id,
-      targetOrgId: params.targetOrganizationId,
-      sessionId: session.id,
-      actorId: params.adminUserId,
-      metadata: {
-        acting_role: session.acting_role,
-        access_reason: params.accessReason
-      }
+    // 1. Call Phase 10 server-enforced operator RPC
+    const { data: sessionId, error: rpcErr } = await (supabase.rpc as any)('start_platform_session', {
+      p_org_id: params.targetOrganizationId,
+      p_reason: params.accessReason,
+      p_acting_role: params.actingRole || 'organization_admin',
+      p_ttl_minutes: params.ttlMinutes || 60
     })
 
-    return session
-  },
+    if (rpcErr) throw rpcErr
 
-  async endPlatformAccessSession(sessionId: string, actorId?: string): Promise<void> {
-    const { data: session } = await supabase
+    // 2. Fetch the newly created and populated session
+    const { data: session, error: fetchErr } = await supabase
       .from('platform_access_sessions')
-      .update({
-        is_active: false,
-        ended_at: new Date().toISOString()
-      })
+      .select('*, target_organization:organizations(*)')
       .eq('id', sessionId)
-      .select()
       .single()
 
-    if (session) {
-      await this.logPlatformAction({
-        action: 'exit_tenant_session',
-        resourceType: 'platform_access_session',
-        resourceId: sessionId,
-        targetOrgId: session.target_organization_id,
-        sessionId,
-        actorId,
-        metadata: { duration_seconds: Math.round((Date.now() - new Date(session.started_at).getTime()) / 1000) }
-      })
+    if (fetchErr) throw fetchErr
+
+    return session as PlatformAccessSession
+  },
+
+  async endPlatformAccessSession(sessionId: string, _actorId?: string): Promise<void> {
+    // Call Phase 10 server-enforced operator exit RPC
+    const { error: rpcErr } = await (supabase.rpc as any)('end_platform_session', {
+      p_session_id: sessionId
+    })
+
+    if (rpcErr) {
+      console.error('Error ending platform session via RPC:', rpcErr)
+      throw rpcErr
     }
   },
 

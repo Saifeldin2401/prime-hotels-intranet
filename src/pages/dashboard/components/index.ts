@@ -6,6 +6,7 @@ export { ActiveLearningsWidget } from './ActiveLearningsWidget'
 export { ReviewQueueWidget } from './ReviewQueueWidget'
 export { AICopilotAssistantWidget } from './AICopilotAssistantWidget'
 export { CertificationsAndSkillsWidget } from './CertificationsAndSkillsWidget'
+export { TasksWidget } from './TasksWidget'
 
 // Secondary/supporting widgets
 export { AnnouncementsWidget } from './AnnouncementsWidget'
@@ -15,3 +16,4 @@ export { OnlineUsersWidget } from './OnlineUsersWidget'
 export { PrayerTimesWidget } from './PrayerTimesWidget'
 export { EmployeeOfMonthWidget } from './EmployeeOfMonthWidget'
 export { TodaysBirthdaysWidget } from './TodaysBirthdaysWidget'
+

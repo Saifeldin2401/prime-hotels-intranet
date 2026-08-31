@@ -860,14 +860,14 @@ export const learningService = {
         const [quizResult, moduleResult] = await Promise.all([
             quizIds.length > 0
                 ? supabase
-                    .from('learning_quizzes')
+                    .from('assessments')
                     .select('id, title, description, time_limit_minutes, status')
                     .in('id', quizIds)
-                    .eq('status', 'published')
+                    .eq('is_deleted', false)
                 : Promise.resolve({ data: [], error: null }),
             moduleIds.length > 0
                 ? supabase
-                    .from('training_modules')
+                    .from('courses')
                     .select('id, title, description, estimated_duration_minutes, status')
                     .in('id', moduleIds)
                     .eq('is_deleted', false)
