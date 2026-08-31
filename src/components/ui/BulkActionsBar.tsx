@@ -1,0 +1,391 @@
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { undoBulkOperation, type BulkOperationResult } from '@/hooks/useBulkOperations'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, domAnimation, LazyMotion, m } from 'framer-motion'
+import { AlertTriangle, Check, CheckCircle, Clock, Loader2, Trash2, UserPlus, X, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
+interface BulkActionsBarProps {
+    selectedCount: number
+    selectedIds: string[]
+    onClearSelection: () => void
+    entityType: 'task' | 'maintenance_ticket' | 'leave_request'
+    statusOptions?: Array<{ value: string; label: string }>
+    assignees?: Array<{ id: string; name: string }>
+    onBulkStatusChange?: (ids: string[], status: string) => Promise<BulkOperationResult>
+    onBulkAssign?: (ids: string[], assigneeId: string | null) => Promise<BulkOperationResult>
+    onBulkDelete?: (ids: string[]) => Promise<BulkOperationResult>
+    onBulkApprove?: (ids: string[]) => Promise<BulkOperationResult>
+    onAfterUndo?: () => void | Promise<void>
+    className?: string
+}
+
+const EMPTY_STATUS_OPTIONS: Array<{ value: string; label: string }> = []
+const EMPTY_ASSIGNEES: Array<{ id: string; name: string }> = []
+
+export function BulkActionsBar({
+    selectedCount,
+    selectedIds,
+    onClearSelection,
+    entityType,
+    statusOptions = EMPTY_STATUS_OPTIONS,
+    assignees = EMPTY_ASSIGNEES,
+    onBulkStatusChange,
+    onBulkAssign,
+    onBulkDelete,
+    onBulkApprove,
+    onAfterUndo,
+    className
+}: BulkActionsBarProps) {
+    const [isLoading, setIsLoading] = useState(false)
+    const [isUndoing, setIsUndoing] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showStatusConfirm, setShowStatusConfirm] = useState(false)
+    const [pendingStatus, setPendingStatus] = useState<string | null>(null)
+    const [showAssignConfirm, setShowAssignConfirm] = useState(false)
+    const [pendingAssigneeId, setPendingAssigneeId] = useState<string | null>(null)
+    const [showApproveConfirm, setShowApproveConfirm] = useState(false)
+    const [result, setResult] = useState<BulkOperationResult | null>(null)
+    const { t } = useTranslation()
+
+    if (selectedCount === 0) return null
+
+    const handleAction = async (
+        action: (ids: string[]) => Promise<BulkOperationResult>
+    ) => {
+        setIsLoading(true)
+        try {
+            const result = await action(selectedIds)
+            setResult(result)
+            if (result.success.length > 0) {
+                onClearSelection()
+            }
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleStatusChange = async (status: string) => {
+        if (!onBulkStatusChange) return
+        setPendingStatus(status)
+        setShowStatusConfirm(true)
+    }
+
+    const handleAssign = async (assigneeId: string) => {
+        if (!onBulkAssign) return
+        setPendingAssigneeId(assigneeId)
+        setShowAssignConfirm(true)
+    }
+
+    const handleDelete = async () => {
+        if (onBulkDelete) {
+            await handleAction(onBulkDelete)
+            setShowDeleteConfirm(false)
+        }
+    }
+
+    const handleApprove = async () => {
+        if (!onBulkApprove) return
+        setShowApproveConfirm(true)
+    }
+
+    const entityLabel = entityType.replace('_', ' ')
+
+    return (
+        <LazyMotion features={domAnimation}>
+            <AnimatePresence>
+                <m.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className={cn(
+                        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 start-1/2 -translate-x-1/2 z-50',
+                        'bg-background border rounded-lg shadow-lg p-3',
+                        'flex items-center gap-3',
+                        className
+                    )}
+                >
+                    {/* Selection count */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-md">
+                        <Check className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">
+                            {selectedCount} {t('common:common.selected')}
+                        </span>
+                    </div>
+
+                    {/* Status change */}
+                    {onBulkStatusChange && statusOptions.length > 0 && (
+                        <Select onValueChange={handleStatusChange} disabled={isLoading}>
+                            <SelectTrigger className="w-[140px]">
+                                <Clock className="h-4 w-4 me-2" />
+                                <SelectValue placeholder={t('common:common.status')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {statusOptions.map(opt => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    {/* Assign */}
+                    {onBulkAssign && assignees.length > 0 && (
+                        <Select onValueChange={handleAssign} disabled={isLoading}>
+                            <SelectTrigger className="w-[140px]">
+                                <UserPlus className="h-4 w-4 me-2" />
+                                <SelectValue placeholder={t('common:common.assign')} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="unassign">{t('common:common.unassign')}</SelectItem>
+                                {assignees.map(user => (
+                                    <SelectItem key={user.id} value={user.id}>
+                                        {user.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+
+                    {/* Approve (for leave requests) */}
+                    {onBulkApprove && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleApprove}
+                            disabled={isLoading}
+                            className="h-8"
+                        >
+                            <CheckCircle className="h-4 w-4 me-2" />
+                            {t('common:common.approveAll')}
+                        </Button>
+                    )}
+
+                    {/* Delete */}
+                    {onBulkDelete && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={isLoading}
+                            className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                            <Trash2 className="h-4 w-4 me-2" />
+                            {t('common:common.delete')}
+                        </Button>
+                    )}
+
+                    {/* Clear selection */}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClearSelection}
+                        disabled={isLoading}
+                    >
+                        <X className="h-4 w-4" />
+                    </Button>
+                </m.div>
+            </AnimatePresence>
+
+            {/* Delete confirmation */}
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                            {t('common:common.deleteItems_label', { count: selectedCount, entityLabel: entityLabel })}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('common:common.deleteConfirmationDescription')}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {t('common:common.deleteItems', { count: selectedCount })}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Status change confirmation */}
+            <AlertDialog
+                open={showStatusConfirm}
+                onOpenChange={(open) => {
+                    setShowStatusConfirm(open)
+                    if (!open) setPendingStatus(null)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Update status for ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will update the status to "${pendingStatus || ''}" for the selected ${entityLabel}${selectedCount === 1 ? '' : 's'}.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkStatusChange || !pendingStatus) return
+                                await handleAction((ids) => onBulkStatusChange(ids, pendingStatus))
+                                setShowStatusConfirm(false)
+                                setPendingStatus(null)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Assignment confirmation */}
+            <AlertDialog
+                open={showAssignConfirm}
+                onOpenChange={(open) => {
+                    setShowAssignConfirm(open)
+                    if (!open) setPendingAssigneeId(null)
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Assign ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will assign the selected ${entityLabel}${selectedCount === 1 ? '' : 's'} to the chosen user.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkAssign || !pendingAssigneeId) return
+                                await handleAction((ids) => onBulkAssign(ids, pendingAssigneeId === 'unassign' ? null : pendingAssigneeId))
+                                setShowAssignConfirm(false)
+                                setPendingAssigneeId(null)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Approve confirmation */}
+            <AlertDialog open={showApproveConfirm} onOpenChange={setShowApproveConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            {`Approve ${selectedCount} ${entityLabel}${selectedCount === 1 ? '' : 's'}?`}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {`This will approve the selected ${entityLabel}${selectedCount === 1 ? '' : 's'}.`}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common:common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={async () => {
+                                if (!onBulkApprove) return
+                                await handleAction(onBulkApprove)
+                                setShowApproveConfirm(false)
+                            }}
+                        >
+                            {t('common:common.confirm')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Result notification */}
+            <AnimatePresence>
+                {result && (
+                    <m.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 20 }}
+                        className={cn(
+                            'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+6rem)] sm:bottom-20 start-1/2 -translate-x-1/2 z-50',
+                            'bg-background border rounded-lg shadow-lg p-3',
+                            'flex items-center gap-3'
+                        )}
+                    >
+                        {result.failed.length === 0 ? (
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                        ) : result.success.length === 0 ? (
+                            <XCircle className="h-5 w-5 text-red-500" />
+                        ) : (
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                        )}
+                        <span className="text-sm">
+                            {result.success.length} succeeded
+                            {result.failed.length > 0 && `, ${result.failed.length} failed`}
+                        </span>
+                        {result.undoToken && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isUndoing}
+                                onClick={async () => {
+                                    setIsUndoing(true)
+                                    try {
+                                        const undoResult = await undoBulkOperation(result.undoToken!)
+                                        setResult({
+                                            ...undoResult,
+                                            undoToken: undefined
+                                        })
+                                        await onAfterUndo?.()
+                                    } finally {
+                                        setIsUndoing(false)
+                                    }
+                                }}
+                            >
+                                {isUndoing ? (
+                                    <Loader2 className="h-3.5 w-3.5 me-1 animate-spin" />
+                                ) : null}
+                                Undo
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setResult(null)}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </m.div>
+                )}
+            </AnimatePresence>
+        </LazyMotion>
+    )
+}
+
+export default BulkActionsBar
