@@ -74,7 +74,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
   return (
     <nav
       className={cn(
-        'fixed bottom-0 inset-x-0 z-50',
+        'fixed bottom-0 inset-x-0 z-50 lg:hidden',
         'print:hidden',
         className
       )}

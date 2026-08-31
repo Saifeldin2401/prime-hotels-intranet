@@ -175,12 +175,13 @@ export function useUserIdsByDepartment(departmentIds: string[]) {
             if (departmentIds.length === 0) return []
 
             const { data, error } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('user_id')
+                .eq('is_active', true)
                 .in('department_id', departmentIds)
 
             if (error) throw error
-            return [...new Set(data?.map(ud => ud.user_id) || [])]
+            return [...new Set(data?.map((ud: any) => ud.user_id) || [])]
         },
         enabled: departmentIds.length > 0
     })
@@ -194,12 +195,13 @@ export function useUserIdsByProperty(propertyIds: string[]) {
             if (propertyIds.length === 0) return []
 
             const { data, error } = await supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
-                .in('property_id', propertyIds)
+                .eq('is_active', true)
+                .in('hotel_id', propertyIds)
 
             if (error) throw error
-            return [...new Set(data?.map(up => up.user_id) || [])]
+            return [...new Set(data?.map((up: any) => up.user_id) || [])]
         },
         enabled: propertyIds.length > 0
     })

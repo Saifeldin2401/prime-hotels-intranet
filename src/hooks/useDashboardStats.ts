@@ -279,13 +279,14 @@ export function useDepartmentHeadStats() {
                 }
             }
 
-            // Find user's department(s)
+            // Find user's department(s) from memberships
             const { data: myDepts } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('department_id')
                 .eq('user_id', profileId)
+                .eq('is_active', true)
 
-            const deptIds = myDepts?.map(d => d.department_id) || []
+            const deptIds = myDepts?.map((d: any) => d.department_id).filter(Boolean) || []
             if (deptIds.length === 0) {
                 return {
                     totalStaff: 0,
@@ -299,18 +300,20 @@ export function useDepartmentHeadStats() {
 
             // Pre-fetch dept users
             const { data: deptUsers } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('user_id')
+                .eq('is_active', true)
                 .in('department_id', deptIds)
-            const deptUserIds = deptUsers?.map(u => u.user_id) || []
+            const deptUserIds = deptUsers?.map((u: any) => u.user_id) || []
 
             const now = new Date().toISOString()
 
             const departmentHeadSettled = await Promise.allSettled([
                 // 1. Total Staff
                 supabase
-                    .from('user_departments')
+                    .from('organization_memberships')
                     .select('id', { count: 'exact', head: true })
+                    .eq('is_active', true)
                     .in('department_id', deptIds),
 
                 // 2. Present Today

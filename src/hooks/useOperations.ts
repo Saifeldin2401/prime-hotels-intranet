@@ -12,12 +12,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useProperties() {
     return useQuery({
-        queryKey: ['properties'],
+        queryKey: ['properties', 'hotels'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .select('*')
                 .eq('is_active', true)
+                .eq('is_deleted', false)
                 .order('name', { ascending: true })
 
             if (error) throw error

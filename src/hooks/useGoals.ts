@@ -18,10 +18,11 @@ export function useGoals(employeeId?: string) {
 
             if (isRealPropertyId(currentProperty?.id)) {
                 const { data: membership, error: membershipError } = await supabase
-                    .from('user_properties')
+                    .from('organization_memberships')
                     .select('id')
                     .eq('user_id', targetId)
-                    .eq('property_id', currentProperty.id)
+                    .eq('hotel_id', currentProperty.id)
+                    .eq('is_active', true)
                     .limit(1)
                     .maybeSingle()
 

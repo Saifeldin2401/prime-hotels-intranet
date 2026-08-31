@@ -51,9 +51,9 @@ function FeatureCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="group p-5 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 bg-[#12161F]/80 backdrop-blur-xl transition-all duration-300 shadow-2xl flex flex-col justify-between h-38"
+      className="group p-5 rounded-2xl border border-white/15 hover:border-[#C45B2F]/60 bg-gradient-to-b from-[#181D26]/95 to-[#0E1117]/95 backdrop-blur-xl transition-all duration-300 shadow-2xl flex flex-col justify-between h-38 text-white"
     >
-      <div className="w-11 h-11 rounded-xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 flex items-center justify-center text-[#E07A5F] shadow-inner group-hover:scale-105 transition-transform">
+      <div className="w-11 h-11 rounded-xl border border-[#C45B2F]/40 bg-[#C45B2F]/15 flex items-center justify-center text-[#E07A5F] shadow-inner group-hover:scale-105 transition-transform">
         <Icon className="w-5 h-5" />
       </div>
       <div>

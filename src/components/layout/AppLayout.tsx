@@ -69,11 +69,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     return (
       p.startsWith('/learning/training/') ||
       p.startsWith('/learning/microlearning/') ||
-      p.includes('/take') ||
-      p.includes('/player') ||
-      p.includes('/learn') ||
-      p.includes('/editor') ||
-      p.includes('/studio')
+      p.startsWith('/training/player/') ||
+      p.includes('/take')
     )
   }, [location.pathname])
 

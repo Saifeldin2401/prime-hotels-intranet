@@ -490,7 +490,7 @@ export default function MyLearning() {
                         <TabsTrigger value="all" className="text-xs rounded-lg">{t('common:all', 'All')}</TabsTrigger>
                         <TabsTrigger value="in_progress" className="text-xs rounded-lg">{t('inProgress', 'In Progress')}</TabsTrigger>
                         <TabsTrigger value="mandatory" className="text-xs rounded-lg">{t('mandatory', 'Mandatory')}</TabsTrigger>
-                        <TabsTrigger value="quizzes" className="text-xs rounded-lg">{t('quizzes', 'Quizzes')}</TabsTrigger>
+                        <TabsTrigger value="quizzes" className="text-xs rounded-lg">{t('quizzes.title', { defaultValue: isRTL ? 'التقييمات' : 'Quizzes' })}</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>

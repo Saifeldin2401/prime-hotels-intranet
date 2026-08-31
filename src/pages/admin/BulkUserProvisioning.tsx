@@ -369,12 +369,13 @@ async function assertPrerequisites() {
 
 async function loadMaps() {
   const { data: properties, error: propError } = await supabase
-    .from('properties')
+    .from('hotels')
     .select('id,name,is_active')
     .eq('is_active', true)
+    .eq('is_deleted', false)
 
   if (propError) {
-    throw new Error(`Failed to load properties: ${propError.message}`)
+    throw new Error(`Failed to load hotels: ${propError.message}`)
   }
 
   const { data: departments, error: deptError } = await supabase

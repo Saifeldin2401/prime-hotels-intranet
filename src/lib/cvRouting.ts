@@ -68,14 +68,15 @@ export async function routeApplication(
 
         // For property-specific roles, also filter by property
         if (propertyId && (rules.roles.includes('property_hr') || rules.roles.includes('property_manager'))) {
-            // Get users who have the role AND are assigned to this property
+            // Get users who have the role AND are assigned to this property / hotel
             const { data: userProperties } = await supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
-                .eq('property_id', propertyId)
+                .eq('hotel_id', propertyId)
+                .eq('is_active', true)
 
             if (userProperties) {
-                const propertyUserIds = userProperties.map(up => up.user_id)
+                const propertyUserIds = userProperties.map((up: any) => up.user_id)
                 query = query.in('user_id', propertyUserIds)
             }
         }

@@ -198,13 +198,14 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
           break
       }
 
-      // Get user's departments from user_departments junction table
+      // Get user's departments from memberships
       const { data: userDepts, error: userDeptsError } = await supabase
-        .from('user_departments')
+        .from('organization_memberships')
         .select('department_id')
         .eq('user_id', user.id)
+        .eq('is_active', true)
 
-      let departmentIds = userDepts?.map(ud => ud.department_id) || []
+      let departmentIds = userDepts?.map((ud: any) => ud.department_id).filter(Boolean) || []
 
       // If no departments but IS an admin, get ALL departments from user's properties
       if (departmentIds.length === 0 && isAdminByRole && propertyIds.length > 0) {
@@ -224,15 +225,16 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
 
       // Get all users in these departments
       const { data: deptUsers, error: deptUsersError } = await supabase
-        .from('user_departments')
+        .from('organization_memberships')
         .select('user_id')
+        .eq('is_active', true)
         .in('department_id', departmentIds)
 
       if (deptUsersError || !deptUsers?.length) {
         return []
       }
 
-      const userIds = [...new Set(deptUsers.map(u => u.user_id))]
+      const userIds = [...new Set(deptUsers.map((u: any) => u.user_id))]
 
       // Get training progress for all these users
       const { data, error } = await supabase

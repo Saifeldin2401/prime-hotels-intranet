@@ -545,9 +545,12 @@ export function TrainingAssignmentsProvider({
   })
 
   const { data: userDepartments } = useQuery({
-    queryKey: ['user-departments'],
+    queryKey: ['user-departments', 'memberships'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_departments').select('user_id, department:departments(id, name)')
+      const { data, error } = await supabase
+        .from('organization_memberships')
+        .select('user_id, department:departments(id, name)')
+        .eq('is_active', true)
       if (error) throw error
       return data
     }

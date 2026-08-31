@@ -25,10 +25,9 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
             try {
                 setLoading(true)
 
-                // 1. Get users in this department
-                // We join user_departments to filter, and get profile data
+                // 1. Get users in this department from memberships
                 const { data: userDepts, error: staffError } = await supabase
-                    .from('user_departments')
+                    .from('organization_memberships')
                     .select(`
             user_id,
             profiles:user_id (
@@ -41,6 +40,7 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
             )
           `)
                     .eq('department_id', departmentId)
+                    .eq('is_active', true)
 
                 if (staffError) throw staffError
 

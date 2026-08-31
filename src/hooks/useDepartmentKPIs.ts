@@ -55,13 +55,14 @@ export function useDepartmentKPIs(propertyId?: string) {
             const kpis: DepartmentKPI[] = []
 
             for (const dept of departments) {
-                // Get users in department
+                // Get users in department from memberships
                 const { data: deptUsers } = await supabase
-                    .from('user_departments')
+                    .from('organization_memberships')
                     .select('user_id')
                     .eq('department_id', dept.id)
+                    .eq('is_active', true)
 
-                const userIds = deptUsers?.map(u => u.user_id) || []
+                const userIds = deptUsers?.map((u: any) => u.user_id) || []
                 const staffCount = userIds.length
 
                 // Get Department Head
@@ -273,13 +274,14 @@ export function useDepartmentKPITrend(departmentId: string) {
             const today = new Date()
             const trend = []
 
-            // Get users in department
+            // Get users in department from memberships
             const { data: deptUsers } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('user_id')
                 .eq('department_id', departmentId)
+                .eq('is_active', true)
 
-            const userIds = deptUsers?.map(u => u.user_id) || []
+            const userIds = deptUsers?.map((u: any) => u.user_id) || []
 
             if (userIds.length === 0) {
                 // Return empty trend with dates

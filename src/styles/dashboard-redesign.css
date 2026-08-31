@@ -4,8 +4,7 @@
    ========================================================================== */
 
 /* Root Dashboard Container & Page Backgrounds */
-.dashboard-luxury-root,
-.space-y-8.font-sans.selection\:bg-blue-100 {
+.dashboard-luxury-root {
   background-image: 
     radial-gradient(at 0% 0%, rgba(195, 154, 69, 0.09) 0px, transparent 55%),
     radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.06) 0px, transparent 48%),
@@ -14,8 +13,7 @@
   border-radius: 28px;
 }
 
-.dark .dashboard-luxury-root,
-.dark .space-y-8.font-sans.selection\:bg-blue-100 {
+.dark .dashboard-luxury-root {
   background-image: 
     radial-gradient(at 0% 0%, rgba(195, 154, 69, 0.08) 0px, transparent 55%),
     radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.05) 0px, transparent 50%),
@@ -28,62 +26,54 @@
    ========================================================================== */
 .altus-luxury-card,
 .altus-card,
-.space-y-8.font-sans .rounded-xl,
-.space-y-8.font-sans .rounded-2xl,
-.space-y-8.font-sans .bg-card,
-.space-y-8.font-sans [class*="Card"] {
-  border-radius: 24px !important;
-  border: 1px solid rgba(226, 232, 240, 0.85) !important;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.85) 100%) !important;
-  backdrop-filter: blur(24px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+.dashboard-luxury-root .bg-card,
+.dashboard-luxury-root [class*="Card"] {
+  border-radius: 24px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.85) 100%);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
   box-shadow: 
     0 10px 25px -4px rgba(11, 21, 40, 0.04), 
     0 4px 12px -2px rgba(195, 154, 69, 0.04),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9) !important;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark .altus-luxury-card,
 .dark .altus-card,
-.dark .space-y-8.font-sans .rounded-xl,
-.dark .space-y-8.font-sans .rounded-2xl,
-.dark .space-y-8.font-sans .bg-card,
-.dark .space-y-8.font-sans [class*="Card"] {
-  border: 1px solid rgba(195, 154, 69, 0.22) !important;
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.88) 0%, rgba(11, 21, 40, 0.94) 100%) !important;
+.dark .dashboard-luxury-root .bg-card,
+.dark .dashboard-luxury-root [class*="Card"] {
+  border: 1px solid rgba(195, 154, 69, 0.22);
+  background: linear-gradient(145deg, rgba(15, 23, 42, 0.88) 0%, rgba(11, 21, 40, 0.94) 100%);
   box-shadow: 
     0 16px 36px -8px rgba(0, 0, 0, 0.55), 
     0 4px 14px -2px rgba(195, 154, 69, 0.06),
-    inset 0 1px 1px 0 rgba(195, 154, 69, 0.18) !important;
+    inset 0 1px 1px 0 rgba(195, 154, 69, 0.18);
 }
 
 /* Luxury Card Hover State */
 .altus-luxury-card:hover,
 .altus-card:hover,
-.space-y-8.font-sans .rounded-xl:hover,
-.space-y-8.font-sans .rounded-2xl:hover,
-.space-y-8.font-sans .bg-card:hover,
-.space-y-8.font-sans [class*="Card"]:hover {
-  transform: translateY(-3px) !important;
-  border-color: rgba(195, 154, 69, 0.45) !important;
+.dashboard-luxury-root .bg-card:hover,
+.dashboard-luxury-root [class*="Card"]:hover {
+  transform: translateY(-3px);
+  border-color: rgba(195, 154, 69, 0.45);
   box-shadow: 
     0 22px 42px -10px rgba(11, 21, 40, 0.09), 
     0 12px 24px -6px rgba(195, 154, 69, 0.14),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95) !important;
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .dark .altus-luxury-card:hover,
 .dark .altus-card:hover,
-.dark .space-y-8.font-sans .rounded-xl:hover,
-.dark .space-y-8.font-sans .rounded-2xl:hover,
-.dark .space-y-8.font-sans .bg-card:hover,
-.dark .space-y-8.font-sans [class*="Card"]:hover {
-  border-color: rgba(195, 154, 69, 0.4) !important;
+.dark .dashboard-luxury-root .bg-card:hover,
+.dark .dashboard-luxury-root [class*="Card"]:hover {
+  border-color: rgba(195, 154, 69, 0.4);
   box-shadow: 
     0 26px 52px -12px rgba(0, 0, 0, 0.7), 
     0 12px 28px -8px rgba(195, 154, 69, 0.15),
-    inset 0 1px 1px 0 rgba(195, 154, 69, 0.28) !important;
+    inset 0 1px 1px 0 rgba(195, 154, 69, 0.28);
 }
 
 /* ==========================================================================
@@ -125,15 +115,14 @@
 /* ==========================================================================
    Luxury Accent Line under Card Headers
    ========================================================================== */
-.space-y-8.font-sans [class*="CardHeader"],
-.space-y-8.font-sans .border-b.border-slate-100,
+.dashboard-luxury-root [class*="CardHeader"],
 .altus-header-accent {
   border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
   padding-bottom: 16px !important;
   position: relative;
 }
 
-.space-y-8.font-sans [class*="CardHeader"]::after,
+.dashboard-luxury-root [class*="CardHeader"]::after,
 .altus-header-accent::after {
   content: '';
   position: absolute;
@@ -145,7 +134,7 @@
   border-radius: 9999px;
 }
 
-[dir="rtl"] .space-y-8.font-sans [class*="CardHeader"]::after,
+[dir="rtl"] .dashboard-luxury-root [class*="CardHeader"]::after,
 [dir="rtl"] .altus-header-accent::after {
   background: linear-gradient(to left, #C39A45, transparent);
 }
@@ -225,8 +214,6 @@
 /* ==========================================================================
    Primary Action Buttons Transition to Luxury Gold Gradient
    ========================================================================== */
-.space-y-8.font-sans .bg-blue-600,
-.space-y-8.font-sans button.bg-primary,
 .btn-altus-gold {
   background: linear-gradient(135deg, #C39A45 0%, #a78033 100%) !important;
   color: #07132c !important;
@@ -235,8 +222,6 @@
   box-shadow: 0 4px 14px rgba(195, 154, 69, 0.25) !important;
 }
 
-.space-y-8.font-sans .bg-blue-600:hover,
-.space-y-8.font-sans button.bg-primary:hover,
 .btn-altus-gold:hover {
   background: linear-gradient(135deg, #d8ab50 0%, #b88d3d 100%) !important;
   box-shadow: 0 8px 22px rgba(195, 154, 69, 0.35) !important;

@@ -162,17 +162,15 @@ export function useApprovalAuthority() {
                 .eq('user_id', user.id)
                 .single()
 
-            // Get user's properties
-            const { data: properties } = await supabase
-                .from('user_properties')
-                .select('property:properties(id, name)')
+            // Get user's properties & departments from memberships
+            const { data: memberships } = await supabase
+                .from('organization_memberships')
+                .select('property:hotels(id, name), department:departments(id, name)')
                 .eq('user_id', user.id)
+                .eq('is_active', true)
 
-            // Get user's departments
-            const { data: departments } = await supabase
-                .from('user_departments')
-                .select('department:departments(id, name)')
-                .eq('user_id', user.id)
+            const properties = memberships?.map((m: any) => ({ property: m.property })).filter((m: any) => Boolean(m.property)) || []
+            const departments = memberships?.map((m: any) => ({ department: m.department })).filter((m: any) => Boolean(m.department)) || []
 
             const role = roleData?.role
 

@@ -194,19 +194,21 @@ export function useTrainingAssignmentsMutations(options: {
               .map((assignment) => assignment.target_id)
               .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: deptUsers } = await supabase
-              .from('user_departments')
+              .from('organization_memberships')
               .select('user_id')
+              .eq('is_active', true)
               .in('department_id', departmentIds)
-            userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
+            userIdsToNotify = [...new Set(deptUsers?.map((d: any) => d.user_id) || [])]
           } else if (formTargetType === 'properties') {
             const propertyIds = changedAssignments
               .map((assignment) => assignment.target_id)
               .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: propUsers } = await supabase
-              .from('user_properties')
+              .from('organization_memberships')
               .select('user_id')
-              .in('property_id', propertyIds)
-            userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+              .eq('is_active', true)
+              .in('hotel_id', propertyIds)
+            userIdsToNotify = [...new Set(propUsers?.map((p: any) => p.user_id) || [])]
           }
 
           if (userIdsToNotify.length === 0) return

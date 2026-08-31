@@ -150,27 +150,29 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             const propertyToQuery = selectedPropertyId || currentProperty?.id
             let userIds: string[] = []
 
-            // Step 1: Get users for the selected property (via user_properties)
+            // Step 1: Get users for the selected property / hotel (via organization_memberships)
             if (isRealPropertyId(propertyToQuery)) {
                 const { data: userPropertyLinks, error: upError } = await supabase
-                    .from('user_properties')
+                    .from('organization_memberships')
                     .select('user_id')
-                    .eq('property_id', propertyToQuery)
+                    .eq('hotel_id', propertyToQuery)
+                    .eq('is_active', true)
 
                 if (upError) throw upError
-                userIds = userPropertyLinks?.map(up => up.user_id) || []
+                userIds = userPropertyLinks?.map((up: any) => up.user_id) || []
                 if (userIds.length === 0) return []
             }
 
-            // Step 2: Further filter by department if selected (via user_departments)
+            // Step 2: Further filter by department if selected (via organization_memberships)
             if (selectedDepartmentId && selectedDepartmentId !== 'none') {
                 const { data: userDeptLinks, error: udError } = await supabase
-                    .from('user_departments')
+                    .from('organization_memberships')
                     .select('user_id')
                     .eq('department_id', selectedDepartmentId)
+                    .eq('is_active', true)
 
                 if (udError) throw udError
-                const deptUserIds = userDeptLinks?.map(ud => ud.user_id) || []
+                const deptUserIds = userDeptLinks?.map((ud: any) => ud.user_id) || []
 
                 // Intersect with property users if we have them
                 if (userIds.length > 0) {

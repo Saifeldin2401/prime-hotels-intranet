@@ -87,8 +87,9 @@ export function useDepartmentKnowledgeCompliance(propertyId?: string, options?: 
             // departments in two round-trips instead of looping per department.
             const [{ data: allDeptUsers }, { data: allDeptDocs }] = await Promise.all([
                 supabase
-                    .from('user_departments')
+                    .from('organization_memberships')
                     .select('user_id, department_id')
+                    .eq('is_active', true)
                     .in('department_id', deptIds),
                 supabase
                     .from('documents')

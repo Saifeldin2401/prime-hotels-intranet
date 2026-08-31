@@ -269,17 +269,20 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
             .from('user_roles')
             .select('user_id, role'),
         supabase
-            .from('user_departments')
-            .select('user_id, department_id'),
+            .from('organization_memberships')
+            .select('user_id, department_id')
+            .eq('is_active', true),
         supabase
-            .from('user_properties')
-            .select('user_id, property_id'),
+            .from('organization_memberships')
+            .select('user_id, property_id:hotel_id')
+            .eq('is_active', true),
         supabase
             .from('departments')
             .select('id, name, property_id'),
         supabase
-            .from('properties')
-            .select('id, name'),
+            .from('hotels')
+            .select('id, name')
+            .eq('is_deleted', false),
         supabase
             .from('training_progress')
             .select('*, content_id:training_id, content_type:lp_content_type')
@@ -722,13 +725,15 @@ export const learningService = {
                 .select('role')
                 .eq('user_id', user.id),
             supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('department_id')
-                .eq('user_id', user.id),
-            supabase
-                .from('user_properties')
-                .select('property_id')
                 .eq('user_id', user.id)
+                .eq('is_active', true),
+            supabase
+                .from('organization_memberships')
+                .select('property_id:hotel_id')
+                .eq('user_id', user.id)
+                .eq('is_active', true)
         ])
 
         if (rolesResult.error) throw rolesResult.error

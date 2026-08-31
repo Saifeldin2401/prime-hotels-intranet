@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import type { Property } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -255,6 +256,8 @@ export default function PropertyManagement() {
         }
     })
 
+    const { currentOrganization } = useTenant()
+
     // Create/Update Mutation
     const mutation = useMutation({
         mutationFn: async (data: typeof formData) => {
@@ -271,7 +274,7 @@ export default function PropertyManagement() {
                     .from('hotels')
                     .insert([{
                         ...data,
-                        organization_id: 'e0000000-0000-0000-0000-000000000001'
+                        organization_id: currentOrganization?.id || 'e0000000-0000-0000-0000-000000000001'
                     }])
                 if (error) throw error
             }
