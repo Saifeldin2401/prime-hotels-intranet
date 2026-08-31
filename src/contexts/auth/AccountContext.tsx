@@ -81,22 +81,30 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       return
     }
     setLoading(true)
-    try {
-      const { data, error } = await (supabase.rpc as any)('resolve_account_context')
-      if (myReq !== reqIdRef.current) return // superseded
-      if (error) {
-        if (import.meta.env.DEV) console.warn('[AccountContext] resolve failed:', error.message)
-        setCtx(EMPTY)
-      } else {
-        setCtx({ ...EMPTY, ...(data as AccountContextShape) })
+    // Right after login the JWT can lag a beat — retry a transient failure a
+    // couple of times before settling, so route guards don't briefly see a
+    // non-operator and bounce the user to /dashboard.
+    let lastErr: unknown = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const { data, error } = await (supabase.rpc as any)('resolve_account_context')
+        if (myReq !== reqIdRef.current) return // superseded
+        if (error) { lastErr = error }
+        else {
+          setCtx({ ...EMPTY, ...(data as AccountContextShape) })
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        if (myReq !== reqIdRef.current) return
+        lastErr = err
       }
-    } catch (err) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
       if (myReq !== reqIdRef.current) return
-      if (import.meta.env.DEV) console.warn('[AccountContext] resolve threw:', err)
-      setCtx(EMPTY)
-    } finally {
-      if (myReq === reqIdRef.current) setLoading(false)
     }
+    if (import.meta.env.DEV) console.warn('[AccountContext] resolve failed after retries:', lastErr)
+    setCtx(EMPTY)
+    setLoading(false)
   }, [user])
 
   useEffect(() => {

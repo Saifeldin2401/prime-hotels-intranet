@@ -93,18 +93,21 @@ const RootIndex = () => {
     const destination = useMemo(() => {
         if (!user) return null
 
+        const GENERIC = new Set(['', '/', '/dashboard', '/home', '/home/learner'])
+        const isDeepLink = (p: string | null | undefined): p is string =>
+            !!p && !GENERIC.has(p.split('?')[0].replace(/\/$/, '') || '/')
+
         const pendingAuthFlowPath = getAuthFlowRedirectPath()
         const spaRedirect = getSpaRedirectFromSearch(location.search)
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        // Smart destination: an explicit deep-link wins, otherwise send the user
-        // to the environment their account authorises. `recommendedDestination`
-        // is resolved server-side (resolve_account_context) from platform-operator
+        // A genuine deep-link wins; a stale generic landing ('/dashboard', '/') does
+        // NOT override the account-aware destination. `recommendedDestination` is
+        // resolved server-side (resolve_account_context) from platform-operator
         // status + highest tenant membership role.
-        const defaultDestination = account.recommendedDestination || '/dashboard'
-
-        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? defaultDestination
+        const deepLink = [pendingAuthFlowPath, spaRedirect, urlRedirect, sessionRedirect].find(isDeepLink) ?? null
+        return deepLink ?? account.recommendedDestination ?? '/dashboard'
     }, [user, location.search, account.recommendedDestination])
 
     useEffect(() => {

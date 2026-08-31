@@ -1,0 +1,19 @@
+-- ============================================================================
+-- §70 / §72 — data retention policy + scheduled lifecycle jobs.
+--   * data_retention_policies: configurable windows per data class (system_owner-writable)
+--   * organizations.archived_at / purge_scheduled_at
+--   * set_organization_status('archived') schedules a purge after the retention window
+--   * purge_archived_organizations(): the ONE sanctioned hard-delete path (§70) —
+--     writes a final platform_audit_logs row (kept ~7y) BEFORE the cascade delete
+--   * cleanup_transient_records(): drops the platform_events outbox + resolved
+--     webhook_deliveries past their window — NEVER touches training records or audit logs
+--   * cron: monthly AI-credit reset, nightly purge check, nightly transient cleanup,
+--     daily org-quota evaluation (80/90/100% warnings)
+--
+-- INFRA follow-up (not code — see docs/remaining-architecture-work.md §72):
+--   verify Supabase plan PITR window, run one restore drill, add a storage-object
+--   backup job (bucket versioning or nightly copy), write the DR runbook.
+-- ============================================================================
+-- See migration history version 20260901251000 for the applied statements
+-- (data_retention_policies + seed, organizations columns, set_organization_status
+--  body, purge_archived_organizations, cleanup_transient_records, cron.schedule x4).
