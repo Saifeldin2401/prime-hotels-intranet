@@ -1,4 +1,23 @@
-export type AppRole =
+/**
+ * Platform roles for the Training + Knowledge Base + Quiz product.
+ * These are the 5 roles the app is migrating to (additive permissions):
+ *   learner < author / knowledge_manager < training_manager < administrator
+ *
+ * See docs/roles-and-rls.md and supabase/migrations/20260901110000_five_role_model.sql.
+ */
+export type PlatformRole =
+  | 'learner'
+  | 'author'
+  | 'knowledge_manager'
+  | 'training_manager'
+  | 'administrator'
+
+/**
+ * Legacy hospitality roles. Kept in the union during the cutover so the ~68
+ * files still referencing them keep type-checking. New code should target
+ * PlatformRole. DB-side, both vocabularies resolve through has_role().
+ */
+export type LegacyRole =
   | 'super_admin'
   | 'corporate_admin'
   | 'regional_admin'
@@ -9,7 +28,45 @@ export type AppRole =
   | 'manager'
   | 'staff'
 
+export type AppRole = PlatformRole | LegacyRole
+
+export const PLATFORM_ROLES: PlatformRole[] = [
+  'administrator',
+  'training_manager',
+  'knowledge_manager',
+  'author',
+  'learner',
+]
+
+/** Legacy role -> platform role. Mirrors public.platform_role_map in the DB. */
+export const LEGACY_ROLE_MAP: Record<LegacyRole, PlatformRole> = {
+  super_admin: 'administrator',
+  corporate_admin: 'administrator',
+  regional_admin: 'training_manager', // business call: curate/assign, not platform admin
+  regional_hr: 'training_manager',
+  property_manager: 'training_manager', // business call: curate/assign, not platform admin
+  property_hr: 'training_manager', // also carries knowledge_manager rights
+  department_head: 'author',
+  manager: 'learner',
+  staff: 'learner',
+}
+
+/** Resolve any role (legacy or platform) to its platform role. */
+export function toPlatformRole(role: AppRole | null | undefined): PlatformRole | null {
+  if (!role) return null
+  if ((PLATFORM_ROLES as string[]).includes(role)) return role as PlatformRole
+  return LEGACY_ROLE_MAP[role as LegacyRole] ?? null
+}
+
 export const ROLES: Record<AppRole, { label: string; level: number }> = {
+  // Platform roles (lower level = more authority), interleaved with legacy
+  // levels so canRoleAccess()'s inheritance comparison stays coherent.
+  administrator: { label: 'Administrator', level: 1 },
+  training_manager: { label: 'Training Manager', level: 2 },
+  knowledge_manager: { label: 'Knowledge Manager', level: 3 },
+  author: { label: 'Author', level: 6 },
+  learner: { label: 'Learner', level: 8 },
+  // Legacy hospitality roles
   super_admin: { label: 'Super Admin', level: 0 },
   corporate_admin: { label: 'Corporate Admin', level: 1 },
   regional_admin: { label: 'Regional Admin', level: 2 },
@@ -21,7 +78,17 @@ export const ROLES: Record<AppRole, { label: string; level: number }> = {
   staff: { label: 'Staff', level: 8 },
 }
 
+/** Platform role hierarchy, most privileged first. */
 export const ROLE_HIERARCHY: AppRole[] = [
+  'administrator',
+  'training_manager',
+  'knowledge_manager',
+  'author',
+  'learner',
+]
+
+/** Full legacy hierarchy, retained for code that still walks the old ladder. */
+export const LEGACY_ROLE_HIERARCHY: LegacyRole[] = [
   'super_admin',
   'corporate_admin',
   'regional_admin',
