@@ -1,3 +1,12 @@
+/**
+ * AssessmentBuilder
+ *
+ * Single authoring surface for assessments. Consolidates the former
+ * `learning/QuizBuilder` (settings + question linking) and provides an entry
+ * point into question authoring (`QuestionEditor`) and AI generation.
+ *
+ * Persistence still targets the `unified_*` quiz engine via `learningService`.
+ */
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { QuestionSelector } from '@/components/questions/QuestionSelector'
 import { Button } from '@/components/ui/button'
@@ -25,8 +34,13 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
-export default function QuizBuilder() {
-    const { t: t_ext } = useTranslation('extracted');
+// TODO(assessment-slice): `assessment_type` (formative | summative) is a UI-only
+// toggle for now. Add the `training_assignment_rules`/quiz DB column + persist in
+// a later slice, then wire `assessmentType` into the CreateQuizDTO payload.
+type AssessmentType = 'formative' | 'summative'
+
+export default function AssessmentBuilder() {
+    const { t: t_ext } = useTranslation('extracted')
     const { id } = useParams()
     const navigate = useNavigate()
     const { toast } = useToast()
@@ -48,8 +62,12 @@ export default function QuizBuilder() {
         show_feedback_during: true,
     })
 
-    // We keep questions separate to manage mutations easier before save? 
-    // actually for questions we probably want to save the quiz first then manage questions links.
+    // UI-only state (see TODOs) — not yet persisted to the backend.
+    const [assessmentType, setAssessmentType] = useState<AssessmentType>('formative')
+    // TODO(assessment-slice): "draw N from pool" needs a backend column + runtime
+    // support in QuizComponentEnhanced (sample N linked questions per attempt).
+    const [drawFromPool, setDrawFromPool] = useState<number | null>(null)
+
     const [questions, setQuestions] = useState<any[]>([])
     const [showAIModal, setShowAIModal] = useState(false)
     const [showSelector, setShowSelector] = useState(false)
@@ -57,7 +75,7 @@ export default function QuizBuilder() {
     const ensureSavedQuizIntegrity = async (quizId: string, quizStatus?: string | null) => {
         const report = await quizIntegrityService.ensureQuizIntegrity(quizId, {
             autoRepair: true,
-            autoPublish: quizStatus === 'published'
+            autoPublish: quizStatus === 'published',
         })
 
         const blockingIssues = report.issues
@@ -74,25 +92,20 @@ export default function QuizBuilder() {
                 description: t(
                     'training:quizzes.builder.quiz_integrity_repaired',
                     'The quiz questions were repaired and published automatically.'
-                )
+                ),
             })
         }
     }
 
     const handleSelectQuestions = async (selectedIds: string[]) => {
         if (!id) return
-
         try {
             setLoading(true)
             const currentCount = questions.length
-
-            // Link questions sequentially
             for (let i = 0; i < selectedIds.length; i++) {
                 await learningService.addQuestionToQuiz(id, selectedIds[i], currentCount + i)
             }
-
             await ensureSavedQuizIntegrity(id, quiz.status)
-
             toast({ title: t('common.success'), description: t('training:quizzes.builder.questions_added_success', { count: selectedIds.length }) })
             setShowSelector(false)
             loadQuiz(id)
@@ -110,19 +123,13 @@ export default function QuizBuilder() {
             if (id) loadQuiz(id)
             return
         }
-
         try {
             setLoading(true)
             const currentCount = questions.length
-
-            // Link each question to the quiz
-            // We do this sequentially to maintain order, or parallel with calculated indices
             for (let i = 0; i < ids.length; i++) {
                 await learningService.addQuestionToQuiz(id, ids[i], currentCount + i)
             }
-
             await ensureSavedQuizIntegrity(id, quiz.status)
-
             toast({ title: t('common.success'), description: t('training:quizzes.builder.ai_generated_success', { count }) })
             setShowAIModal(false)
             loadQuiz(id)
@@ -135,9 +142,7 @@ export default function QuizBuilder() {
     }
 
     useEffect(() => {
-        if (id) {
-            loadQuiz(id)
-        }
+        if (id) loadQuiz(id)
     }, [id])
 
     const loadQuiz = async (quizId: string) => {
@@ -152,7 +157,7 @@ export default function QuizBuilder() {
                 description: t('training:quizzes.builder.load_error'),
                 variant: 'destructive',
             })
-            navigate('/learning/quizzes')
+            navigate('/assessments')
         } finally {
             setLoading(false)
         }
@@ -165,13 +170,11 @@ export default function QuizBuilder() {
                 toast({ title: t('common.error'), description: t('training:quizzes.builder.validation_title_required'), variant: 'destructive' })
                 return
             }
-
             if (!user?.id) {
                 toast({ title: t('common.error'), description: t('training:quizzes.builder.validation_login_required'), variant: 'destructive' })
                 return
             }
 
-            // Clean the quiz object for saving: remove joined fields and ensure correct types
             const quizData = { ...quiz }
             delete quizData.questions
             delete quizData.question_count
@@ -202,7 +205,7 @@ export default function QuizBuilder() {
                 savedQuiz = await learningService.createQuiz(quizPayload)
                 await ensureSavedQuizIntegrity(savedQuiz.id, quizPayload.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_created') })
-                navigate(`/learning/quizzes/${savedQuiz.id}`, { replace: true })
+                navigate(`/assessments/builder/${savedQuiz.id}`, { replace: true })
             }
         } catch (error) {
             console.error(error)
@@ -235,7 +238,7 @@ export default function QuizBuilder() {
                     <p className="text-muted-foreground">{t('training:quizzes.builder.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => navigate('/learning/quizzes')}>{t('common.cancel')}</Button>
+                    <Button variant="outline" onClick={() => navigate('/assessments')}>{t('common.cancel')}</Button>
                     <Button onClick={handleSave} disabled={saving}>
                         {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
                     </Button>
@@ -266,6 +269,27 @@ export default function QuizBuilder() {
                                 onChange={e => setQuiz({ ...quiz, description: e.target.value })}
                                 placeholder={t('training:quizzes.builder.description_placeholder')}
                             />
+                        </div>
+
+                        {/* Assessment type — UI only, see TODO at top of file */}
+                        <div className="space-y-2">
+                            <Label>{t('training:quizzes.builder.assessment_type_label', 'Assessment type')}</Label>
+                            <div className="inline-flex rounded-lg border p-1">
+                                {(['formative', 'summative'] as AssessmentType[]).map(kind => (
+                                    <Button
+                                        key={kind}
+                                        type="button"
+                                        size="sm"
+                                        variant={assessmentType === kind ? 'default' : 'ghost'}
+                                        onClick={() => setAssessmentType(kind)}
+                                    >
+                                        {t(`training:quizzes.builder.assessment_type_${kind}`, kind === 'formative' ? 'Formative' : 'Summative')}
+                                    </Button>
+                                ))}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                                {t('training:quizzes.builder.assessment_type_desc', 'Formative assessments are for practice; summative assessments count toward completion. (Not yet persisted.)')}
+                            </p>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -307,6 +331,20 @@ export default function QuizBuilder() {
                                         <SelectItem value="archived">{t('training:archived')}</SelectItem>
                                     </SelectContent>
                                 </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label>{t('training:quizzes.builder.draw_from_pool_label', 'Draw N questions from pool')}</Label>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={drawFromPool ?? ''}
+                                    onChange={e => setDrawFromPool(e.target.value ? parseInt(e.target.value) : null)}
+                                    placeholder={t('training:quizzes.builder.draw_from_pool_placeholder', 'All linked questions')}
+                                />
+                                <p className="text-sm text-muted-foreground">
+                                    {t('training:quizzes.builder.draw_from_pool_desc', 'Randomly sample this many questions per attempt from the linked pool. (Not yet persisted.)')}
+                                </p>
                             </div>
                         </div>
 
@@ -383,6 +421,9 @@ export default function QuizBuilder() {
                                             />
                                         </DialogContent>
                                     </Dialog>
+                                    <Button variant="outline" onClick={() => navigate('/assessments/questions/new')}>
+                                        <Plus className="me-2 h-4 w-4" /> {t('training:quizzes.builder.author_question', 'Author question')}
+                                    </Button>
                                     <Button variant="outline" onClick={() => setShowSelector(true)}>
                                         <Plus className="me-2 h-4 w-4" /> {t('training:quizzes.builder.add_questions')}
                                     </Button>

@@ -440,8 +440,12 @@ export const ROUTES: RouteConfig[] = [
     // NOTE: the standalone System Wiki page was removed in the KB 8->3 consolidation.
     // The `system_wiki` table is retained; a later data-migration slice folds it into articles.
     // Secondary sub-routes (hidden from main sidebar navigation to keep UI clean)
+    // NOTE: quiz + question bank surfaces consolidated into one page at /assessments
+    // (src/pages/assessments/QuestionBank.tsx). Legacy /learning/quizzes and
+    // /questions paths still redirect there. Keep this minimal if another branch
+    // also edits navigation.ts.
     {
-        path: '/learning/quizzes',
+        path: '/assessments?section=assessments',
         title: 'quizzes',
         icon: CheckSquare,
         description: 'Manage quizzes',
@@ -451,7 +455,7 @@ export const ROUTES: RouteConfig[] = [
         hideFromNav: true,
     },
     {
-        path: '/questions',
+        path: '/assessments',
         title: 'questions',
         icon: FileQuestion,
         description: 'Manage knowledge question bank',

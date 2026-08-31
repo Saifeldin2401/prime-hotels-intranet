@@ -15,11 +15,24 @@ const TrainingAnalytics = lazy(() => import('@/pages/training/TrainingAnalytics'
 const LearningAnalyticsHub = lazy(() => import('@/pages/analytics/LearningAnalyticsHub'))
 const SkillsMatrix = lazy(() => import('@/pages/training/SkillsMatrix'))
 const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
-const QuizList = lazy(() => import('@/pages/learning/QuizList'))
-const QuizBuilder = lazy(() => import('@/pages/learning/QuizBuilder'))
-const QuizPlayer = lazy(() => import('@/pages/learning/QuizPlayer'))
+// Consolidated assessment surfaces (see src/pages/assessments/). The QuestionBank
+// browse page is routed from KnowledgeRoutes at /assessments.
+const AssessmentBuilder = lazy(() => import('@/pages/assessments/AssessmentBuilder'))
+const AssessmentPlayer = lazy(() => import('@/pages/assessments/AssessmentPlayer'))
 const AssignmentManager = lazy(() => import('@/pages/learning/AssignmentManager'))
 const MicrolearningViewer = lazy(() => import('@/pages/learning/MicrolearningViewer'))
+
+const LegacyQuizTakeRedirect = () => {
+    const { id } = useParams()
+    const location = useLocation()
+    return <Navigate to={`/assessments/${id}/take${location.search}${location.hash}`} replace />
+}
+
+const LegacyQuizEditRedirect = () => {
+    const { id } = useParams()
+    const location = useLocation()
+    return <Navigate to={`/assessments/builder/${id}${location.search}${location.hash}`} replace />
+}
 
 const TrainingBuilderRedirect = () => {
     const { id } = useParams()
@@ -133,49 +146,47 @@ export const TrainingRoutes = () => (
             }
             errorElement={<RouteErrorBoundary section="Training Paths" />}
         />
+        {/* Consolidated assessment routes. Legacy /learning/quizzes* paths are kept
+            as redirects so existing links, assignments and bookmarks keep working. */}
+        <Route path="/learning/quizzes" element={<PreserveQueryNavigate to="/assessments?section=assessments" />} />
+        <Route path="/learning/quizzes/new" element={<PreserveQueryNavigate to="/assessments/builder/new" />} />
         <Route
-            path="/learning/quizzes"
+            path="/assessments/builder/new"
             element={
                 <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
                     <AppLayout>
-                        <QuizList />
+                        <AssessmentBuilder />
                     </AppLayout>
                 </ProtectedRoute>
             }
-            errorElement={<RouteErrorBoundary section="Quizzes" />}
+            errorElement={<RouteErrorBoundary section="Assessment Builder" />}
         />
         <Route
-            path="/learning/quizzes/new"
+            path="/assessments/builder/:id"
             element={
                 <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
                     <AppLayout>
-                        <QuizBuilder />
+                        <AssessmentBuilder />
                     </AppLayout>
                 </ProtectedRoute>
             }
-            errorElement={<RouteErrorBoundary section="Quiz Builder" />}
+            errorElement={<RouteErrorBoundary section="Assessment Builder" />}
         />
+        <Route path="/learning/quizzes/:id/take" element={<LegacyQuizTakeRedirect />} />
         <Route
-            path="/learning/quizzes/:id"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'department_head']}>
-                    <AppLayout>
-                        <QuizBuilder />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-            errorElement={<RouteErrorBoundary section="Quiz Builder" />}
-        />
-        <Route
-            path="/learning/quizzes/:id/take"
+            path="/assessments/:id/take"
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <QuizPlayer />
+                        <AssessmentPlayer />
                     </AppLayout>
                 </ProtectedRoute>
             }
-            errorElement={<RouteErrorBoundary section="Quiz Player" />}
+            errorElement={<RouteErrorBoundary section="Assessment Player" />}
+        />
+        <Route
+            path="/learning/quizzes/:id"
+            element={<LegacyQuizEditRedirect />}
         />
         <Route
             path="/learning/assignments"
