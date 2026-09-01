@@ -90,7 +90,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <Header onOpenSearch={() => setCommandPaletteOpen(true)} />
 
         {/* Main Content Stage */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-none pb-24 lg:pb-12">
           {!isImmersiveOrFocusedPage && <HolidayCelebration />}
           <PageTransition className="w-full">{children}</PageTransition>
         </main>

@@ -151,6 +151,48 @@ export default function EmailTemplateEditor() {
     }
   }
 
+  const previewHtml = useMemo(() => {
+    if (!htmlTemplate) return '<div style="padding: 40px; text-align: center; color: #888; font-family: sans-serif;">No HTML content</div>'
+    
+    let html = htmlTemplate
+    const sampleContext: Record<string, string> = {
+      '{{org_name}}': 'Royal Palace Hospitality Group',
+      '{{org_name_ar}}': 'مجموعة فنادق القصر الملكي',
+      '{{logo_url}}': '/altus-emblem-icon.png',
+      '{{header_gradient}}': 'linear-gradient(135deg, #0B1C3E 0%, #1a365d 100%)',
+      '{{brand_primary}}': '#0B1C3E',
+      '{{brand_secondary}}': '#2563eb',
+      '{{brand_accent}}': '#D4AF37',
+      '{{brand_color}}': '#2563eb',
+      '{{title}}': subjectTemplate ? subjectTemplate.replace(/\{\{[^}]+\}\}/g, 'Notification') : 'Sample Notification Title',
+      '{{recipient_name}}': 'Sarah Al-Otaibi',
+      '{{greeting_hello}}': 'Hello ',
+      '{{message}}': 'This is a sample operational notification rendered with authoritative dynamic multi-tenant branding variables.',
+      '{{module_title}}': 'Executive Hospitality Standards & Guest Experience SOP',
+      '{{due_date}}': '2026-09-15',
+      '{{action_url}}': 'https://phg-connect.com/admin',
+      '{{action_label}}': 'Open Portal & Review',
+      '{{footer_text}}': 'Confidential & Proprietary. Intended solely for authorized personnel.',
+      '{{app_url}}': 'https://phg-connect.com',
+      '{{dashboard_link_text}}': 'Dashboard',
+      '{{help_link_text}}': 'Knowledge Hub',
+      '{{rights_reserved}}': 'All rights reserved.',
+      '{{year}}': new Date().getFullYear().toString(),
+      '{{lang}}': 'en',
+      '{{dir}}': 'ltr',
+      '{{align}}': 'left',
+      '{{align_opposite}}': 'right',
+      '{{business_unit_label}}': 'Operations & Standards',
+      '{{trouble_clicking}}': 'If you are having trouble clicking the button above, copy and paste this URL into your browser:'
+    }
+
+    for (const [key, val] of Object.entries(sampleContext)) {
+      html = html.split(key).join(val)
+    }
+
+    return html
+  }, [htmlTemplate, subjectTemplate])
+
   return (
     <div className="container mx-auto py-6 max-w-[1400px]">
       <PageHeader
@@ -169,7 +211,7 @@ export default function EmailTemplateEditor() {
         {/* Sidebar */}
         <Card className="md:col-span-3 h-[calc(100vh-200px)] flex flex-col overflow-hidden">
           <div className="p-4 border-b flex items-center justify-between bg-muted/20">
-            <h3 className="font-semibold text-sm">Templates</h3>
+            <h3 className="font-semibold text-sm">Templates ({templates.length})</h3>
             <Button variant="ghost" size="icon" onClick={handleNewTemplate}>
               <Plus className="w-4 h-4" />
             </Button>
@@ -267,7 +309,7 @@ export default function EmailTemplateEditor() {
                     <iframe 
                       title="preview"
                       className="w-full flex-1" 
-                      srcDoc={htmlTemplate || '<div style="padding: 20px; text-align: center; color: #888;">No HTML content</div>'} 
+                      srcDoc={previewHtml} 
                     />
                   </div>
                 </div>

@@ -259,13 +259,13 @@ export const assignmentSubmissionService = {
       throw uploadError
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: signedData } = await supabase.storage
       .from('documents')
-      .getPublicUrl(filePath)
+      .createSignedUrl(filePath, 60 * 60 * 24 * 7)
 
     return {
       name: file.name,
-      url: urlData.publicUrl,
+      url: signedData?.signedUrl || filePath,
       size: file.size,
       type: file.type,
       uploadedAt: new Date().toISOString()

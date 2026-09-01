@@ -43,11 +43,16 @@ export const DashboardHeroHeader: React.FC = () => {
 
   let hijriDate = ''
   try {
-    hijriDate = new Intl.DateTimeFormat(isRTL ? 'ar-SA-u-ca-islamic-umalqura' : 'en-US-u-ca-islamic-umalqura', {
+    const rawHijri = new Intl.DateTimeFormat(isRTL ? 'ar-SA-u-ca-islamic-umalqura' : 'en-US-u-ca-islamic-umalqura', {
       day: 'numeric',
       month: 'long',
       year: 'numeric'
-    }).format(today) + (isRTL ? ' هـ' : ' AH')
+    }).format(today)
+    if (isRTL) {
+      hijriDate = rawHijri.includes('هـ') ? rawHijri : `${rawHijri} هـ`
+    } else {
+      hijriDate = rawHijri.includes('AH') ? rawHijri : `${rawHijri} AH`
+    }
   } catch {
     hijriDate = ''
   }

@@ -10,7 +10,7 @@ const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (
   Deno.env.get("APP_BASE_URL") ?? "https://www.phg-connect.com"
 ).replace(/\/+$/, "");
-const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "Altus Hospitality";
+const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "Altus Connect";
 const ENV_DEFAULT_FROM_EMAIL =
   Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
 const RESEND_MAX_RETRIES = 3;
@@ -32,8 +32,11 @@ interface SendEmailBody {
   variables?: Record<string, unknown>;
   fromName?: string;
   fromEmail?: string;
+  replyTo?: string;
   actionLabel?: string;
   userId?: string;
+  organizationId?: string;
+  organization_id?: string;
   batchId?: string;
   queueId?: string;
   attachments?: Array<{ filename: string; content: string }>;
@@ -53,6 +56,26 @@ interface RuntimeConfig {
   appBaseUrl: string;
   fromName: string;
   fromEmail: string;
+}
+
+interface TenantEmailContext {
+  org_id: string | null;
+  org_name: string;
+  org_name_ar: string;
+  logo_url: string;
+  brand_colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  sender_name: string;
+  from_email: string;
+  reply_to: string;
+  support_email: string;
+  website_url: string;
+  footer_text: string;
+  footer_text_ar: string;
+  is_custom_branded: boolean;
 }
 
 serve(async (req) => {
@@ -135,6 +158,84 @@ serve(async (req) => {
       );
     }
 
+    // Resolve Target Organization ID
+    let targetOrgId: string | null =
+      body.organizationId || body.organization_id || null;
+
+    if (!targetOrgId && body.userId) {
+      const { data: memberData } = await serviceClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", body.userId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (memberData?.organization_id) {
+        targetOrgId = memberData.organization_id;
+      }
+    }
+
+    if (!targetOrgId && user) {
+      const { data: callerMember } = await serviceClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (callerMember?.organization_id) {
+        targetOrgId = callerMember.organization_id;
+      }
+    }
+
+    // Security Gate: Validate caller authorization for the target tenant
+    if (!isServiceRoleCall && user && targetOrgId) {
+      const { data: canSend, error: canSendErr } = await serviceClient.rpc(
+        "can_send_tenant_email",
+        {
+          p_user_id: user.id,
+          p_org_id: targetOrgId,
+        },
+      );
+
+      if (canSendErr || canSend === false) {
+        return jsonResponse(
+          { error: "Forbidden: Not authorized to send email for this tenant organization" },
+          403,
+          corsHeaders,
+        );
+      }
+    }
+
+    // Resolve Authoritative Tenant Branding & Email Context
+    const { data: tenantBrandingRaw } = await serviceClient.rpc(
+      "get_tenant_email_context",
+      { p_org_id: targetOrgId },
+    );
+
+    const tenantContext: TenantEmailContext = tenantBrandingRaw || {
+      org_id: null,
+      org_name: "Altus Connect",
+      org_name_ar: "ألتوس كونكت",
+      logo_url: `${runtimeConfig.appBaseUrl}/altus-emblem-icon.png`,
+      brand_colors: {
+        primary: "#0B1C3E",
+        secondary: "#1a365d",
+        accent: "#D4AF37",
+      },
+      sender_name: runtimeConfig.fromName || "Altus Connect",
+      from_email: runtimeConfig.fromEmail || "notifications@phg-connect.com",
+      reply_to: "support@altus-advisory.com",
+      support_email: "support@altus-advisory.com",
+      website_url: runtimeConfig.appBaseUrl,
+      footer_text: "All rights reserved.",
+      footer_text_ar: "جميع الحقوق محفوظة.",
+      is_custom_branded: false,
+    };
+
+    // Role checks for non-service-role callers
     if (!isServiceRoleCall && user) {
       const adminRoles = [
         "corporate_admin",
@@ -142,6 +243,8 @@ serve(async (req) => {
         "regional_hr",
         "property_manager",
         "property_hr",
+        "administrator",
+        "super_admin",
       ];
       const { data: roleRows, error: roleError } = await serviceClient
         .from("user_roles")
@@ -172,7 +275,7 @@ serve(async (req) => {
       }
     }
 
-    // Fetch profile for more context
+    // Fetch profile for language context
     let profileData: {
       full_name?: string | null;
       language?: string | null;
@@ -195,34 +298,37 @@ serve(async (req) => {
           html_template: sanitizeHtmlTemplate(template.html_template),
         }
       : null;
+
+    const recipientLang = profileData?.language || "en";
     const context = buildContext(
       body,
+      tenantContext,
       profileData?.full_name ??
         user?.email ??
         cleanedRecipients[0] ??
-        "team@altus-advisory.com",
+        tenantContext.support_email,
       runtimeConfig.appBaseUrl,
-      profileData?.language || "en",
+      recipientLang,
     );
+
+    const defaultSubject =
+      recipientLang === "ar"
+        ? `إشعار ${tenantContext.org_name_ar} - {{title}}`
+        : `${tenantContext.org_name} Notification - {{title}}`;
 
     const subject =
       body.subject ||
       renderTemplate(
-        sanitizedTemplate?.subject_template ||
-          "Altus Connect Notification - {{title}}",
+        sanitizedTemplate?.subject_template || defaultSubject,
         context,
         false,
       );
-    // Fallback chain: caller HTML → DB template → code template → generic default
-    // For the self-certificate-email bypass (a non-admin caller emailing
-    // themselves their own earned-certificate notice), the caller-supplied
-    // html/fromName/fromEmail are ignored entirely so this path always
-    // renders the resolved certificate_earned template rather than
-    // arbitrary caller-controlled markup or a spoofed sender identity.
+
     const resolvedHtmlTemplate =
       sanitizedTemplate?.html_template ||
       (body.templateKey ? getCodeTemplate(body.templateKey) : null) ||
       defaultHtmlTemplate();
+
     const effectiveHtml = isSelfCertificateEmail ? undefined : body.html;
     const html =
       effectiveHtml ||
@@ -234,19 +340,21 @@ serve(async (req) => {
         context,
         false,
       );
-    const fromName = isSelfCertificateEmail
-      ? sanitizedTemplate?.from_name || runtimeConfig.fromName
-      : body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
-    const fromEmail = isSelfCertificateEmail
-      ? sanitizedTemplate?.from_email || runtimeConfig.fromEmail
-      : body.fromEmail ||
-        sanitizedTemplate?.from_email ||
-        runtimeConfig.fromEmail;
+
+    const fromName =
+      body.fromName ||
+      (tenantContext.is_custom_branded
+        ? (tenantContext.sender_name || sanitizedTemplate?.from_name || runtimeConfig.fromName)
+        : (sanitizedTemplate?.from_name || tenantContext.sender_name || runtimeConfig.fromName));
+
+    const fromEmail = runtimeConfig.fromEmail;
+    const replyTo = body.replyTo || tenantContext.reply_to || tenantContext.support_email;
 
     const resendResult = await sendWithResendWithRetry({
       apiKey: runtimeConfig.resendApiKey,
       fromName,
       fromEmail,
+      replyTo,
       to: cleanedRecipients,
       subject,
       html,
@@ -258,6 +366,7 @@ serve(async (req) => {
           name: "type",
           value: (body.notificationType || "system").toLowerCase(),
         },
+        { name: "tenant_id", value: targetOrgId || "global" },
         { name: "source", value: "send-email-function" },
       ],
     });
@@ -277,6 +386,7 @@ serve(async (req) => {
 
     try {
       await trackDelivery(serviceClient, {
+        organizationId: targetOrgId || undefined,
         userId:
           body.userId || (isServiceRoleCall ? null : user?.id) || undefined,
         recipientEmail: cleanedRecipients[0],
@@ -289,6 +399,7 @@ serve(async (req) => {
         requestPayload: {
           subject,
           templateKey: body.templateKey,
+          organizationId: targetOrgId,
           variables: body.variables ?? {},
         },
         responsePayload: data as Record<string, unknown>,
@@ -297,7 +408,7 @@ serve(async (req) => {
       console.error("Delivery tracking failed:", trackError);
     }
 
-    return jsonResponse({ success: true, data }, 200, corsHeaders);
+    return jsonResponse({ success: true, data, tenant: tenantContext.org_name }, 200, corsHeaders);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     return jsonResponse({ error: message }, 500, corsHeaders);
@@ -323,6 +434,7 @@ async function resolveTemplate(
 
 function buildContext(
   body: SendEmailBody,
+  tenant: TenantEmailContext,
   fallbackRecipient: string,
   appBaseUrl: string,
   language = "en",
@@ -333,58 +445,47 @@ function buildContext(
     appBaseUrl,
   );
   const domain = normalizeDomain(body.businessDomain);
-
-  // Resolution Logic for Premium Branding
-  const branding = resolveBranding(domain);
+  const orgName = isAr ? tenant.org_name_ar : tenant.org_name;
 
   const baseContext: Record<string, string> = {
     title: asText(body.title, body.subject || "Notification"),
     message: asText(
       body.message,
       isAr
-        ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A Altus Connect."
-        : "You have a new update in Altus Connect.",
+        ? `لديك تحديث جديد في ${orgName}.`
+        : `You have a new update in ${orgName}.`,
     ),
     action_url: actionUrl,
     action_label: asText(
       body.actionLabel,
-      isAr
-        ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629"
-        : "Open Altus Connect",
+      isAr ? "فتح المنصة" : `Open ${orgName}`,
     ),
     app_url: appBaseUrl,
-    logo_url: asText(body.variables?.logo_url, `${appBaseUrl}/altus-logo-official.png`),
+    org_name: orgName,
+    logo_url: asText(body.variables?.logo_url, tenant.logo_url),
     recipient_name: fallbackRecipient,
     lang: language,
     dir: isAr ? "rtl" : "ltr",
     align: isAr ? "right" : "left",
     align_opposite: isAr ? "left" : "right",
     year: new Date().getFullYear().toString(),
-    brand_color: branding.color,
-    brand_gradient: branding.gradient,
-    business_unit_label: isAr ? branding.labelAr : branding.labelEn,
-    footer_text: isAr
-      ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 Altus Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
-      : "Automated notification from Altus Connect. Sent based on an action in your department or an assignment.",
+    brand_primary: tenant.brand_colors.primary,
+    brand_secondary: tenant.brand_colors.secondary,
+    brand_accent: tenant.brand_colors.accent,
+    header_gradient: `linear-gradient(135deg, ${tenant.brand_colors.primary} 0%, ${tenant.brand_colors.secondary} 100%)`,
+    support_email: tenant.support_email,
+    website_url: tenant.website_url,
+    business_unit_label: isAr ? "المنصة الذكية" : orgName,
+    footer_text: isAr ? tenant.footer_text_ar : tenant.footer_text,
     has_data_box: body.variables?.data_box ? "true" : "false",
     data_box_content: asText(body.variables?.data_box, ""),
-    greeting_hello: isAr ? "\u0645\u0631\u062D\u0628\u0627\u064B " : "Hello ",
+    greeting_hello: isAr ? "مرحباً " : "Hello ",
     trouble_clicking: isAr
-      ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631:"
+      ? "إذا واجهت مشكلة في النقر على الزر، قم بنسخ الرابط التالي ولصقه في متصفحك:"
       : "If you're having trouble clicking the button, copy and paste the URL below into your web browser:",
-    dashboard_link_text: isAr
-      ? "\u0644\u0648\u062D\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629"
-      : "Dashboard",
-    help_link_text: isAr
-      ? "\u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
-      : "Help Center",
-    preferences_url: resolveAbsoluteUrl("/settings/notifications", appBaseUrl),
-    preferences_link_text: isAr
-      ? "\u0625\u062F\u0627\u0631\u0629 \u062A\u0641\u0636\u064A\u0644\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A"
-      : "Manage Email Preferences",
-    rights_reserved: isAr
-      ? "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629."
-      : "All rights reserved.",
+    dashboard_link_text: isAr ? "لوحة القيادة" : "Dashboard",
+    help_link_text: isAr ? "مركز المساعدة" : "Help & Support",
+    rights_reserved: isAr ? "جميع الحقوق محفوظة." : "All rights reserved.",
   };
 
   for (const [key, value] of Object.entries(body.variables || {})) {
@@ -396,78 +497,6 @@ function buildContext(
   return baseContext;
 }
 
-function resolveBranding(domain: string) {
-  const map: Record<
-    string,
-    { color: string; gradient: string; labelEn: string; labelAr: string }
-  > = {
-    user_management: {
-      color: "#0B1C3E",
-      gradient: "linear-gradient(135deg, #0B1C3E 0%, #1E40AF 100%)",
-      labelEn: "User Management",
-      labelAr:
-        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
-    },
-    hr: {
-      color: "#0D9488",
-      gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
-      labelEn: "HR & Workplace Excellence",
-      labelAr:
-        "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
-    },
-    learning: {
-      color: "#D97706",
-      gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
-      labelEn: "Learning & Academy",
-      labelAr:
-        "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
-    },
-    finance: {
-      color: "#2563EB",
-      gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
-      labelEn: "Finance & Approvals",
-      labelAr:
-        "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
-    },
-    operations: {
-      color: "#DC2626",
-      gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
-      labelEn: "Operations & Safety",
-      labelAr:
-        "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
-    },
-    management: {
-      color: "#1E293B",
-      gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
-      labelEn: "Corporate Management",
-      labelAr:
-        "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
-    },
-    sales: {
-      color: "#4F46E5",
-      gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
-      labelEn: "Sales & Pipelines",
-      labelAr:
-        "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
-    },
-    system: {
-      color: "#0F172A",
-      gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-      labelEn: "System Administration",
-      labelAr:
-        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
-    },
-  };
-
-  return map[domain] || map.system;
-}
-
-// context values include DB-stored / caller-supplied strings (message,
-// data_box_content, arbitrary body.variables entries, and even a
-// self-editable profile field like full_name reaching this via message
-// text). None of it is escaped upstream, so every substitution here must be
-// - this is the one place all of it funnels through before landing in a
-// real HTML email sent to potentially privileged recipients.
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -477,10 +506,6 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// `escapeValues` must be true for the HTML template render (the only
-// context where these are actual markup-injection sinks) and false for the
-// plain-text subject/text renders, which should show raw characters, not
-// HTML entities.
 function renderTemplate(
   template: string,
   context: Record<string, string>,
@@ -512,11 +537,7 @@ function renderTemplate(
 
 function sanitizeHtmlTemplate(html: string): string {
   let sanitized = html;
-
-  // Fix malformed closing tag seen in stored templates: </media> should be </style>
   sanitized = sanitized.replace(/<\/media>/gi, "</style>");
-
-  // If a <style> tag exists but never closes, close it before </head>
   const hasStyleOpen = /<style\b[^>]*>/i.test(sanitized);
   const hasStyleClose = /<\/style>/i.test(sanitized);
   if (hasStyleOpen && !hasStyleClose) {
@@ -526,317 +547,50 @@ function sanitizeHtmlTemplate(html: string): string {
       sanitized = `${sanitized}\n</style>`;
     }
   }
-
   return sanitized;
 }
 
 function defaultHtmlTemplate(): string {
   return `<!DOCTYPE html>
-<html lang="{{lang}}" dir="{{dir}}" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="x-apple-disable-message-reformatting">
-    <meta name="color-scheme" content="light dark">
-    <meta name="supported-color-schemes" content="light dark">
     <title>{{title}}</title>
-    <!--[if mso]>
-    <noscript>
-        <xml>
-            <o:OfficeDocumentSettings>
-                <o:AllowPNG/>
-                <o:PixelsPerInch>96</o:PixelsPerInch>
-            </o:OfficeDocumentSettings>
-        </xml>
-    </noscript>
-    <![endif]-->
     <style>
-        :root { color-scheme: light dark; supported-color-schemes: light dark; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background-color: #f1f5f9;
-            color: #334155;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
-        }
-
-        /* Preheader — hidden text shown as email preview */
-        .preheader {
-            display: none !important;
-            visibility: hidden;
-            mso-hide: all;
-            font-size: 1px;
-            line-height: 1px;
-            max-height: 0;
-            max-width: 0;
-            opacity: 0;
-            overflow: hidden;
-        }
-
-        .wrapper {
-            width: 100%;
-            background-color: #f1f5f9;
-            padding: 40px 0;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 4px 24px rgba(11, 28, 62, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
-            overflow: hidden;
-        }
-
-        /* ── Header ────────────────────────────── */
-        .header {
-            background: {{brand_gradient}};
-            padding: 36px 40px 32px;
-            text-align: center;
-        }
-        .header img {
-            max-height: 44px;
-            width: auto;
-        }
-        .business-unit {
-            display: inline-block;
-            margin-top: 14px;
-            padding: 5px 16px;
-            background-color: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 9999px;
-            color: #ffffff;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-        }
-
-        /* ── Content ───────────────────────────── */
-        .content {
-            padding: 40px 40px 32px;
-            text-align: {{align}};
-        }
-        .title {
-            color: #0B1C3E;
-            font-size: 22px;
-            font-weight: 700;
-            margin: 0 0 24px 0;
-            letter-spacing: -0.3px;
-            line-height: 1.3;
-        }
-        .greeting {
-            font-size: 16px;
-            margin: 0 0 16px 0;
-            color: #475569;
-        }
-        .message {
-            font-size: 15px;
-            color: #475569;
-            margin: 0 0 28px 0;
-            line-height: 1.7;
-        }
-
-        /* ── Data box ──────────────────────────── */
-        .data-box {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-{{align}}: 4px solid {{brand_color}};
-            border-radius: 8px;
-            padding: 20px 24px;
-            margin-bottom: 28px;
-            font-size: 14px;
-            color: #334155;
-            text-align: {{align}};
-            line-height: 1.6;
-        }
-
-        /* ── CTA Button ────────────────────────── */
-        .button-wrapper {
-            margin: 32px 0;
-            text-align: {{align}};
-        }
-        .button {
-            display: inline-block;
-            background: {{brand_gradient}};
-            color: #ffffff !important;
-            font-weight: 700;
-            text-decoration: none;
-            padding: 14px 32px;
-            border-radius: 8px;
-            font-size: 15px;
-            letter-spacing: 0.3px;
-            box-shadow: 0 2px 8px rgba(11, 28, 62, 0.2);
-            mso-padding-alt: 0;
-        }
-
-        /* ── Divider ───────────────────────────── */
-        .section-divider {
-            border: none;
-            border-top: 1px solid #e2e8f0;
-            margin: 32px 0 24px 0;
-        }
-
-        /* ── Trouble clicking ──────────────────── */
-        .trouble-section {
-            font-size: 13px;
-            color: #94a3b8;
-            margin-top: 0;
-            padding-top: 0;
-            line-height: 1.5;
-        }
-        .trouble-section a {
-            color: {{brand_color}};
-            word-break: break-all;
-            text-decoration: underline;
-            display: inline-block;
-            margin-top: 6px;
-        }
-
-        /* ── Footer ────────────────────────────── */
-        .footer {
-            background-color: #0B1C3E;
-            padding: 28px 40px;
-            text-align: center;
-        }
-        .footer p {
-            margin: 0;
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.6);
-            line-height: 1.6;
-        }
-        .footer-links {
-            margin-top: 16px;
-            margin-bottom: 16px;
-        }
-        .footer-links a {
-            color: #D4AF37;
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            margin: 0 12px;
-            letter-spacing: 0.3px;
-        }
-        .footer-divider {
-            border: none;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            margin: 16px 0;
-        }
-        .footer-copyright {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        /* ── Responsive ────────────────────────── */
-        @media only screen and (max-width: 620px) {
-            .wrapper { padding: 16px 8px !important; }
-            .container { border-radius: 12px !important; }
-            .content { padding: 28px 20px 24px !important; }
-            .header { padding: 28px 20px 24px !important; }
-            .footer { padding: 24px 20px !important; }
-            .title { font-size: 20px !important; }
-            .button { padding: 12px 24px !important; font-size: 14px !important; }
-            .data-box { padding: 16px !important; }
-        }
-
-        /* ── Dark Mode ─────────────────────────── */
-        @media (prefers-color-scheme: dark) {
-            body, .wrapper { background-color: #0f172a !important; }
-            .container { background-color: #1e293b !important; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important; }
-            .title { color: #f1f5f9 !important; }
-            .greeting, .message { color: #cbd5e1 !important; }
-            .data-box {
-                background-color: #0f172a !important;
-                border-color: #334155 !important;
-                color: #cbd5e1 !important;
-            }
-            .trouble-section { color: #64748b !important; }
-            .footer { background-color: #020617 !important; }
-        }
-
-        /* Outlook dark mode (Windows) */
-        [data-ogsc] .title { color: #f1f5f9 !important; }
-        [data-ogsc] .greeting, [data-ogsc] .message { color: #cbd5e1 !important; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f8fafc; color: #334155; }
+        .wrapper { width: 100%; padding: 40px 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 24px rgba(15,23,42,.06); }
+        .header { padding: 32px 40px; background: {{header_gradient}}; text-align: center; color: #ffffff; }
+        .header img { max-height: 48px; width: auto; }
+        .content { padding: 36px 40px; text-align: {{align}}; }
+        .h1 { color: {{brand_primary}}; font-size: 22px; font-weight: 700; margin: 0 0 20px; }
+        .btn-wrap { margin: 32px 0; text-align: {{align}}; }
+        .btn { display: inline-block; background: {{header_gradient}}; color: #ffffff !important; font-weight: 700; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-size: 15px; }
+        .footer { background: {{brand_primary}}; padding: 28px 40px; text-align: center; color: rgba(255,255,255,.8); font-size: 13px; }
+        .footer a { color: {{brand_accent}}; text-decoration: none; font-weight: 600; }
     </style>
 </head>
 <body>
-    <!-- Preheader text (shows as preview in email clients) -->
-    <div class="preheader">{{message}} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
-
     <div class="wrapper">
-        <!--[if mso]>
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;">
-        <tr><td>
-        <![endif]-->
         <div class="container">
-            <!-- Header -->
             <div class="header">
-                <img src="{{logo_url}}" alt="Altus Hospitality">
-                <br>
-                <div class="business-unit">{{business_unit_label}}</div>
+                <img src="{{logo_url}}" alt="{{org_name}}">
             </div>
-
-            <!-- Content -->
             <div class="content">
-                <h1 class="title">{{title}}</h1>
-
-                <p class="greeting">{{greeting_hello}}{{recipient_name}},</p>
-
-                <p class="message">{{message}}</p>
-
-                {{#if has_data_box}}
-                <div class="data-box">
-                    {{data_box_content}}
+                <h1 class="h1">{{title}}</h1>
+                <p>{{greeting_hello}} {{recipient_name}},</p>
+                <p>{{message}}</p>
+                <div class="btn-wrap">
+                    <a href="{{action_url}}" class="btn">{{action_label}}</a>
                 </div>
-                {{/if}}
-
-                <!-- CTA Button (with VML fallback for Outlook) -->
-                <div class="button-wrapper">
-                    <!--[if mso]>
-                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{action_url}}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="17%" fillcolor="{{brand_color}}" stroke="f">
-                      <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">{{action_label}}</center>
-                    </v:roundrect>
-                    <![endif]-->
-                    <!--[if !mso]><!-->
-                    <a href="{{action_url}}" class="button">{{action_label}}</a>
-                    <!--<![endif]-->
-                </div>
-
-                <hr class="section-divider">
-
-                <p class="trouble-section">
-                    {{trouble_clicking}}<br>
-                    <a href="{{action_url}}">{{action_url}}</a>
-                </p>
             </div>
-
-            <!-- Footer -->
             <div class="footer">
                 <p>{{footer_text}}</p>
-                <div class="footer-links">
-                    <a href="{{app_url}}">{{dashboard_link_text}}</a>
-                    &bull;
-                    <a href="{{app_url}}/knowledge">{{help_link_text}}</a>
-                    &bull;
-                    <a href="{{preferences_url}}">{{preferences_link_text}}</a>
-                </div>
-                <hr class="footer-divider">
-                <p class="footer-copyright">&copy; {{year}} Altus Hospitality. {{rights_reserved}}</p>
+                <p><a href="{{website_url}}">{{dashboard_link_text}}</a> &bull; <a href="mailto:{{support_email}}">{{help_link_text}}</a></p>
+                <p>&copy; {{year}} {{org_name}}. {{rights_reserved}}</p>
             </div>
         </div>
-        <!--[if mso]>
-        </td></tr>
-        </table>
-        <![endif]-->
     </div>
 </body>
 </html>`;
@@ -845,51 +599,106 @@ function defaultHtmlTemplate(): string {
 function defaultTextTemplate(): string {
   return `{{title}}
 
-{{greeting_hello}}{{recipient_name}},
+{{greeting_hello}} {{recipient_name}},
 
 {{message}}
 
 {{action_label}}: {{action_url}}
 
----
-{{footer_text}}
-
-{{preferences_link_text}}: {{preferences_url}}
-
-© {{year}} Altus Hospitality. {{rights_reserved}}`;
+--
+{{org_name}}
+{{footer_text}}`;
 }
 
-function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {
-  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
-  const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
-  return `${appBaseUrl.replace(/\/+$/, "")}${path}`;
-}
+async function sendWithResendWithRetry(params: {
+  apiKey: string;
+  fromName: string;
+  fromEmail: string;
+  replyTo?: string;
+  to: string[];
+  subject: string;
+  html: string;
+  text?: string;
+  attachments?: Array<{ filename: string; content: string }>;
+  tags?: Array<{ name: string; value: string }>;
+}): Promise<{ ok: boolean; payload: unknown }> {
+  let lastError: unknown = null;
 
-function normalizeDomain(domain?: string): string {
-  const value = (domain || "system").toLowerCase();
-  const allowed = [
-    "system",
-    "user_management",
-    "operations",
-    "hr",
-    "learning",
-    "finance",
-    "sales",
-    "management",
-  ];
-  return allowed.includes(value) ? value : "system";
-}
+  for (let attempt = 1; attempt <= RESEND_MAX_RETRIES; attempt++) {
+    try {
+      const now = Date.now();
+      const waitMs = resendLastRequestAt + RESEND_MIN_INTERVAL_MS - now;
+      if (waitMs > 0) {
+        await sleep(waitMs);
+      }
 
-function asText(value: unknown, fallback: string): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean")
-    return String(value);
-  return fallback;
+      const payload: Record<string, unknown> = {
+        from: `${params.fromName} <${params.fromEmail}>`,
+        to: params.to,
+        subject: params.subject,
+        html: params.html,
+        text: params.text,
+      };
+
+      if (params.replyTo) {
+        payload.reply_to = params.replyTo;
+      }
+      if (params.attachments && params.attachments.length > 0) {
+        payload.attachments = params.attachments;
+      }
+      if (params.tags && params.tags.length > 0) {
+        payload.tags = params.tags;
+      }
+
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${params.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      resendLastRequestAt = Date.now();
+
+      if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+        return { ok: true, payload: data };
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      lastError = errorData;
+
+      const shouldRetry =
+        response.status === 429 ||
+        (response.status >= 500 && response.status <= 599);
+
+      if (!shouldRetry || attempt === RESEND_MAX_RETRIES) {
+        return { ok: false, payload: errorData };
+      }
+
+      await sleep(RESEND_RETRY_BASE_MS * attempt);
+    } catch (err) {
+      lastError = err;
+      if (attempt === RESEND_MAX_RETRIES) {
+        return {
+          ok: false,
+          payload: {
+            error: err instanceof Error ? err.message : "Network error",
+          },
+        };
+      }
+      await sleep(RESEND_RETRY_BASE_MS * attempt);
+    }
+  }
+
+  return { ok: false, payload: lastError };
 }
 
 async function trackDelivery(
   serviceClient: ReturnType<typeof createClient>,
-  payload: {
+  data: {
+    organizationId?: string;
     userId?: string;
     recipientEmail: string;
     templateKey: string;
@@ -900,28 +709,27 @@ async function trackDelivery(
     requestPayload: Record<string, unknown>;
     responsePayload: Record<string, unknown>;
   },
-): Promise<void> {
-  if (!payload.userId) return;
-
+) {
   const providerMessageId =
-    typeof payload.responsePayload?.id === "string"
-      ? payload.responsePayload.id
+    typeof data.responsePayload === "object" &&
+    data.responsePayload &&
+    "id" in data.responsePayload
+      ? String(data.responsePayload.id)
       : null;
 
   await serviceClient.from("notification_delivery_events").insert({
-    user_id: payload.userId,
-    recipient_email: payload.recipientEmail,
-    queue_id: payload.queueId || null,
-    batch_id: payload.batchId || null,
-    template_key: payload.templateKey,
-    business_domain: payload.businessDomain,
-    notification_type: payload.notificationType,
+    organization_id: data.organizationId || null,
+    user_id: data.userId || null,
+    recipient_email: data.recipientEmail,
     provider: "resend",
     provider_message_id: providerMessageId,
+    template_key: data.templateKey,
+    business_domain: data.businessDomain,
+    notification_type: data.notificationType,
     status: "sent",
     attempts: 1,
-    request_payload: payload.requestPayload,
-    response_payload: payload.responsePayload,
+    request_payload: data.requestPayload,
+    response_payload: data.responsePayload,
     sent_at: new Date().toISOString(),
   });
 }
@@ -929,119 +737,67 @@ async function trackDelivery(
 async function loadRuntimeConfig(
   serviceClient: ReturnType<typeof createClient>,
 ): Promise<RuntimeConfig> {
-  const { data } = await serviceClient.rpc("get_email_runtime_config");
-  const config =
-    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
-  const rpcResend = readSecretString(config.resend_api_key);
-  const rpcBaseUrl = readSecretString(config.app_base_url);
-  const rpcFromName = readSecretString(config.email_from_name);
-  const rpcFromEmail = readSecretString(config.email_from_address);
+  let resendApiKey = ENV_RESEND_API_KEY;
+  let appBaseUrl = ENV_APP_BASE_URL;
+  let fromName = ENV_DEFAULT_FROM_NAME;
+  let fromEmail = ENV_DEFAULT_FROM_EMAIL;
 
-  return {
-    resendApiKey: rpcResend || ENV_RESEND_API_KEY,
-    appBaseUrl: (rpcBaseUrl || ENV_APP_BASE_URL).replace(/\/+$/, ""),
-    fromName: rpcFromName || ENV_DEFAULT_FROM_NAME,
-    fromEmail: rpcFromEmail || ENV_DEFAULT_FROM_EMAIL,
-  };
-}
-
-async function sendWithResendWithRetry(params: {
-  apiKey: string;
-  fromName: string;
-  fromEmail: string;
-  to: string[];
-  subject: string;
-  html: string;
-  text: string;
-  attachments?: Array<{ filename: string; content: string }>;
-  tags: Array<{ name: string; value: string }>;
-}): Promise<{ ok: boolean; payload: Record<string, unknown> }> {
-  let lastPayload: Record<string, unknown> = {};
-
-  for (let attempt = 1; attempt <= RESEND_MAX_RETRIES; attempt++) {
-    try {
-      const now = Date.now();
-      const waitMs = resendLastRequestAt + RESEND_MIN_INTERVAL_MS - now;
-      if (waitMs > 0) await sleep(waitMs);
-
-      const response = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${params.apiKey}`,
-        },
-        body: JSON.stringify({
-          from: `${params.fromName} <${params.fromEmail}>`,
-          to: params.to,
-          subject: params.subject,
-          html: params.html,
-          text: params.text,
-          attachments: params.attachments,
-          tags: params.tags,
-        }),
-      });
-
-      resendLastRequestAt = Date.now();
-      const payload = (await response.json().catch(() => ({}))) as Record<
-        string,
-        unknown
-      >;
-      if (response.ok) {
-        return { ok: true, payload };
-      }
-
-      lastPayload = payload;
-      const shouldRetry = response.status === 429 || response.status >= 500;
-      if (!shouldRetry || attempt === RESEND_MAX_RETRIES) {
-        return { ok: false, payload };
-      }
-
-      const retryAfterMs = parseRetryAfterMs(
-        response.headers.get("retry-after"),
-      );
-      await sleep(retryAfterMs ?? RESEND_RETRY_BASE_MS * attempt);
-    } catch (error) {
-      lastPayload = {
-        message:
-          error instanceof Error ? error.message : "Resend request failed",
-      };
-      if (attempt === RESEND_MAX_RETRIES) {
-        return { ok: false, payload: lastPayload };
-      }
-      await sleep(RESEND_RETRY_BASE_MS * attempt);
+  try {
+    const { data: config } = await serviceClient.rpc(
+      "get_email_runtime_config",
+    );
+    if (config) {
+      if (config.resend_api_key) resendApiKey = config.resend_api_key;
+      if (config.app_base_url) appBaseUrl = config.app_base_url;
+      if (config.from_name) fromName = config.from_name;
+      if (config.from_email) fromEmail = config.from_email;
     }
+  } catch (_err) {
+    // fallback to env vars
   }
 
-  return { ok: false, payload: lastPayload };
+  return { resendApiKey, appBaseUrl, fromName, fromEmail };
 }
 
-function readSecretString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
+function resolveAbsoluteUrl(targetUrl: string, baseUrl: string): string {
+  if (/^https?:\/\//i.test(targetUrl)) return targetUrl;
+  const cleanPath = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
+  return `${baseUrl}${cleanPath}`;
 }
 
-function parseRetryAfterMs(value: string | null): number | null {
-  if (!value) return null;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return Math.ceil(seconds * 1000);
+function normalizeDomain(domain?: string): string {
+  const d = (domain || "system").toLowerCase().trim();
+  const valid = [
+    "user_management",
+    "hr",
+    "learning",
+    "finance",
+    "operations",
+    "management",
+    "sales",
+    "system",
+  ];
+  return valid.includes(d) ? d : "system";
+}
+
+function asText(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim().length > 0) {
+    return value.trim();
   }
-  return null;
-}
-
-function sleep(ms: number): Promise<void> {
-  const clamped = Number.isFinite(ms) && ms > 0 ? ms : 0;
-  return new Promise((resolve) => setTimeout(resolve, clamped));
+  return fallback;
 }
 
 function jsonResponse(
-  payload: Record<string, unknown>,
-  status = 200,
-  corsHeaders: HeadersInit = {},
+  body: Record<string, unknown>,
+  status: number,
+  headers: Record<string, string>,
 ): Response {
-  return new Response(JSON.stringify(payload), {
+  return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...headers, "Content-Type": "application/json" },
   });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

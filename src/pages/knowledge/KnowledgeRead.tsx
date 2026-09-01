@@ -1086,7 +1086,7 @@ export default function KnowledgeRead() {
 
             {/* Header - Back Navigation & Actions */}
             <div className={cn(
-                "bg-white/80 border-b sticky top-0 z-40 kb-focus-transition kb-action-blur print:hidden",
+                "bg-card/90 backdrop-blur-xl border-b border-border/80 text-card-foreground sticky top-0 z-40 kb-focus-transition kb-action-blur print:hidden",
                 isFocusMode && "-translate-y-full opacity-0"
             )}>
                 <div className="max-w-[1400px] mx-auto px-3 py-2.5 sm:px-4 sm:py-3">
@@ -1096,18 +1096,18 @@ export default function KnowledgeRead() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => navigate(-1)}
-                                className="hover:bg-gray-100 rounded-full h-9 w-9 p-0 md:h-9 md:w-auto md:px-3"
+                                className="hover:bg-muted rounded-full h-9 w-9 p-0 md:h-9 md:w-auto md:px-3 text-foreground"
                             >
                                 <ArrowLeft className="h-4 w-4 md:me-2" />
                                 <span className="hidden md:inline">{t('viewer.back')}</span>
                             </Button>
                             <Separator orientation="vertical" className="h-6 mx-1" />
                             <Breadcrumbs items={[
-                                { label: t('viewer.library', 'Library'), href: '/knowledge/search' },
-                                { label: article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || t('viewer.no_dept', 'General')), href: `/knowledge/search?department=${article.department_id}` },
+                                { label: t('viewer.library', 'Library'), href: '/knowledge' },
+                                { label: article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || t('viewer.no_dept', 'General')), href: `/knowledge?department=${article.department_id}` },
                                 { label: article.title }
                             ]} className="hidden md:flex" />
-                            <div className="md:hidden text-xs font-semibold text-slate-500 truncate max-w-[150px]">
+                            <div className="md:hidden text-xs font-semibold text-muted-foreground truncate max-w-[150px]">
                                 {article.title}
                             </div>
                         </div>
@@ -1120,7 +1120,7 @@ export default function KnowledgeRead() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => navigate(`/knowledge/${id}/edit`)}
-                                            className="h-9 px-2 sm:px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
+                                            className="h-9 px-2 sm:px-3 border-border hover:border-altus-copper hover:text-altus-copper rounded-lg group transition-all"
                                         >
                                             <Pencil className="h-3.5 w-3.5 sm:me-2 group-hover:scale-110 transition-transform" />
                                             <span className="hidden sm:inline">{t('viewer.edit')}</span>
@@ -1171,7 +1171,7 @@ export default function KnowledgeRead() {
                                         size="sm"
                                         className={cn(
                                             "h-9 px-3 gap-2 rounded-lg transition-all",
-                                            translatedData ? "bg-indigo-50 border-indigo-200 text-indigo-600" : "border-slate-200 hover:border-indigo-300 hover:text-indigo-600"
+                                            translatedData ? "bg-altus-copper/10 border-altus-copper/30 text-altus-copper" : "border-border hover:border-altus-copper hover:text-altus-copper"
                                         )}
                                         disabled={isTranslating}
                                     >
@@ -1186,12 +1186,12 @@ export default function KnowledgeRead() {
                                 <DropdownMenuContent align="end" className="w-48">
                                     {!translatedData ? (
                                         <>
-                                            <div className="px-2 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                            <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                                 {t('viewer.translate_ai', 'Translate to')}
                                             </div>
                                             {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
                                                 <DropdownMenuItem key={lang.code} onClick={() => handleAITranslate(lang.code)} className="gap-2">
-                                                    <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
+                                                    <Sparkles className="h-3.5 w-3.5 text-altus-copper" />
                                                     {lang.label}
                                                 </DropdownMenuItem>
                                             ))}
@@ -1239,17 +1239,17 @@ export default function KnowledgeRead() {
                                     onClick={() => toggleBookmark.mutate(id!)}
                                     className={cn(
                                         "h-9 w-9 p-0 rounded-full transition-colors",
-                                        isBookmarked ? "text-indigo-600 bg-indigo-50" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                        isBookmarked ? "text-hotel-gold bg-hotel-gold/10" : "text-muted-foreground hover:text-hotel-gold hover:bg-muted"
                                     )}
                                     aria-label={isBookmarked ? t('accessibility.remove_bookmark', 'Remove bookmark') : t('accessibility.add_bookmark', 'Add bookmark')}
                                 >
-                                    {isBookmarked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
+                                    {isBookmarked ? <BookmarkCheck className="h-5 w-5 fill-hotel-gold/30" /> : <Bookmark className="h-5 w-5" />}
                                 </Button>
                                 <Button
                                     variant="ghost"
                                     size="sm"
                                     onClick={handleShare}
-                                    className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                    className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
                                     aria-label={t('accessibility.share', 'Share article')}
                                 >
                                     <Share2 className="h-5 w-5" />
@@ -1258,7 +1258,7 @@ export default function KnowledgeRead() {
                                     variant="ghost"
                                     size="sm"
                                     onClick={handlePrint}
-                                    className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                    className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
                                     aria-label={t('accessibility.print', 'Print article')}
                                 >
                                     <Printer className="h-5 w-5" />
@@ -1463,12 +1463,12 @@ export default function KnowledgeRead() {
                             <div className="lg:hidden no-print">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" className="w-full flex items-center justify-between border-slate-200 bg-white">
+                                        <Button variant="outline" className="w-full flex items-center justify-between border-border bg-card">
                                             <div className="flex items-center gap-2">
-                                                <List className="h-4 w-4 text-indigo-500" />
-                                                <span className="text-sm font-semibold">{t('viewer.on_this_page', 'Jump to Section')}</span>
+                                                <List className="h-4 w-4 text-altus-copper" />
+                                                <span className="text-sm font-semibold text-foreground">{t('viewer.on_this_page', 'Jump to Section')}</span>
                                             </div>
-                                            <ChevronDown className="h-4 w-4 text-slate-400" />
+                                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent className="w-[calc(100vw-1.5rem)] max-h-64 overflow-y-auto">
@@ -1476,7 +1476,7 @@ export default function KnowledgeRead() {
                                             <DropdownMenuItem key={item.id} onClick={() => scrollToSection(item.id)}>
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full me-2",
-                                                    activeSection === item.id ? "bg-indigo-600" : "bg-slate-200"
+                                                    activeSection === item.id ? "bg-altus-copper" : "bg-muted"
                                                 )} />
                                                 {item.text}
                                             </DropdownMenuItem>
@@ -1486,23 +1486,23 @@ export default function KnowledgeRead() {
                             </div>
                         )}
 
-                        {/* TL;DR Quick Summary - Premium Redesign */}
+                        {/* TL;DR Quick Summary */}
                         {article.summary && (
-                            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent">
-                                <div className="bg-white rounded-[15px] p-6 shadow-sm overflow-hidden relative">
-                                    <div className="absolute -top-4 -end-4 h-24 w-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700" />
-                                    <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                        <Zap className="h-3.5 w-3.5 fill-indigo-600" />
+                            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-altus-copper/30 via-hotel-gold/20 to-transparent">
+                                <div className="bg-card rounded-[15px] p-6 shadow-xs overflow-hidden relative border border-border">
+                                    <div className="absolute -top-4 -end-4 h-24 w-24 bg-hotel-gold/10 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
+                                    <h3 className="text-[11px] font-bold text-altus-copper uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                        <Zap className="h-3.5 w-3.5 fill-altus-copper" />
                                         {t('viewer.tldr', 'Quick Summary')}
                                     </h3>
-                                    <p className="relative z-10 text-slate-700 text-lg font-medium leading-relaxed italic">
+                                    <div className="relative z-10 text-foreground text-base sm:text-lg font-medium leading-relaxed italic">
                                         {showBilingual && translatedData ? (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="border-r border-slate-100 pe-6">"{article.summary}"</div>
+                                                <div className="border-e border-border pe-6">"{article.summary}"</div>
                                                 <div
                                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                                     className={cn(
-                                                        "text-indigo-600",
+                                                        "text-altus-copper",
                                                         isRtlTarget ? "text-right font-arabic" : "text-left"
                                                     )}
                                                 >
@@ -1512,29 +1512,29 @@ export default function KnowledgeRead() {
                                         ) : (
                                             translatedData && translatedData.summary ? `"${translatedData.summary}"` : `"${article.summary}"`
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
                         {/* File Attachment Quick Preview */}
                         {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) && (
-                            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="bg-muted/40 border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                                    <div className="h-10 w-10 rounded-lg bg-altus-copper/10 flex items-center justify-center text-altus-copper">
                                         <FileText className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-slate-900">{t('viewer.attached_file', 'Attached Document')}</p>
-                                        <p className="text-xs text-slate-500">{article.file_url.split('/').pop()}</p>
+                                        <p className="text-sm font-bold text-foreground">{t('viewer.attached_file', 'Attached Document')}</p>
+                                        <p className="text-xs text-muted-foreground">{article.file_url.split('/').pop()}</p>
                                     </div>
                                 </div>
                                 <div className="flex w-full sm:w-auto gap-2">
-                                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
+                                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-card text-foreground" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
                                         <Eye className="h-4 w-4 me-2" />
                                         {t('viewer.view')}
                                     </Button>
-                                    <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
+                                    <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-card border-border text-foreground" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
                                         <Download className="h-4 w-4 me-2" />
                                         {t('viewer.download')}
                                     </Button>
@@ -1797,55 +1797,55 @@ export default function KnowledgeRead() {
                         )}>
                             <CardHeader className="pb-4">
                                 <div className="flex items-center justify-between">
-                                    <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5 text-indigo-500" />
+                                    <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5 text-altus-copper" />
                                         {t('viewer.discussion')}
-                                        <span className="text-sm font-normal text-slate-400 ms-1">({comments?.length || 0})</span>
+                                        <span className="text-sm font-normal text-muted-foreground ms-1">({comments?.length || 0})</span>
                                     </CardTitle>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowComments(!showComments)} aria-label={showComments ? t('accessibility.collapse_comments', 'Collapse comments') : t('accessibility.expand_comments', 'Expand comments')}>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground" onClick={() => setShowComments(!showComments)} aria-label={showComments ? t('accessibility.collapse_comments', 'Collapse comments') : t('accessibility.expand_comments', 'Expand comments')}>
                                         {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     </Button>
                                 </div>
                             </CardHeader>
                             {showComments && (
                                 <CardContent className="space-y-6">
-                                    <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                                    <div className="space-y-3 bg-card p-4 rounded-xl border border-border shadow-2xs">
                                         <Textarea
                                             value={newComment}
                                             onChange={(e) => setNewComment(e.target.value)}
                                             placeholder={t('viewer.leave_comment')}
-                                            className="min-h-[80px] border-none focus-visible:ring-0 p-0 text-sm resize-none"
+                                            className="min-h-[80px] border-none focus-visible:ring-0 p-0 text-sm resize-none bg-transparent"
                                         />
-                                        <div className="flex justify-end pt-2 border-t border-slate-50">
-                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                                        <div className="flex justify-end pt-2 border-t border-border">
+                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-hotel-navy dark:bg-hotel-gold text-white dark:text-hotel-navy font-semibold hover:opacity-90">
                                                 <Send className="h-3.5 w-3.5 me-2" /> {t('viewer.post')}
                                             </Button>
                                         </div>
                                     </div>
 
                                     {comments?.length === 0 ? (
-                                        <div className="text-center py-8 text-slate-400">
-                                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-10" />
+                                        <div className="text-center py-8 text-muted-foreground">
+                                            <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-20" />
                                             <p className="text-sm italic">{t('viewer.no_comments')}</p>
                                         </div>
                                     ) : (
                                         <div className="space-y-6">
                                             {comments?.map((comment) => (
                                                 <div key={comment.id} className="flex gap-4 group">
-                                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm shrink-0">
+                                                    <Avatar className="h-10 w-10 border border-border shadow-xs shrink-0">
                                                         <AvatarImage src={comment.author?.avatar_url} />
-                                                        <AvatarFallback className="bg-slate-200 text-slate-500 font-bold">
+                                                        <AvatarFallback className="bg-hotel-navy text-hotel-gold font-bold">
                                                             {comment.author?.full_name?.charAt(0) || '?'}
                                                         </AvatarFallback>
                                                     </Avatar>
                                                     <div className="flex-1 space-y-1.5 min-w-0">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-sm font-bold text-slate-900">{comment.author?.full_name || t('viewer.unknown_author')}</span>
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                            <span className="text-sm font-bold text-foreground">{comment.author?.full_name || t('viewer.unknown_author')}</span>
+                                                            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-tight">
                                                                 {new Date(comment.created_at).toLocaleDateString()}
                                                             </span>
                                                         </div>
-                                                        <div className="text-sm text-slate-700 leading-relaxed bg-white/80 p-3.5 rounded-2xl rounded-tl-none border border-slate-100/50 shadow-sm">
+                                                        <div className="text-sm text-foreground/90 leading-relaxed bg-muted/40 p-3.5 rounded-2xl rounded-tl-none border border-border shadow-2xs">
                                                             {comment.content}
                                                         </div>
                                                     </div>
@@ -1858,39 +1858,13 @@ export default function KnowledgeRead() {
                         </Card>
                     </div>
 
-                    {/* Premium Sidebar */}
+                    {/* Premium Editorial Sidebar */}
                     {!isFocusMode && (
                         <aside className="lg:col-span-3 space-y-8 sticky top-20 h-fit print:hidden">
-                            {/* Ask AI about this article.
-                                TODO(kb-rag): wire to the Knowledge RAG backend once the
-                                retrieval-augmented answering slice lands. For now this is a
-                                stub that surfaces a "coming soon" notice. */}
-                            <div className="p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600">
-                                <div className="bg-white/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
-                                    <div className="flex items-center gap-2 text-indigo-600">
-                                        <Sparkles className="h-5 w-5" />
-                                        <span className="text-[11px] font-black uppercase tracking-wider">
-                                            {t('viewer.ask_ai_title', 'Ask AI')}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 leading-relaxed">
-                                        {t('viewer.ask_ai_desc', 'Get instant answers grounded in this article.')}
-                                    </p>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl"
-                                        onClick={() => toast.info(t('viewer.ask_ai_coming_soon', 'Ask AI about this article is coming soon.'))}
-                                    >
-                                        <Sparkles className="h-4 w-4 me-2" />
-                                        {t('viewer.ask_ai_button', 'Ask AI about this')}
-                                    </Button>
-                                </div>
-                            </div>
-
                             {/* Table of Contents - Primary Sidebar Widget */}
                             {tocItems.length > 0 && (
-                                <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('viewer.on_this_page')}</h4>
+                                <div className="space-y-4 bg-card/85 backdrop-blur-xl border border-border rounded-2xl p-4 shadow-xs">
+                                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">{t('viewer.on_this_page')}</h4>
                                     <nav className="space-y-0.5">
                                         {tocItems.map(item => (
                                             <button
@@ -1898,12 +1872,12 @@ export default function KnowledgeRead() {
                                                 onClick={() => scrollToSection(item.id)}
                                                 className={cn(
                                                     "kb-sidebar-item w-full text-start text-sm py-2 px-3 rounded-xl transition-all flex items-center gap-3",
-                                                    activeSection === item.id ? "kb-toc-active" : "text-slate-500 hover:text-indigo-600"
+                                                    activeSection === item.id ? "bg-altus-copper/10 text-altus-copper font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                 )}
                                             >
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full shrink-0",
-                                                    activeSection === item.id ? "bg-indigo-600" : "bg-slate-200"
+                                                    activeSection === item.id ? "bg-altus-copper" : "bg-muted"
                                                 )} />
                                                 <span className="truncate">{item.text}</span>
                                             </button>
@@ -1914,15 +1888,15 @@ export default function KnowledgeRead() {
 
                             {/* Tags */}
                             {article.tags && article.tags.length > 0 && (
-                                <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">{t('viewer.tags')}</h4>
+                                <div className="space-y-4 bg-card/85 backdrop-blur-xl border border-border rounded-2xl p-4 shadow-xs">
+                                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] px-2">{t('viewer.tags')}</h4>
                                     <div className="flex flex-wrap gap-2 px-2">
                                         {article.tags.map(tag => (
                                             <Badge
                                                 key={tag.id}
                                                 variant="outline"
-                                                className="bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600 transition-colors cursor-default"
-                                                style={{ borderLeft: `3px solid ${tag.color}` }}
+                                                className="bg-card border-border text-foreground hover:border-altus-copper hover:text-altus-copper transition-colors cursor-default"
+                                                style={{ borderInlineStart: `3px solid ${tag.color}` }}
                                             >
                                                 {tag.name}
                                             </Badge>
@@ -1931,7 +1905,7 @@ export default function KnowledgeRead() {
                                 </div>
                             )}
 
-                            {/* Linked Learning - Featured Card */}
+                            {/* Linked Learning */}
                             {(article.linked_training_id || article.linked_quiz_id) ? (
                                 <div className="p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600">
                                     <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm">

@@ -503,10 +503,10 @@ Deno.serve(async (req: Request) => {
               },
               body: JSON.stringify({
                 to: targetEmail,
-                templateKey: "system_generic_alert",
+                templateKey: "auth_password_reset",
                 title: "Password reset",
                 message:
-                  "Use the link below to reset your Altus Connect password.",
+                  "Use the link below to reset your password and secure your account.",
                 actionUrl: resetLink,
                 actionLabel: "Reset Password",
                 businessDomain: "user_management",
@@ -633,7 +633,7 @@ Deno.serve(async (req: Request) => {
                   title: "Portal Access Credentials",
                   message:
                     "Your access credentials have been reissued. Use the temporary password below to sign in and you will be prompted to change it.",
-                  actionLabel: "Sign In to Altus Connect",
+                  actionLabel: "Sign In to Portal",
                   actionUrl: "/",
                   businessDomain: "user_management",
                   notificationType: "system",
@@ -689,13 +689,13 @@ Deno.serve(async (req: Request) => {
             : actionLink || recoveryRedirectTo;
 
           const subject = passwordInitialized
-            ? "Reset your Altus Connect password"
-            : "Complete your Altus Connect account setup";
+            ? "Reset your password"
+            : "Complete your account setup";
           const title = passwordInitialized
             ? "Password reset"
             : "Complete your account setup";
           const message = passwordInitialized
-            ? "Use the link below to reset your Altus Connect password."
+            ? "Use the link below to reset your password and secure your account."
             : "Use the link below to finish your account setup and set your password.";
           const actionLabel = passwordInitialized
             ? "Reset Password"
@@ -713,6 +713,7 @@ Deno.serve(async (req: Request) => {
                 },
                 body: JSON.stringify({
                   to: targetEmail,
+                  templateKey: "auth_password_reset",
                   subject,
                   title,
                   message,

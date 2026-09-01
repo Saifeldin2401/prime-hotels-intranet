@@ -784,6 +784,31 @@ async function processNotifications(
             responsePayload: {},
           });
         } else {
+          let targetOrgId =
+            item.organization_id ||
+            (dataPayload?.organizationId as string) ||
+            (dataPayload?.organization_id as string) ||
+            null;
+
+          if (!targetOrgId && item.user_id) {
+            const { data: mem } = await supabase
+              .from("organization_memberships")
+              .select("organization_id")
+              .eq("user_id", item.user_id)
+              .eq("is_active", true)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (mem?.organization_id) {
+              targetOrgId = mem.organization_id;
+            }
+          }
+
+          const { data: tenantBranding } = await supabase.rpc(
+            "get_tenant_email_context",
+            { p_org_id: targetOrgId },
+          );
+
           const template = await resolveTemplate(
             supabase,
             item,
@@ -797,6 +822,7 @@ async function processNotifications(
             recipientEmail,
             runtimeConfig.appBaseUrl,
             (profile?.language as string | null) || "en",
+            tenantBranding,
           );
 
           const subject = renderTemplate(
@@ -820,8 +846,12 @@ async function processNotifications(
             subject,
             html,
             text,
-            fromName: template.from_name || runtimeConfig.fromName,
-            fromEmail: template.from_email || runtimeConfig.fromEmail,
+            fromName:
+              template.from_name ||
+              tenantBranding?.sender_name ||
+              runtimeConfig.fromName,
+            fromEmail: runtimeConfig.fromEmail,
+            replyTo: tenantBranding?.reply_to || undefined,
             apiKey: runtimeConfig.resendApiKey,
             tags: [
               {
@@ -835,6 +865,7 @@ async function processNotifications(
                 name: "type",
                 value: normalizeNotificationType(item.notification_type),
               },
+              { name: "tenant_id", value: targetOrgId || "global" },
               { name: "batch_id", value: item.batch_id || "none" },
             ],
           });
@@ -842,6 +873,7 @@ async function processNotifications(
           if (!resendResult.ok) {
             emailFailed++;
             await logDeliveryEvent(supabase, {
+              organizationId: targetOrgId,
               queueId: item.id,
               batchId: item.batch_id,
               userId: item.user_id,
@@ -868,6 +900,7 @@ async function processNotifications(
           emailSent++;
           emailSentForItem = 1;
           await logDeliveryEvent(supabase, {
+            organizationId: targetOrgId,
             queueId: item.id,
             batchId: item.batch_id,
             userId: item.user_id,
@@ -1105,6 +1138,7 @@ async function sendWithResend(params: {
   text?: string;
   fromName: string;
   fromEmail: string;
+  replyTo?: string;
   apiKey: string;
   tags: Array<{ name: string; value: string }>;
 }): Promise<{
@@ -1127,20 +1161,25 @@ async function sendWithResend(params: {
         await sleep(waitMs);
       }
 
+      const emailPayload: Record<string, unknown> = {
+        from: `${params.fromName} <${params.fromEmail}>`,
+        to: [params.to],
+        subject: params.subject,
+        html: params.html,
+        text: params.text || undefined,
+        tags: params.tags,
+      };
+      if (params.replyTo) {
+        emailPayload.reply_to = params.replyTo;
+      }
+
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${params.apiKey}`,
         },
-        body: JSON.stringify({
-          from: `${params.fromName} <${params.fromEmail}>`,
-          to: [params.to],
-          subject: params.subject,
-          html: params.html,
-          text: params.text || undefined,
-          tags: params.tags,
-        }),
+        body: JSON.stringify(emailPayload),
       });
 
       resendLastRequestAt = Date.now();
@@ -1187,6 +1226,7 @@ async function sendWithResend(params: {
 async function logDeliveryEvent(
   supabase: ReturnType<typeof createClient>,
   payload: {
+    organizationId?: string | null;
     queueId?: string;
     batchId?: string;
     userId: string;
@@ -1207,6 +1247,7 @@ async function logDeliveryEvent(
       : null;
 
   await supabase.from("notification_delivery_events").insert({
+    organization_id: payload.organizationId ?? null,
     queue_id: payload.queueId ?? null,
     batch_id: payload.batchId ?? null,
     user_id: payload.userId,
@@ -1357,6 +1398,7 @@ function buildTemplateContext(
   recipientEmail: string,
   appBaseUrl: string,
   language = "en",
+  tenant?: any,
 ): Record<string, string> {
   const isAr = language === "ar";
   const domain = normalizeDomain(
@@ -1366,40 +1408,55 @@ function buildTemplateContext(
   const branding = resolveBranding(domain);
   const link = resolveRelativeLink(payload);
   const actionUrl = resolveAbsoluteUrlWithBase(link, appBaseUrl);
+  const orgName = isAr
+    ? tenant?.org_name_ar || tenant?.org_name || "Altus Connect"
+    : tenant?.org_name || "Altus Connect";
+  const logoUrl = tenant?.logo_url || `${appBaseUrl}/altus-logo-official.png`;
+  const primaryColor = tenant?.brand_colors?.primary || branding.color;
+  const secondaryColor = tenant?.brand_colors?.secondary || "#1a365d";
+  const accentColor = tenant?.brand_colors?.accent || "#D4AF37";
+  const footerText = isAr
+    ? tenant?.footer_text_ar || "جميع الحقوق محفوظة."
+    : tenant?.footer_text || "All rights reserved.";
 
   const baseContext: Record<string, string> = {
     title:
       isAr && payload.title_ar
         ? asText(payload.title_ar, "")
-        : asText(payload.title, "Altus Connect Notification"),
+        : asText(payload.title, `${orgName} Notification`),
     message:
       isAr && payload.message_ar
         ? asText(payload.message_ar, "")
         : asText(
             payload.message,
             isAr
-              ? "لديك تحديث جديد في Altus Connect."
-              : "You have a new update in Altus Connect.",
+              ? `لديك تحديث جديد في ${orgName}.`
+              : `You have a new update in ${orgName}.`,
           ),
     action_url: actionUrl,
     action_label:
       isAr && payload.actionLabel_ar
         ? asText(payload.actionLabel_ar, "")
-        : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open Altus Connect"),
+        : asText(payload.actionLabel, isAr ? "فتح المنصة" : `Open ${orgName}`),
     app_url: appBaseUrl,
-    logo_url: appBaseUrl + "/altus-logo-official.png",
+    org_name: orgName,
+    logo_url: logoUrl,
     recipient_name: recipientName || recipientEmail,
     lang: language,
     dir: isAr ? "rtl" : "ltr",
     align: isAr ? "right" : "left",
     align_opposite: isAr ? "left" : "right",
     year: new Date().getFullYear().toString(),
-    brand_color: branding.color,
+    brand_color: primaryColor,
+    brand_primary: primaryColor,
+    brand_secondary: secondaryColor,
+    brand_accent: accentColor,
+    header_gradient: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)`,
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
-    footer_text: isAr
-      ? "إشعار تلقائي من Altus Connect. تم الإرسال بناءً على إجراء داخل القسم أو مهمة/اعتماد مرتبط بك."
-      : "Automated notification from Altus Connect. Sent based on an action in your department or an assignment.",
+    footer_text: footerText,
+    support_email: tenant?.support_email || "support@altus-advisory.com",
+    website_url: tenant?.website_url || appBaseUrl,
     has_data_box:
       payload.data_box ||
       payload.data_box_ar ||

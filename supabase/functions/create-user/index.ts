@@ -457,6 +457,24 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!isOp && targetOrgId) {
+      // 1. Verify organization is active and operational
+      const { data: isOperational } = await adminClient.rpc("org_is_operational", {
+        p_org_id: targetOrgId,
+      });
+
+      if (isOperational === false) {
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden: Cannot invite or provision users for a suspended or inactive organization.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // 2. Check entitlement seat headroom
       const { data: hasHeadroom, error: entitlementError } = await adminClient.rpc(
         "check_entitlement",
         {
@@ -667,7 +685,36 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 6. Send Welcome Email (temp password mode only).
+    // 6. Assign Organization Membership (multi-tenant authoritative context)
+    if (targetOrgId) {
+      let mappedMembershipRole = "learner";
+      if (normalizedRole === "corporate_admin") mappedMembershipRole = "organization_admin";
+      else if (normalizedRole === "regional_admin" || normalizedRole === "property_manager") mappedMembershipRole = "hotel_admin";
+      else if (normalizedRole === "regional_hr" || normalizedRole === "property_hr") mappedMembershipRole = "training_manager";
+      else if (normalizedRole === "department_head") mappedMembershipRole = "author";
+      else if (normalizedRole === "manager" || normalizedRole === "staff") mappedMembershipRole = "learner";
+
+      const { error: membershipError } = await adminClient
+        .from("organization_memberships")
+        .upsert(
+          {
+            user_id: userId,
+            organization_id: targetOrgId,
+            role: mappedMembershipRole,
+            hotel_id: propertyIds[0] || null,
+            department_id: departmentIds[0] || null,
+            is_active: true,
+            is_primary: true,
+          },
+          { onConflict: "user_id,organization_id" },
+        );
+
+      if (membershipError) {
+        console.error("Organization membership assignment failed:", membershipError);
+      }
+    }
+
+    // 7. Send Welcome Email (temp password mode only).
     if (provisioningMethod === "temporary_password") {
       try {
         console.log(`Sending welcome email to ${normalizedEmail}...`);
@@ -687,7 +734,9 @@ Deno.serve(async (req: Request) => {
               templateKey: "user_management_welcome",
               title: "Portal Access Credentials",
               message: welcomeMsg,
-              actionLabel: "Sign In to Altus Connect",
+              actionLabel: "Sign In to Portal",
+              organizationId: targetOrgId,
+              userId: userId,
               variables: {
                 recipient_name: normalizedFullName,
                 credential_email: normalizedEmail,
@@ -731,8 +780,6 @@ Deno.serve(async (req: Request) => {
       }
 
       try {
-        const inviteMessage =
-          "You have been invited to Altus Connect. Open the link below to set your password and complete your profile.";
         const emailResponse = await fetch(
           supabaseUrl + "/functions/v1/send-email",
           {
@@ -743,13 +790,15 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
               to: normalizedEmail,
-              subject: "You are invited to Altus Connect",
+              templateKey: "user_welcome_invitation",
               title: "Complete your account setup",
-              message: inviteMessage,
+              message: "You have been invited to join the team. Open the link below to set your password and complete your profile.",
               actionUrl: inviteUrl,
               actionLabel: "Complete Account Setup",
               businessDomain: "user_management",
               notificationType: "system",
+              organizationId: targetOrgId,
+              userId: userId,
               variables: {
                 recipient_name: normalizedFullName || normalizedEmail,
                 invite_url: inviteUrl,
@@ -785,6 +834,7 @@ Deno.serve(async (req: Request) => {
       const invitationMetadata = {
         full_name: normalizedFullName || null,
         created_via: "create-user",
+        organization_id: targetOrgId,
       };
 
       const { error: invitationError } = await adminClient

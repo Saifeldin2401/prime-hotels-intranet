@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
       .select(
         `
               id,
+              organization_id,
               content_id,
               due_date,
               notify_on_due,
@@ -111,6 +112,7 @@ Deno.serve(async (req) => {
         supabase,
         assignment.target_type,
         assignment.target_id,
+        assignment.organization_id,
       );
       if (targets.length === 0) continue;
 
@@ -215,6 +217,7 @@ Deno.serve(async (req) => {
               to: target.email,
               templateKey: "learning_deadline_reminder",
               title: emailTitle,
+              organizationId: assignment.organization_id,
               userId: target.id,
               variables: {
                 recipient_name: target.full_name || "Team Member",
@@ -406,6 +409,7 @@ async function resolveAssignmentTargets(
   supabase: ReturnType<typeof createClient>,
   targetType: string,
   targetId: string | null,
+  orgId?: string | null,
 ): Promise<TargetUser[]> {
   const dedupe = (rows: TargetUser[]): TargetUser[] => {
     const map = new Map<string, TargetUser>();
@@ -418,6 +422,18 @@ async function resolveAssignmentTargets(
 
   switch (targetType) {
     case "everyone": {
+      if (orgId) {
+        const { data } = await supabase
+          .from("organization_memberships")
+          .select("profiles(id, email, full_name)")
+          .eq("organization_id", orgId)
+          .eq("is_active", true);
+        return dedupe(
+          (data || [])
+            .map((u: any) => u.profiles)
+            .filter(Boolean) as TargetUser[],
+        );
+      }
       const { data } = await supabase
         .from("profiles")
         .select("id, email, full_name")

@@ -37,8 +37,12 @@ import {
   Mail,
   Palette,
   Crown,
-  Building
+  Building,
+  Globe,
+  Image as ImageIcon
 } from 'lucide-react'
+import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
+import { AITenantEmailBrandCopilotModal, AIEmailBrandSuggestions } from '@/components/admin/AITenantEmailBrandCopilotModal'
 
 const LIFECYCLE = ['prospect', 'trial', 'onboarding', 'active', 'renewal', 'suspended', 'archived']
 
@@ -69,9 +73,19 @@ export default function OrganizationProfile() {
   const [editNameAr, setEditNameAr] = useState('')
   const [editSlug, setEditSlug] = useState('')
   const [editIndustry, setEditIndustry] = useState('')
+  const [editLogoUrl, setEditLogoUrl] = useState('')
+  const [editFaviconUrl, setEditFaviconUrl] = useState('')
   const [primaryColor, setPrimaryColor] = useState('#0f172a')
   const [secondaryColor, setSecondaryColor] = useState('#2563eb')
   const [accentColor, setAccentColor] = useState('#d97706')
+
+  // Email branding states
+  const [editSenderName, setEditSenderName] = useState('')
+  const [editReplyTo, setEditReplyTo] = useState('')
+  const [editSupportEmail, setEditSupportEmail] = useState('')
+  const [editWebsiteUrl, setEditWebsiteUrl] = useState('')
+  const [editFooterText, setEditFooterText] = useState('')
+  const [editFooterTextAr, setEditFooterTextAr] = useState('')
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['org-profile', id],
@@ -125,7 +139,15 @@ export default function OrganizationProfile() {
       nameAr?: string
       slug?: string
       industry?: string
+      logoUrl?: string
+      faviconUrl?: string
       brandColors?: { primary?: string; secondary?: string; accent?: string }
+      emailSenderName?: string
+      emailReplyTo?: string
+      supportEmail?: string
+      websiteUrl?: string
+      emailFooterText?: string
+      emailFooterTextAr?: string
     }) => platformService.updateOrganizationDetails(id, { ...params, actorId: user?.id }),
     onSuccess: () => {
       toast({ title: 'Organization details updated' })
@@ -163,9 +185,17 @@ export default function OrganizationProfile() {
     setEditNameAr(org.name_ar || '')
     setEditSlug(org.slug || '')
     setEditIndustry(org.industry || 'hospitality')
+    setEditLogoUrl(org.logo_url || '')
+    setEditFaviconUrl(org.favicon_url || '')
     setPrimaryColor(org.brand_colors?.primary || '#0f172a')
     setSecondaryColor(org.brand_colors?.secondary || '#2563eb')
     setAccentColor(org.brand_colors?.accent || '#d97706')
+    setEditSenderName(org.email_sender_name || '')
+    setEditReplyTo(org.email_reply_to || '')
+    setEditSupportEmail(org.support_email || '')
+    setEditWebsiteUrl(org.website_url || '')
+    setEditFooterText(org.email_footer_text || '')
+    setEditFooterTextAr(org.email_footer_text_ar || '')
     setIsDetailsOpen(true)
   }
 
@@ -179,6 +209,33 @@ export default function OrganizationProfile() {
   const hotelPct = Math.min(100, Math.round(((counts?.hotels || 0) / maxH) * 100))
   const memberPct = Math.min(100, Math.round(((counts?.members || 0) / maxL) * 100))
 
+  const handleApplyAISuggestions = (sug: AIEmailBrandSuggestions) => {
+    setEditSenderName(sug.emailSenderName)
+    setEditReplyTo(sug.emailReplyTo)
+    setSupportEmail(sug.supportEmail)
+    setWebsiteUrl(sug.websiteUrl)
+    setEditFooterText(sug.emailFooterText)
+    setEditFooterTextAr(sug.emailFooterTextAr)
+    setPrimaryColor(sug.brandColors.primary)
+    setSecondaryColor(sug.brandColors.secondary)
+    setAccentColor(sug.brandColors.accent)
+
+    detailsMutation.mutate({
+      name: org?.name || '',
+      nameAr: org?.name_ar || undefined,
+      slug: org?.slug || '',
+      industry: org?.industry || undefined,
+      logoUrl: org?.logo_url || undefined,
+      brandColors: sug.brandColors,
+      emailSenderName: sug.emailSenderName,
+      emailReplyTo: sug.emailReplyTo,
+      supportEmail: sug.supportEmail,
+      websiteUrl: sug.websiteUrl,
+      emailFooterText: sug.emailFooterText,
+      emailFooterTextAr: sug.emailFooterTextAr,
+    })
+  }
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex items-center justify-between">
@@ -186,6 +243,32 @@ export default function OrganizationProfile() {
           <ArrowLeft className="h-3.5 w-3.5 me-1.5" /> All organizations
         </Button>
         <div className="flex items-center gap-2">
+          {canManage && (
+            <AITenantEmailBrandCopilotModal
+              orgName={org.name}
+              orgNameAr={org.name_ar || undefined}
+              slug={org.slug || undefined}
+              industry={org.industry || undefined}
+              currentPrimaryColor={org.brand_colors?.primary || '#0f172a'}
+              currentSecondaryColor={org.brand_colors?.secondary || '#2563eb'}
+              currentAccentColor={org.brand_colors?.accent || '#d97706'}
+              onApply={handleApplyAISuggestions}
+            />
+          )}
+          <TenantEmailPreviewModal
+            orgName={org.name}
+            orgNameAr={org.name_ar || undefined}
+            logoUrl={org.logo_url || undefined}
+            primaryColor={org.brand_colors?.primary || '#0f172a'}
+            secondaryColor={org.brand_colors?.secondary || '#2563eb'}
+            accentColor={org.brand_colors?.accent || '#d97706'}
+            senderName={org.email_sender_name || undefined}
+            replyTo={org.email_reply_to || undefined}
+            supportEmail={org.support_email || undefined}
+            websiteUrl={org.website_url || undefined}
+            footerText={org.email_footer_text || undefined}
+            footerTextAr={org.email_footer_text_ar || undefined}
+          />
           {canManage && (
             <>
               <Button variant="outline" size="sm" onClick={openDetailsModal} className="text-xs h-8">
@@ -604,6 +687,31 @@ export default function OrganizationProfile() {
                 </Select>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold flex items-center gap-1">
+                  <ImageIcon className="h-3 w-3" /> Logo URL (PNG/SVG)
+                </Label>
+                <Input
+                  value={editLogoUrl}
+                  onChange={(e) => setEditLogoUrl(e.target.value)}
+                  placeholder="https://.../logo.png"
+                  className="h-9 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold flex items-center gap-1">
+                  <Globe className="h-3 w-3" /> Favicon URL
+                </Label>
+                <Input
+                  value={editFaviconUrl}
+                  onChange={(e) => setEditFaviconUrl(e.target.value)}
+                  placeholder="https://.../favicon.ico"
+                  className="h-9 text-xs"
+                />
+              </div>
+            </div>
 
             <div className="space-y-2 pt-2 border-t">
               <Label className="text-xs font-semibold">Brand Theme Colors</Label>
@@ -660,6 +768,81 @@ export default function OrganizationProfile() {
                 </div>
               </div>
             </div>
+
+            {/* Email & Outbound Communication Branding */}
+            <div className="space-y-3 pt-2 border-t">
+              <div className="flex items-center gap-1.5 text-primary font-semibold text-xs">
+                <Mail className="h-4 w-4" />
+                <span>Outbound Email Sender & Footers</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Sender Display Name</Label>
+                  <Input
+                    value={editSenderName}
+                    onChange={(e) => setEditSenderName(e.target.value)}
+                    placeholder="e.g. Royal Palace Hospitality"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Reply-To Email</Label>
+                  <Input
+                    value={editReplyTo}
+                    onChange={(e) => setEditReplyTo(e.target.value)}
+                    placeholder="e.g. guestcare@royalpalace.com"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Support & Help Email</Label>
+                  <Input
+                    value={editSupportEmail}
+                    onChange={(e) => setEditSupportEmail(e.target.value)}
+                    placeholder="e.g. support@royalpalace.com"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Website URL</Label>
+                  <Input
+                    value={editWebsiteUrl}
+                    onChange={(e) => setEditWebsiteUrl(e.target.value)}
+                    placeholder="https://www.royalpalace.com"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Email Footer (English)</Label>
+                  <Input
+                    value={editFooterText}
+                    onChange={(e) => setEditFooterText(e.target.value)}
+                    placeholder="e.g. All rights reserved."
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Email Footer (Arabic)</Label>
+                  <Input
+                    value={editFooterTextAr}
+                    onChange={(e) => setEditFooterTextAr(e.target.value)}
+                    dir="rtl"
+                    placeholder="مثال: جميع الحقوق محفوظة."
+                    className="h-8 text-xs font-arabic"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="pt-2 border-t">
@@ -674,11 +857,19 @@ export default function OrganizationProfile() {
                 nameAr: editNameAr || undefined,
                 slug: editSlug,
                 industry: editIndustry || undefined,
+                logoUrl: editLogoUrl || undefined,
+                faviconUrl: editFaviconUrl || undefined,
                 brandColors: {
                   primary: primaryColor,
                   secondary: secondaryColor,
                   accent: accentColor,
-                }
+                },
+                emailSenderName: editSenderName || undefined,
+                emailReplyTo: editReplyTo || undefined,
+                supportEmail: editSupportEmail || undefined,
+                websiteUrl: editWebsiteUrl || undefined,
+                emailFooterText: editFooterText || undefined,
+                emailFooterTextAr: editFooterTextAr || undefined,
               })}
               className="text-xs font-semibold"
             >

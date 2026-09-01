@@ -417,7 +417,7 @@ serve(async (req) => {
             headers: {
               Authorization: `Bearer ${openrouterApiKey}`,
               "HTTP-Referer": "https://phg-connect.com",
-              "X-Title": "PRIME Connect Intranet",
+              "X-Title": "Altus Connect",
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

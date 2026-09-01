@@ -34,11 +34,32 @@ export interface Organization {
   max_learners?: number | null
   max_storage_gb?: number | null
   max_ai_credits_monthly?: number | null
-  ai_credits_used_this_month?: number | null
   billing_email?: string | null
+  email_sender_name?: string | null
+  email_reply_to?: string | null
+  support_email?: string | null
+  website_url?: string | null
+  email_footer_text?: string | null
+  email_footer_text_ar?: string | null
   suspension_reason?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface TenantEmailContext {
+  org_id: string | null
+  org_name: string
+  org_name_ar: string
+  logo_url: string
+  brand_colors: OrganizationBrandColors
+  sender_name: string
+  from_email: string
+  reply_to: string
+  support_email: string
+  website_url: string
+  footer_text: string
+  footer_text_ar: string
+  is_custom_branded: boolean
 }
 
 export interface SubscriptionPlan {

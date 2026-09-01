@@ -207,6 +207,37 @@ Deno.serve(async (req: Request) => {
       ? invitation.metadata as Record<string, unknown>
       : {};
 
+    let targetOrgId: string | null = (metadata.organization_id as string) || (metadata.organizationId as string) || null;
+    if (!targetOrgId && invitation.auth_user_id) {
+      const { data: mem } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", invitation.auth_user_id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (mem?.organization_id) {
+        targetOrgId = mem.organization_id;
+      }
+    }
+
+    if (targetOrgId) {
+      const { data: canSend } = await adminClient.rpc("can_send_tenant_email", {
+        p_user_id: user.id,
+        p_org_id: targetOrgId,
+      });
+      if (canSend === false) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: Not authorized to manage invitations for this tenant" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+
     const redirectTo = `${appUrl}/complete-invite`;
     const generatedInvite = await adminClient.auth.admin.generateLink({
       type: "invite",
@@ -242,14 +273,16 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         to: invitation.email,
-        subject: "You are invited to Altus Connect",
+        templateKey: "user_welcome_invitation",
         title: "Complete your account setup",
         message:
-          "You have been invited to Altus Connect. Open the link below to set your password and complete your profile.",
+          "You have been invited to join the platform. Open the link below to set your password and complete your profile.",
         actionUrl: inviteUrl,
         actionLabel: "Complete Account Setup",
         businessDomain: "user_management",
         notificationType: "system",
+        organizationId: targetOrgId,
+        userId: invitation.auth_user_id,
         variables: {
           recipient_name: typeof metadata.full_name === "string"
             ? metadata.full_name

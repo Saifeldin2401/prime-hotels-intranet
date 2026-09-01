@@ -290,9 +290,9 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
               to: email,
-              templateKey: "system_generic_alert",
+              templateKey: "auth_password_reset",
               title: "Password reset",
-              message: "Use the link below to reset your Altus Connect password.",
+              message: "Use the link below to reset your account password.",
               actionUrl: resetLink,
               actionLabel: "Reset Password",
               businessDomain: "user_management",

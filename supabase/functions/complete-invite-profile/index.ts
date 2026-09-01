@@ -184,9 +184,10 @@ Deno.serve(async (req: Request) => {
           .select("title")
           .order("title", { ascending: true }),
         adminClient
-          .from("properties")
-          .select("id, name")
+          .from("hotels")
+          .select("id, name, organization_id")
           .eq("is_active", true)
+          .eq("is_deleted", false)
           .order("name", { ascending: true }),
       ]);
 
@@ -376,21 +377,40 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: propertyRow, error: propertyLookupError } = await adminClient
-      .from("properties")
-      .select("id")
+    const { data: hotelRow, error: hotelLookupError } = await adminClient
+      .from("hotels")
+      .select("id, organization_id")
       .eq("id", propertyId)
       .eq("is_active", true)
+      .eq("is_deleted", false)
       .maybeSingle();
 
-    if (propertyLookupError || !propertyRow) {
+    if (hotelLookupError || !hotelRow) {
       return new Response(
-        JSON.stringify({ error: "Selected property is not valid." }),
+        JSON.stringify({ error: "Selected hotel property is not valid." }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
+    }
+
+    if (hotelRow.organization_id) {
+      const { data: isOperational } = await adminClient.rpc("org_is_operational", {
+        p_org_id: hotelRow.organization_id,
+      });
+
+      if (isOperational === false) {
+        return new Response(
+          JSON.stringify({
+            error: "Cannot complete account setup: the organization is suspended or inactive.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
     }
 
     let normalizedJobTitle: string | null = null;
@@ -492,6 +512,27 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
+    }
+
+    // Upsert organization membership context
+    if (hotelRow?.organization_id) {
+      const { error: membershipAssignError } = await adminClient
+        .from("organization_memberships")
+        .upsert(
+          {
+            user_id: user.id,
+            organization_id: hotelRow.organization_id,
+            role: "learner",
+            hotel_id: propertyId,
+            is_active: true,
+            is_primary: true,
+          },
+          { onConflict: "user_id,organization_id" },
+        );
+
+      if (membershipAssignError) {
+        console.error("Failed to assign organization membership:", membershipAssignError);
+      }
     }
 
     const inviteEmail = typeof user.email === "string"

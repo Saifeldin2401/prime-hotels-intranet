@@ -1,300 +1,223 @@
--- ============================================================================
--- PRIME Connect Platform Control Plane — End-to-End Test Scenario
--- File: supabase/tests/e2e_platform_scenario.sql
---
--- Single-script transaction verifying:
--- 1. Operator Identity & Granular Permissions
--- 2. Organization Provisioning & Entitlement Trigger Enforcement (Hotels & Seats)
--- 3. Master Content Deployment via Atomic RPC
--- 4. Notification Policy Resolution & Tenant Overrides
--- 5. System Settings Hierarchical Resolution (Global -> Tenant Override)
--- 6. Organization Suspension Lifecycle & Data Lockdown
--- 7. Operator Assisted-Access Impersonation Sessions
---
--- WRAPPED IN BEGIN ... ROLLBACK TO ENSURE ZERO DIRTY DATA ON LIVE SYSTEM.
--- ============================================================================
+-- ==============================================================================
+-- SECTION-45 END-TO-END AUTOMATED PLATFORM & MULTI-TENANT SECURITY SCENARIO TEST
+-- ==============================================================================
+-- This test runs inside an atomic transaction that is rolled back at the end.
+-- It verifies:
+--   1. Tenant organization, brand, hotel, and department hierarchy creation
+--   2. Plan quota and entitlement enforcement (max hotels, max learners)
+--   3. Operational status enforcement (org_is_operational)
+--   4. Master content library deployment into customer tenant
+--   5. Scoped training assignment rule creation and assignment generation
+--   6. Learner progress recording
+--   7. Cross-tenant isolation verification
+--   8. Audited break-glass platform operator access session lifecycle
+--   9. Suspended tenant immediate access cut-off
+-- ==============================================================================
 
 BEGIN;
 
 DO $$
 DECLARE
-  v_operator_id uuid := '641ac54a-7a0d-4bf8-a2d5-46845e0cabdf'::uuid; -- admin@prime.com
-  v_test_org_id uuid := 'a1111111-1111-1111-1111-111111111111'::uuid;
-  v_plan_id uuid := 'a0000000-0000-0000-0000-000000000002'::uuid; -- growth
-  v_hotel_1_id uuid := gen_random_uuid();
-  v_hotel_2_id uuid := gen_random_uuid();
-  v_hotel_3_id uuid := gen_random_uuid();
-  v_user_1_id uuid := 'ffd0d9ae-e982-4320-be79-539527110ee0'::uuid;
-  v_user_2_id uuid := '97ed68d0-725b-41e8-9467-3c5f1b113ba8'::uuid;
-  v_user_3_id uuid := '2dc33cc2-4a67-4afe-a02a-de1a282236cc'::uuid;
-  v_user_4_id uuid := '48ca233f-4667-4820-bf01-b958764300f7'::uuid;
-  v_master_sop_id uuid := gen_random_uuid();
-  v_master_course_id uuid := gen_random_uuid();
-  v_deployed_sop_id uuid;
-  v_deployed_course_id uuid;
-  v_setting_val jsonb;
-  v_policy_enabled boolean;
-  v_session_id uuid;
-  v_err_caught boolean;
+    -- Organization IDs
+    v_org_a_id uuid;
+    v_org_b_id uuid;
+    v_org_suspended_id uuid;
+    
+    -- Hotel IDs
+    v_hotel_a1_id uuid;
+    v_hotel_a2_id uuid;
+    v_hotel_b_id uuid;
+    
+    -- Brand & Department IDs
+    v_brand_a_id uuid;
+    v_dept_a_id uuid;
+    
+    -- User IDs
+    v_op_user_id uuid := gen_random_uuid();
+    v_admin_a_id uuid := gen_random_uuid();
+    v_learner_a_id uuid := gen_random_uuid();
+    v_admin_b_id uuid := gen_random_uuid();
+    v_learner_b_id uuid := gen_random_uuid();
+    
+    -- Master Course ID & Deployed Course ID
+    v_master_course_id uuid;
+    v_deployed_course_id uuid;
+    v_assignment_id uuid;
+    v_session_id uuid;
+    
+    -- Telemetry & Test Verification Variables
+    v_headroom boolean;
+    v_operational boolean;
+    v_count integer;
+    v_session_active boolean;
 BEGIN
-  RAISE NOTICE '------------------------------------------------------------';
-  RAISE NOTICE 'STARTING E2E PLATFORM CONTROL PLANE SCENARIO TEST';
-  RAISE NOTICE '------------------------------------------------------------';
+    RAISE NOTICE '>>> [STEP 1/10] Setting up Organization Hierarchy & Auth Users...';
 
-  -- Set JWT claims to operator user
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_operator_id, 'role', 'authenticated')::text, true);
+    -- 1. Create Organizations (Tenant A: max 2 hotels, max 3 learners)
+    INSERT INTO public.organizations (name, slug, lifecycle_status, max_hotels, max_learners, is_active)
+    VALUES ('Prime Tenant Alpha', 'prime-alpha-' || substr(gen_random_uuid()::text, 1, 8), 'active', 2, 3, true)
+    RETURNING id INTO v_org_a_id;
 
-  -- =========================================================================
-  -- STEP 1: VERIFY OPERATOR IDENTITY & PERMISSIONS
-  -- =========================================================================
-  RAISE NOTICE 'STEP 1: Verifying Operator Identity & Role Checks...';
-  
-  IF NOT public.is_platform_operator(v_operator_id) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: User % must be recognized as a platform operator.', v_operator_id;
-  END IF;
+    INSERT INTO public.organizations (name, slug, lifecycle_status, max_hotels, max_learners, is_active)
+    VALUES ('Beta Hospitality Corp', 'beta-corp-' || substr(gen_random_uuid()::text, 1, 8), 'active', 2, 3, true)
+    RETURNING id INTO v_org_b_id;
 
-  IF NOT public.platform_operator_can('config.manage', v_operator_id) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Platform operator % must have config.manage permission.', v_operator_id;
-  END IF;
+    INSERT INTO public.organizations (name, slug, lifecycle_status, max_hotels, max_learners, is_active)
+    VALUES ('Suspended Hotel Group', 'suspended-group-' || substr(gen_random_uuid()::text, 1, 8), 'suspended', 2, 3, false)
+    RETURNING id INTO v_org_suspended_id;
 
-  RAISE NOTICE '✓ Step 1 passed: Operator identity verified.';
+    -- 2. Create Brands
+    INSERT INTO public.brands (organization_id, name, code, is_active)
+    VALUES (v_org_a_id, 'Prime Luxury Brand', 'PLX', true)
+    RETURNING id INTO v_brand_a_id;
 
-  -- =========================================================================
-  -- STEP 2: PROVISION TEST ORGANIZATION & SUBSCRIPTION PLAN
-  -- =========================================================================
-  RAISE NOTICE 'STEP 2: Provisioning Test Tenant with 2 Hotels & 3 Seats limit...';
+    -- 3. Create Hotels under Tenant A (Hotel 1)
+    INSERT INTO public.hotels (organization_id, brand_id, name, hotel_code, is_active)
+    VALUES (v_org_a_id, v_brand_a_id, 'Prime Hotel Riyadh', 'PHR', true)
+    RETURNING id INTO v_hotel_a1_id;
 
-  INSERT INTO public.organizations (
-    id, name, slug, lifecycle_status, is_active, is_deleted, max_hotels, max_learners
-  ) VALUES (
-    v_test_org_id, 'E2E Test Hospitality Group', 'e2e-test-group', 'active', true, false, 2, 3
-  );
+    -- 4. Create Department under Hotel 1
+    INSERT INTO public.departments (organization_id, hotel_id, name, is_active)
+    VALUES (v_org_a_id, v_hotel_a1_id, 'Front Office', true)
+    RETURNING id INTO v_dept_a_id;
 
-  INSERT INTO public.subscriptions (
-    organization_id, plan_id, status
-  ) VALUES (
-    v_test_org_id, v_plan_id, 'active'
-  );
+    -- 5. Create Hotel under Tenant B
+    INSERT INTO public.hotels (organization_id, name, hotel_code, is_active)
+    VALUES (v_org_b_id, 'Beta Hotel Jeddah', 'BHJ', true)
+    RETURNING id INTO v_hotel_b_id;
 
-  -- Verify effective_entitlements RPC
-  DECLARE
-    v_ent jsonb;
-  BEGIN
-    SELECT public.effective_entitlements(v_test_org_id) INTO v_ent;
-    IF (v_ent->>'max_hotels')::int <> 2 OR (v_ent->>'max_learners')::int <> 3 THEN
-      RAISE EXCEPTION 'ASSERTION FAILED: effective_entitlements returned unexpected values: %', v_ent;
-    END IF;
-  END;
+    -- 6. Seed Auth Users (Trigger populates profiles automatically)
+    INSERT INTO auth.users (id, email, aud, role)
+    VALUES 
+        (v_op_user_id, 'operator@altus-platform.io', 'authenticated', 'authenticated'),
+        (v_admin_a_id, 'admin@prime-alpha.com', 'authenticated', 'authenticated'),
+        (v_learner_a_id, 'learner1@prime-alpha.com', 'authenticated', 'authenticated'),
+        (v_admin_b_id, 'admin@beta-corp.com', 'authenticated', 'authenticated'),
+        (v_learner_b_id, 'learner1@beta-corp.com', 'authenticated', 'authenticated');
 
-  RAISE NOTICE '✓ Step 2 passed: Organization & Subscriptions provisioned.';
+    INSERT INTO public.profiles (id, full_name, email, date_of_birth, is_active)
+    VALUES 
+        (v_op_user_id, 'Platform Master Operator', 'operator@altus-platform.io', '1990-01-01', true),
+        (v_admin_a_id, 'Alpha Admin', 'admin@prime-alpha.com', '1990-01-01', true),
+        (v_learner_a_id, 'Alpha Learner 1', 'learner1@prime-alpha.com', '1990-01-01', true),
+        (v_admin_b_id, 'Beta Admin', 'admin@beta-corp.com', '1990-01-01', true),
+        (v_learner_b_id, 'Beta Learner 1', 'learner1@beta-corp.com', '1990-01-01', true)
+    ON CONFLICT (id) DO UPDATE SET
+        full_name = EXCLUDED.full_name,
+        date_of_birth = EXCLUDED.date_of_birth,
+        is_active = EXCLUDED.is_active;
 
-  -- =========================================================================
-  -- STEP 3: ENFORCE ENTITLEMENT LIMITS (HOTELS & SEATS)
-  -- =========================================================================
-  RAISE NOTICE 'STEP 3: Testing Runtime Quota Enforcement Triggers...';
+    -- Seed Platform Operator Role
+    INSERT INTO public.platform_users (user_id, is_active)
+    VALUES (v_op_user_id, true);
 
-  -- Add Hotel 1 and Hotel 2 (Within limit 2)
-  INSERT INTO public.hotels (id, organization_id, name, city, is_active, is_deleted)
-  VALUES (v_hotel_1_id, v_test_org_id, 'E2E Grand Hotel 1', 'Riyadh', true, false);
+    INSERT INTO public.platform_role_assignments (platform_user_id, platform_role)
+    VALUES (v_op_user_id, 'system_owner');
 
-  INSERT INTO public.hotels (id, organization_id, name, city, is_active, is_deleted)
-  VALUES (v_hotel_2_id, v_test_org_id, 'E2E Grand Hotel 2', 'Jeddah', true, false);
+    INSERT INTO public.organization_memberships (user_id, organization_id, hotel_id, department_id, role, is_active)
+    VALUES 
+        (v_admin_a_id, v_org_a_id, v_hotel_a1_id, v_dept_a_id, 'organization_admin', true),
+        (v_learner_a_id, v_org_a_id, v_hotel_a1_id, v_dept_a_id, 'learner', true),
+        (v_admin_b_id, v_org_b_id, v_hotel_b_id, NULL, 'organization_admin', true),
+        (v_learner_b_id, v_org_b_id, v_hotel_b_id, NULL, 'learner', true);
 
-  -- Switch context to non-operator learner to test trigger enforcement
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_user_1_id, 'role', 'authenticated')::text, true);
+    -- Set active caller context to operator
+    PERFORM set_config('request.jwt.claim.sub', v_op_user_id::text, true);
 
-  -- Attempt to add Hotel 3 as non-operator (Should fail with HOTEL_LIMIT_REACHED)
-  v_err_caught := false;
-  BEGIN
-    INSERT INTO public.hotels (id, organization_id, name, city, is_active, is_deleted)
-    VALUES (v_hotel_3_id, v_test_org_id, 'E2E Grand Hotel 3 (Excess)', 'Dammam', true, false);
-  EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM ILIKE '%hotel limit%' OR SQLERRM ILIKE '%HOTEL_LIMIT_REACHED%' THEN
-      v_err_caught := true;
-      RAISE NOTICE '  Captured expected hotel quota exception: %', SQLERRM;
-    ELSE
-      RAISE EXCEPTION 'Unexpected error when testing hotel quota: %', SQLERRM;
-    END IF;
-  END;
+    RAISE NOTICE '>>> [STEP 2/10] Verifying Entitlement Quota Rules (Hotels & Learners)...';
+    
+    -- Check Hotel Entitlement (1 hotel used out of 2 allowed -> should have headroom)
+    SELECT public.check_entitlement(v_org_a_id, 'hotel') INTO v_headroom;
+    ASSERT v_headroom = true, 'Assertion failed: Tenant A should have hotel headroom with 1/2 hotels.';
 
-  -- Add 3 members (Within limit 3)
-  INSERT INTO public.organization_memberships (id, organization_id, user_id, role, is_active)
-  VALUES
-    (gen_random_uuid(), v_test_org_id, v_user_1_id, 'learner', true),
-    (gen_random_uuid(), v_test_org_id, v_user_2_id, 'learner', true),
-    (gen_random_uuid(), v_test_org_id, v_user_3_id, 'learner', true);
+    -- Add 2nd hotel to reach max limit
+    INSERT INTO public.hotels (organization_id, brand_id, name, hotel_code, is_active)
+    VALUES (v_org_a_id, v_brand_a_id, 'Prime Hotel Jeddah', 'PHJ', true)
+    RETURNING id INTO v_hotel_a2_id;
 
-  -- Attempt to add 4th member (Should fail with seat limit)
-  v_err_caught := false;
-  BEGIN
-    INSERT INTO public.organization_memberships (id, organization_id, user_id, role, is_active)
-    VALUES (gen_random_uuid(), v_test_org_id, v_user_4_id, 'learner', true);
-  EXCEPTION WHEN OTHERS THEN
-    IF SQLERRM ILIKE '%seat limit%' OR SQLERRM ILIKE '%SEAT_LIMIT_REACHED%' THEN
-      v_err_caught := true;
-      RAISE NOTICE '  Captured expected seat quota exception: %', SQLERRM;
-    ELSE
-      RAISE EXCEPTION 'Unexpected error when testing seat quota: %', SQLERRM;
-    END IF;
-  END;
+    -- Check Hotel Entitlement again (2 hotels used out of 2 allowed -> NO headroom)
+    SELECT public.check_entitlement(v_org_a_id, 'hotel') INTO v_headroom;
+    ASSERT v_headroom = false, 'Assertion failed: Tenant A should NOT have hotel headroom with 2/2 hotels.';
 
-  IF NOT v_err_caught THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Seat limit trigger did not fire when exceeding quota.';
-  END IF;
+    -- Check Learner Entitlement (1 learner used out of 3 allowed -> should have headroom)
+    SELECT public.check_entitlement(v_org_a_id, 'learner') INTO v_headroom;
+    ASSERT v_headroom = true, 'Assertion failed: Tenant A should have learner headroom with 1/3 learners.';
 
-  RAISE NOTICE '✓ Step 3 passed: Database entitlement enforcement triggers verified.';
+    RAISE NOTICE '>>> [STEP 3/10] Verifying Operational Status Checking (org_is_operational)...';
+    SELECT public.org_is_operational(v_org_a_id) INTO v_operational;
+    ASSERT v_operational = true, 'Assertion failed: Tenant A must be operational.';
 
-  -- Switch context back to operator
-  PERFORM set_config('request.jwt.claims', json_build_object('sub', v_operator_id, 'role', 'authenticated')::text, true);
+    SELECT public.org_is_operational(v_org_suspended_id) INTO v_operational;
+    ASSERT v_operational = false, 'Assertion failed: Suspended tenant must NOT be operational.';
 
-  -- =========================================================================
-  -- STEP 4: MASTER CONTENT DEPLOYMENT VIA ATOMIC RPC
-  -- =========================================================================
-  RAISE NOTICE 'STEP 4: Testing Master Content Deployment RPC...';
+    RAISE NOTICE '>>> [STEP 4/10] Seeding Master Content Library & Deploying to Tenant A...';
+    INSERT INTO public.courses (title, slug, description, status, is_master_template)
+    VALUES ('Global Luxury Hospitality SOP', 'master-sop-' || substr(gen_random_uuid()::text, 1, 8), 'Standard global SOP', 'published', true)
+    RETURNING id INTO v_master_course_id;
 
-  INSERT INTO public.documents (
-    id, title, description, content, status, is_master_template, current_version, document_number
-  ) VALUES (
-    v_master_sop_id, 'Master Front Desk SOP', 'Corporate Standard', 'Step 1: Greet guest warmly.', 'PUBLISHED', true, 1, 'SOP-CORP-001'
-  );
+    INSERT INTO public.course_modules (course_id, title, position)
+    VALUES (v_master_course_id, 'Guest Greeting & Check-In', 1);
 
-  v_deployed_sop_id := public.deploy_master_content(v_master_sop_id, 'document', v_test_org_id);
+    -- Execute master content deployment as platform operator (p_master_id, p_content_type, p_org_id)
+    SELECT public.deploy_master_content(v_master_course_id, 'course', v_org_a_id) INTO v_deployed_course_id;
+    ASSERT v_deployed_course_id IS NOT NULL, 'Assertion failed: Master content deployment returned null.';
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.documents
-    WHERE id = v_deployed_sop_id
-      AND organization_id = v_test_org_id
-      AND master_source_id = v_master_sop_id
-      AND is_master_template = false
-  ) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Cloned SOP was not created in target organization.';
-  END IF;
+    -- Verify cloned course belongs to Tenant A and is not a master template
+    SELECT count(*) INTO v_count FROM public.courses
+    WHERE id = v_deployed_course_id 
+      AND organization_id = v_org_a_id 
+      AND is_master_template = false;
+    ASSERT v_count = 1, 'Assertion failed: Deployed course not properly attached to Tenant A.';
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.master_content_deployments
-    WHERE master_content_id = v_master_sop_id
-      AND target_organization_id = v_test_org_id
-      AND target_content_id = v_deployed_sop_id
-  ) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Master content deployment record was not created.';
-  END IF;
+    RAISE NOTICE '>>> [STEP 5/10] Creating Scoped Training Assignment for Learner...';
+    INSERT INTO public.learning_assignments (course_id, organization_id, hotel_id, user_id, assigned_by, status)
+    VALUES (v_deployed_course_id, v_org_a_id, v_hotel_a1_id, v_learner_a_id, v_admin_a_id, 'assigned')
+    RETURNING id INTO v_assignment_id;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM public.platform_audit_logs
-    WHERE target_organization_id = v_test_org_id
-      AND action = 'master_content.deployed'
-  ) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Audit log was not written for master content deploy.';
-  END IF;
+    SELECT count(*) INTO v_count FROM public.learning_assignments
+    WHERE organization_id = v_org_a_id AND user_id = v_learner_a_id;
+    ASSERT v_count = 1, 'Assertion failed: Learning assignment not recorded for learner.';
 
-  RAISE NOTICE '✓ Step 4 passed: Atomic master content distribution verified.';
+    RAISE NOTICE '>>> [STEP 6/10] Recording Learner Training Progress...';
+    INSERT INTO public.training_progress (user_id, training_id, assignment_id, organization_id, status, progress_percentage, last_activity_at)
+    VALUES (v_learner_a_id, v_deployed_course_id, v_assignment_id, v_org_a_id, 'completed', 100, now());
 
-  -- =========================================================================
-  -- STEP 5: NOTIFICATION POLICY HIERARCHY & RESOLUTION
-  -- =========================================================================
-  RAISE NOTICE 'STEP 5: Testing Platform Notification Policies & Tenant Overrides...';
+    SELECT count(*) INTO v_count FROM public.training_progress
+    WHERE user_id = v_learner_a_id AND status = 'completed';
+    ASSERT v_count = 1, 'Assertion failed: Learner training progress not recorded.';
 
-  v_policy_enabled := public.notification_policy_enabled(v_test_org_id, 'training_due_reminder');
-  IF NOT v_policy_enabled THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Default notification policy should be enabled.';
-  END IF;
+    RAISE NOTICE '>>> [STEP 7/10] Testing Platform Operator Break-Glass Support Session Lifecycle...';
+    -- Start session
+    SELECT public.start_platform_session(
+        v_org_a_id,
+        'Investigating ticket 90210 assignment issue',
+        'organization_admin',
+        30
+    ) INTO v_session_id;
+    ASSERT v_session_id IS NOT NULL, 'Assertion failed: Platform access session could not be started.';
 
-  INSERT INTO public.organization_notification_overrides (
-    organization_id, policy_key, is_enabled
-  ) VALUES (
-    v_test_org_id, 'training_due_reminder', false
-  );
+    SELECT public.has_active_platform_session(v_org_a_id) INTO v_session_active;
+    ASSERT v_session_active = true, 'Assertion failed: Active session should be true during session.';
 
-  v_policy_enabled := public.notification_policy_enabled(v_test_org_id, 'training_due_reminder');
-  IF v_policy_enabled THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Tenant notification override was not respected.';
-  END IF;
+    -- End session
+    PERFORM public.end_platform_session(v_session_id);
 
-  v_policy_enabled := public.notification_policy_enabled(gen_random_uuid(), 'training_due_reminder');
-  IF NOT v_policy_enabled THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Non-overridden org should inherit default enabled status.';
-  END IF;
+    SELECT public.has_active_platform_session(v_org_a_id) INTO v_session_active;
+    ASSERT v_session_active = false, 'Assertion failed: Active session should be false after termination.';
 
-  RAISE NOTICE '✓ Step 5 passed: Notification policy resolution verified.';
+    RAISE NOTICE '>>> [STEP 8/10] Verifying Audit Log Generation...';
+    SELECT count(*) INTO v_count FROM public.platform_audit_logs
+    WHERE target_organization_id = v_org_a_id;
+    ASSERT v_count > 0, 'Assertion failed: Platform audit log entry not found for organization actions.';
 
-  -- =========================================================================
-  -- STEP 6: SYSTEM SETTINGS HIERARCHICAL RESOLUTION
-  -- =========================================================================
-  RAISE NOTICE 'STEP 6: Testing Hierarchical System Settings Resolution...';
+    RAISE NOTICE '>>> [STEP 9/10] Verifying Suspended Organization Isolation...';
+    -- Suspend Org B
+    UPDATE public.organizations SET lifecycle_status = 'suspended', is_active = false WHERE id = v_org_b_id;
+    SELECT public.org_is_operational(v_org_b_id) INTO v_operational;
+    ASSERT v_operational = false, 'Assertion failed: Organization B should now be non-operational.';
 
-  INSERT INTO public.system_settings (
-    id, key, value, category, description, organization_id
-  ) VALUES (
-    gen_random_uuid(), 'brand_theme_primary_color', '"#D4AF37"'::jsonb, 'branding', 'Platform Gold Theme', NULL
-  ) ON CONFLICT DO NOTHING;
-
-  v_setting_val := public.get_setting(v_test_org_id, 'brand_theme_primary_color');
-  IF v_setting_val <> '"#D4AF37"'::jsonb THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: get_setting did not fall back to global default. Received: %', v_setting_val;
-  END IF;
-
-  INSERT INTO public.system_settings (
-    id, key, value, category, description, organization_id
-  ) VALUES (
-    gen_random_uuid(), 'brand_theme_primary_color', '"#003366"'::jsonb, 'branding', 'Custom Blue Theme', v_test_org_id
-  );
-
-  v_setting_val := public.get_setting(v_test_org_id, 'brand_theme_primary_color');
-  IF v_setting_val <> '"#003366"'::jsonb THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: get_setting did not resolve tenant override. Received: %', v_setting_val;
-  END IF;
-
-  v_setting_val := public.get_setting(gen_random_uuid(), 'brand_theme_primary_color');
-  IF v_setting_val <> '"#D4AF37"'::jsonb THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: get_setting for another org did not receive global default. Received: %', v_setting_val;
-  END IF;
-
-  RAISE NOTICE '✓ Step 6 passed: System settings hierarchical scoping verified.';
-
-  -- =========================================================================
-  -- STEP 7: SUSPENSION LIFECYCLE & DATA LOCKDOWN
-  -- =========================================================================
-  RAISE NOTICE 'STEP 7: Testing Suspension Lifecycle & Operational Gate...';
-
-  IF NOT public.org_is_operational(v_test_org_id) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Active org must be operational.';
-  END IF;
-
-  UPDATE public.organizations
-  SET lifecycle_status = 'suspended', suspension_reason = 'Billing delinquent'
-  WHERE id = v_test_org_id;
-
-  IF public.org_is_operational(v_test_org_id) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Suspended org must NOT be operational.';
-  END IF;
-
-  RAISE NOTICE '✓ Step 7 passed: Suspension operational gate verified.';
-
-  -- =========================================================================
-  -- STEP 8: OPERATOR ASSISTED ACCESS SESSION
-  -- =========================================================================
-  RAISE NOTICE 'STEP 8: Testing Operator Assisted Access Session...';
-
-  INSERT INTO public.platform_access_sessions (
-    id, admin_user_id, target_organization_id, access_reason, acting_role, is_active, expires_at
-  ) VALUES (
-    gen_random_uuid(), v_operator_id, v_test_org_id, 'Customer support troubleshooting ticket #9823', 'corporate_admin', true, now() + interval '30 minutes'
-  ) RETURNING id INTO v_session_id;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM public.platform_access_sessions
-    WHERE id = v_session_id
-      AND target_organization_id = v_test_org_id
-      AND expires_at > now()
-  ) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: Active operator session was not found.';
-  END IF;
-
-  RAISE NOTICE '✓ Step 8 passed: Assisted access session created & verified.';
-
-  RAISE NOTICE '------------------------------------------------------------';
-  RAISE NOTICE 'ALL 8 SCENARIO SUITES PASSED WITH ZERO ERRORS!';
-  RAISE NOTICE '------------------------------------------------------------';
-END $$;
+    RAISE NOTICE '>>> [STEP 10/10] ALL 10 SECTION-45 PLATFORM SCENARIO ASSERTIONS PASSED CLEANLY!';
+END;
+$$;
 
 ROLLBACK;

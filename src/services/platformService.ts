@@ -375,6 +375,12 @@ export const platformService = {
     faviconUrl?: string
     brandColors?: { primary: string; secondary: string; accent?: string }
     billingEmail?: string
+    emailSenderName?: string
+    emailReplyTo?: string
+    supportEmail?: string
+    websiteUrl?: string
+    emailFooterText?: string
+    emailFooterTextAr?: string
     actorId?: string
   }): Promise<void> {
     const updateData: any = {
@@ -388,6 +394,12 @@ export const platformService = {
     if (params.faviconUrl !== undefined) updateData.favicon_url = params.faviconUrl
     if (params.brandColors !== undefined) updateData.brand_colors = params.brandColors
     if (params.billingEmail !== undefined) updateData.billing_email = params.billingEmail.trim() || null
+    if (params.emailSenderName !== undefined) updateData.email_sender_name = params.emailSenderName.trim() || null
+    if (params.emailReplyTo !== undefined) updateData.email_reply_to = params.emailReplyTo.trim() || null
+    if (params.supportEmail !== undefined) updateData.support_email = params.supportEmail.trim() || null
+    if (params.websiteUrl !== undefined) updateData.website_url = params.websiteUrl.trim() || null
+    if (params.emailFooterText !== undefined) updateData.email_footer_text = params.emailFooterText.trim() || null
+    if (params.emailFooterTextAr !== undefined) updateData.email_footer_text_ar = params.emailFooterTextAr.trim() || null
 
     const { error } = await supabase
       .from('organizations')
@@ -1824,6 +1836,50 @@ export const platformService = {
       return null
     }
     return data
+  },
+
+  // ============================================================================
+  // 17. TENANT EMAIL & DYNAMIC BRANDING
+  // ============================================================================
+  async getTenantEmailContext(orgId?: string | null): Promise<TenantEmailContext | null> {
+    const { data, error } = await (supabase.rpc as any)('get_tenant_email_context', {
+      p_org_id: orgId || null
+    })
+    if (error) {
+      console.error('getTenantEmailContext error:', error)
+      return null
+    }
+    return data
+  },
+
+  async updateTenantEmailSettings(
+    orgId: string,
+    settings: {
+      email_sender_name?: string | null
+      email_reply_to?: string | null
+      support_email?: string | null
+      website_url?: string | null
+      email_footer_text?: string | null
+      email_footer_text_ar?: string | null
+      brand_colors?: { primary: string; secondary: string; accent?: string }
+      logo_url?: string | null
+      name?: string
+      name_ar?: string | null
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase
+      .from('organizations')
+      .update({
+        ...settings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orgId)
+
+    if (error) {
+      console.error('updateTenantEmailSettings error:', error)
+      return { success: false, error: error.message }
+    }
+    return { success: true }
   }
 }
 

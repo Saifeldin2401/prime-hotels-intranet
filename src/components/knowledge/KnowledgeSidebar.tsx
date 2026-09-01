@@ -41,18 +41,18 @@ function NavItem({ icon: Icon, label, href, active, badge, className }: NavItemP
         <Link to={href} className="block group">
             <div className={cn(
                 "flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200",
-                "hover:bg-hotel-navy/5 group-hover:translate-x-1",
-                active ? "bg-hotel-navy text-white hover:bg-hotel-navy shadow-sm" : "text-gray-600",
+                "hover:bg-accent group-hover:translate-x-0.5",
+                active ? "bg-hotel-navy dark:bg-hotel-gold text-white dark:text-hotel-navy shadow-sm font-semibold" : "text-muted-foreground hover:text-foreground",
                 className
             )}>
-                <div className="flex items-center gap-3">
-                    <Icon className={cn("h-4 w-4", active ? "text-hotel-gold" : "text-gray-400 group-hover:text-hotel-navy")} />
-                    <span className="text-sm font-medium">{label}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                    <Icon className={cn("h-4 w-4 shrink-0", active ? "text-hotel-gold dark:text-hotel-navy" : "text-muted-foreground group-hover:text-foreground")} />
+                    <span className="text-sm font-medium truncate">{label}</span>
                 </div>
                 {badge !== undefined && (
                     <Badge variant={active ? "outline" : "secondary"} className={cn(
                         "text-[10px] px-1.5 h-4 min-w-4 flex items-center justify-center border-none",
-                        active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                        active ? "bg-white/20 text-white dark:bg-hotel-navy/20 dark:text-hotel-navy" : "bg-muted text-muted-foreground"
                     )}>
                         {badge}
                     </Badge>
@@ -119,24 +119,24 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
     ]
 
     return (
-        <div className={cn("w-64 max-w-full flex flex-col h-full min-h-0 bg-white border-r border-gray-100", className)}>
+        <div className={cn("w-64 max-w-full flex flex-col h-full min-h-0 bg-card border-e border-border text-card-foreground", className)}>
             {/* Sidebar Header */}
-            <div className="p-4 border-b border-gray-50">
+            <div className="p-4 border-b border-border">
                 <div className="flex items-center gap-2 mb-4">
-                    <div className="w-8 h-8 rounded-lg bg-hotel-navy flex items-center justify-center shadow-lg">
+                    <div className="w-8 h-8 rounded-lg bg-hotel-navy flex items-center justify-center shadow-md">
                         <Library className="h-4 w-4 text-hotel-gold" />
                     </div>
                     <div>
-                        <h2 className="text-sm font-bold text-hotel-navy uppercase tracking-wider">{t('library.nav_title', 'Knowledge Library')}</h2>
-                        <p className="text-[10px] text-gray-400 font-medium">{t('library.version', 'ALTUS ADVISORY v2')}</p>
+                        <h2 className="text-sm font-bold text-foreground uppercase tracking-wider">{t('library.nav_title', 'Knowledge Library')}</h2>
+                        <p className="text-[10px] text-muted-foreground font-medium">{t('library.version', 'ALTUS ADVISORY v2')}</p>
                     </div>
                 </div>
-                <Link to="/knowledge/search" className="block">
+                <Link to="/knowledge" className="block">
                     <div className="relative group">
                         <div className="absolute inset-y-0 start-3 flex items-center pointer-events-none">
-                            <Search className="h-4 w-4 text-gray-400 group-hover:text-hotel-navy transition-colors" />
+                            <Search className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                         </div>
-                        <div className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 ps-10 pe-4 text-sm text-gray-400 group-hover:bg-white group-hover:border-hotel-gold/30 group-hover:shadow-sm transition-all">
+                        <div className="w-full bg-muted/60 border border-border rounded-lg py-2 ps-10 pe-4 text-sm text-muted-foreground group-hover:bg-card group-hover:border-hotel-gold/40 group-hover:text-foreground group-hover:shadow-xs transition-all">
                             {t('library.quick_search', 'Quick Search...')}
                         </div>
                     </div>
@@ -214,17 +214,17 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
 
             {/* User Context Bottom */}
             {user && (
-                <div className="p-4 bg-hotel-navy/5 border-t border-hotel-gold/10">
+                <div className="p-4 bg-muted/40 border-t border-border">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-hotel-navy flex items-center justify-center text-white text-xs font-bold ring-2 ring-hotel-gold/20">
+                        <div className="w-8 h-8 rounded-full bg-hotel-navy flex items-center justify-center text-hotel-gold text-xs font-bold ring-2 ring-hotel-gold/20">
                             {user.email?.[0].toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-hotel-navy truncate">
+                            <p className="text-xs font-bold text-foreground truncate">
                                 {t('library.my_dept', 'My Dept: {{name}}', { name: departments?.[0]?.name || 'N/A' })}
                             </p>
                             {primaryRole !== 'staff' && (
-                                <Link to="/knowledge/create" className="text-[10px] text-hotel-gold font-bold hover:underline">
+                                <Link to="/knowledge/create" className="text-[10px] text-altus-copper dark:text-hotel-gold font-bold hover:underline">
                                     + {t('library.create_new', 'Create New Article')}
                                 </Link>
                             )}

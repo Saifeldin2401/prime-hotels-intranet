@@ -104,13 +104,13 @@ export function Header({
               </Button>
             )}
 
-            <Link to="/dashboard" className="flex items-center gap-2.5 group">
+            <Link to="/dashboard" className="flex items-center gap-2.5 group lg:hidden">
               <img
                 src="/altus-emblem-icon.png"
                 alt="ALTUS Advisory"
                 className="h-8 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
               />
-              <div className="hidden sm:flex flex-col text-start">
+              <div className="flex flex-col text-start">
                 <span className="font-serif text-sm font-bold text-white tracking-wide leading-none">
                   ALTUS
                 </span>
@@ -122,7 +122,7 @@ export function Header({
           </div>
 
           {/* Center Search - Premium Sleek Style */}
-          <div className="flex-1 max-w-2xl mx-4 lg:mx-6 hidden md:flex items-center gap-2">
+          <div className="flex-1 max-w-3xl mx-2 lg:mx-6 hidden md:flex items-center gap-2">
             <Button
               variant="outline"
               className="w-full justify-start text-sm text-slate-300 bg-hotel-navy-dark/80 border-hotel-navy-light/60 hover:bg-hotel-navy-light hover:text-white hover:border-hotel-gold/40 active:scale-[0.99] transition-all duration-150 shadow-inner"

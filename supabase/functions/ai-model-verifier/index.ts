@@ -438,7 +438,7 @@ serve(async (req) => {
             headers: {
               Authorization: `Bearer ${OPENROUTER_API_KEY}`,
               "HTTP-Referer": "https://phg-connect.com",
-              "X-Title": "PRIME Connect Intranet",
+              "X-Title": "Altus Connect",
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ model: m.provider_model_id, messages: [{ role: "user", content: prompt }], max_tokens: 256, temperature: 0 }),
@@ -658,7 +658,7 @@ async function validateJsonMode(
       headers: {
         Authorization: `Bearer ${keys.OPENROUTER_API_KEY}`,
         "HTTP-Referer": "https://phg-connect.com",
-        "X-Title": "PRIME Connect Intranet",
+        "X-Title": "Altus Connect",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

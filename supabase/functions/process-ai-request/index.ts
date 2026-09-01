@@ -354,7 +354,51 @@ serve(async (req) => {
     if (!isServiceRoleCall && !isVerifiedUser && !isAnonKeyCall) {
       return jsonResponse({ error: "Unauthorized: invalid or expired token", success: false }, 401);
     }
-    void authUserId;
+
+    let callerOrgId: string | null = null;
+    if (authUserId && !isServiceRoleCall) {
+      try {
+        const adminClient = createClient(supabaseUrl, serviceRoleKey);
+        const { data: isOp } = await adminClient.rpc("is_platform_operator", {
+          p_user_id: authUserId,
+        });
+
+        if (!isOp) {
+          const { data: userMembership } = await adminClient
+            .from("organization_memberships")
+            .select("organization_id")
+            .eq("user_id", authUserId)
+            .eq("is_active", true)
+            .limit(1)
+            .maybeSingle();
+
+          if (userMembership?.organization_id) {
+            callerOrgId = userMembership.organization_id;
+            const { data: isOperational } = await adminClient.rpc("org_is_operational", {
+              p_org_id: callerOrgId,
+            });
+            if (isOperational === false) {
+              return jsonResponse(
+                { error: "Forbidden: Your organization is suspended or inactive.", success: false },
+                403
+              );
+            }
+
+            const { data: hasAiCredit } = await adminClient.rpc("check_ai_credit", {
+              p_org_id: callerOrgId,
+            });
+            if (hasAiCredit === false) {
+              return jsonResponse(
+                { error: "Monthly AI credit limit reached for this organization.", success: false },
+                429
+              );
+            }
+          }
+        }
+      } catch (orgCheckErr) {
+        console.warn("Organization operational/quota check warning:", orgCheckErr);
+      }
+    }
 
     const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider, capability, agentRole } =
       parseAiRequest(await req.json());
@@ -509,7 +553,7 @@ serve(async (req) => {
             const om = (model && model.includes("/")) ? model : DEFAULT_OPENROUTER_MODELS[0];
             if (!OPENROUTER_API_KEY) return { ok: false, model: om, detail: "no OPENROUTER_API_KEY configured" };
             const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-              method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+              method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "Altus Connect", "Content-Type": "application/json" },
               body: JSON.stringify({ model: om, messages: [{ role: "user", content: prompt }], max_tokens: Math.max(effectiveMaxTokens, 32) }),
               signal: AbortSignal.timeout(25000),
             });
@@ -592,7 +636,7 @@ serve(async (req) => {
               headers: {
                 Authorization: `Bearer ${OPENROUTER_API_KEY}`,
                 "HTTP-Referer": "https://phg-connect.com",
-                "X-Title": "PRIME Connect Intranet",
+                "X-Title": "Altus Connect",
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({ model: orModel, modalities: ["image", "text"], messages: [{ role: "user", content: cleanPrompt }] }),
@@ -719,7 +763,7 @@ serve(async (req) => {
                 try {
                   const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
-                    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+                    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "Altus Connect", "Content-Type": "application/json" },
                     body: JSON.stringify({ model: candModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, stream: true, stream_options: { include_usage: true } }),
                     signal: AbortSignal.timeout(50000),
                   });
@@ -923,6 +967,7 @@ serve(async (req) => {
                   estimatedCost = ((promptTokens + completionTokens) / 1_000_000) * 1.5; pricingSource = "flat_1.5_per_mtok";
                 }
                 void supabaseAdmin.from("ai_usage_log").insert({
+                  user_id: authUserId || null,
                   agent_role: currentTask,
                   task_type: currentTask,
                   model_used: modelUsed,
@@ -936,6 +981,7 @@ serve(async (req) => {
                   started_at: new Date(requestStart).toISOString(),
                   success: true,
                   metadata: {
+                    organization_id: callerOrgId,
                     is_free_tier: isFreeTier,
                     model_candidate: model,
                     preferred_provider: preferredProvider ?? null,
@@ -980,7 +1026,7 @@ serve(async (req) => {
           else diagnosticErrors.push(`plan groq ${pm.id} (${r.status})`);
         } else if (pm.provider === "openrouter" && OPENROUTER_API_KEY) {
           const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+            method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "Altus Connect", "Content-Type": "application/json" },
             body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jm ? { response_format: { type: "json_object" } } : {}) }),
             signal: AbortSignal.timeout(45000),
           });
@@ -1066,7 +1112,7 @@ serve(async (req) => {
         try {
           const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
-            headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+            headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "Altus Connect", "Content-Type": "application/json" },
             body: JSON.stringify({ model: candModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jsonMode ? { response_format: { type: "json_object" } } : {}) }),
             signal: AbortSignal.timeout(45000),
           });
@@ -1277,6 +1323,7 @@ serve(async (req) => {
       const billable = estimatedCost > 0;
 
       void supabaseAdmin.from("ai_usage_log").insert({
+        user_id: authUserId || null,
         agent_role: currentTask,
         task_type: currentTask,
         model_used: modelUsed,
@@ -1290,6 +1337,7 @@ serve(async (req) => {
         started_at: new Date(requestStart).toISOString(),
         success: true,
         metadata: {
+          organization_id: callerOrgId,
           is_free_tier: isFreeTier,
           model_candidate: model,
           preferred_provider: preferredProvider ?? null,

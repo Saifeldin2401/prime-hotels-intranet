@@ -13,6 +13,24 @@ vi.mock('@/contexts/auth', () => ({
   useUserData: vi.fn(),
 }))
 
+vi.mock('@/hooks/useAccountContext', () => ({
+  useAccountContext: vi.fn(() => ({
+    loading: false,
+    isPlatformOperator: false,
+    platformRoles: [],
+    platformPermissions: [],
+    can: () => false,
+    hasPlatformRole: () => false,
+    activePlatformSession: null,
+    tenantMemberships: [],
+    primaryOrganizationId: 'test-org-123',
+    isMultiOrg: false,
+    allOrgsSuspended: false,
+    recommendedDestination: '/home/learner',
+    refresh: vi.fn(),
+  })),
+}))
+
 vi.mock('@/hooks/usePermissions', () => ({
   usePermissions: vi.fn(() => ({
     hasPermission: vi.fn(() => true),

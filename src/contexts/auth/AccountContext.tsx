@@ -72,15 +72,20 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [ctx, setCtx] = useState<AccountContextShape>(EMPTY)
   const [loading, setLoading] = useState(true)
   const reqIdRef = useRef(0)
+  const hasResolvedRef = useRef(false)
 
   const resolve = useCallback(async () => {
     const myReq = ++reqIdRef.current
     if (!user) {
       setCtx(EMPTY)
       setLoading(false)
+      hasResolvedRef.current = false
       return
     }
-    setLoading(true)
+    // Only show full loading state during initial resolution
+    if (!hasResolvedRef.current) {
+      setLoading(true)
+    }
     // Right after login the JWT can lag a beat — retry a transient failure a
     // couple of times before settling, so route guards don't briefly see a
     // non-operator and bounce the user to /dashboard.
@@ -92,6 +97,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (error) { lastErr = error }
         else {
           setCtx({ ...EMPTY, ...(data as AccountContextShape) })
+          hasResolvedRef.current = true
           setLoading(false)
           return
         }
@@ -104,6 +110,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     if (import.meta.env.DEV) console.warn('[AccountContext] resolve failed after retries:', lastErr)
     setCtx(EMPTY)
+    hasResolvedRef.current = true
     setLoading(false)
   }, [user])
 
