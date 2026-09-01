@@ -35,7 +35,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
-import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -45,6 +45,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { useAccountContext } from '@/contexts/auth/AccountContext'
 import { platformService } from '@/services/platformService'
 import type { Profile, AppRole } from '@/lib/types'
+import { ROLE_HIERARCHY, ROLES } from '@/lib/constants'
 
 
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive' | 'pending_approval'

@@ -71,7 +71,6 @@ export default function MyProfile() {
     const [bio, setBio] = useState('')
     const [phoneExtension, setPhoneExtension] = useState('')
     const [iqamaNumber, setIqamaNumber] = useState('')
-    const [dateOfBirth, setDateOfBirth] = useState('')
 
     useEffect(() => {
         if (authProfile) {
@@ -85,7 +84,6 @@ export default function MyProfile() {
             setBio(authProfile.bio || '')
             setPhoneExtension(authProfile.phone_extension || '')
             setIqamaNumber(authProfile.iqama_number || '')
-            setDateOfBirth(authProfile.date_of_birth || '')
         }
     }, [authProfile])
 
@@ -120,7 +118,6 @@ export default function MyProfile() {
                     bio: bio || null,
                     phone_extension: phoneExtension || null,
                     iqama_number: iqamaNumber || null,
-                    date_of_birth: dateOfBirth || null,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id)
@@ -344,16 +341,7 @@ export default function MyProfile() {
                                                 </Select>
                                             </div>
                                         </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="iqamaNumber">{t('iqama_number', 'Iqama Number')}</Label>
-                                                <Input id="iqamaNumber" placeholder="ID Number" value={iqamaNumber} onChange={(e) => setIqamaNumber(e.target.value)} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="dateOfBirth">{t('date_of_birth', 'Date of Birth')}</Label>
-                                                <Input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} />
-                                            </div>
-                                        </div>
+
                                         {/* Bio */}
                                         <div className="grid gap-2">
                                             <Label htmlFor="bio">

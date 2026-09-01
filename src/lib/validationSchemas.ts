@@ -26,7 +26,7 @@ export const userSchema = z.object({
   email: emailSchema,
   full_name: z.string().min(2, 'Full name must be at least 2 characters').max(100, 'Full name is too long'),
   phone: phoneSchema,
-  date_of_birth: z.string().min(1, 'Date of birth is required'),
+  date_of_birth: z.string().optional(),
   hire_date: z.date().optional().or(z.string().optional()),
   job_title: z.string().optional(),
   staff_id: z.string().optional(),
