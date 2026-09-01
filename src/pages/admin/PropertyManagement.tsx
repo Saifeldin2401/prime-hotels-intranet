@@ -270,11 +270,14 @@ export default function PropertyManagement() {
                 if (error) throw error
             } else {
                 // Create
+                if (!currentOrganization?.id) {
+                    throw new Error('No active organization selected')
+                }
                 const { error } = await supabase
                     .from('hotels')
                     .insert([{
                         ...data,
-                        organization_id: currentOrganization?.id || 'e0000000-0000-0000-0000-000000000001'
+                        organization_id: currentOrganization.id
                     }])
                 if (error) throw error
             }

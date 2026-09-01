@@ -41,6 +41,7 @@ import { Briefcase, Building2, Check, ChevronsUpDown, Loader2, Save, ShieldAlert
 import { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { useTenant } from '@/contexts/TenantContext'
 
 interface EmployeeAssignmentDialogProps {
     employee: OrgEmployee | null
@@ -61,6 +62,7 @@ const ASSIGNABLE_ROLES: Record<string, string[]> = {
 const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
 export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: EmployeeAssignmentDialogProps) {
+    const { currentOrganization } = useTenant()
     const { t } = useTranslation('directory')
     const { primaryRole, properties: userProperties } = useAuth()
     const queryClient = useQueryClient()
@@ -271,20 +273,23 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 ? 'department_manager'
                 : 'learner'
 
-            const { error: membershipError } = await supabase
-                .from('organization_memberships')
-                .upsert({
-                    user_id: employee.id,
-                    organization_id: 'e0000000-0000-0000-0000-000000000001',
-                    hotel_id: selectedPropertyId || null,
-                    department_id: actualDeptId,
-                    role: tenantRole as any,
-                    is_active: true,
-                    is_primary: true,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'organization_id,user_id' })
+            const targetOrgId = (employee as any)?.organization_id || currentOrganization?.id
+            if (targetOrgId) {
+                const { error: membershipError } = await supabase
+                    .from('organization_memberships')
+                    .upsert({
+                        user_id: employee.id,
+                        organization_id: targetOrgId,
+                        hotel_id: selectedPropertyId || null,
+                        department_id: actualDeptId,
+                        role: tenantRole as any,
+                        is_active: true,
+                        is_primary: true,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'organization_id,user_id' })
 
-            if (membershipError) throw membershipError
+                if (membershipError) throw membershipError
+            }
 
             // 3. Update user role (only if allowed)
             if (selectedRole && selectedRole !== employee.roles?.[0]) {

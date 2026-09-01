@@ -14,6 +14,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ZodError } from 'zod'
+import { useTenant } from '@/contexts/TenantContext'
 
 
 import {
@@ -71,6 +72,7 @@ const isValidUUID = (id: string | null | undefined): boolean => {
 const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
 export function UserForm({ user, onClose }: UserFormProps) {
+  const { currentOrganization } = useTenant()
   const { t } = useTranslation('users')
   const { t: tCommon } = useTranslation('common')
   const { toast } = useToast()
@@ -568,18 +570,21 @@ export function UserForm({ user, onClose }: UserFormProps) {
         ? 'department_manager'
         : 'learner'
 
-      await supabase
-        .from('organization_memberships')
-        .upsert({
-          user_id: user.id,
-          organization_id: 'e0000000-0000-0000-0000-000000000001',
-          hotel_id: primaryHotelId,
-          department_id: primaryDeptId,
-          role: tenantRole as any,
-          is_active: true,
-          is_primary: true,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'organization_id,user_id' })
+      const targetOrgId = user?.organization_id || currentOrganization?.id
+      if (targetOrgId) {
+        await supabase
+          .from('organization_memberships')
+          .upsert({
+            user_id: user.id,
+            organization_id: targetOrgId,
+            hotel_id: primaryHotelId,
+            department_id: primaryDeptId,
+            role: tenantRole as any,
+            is_active: true,
+            is_primary: true,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'organization_id,user_id' })
+      }
     },
     onSuccess: () => {
       toast({

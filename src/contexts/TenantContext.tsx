@@ -40,21 +40,6 @@ interface TenantContextType {
 
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
 
-const DEFAULT_ORGANIZATION: Organization = {
-  id: 'e0000000-0000-0000-0000-000000000001',
-  name: 'Altus Hospitality Group',
-  name_ar: 'مجموعة ألتوس للضيافة',
-  slug: 'altus-hospitality',
-  logo_url: null,
-  favicon_url: null,
-  brand_colors: { primary: '#0B1528', secondary: '#C45B2F', accent: '#D9C6A3' },
-  industry: 'hospitality',
-  is_active: true,
-  is_deleted: false,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-}
-
 export function TenantProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   const account = useAccountContext()
@@ -114,7 +99,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         console.warn('Error fetching organizations:', orgErr)
       }
 
-      const fetchedOrgs = (orgRows && orgRows.length > 0) ? orgRows : [DEFAULT_ORGANIZATION]
+      const fetchedOrgs = orgRows || []
       setOrganizations(fetchedOrgs)
 
       // 3. Check for active platform impersonation session if platform admin
@@ -135,21 +120,36 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Restore active organization from localStorage or pick first
-      const storedOrgId = safeLocalStorage.getItem('altus_active_tenant_id') || safeLocalStorage.getItem('prime_active_tenant_id')
-      const initialOrg = fetchedOrgs.find(o => o.id === storedOrgId) || fetchedOrgs[0]
+      // Priority 1: Server-authoritative primary organization from AccountContext
+      // Priority 2: User's primary active membership organization
+      // Priority 3: User-scoped active tenant in localStorage
+      // Priority 4: First accessible organization
+      const storedOrgId = safeLocalStorage.getItem(`active_tenant_id_${user.id}`) || safeLocalStorage.getItem('altus_active_tenant_id')
+      
+      const candidateOrgId =
+        account.primaryOrganizationId ||
+        activeMemberships.find(m => m.is_primary)?.organization_id ||
+        activeMemberships[0]?.organization_id ||
+        storedOrgId
+
+      const initialOrg =
+        (candidateOrgId ? fetchedOrgs.find(o => o.id === candidateOrgId) : null) ||
+        fetchedOrgs[0] ||
+        null
+
       setCurrentOrganization(initialOrg)
 
       if (initialOrg) {
+        safeLocalStorage.setItem(`active_tenant_id_${user.id}`, initialOrg.id)
         await loadScopesForOrg(initialOrg.id)
       }
     } catch (err) {
       console.error('Failed to load tenant data:', err)
-      setCurrentOrganization(DEFAULT_ORGANIZATION)
+      setCurrentOrganization(null)
     } finally {
       setIsLoading(false)
     }
-  }, [user, isPlatformAdmin])
+  }, [user, isPlatformAdmin, account.primaryOrganizationId])
 
   const loadScopesForOrg = async (orgId: string) => {
     // Fetch brands
@@ -199,6 +199,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const targetOrg = organizations.find(o => o.id === orgId)
     if (!targetOrg) return
 
+    if (user) {
+      safeLocalStorage.setItem(`active_tenant_id_${user.id}`, orgId)
+    }
     safeLocalStorage.setItem('altus_active_tenant_id', orgId)
     setCurrentOrganization(targetOrg)
     setCurrentBrand(null)
@@ -247,11 +250,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         console.warn('Error ending platform session:', err)
       }
       setImpersonationSession(null)
-      // Switch back to primary or default org
-      const defaultOrg = organizations[0] || DEFAULT_ORGANIZATION
-      safeLocalStorage.setItem('altus_active_tenant_id', defaultOrg.id)
-      setCurrentOrganization(defaultOrg)
-      await loadScopesForOrg(defaultOrg.id)
+      // Switch back to primary or first accessible org
+      const defaultOrgId = account.primaryOrganizationId || memberships[0]?.organization_id || organizations[0]?.id
+      const defaultOrg = (defaultOrgId ? organizations.find(o => o.id === defaultOrgId) : null) || organizations[0] || null
+      if (defaultOrg) {
+        if (user) {
+          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, defaultOrg.id)
+        }
+        safeLocalStorage.setItem('altus_active_tenant_id', defaultOrg.id)
+        setCurrentOrganization(defaultOrg)
+        await loadScopesForOrg(defaultOrg.id)
+      }
       await account.refresh()
     }
   }

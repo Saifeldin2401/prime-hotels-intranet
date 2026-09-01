@@ -499,7 +499,7 @@ export const aiCourseEngineService = {
           .eq('is_active', true)
           .limit(1)
           .maybeSingle()
-        userOrgId = member?.organization_id || 'e0000000-0000-0000-0000-000000000001'
+        userOrgId = member?.organization_id || null
       }
     }
 
