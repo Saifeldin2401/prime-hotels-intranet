@@ -42,7 +42,8 @@ import {
   Image as ImageIcon
 } from 'lucide-react'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
-import { AITenantEmailBrandCopilotModal, AIEmailBrandSuggestions } from '@/components/admin/AITenantEmailBrandCopilotModal'
+import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
+import type { AIEmailBrandSuggestions } from '@/components/admin/AITenantEmailBrandCopilotModal'
 
 const LIFECYCLE = ['prospect', 'trial', 'onboarding', 'active', 'renewal', 'suspended', 'archived']
 

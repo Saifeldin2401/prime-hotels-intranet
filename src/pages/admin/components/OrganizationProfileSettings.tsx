@@ -11,7 +11,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { Building, Palette, Mail, Check, RefreshCw, Globe, Image as ImageIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
-import { AITenantEmailBrandCopilotModal, AIEmailBrandSuggestions } from '@/components/admin/AITenantEmailBrandCopilotModal'
+import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
+import type { AIEmailBrandSuggestions } from '@/components/admin/AITenantEmailBrandCopilotModal'
 
 export function OrganizationProfileSettings() {
   const { currentOrganization, isOrgAdmin, refreshTenantData } = useTenant()
