@@ -28,12 +28,20 @@
     "payslips_management": "إدارة مسيرات الرواتب",
     "groups": {
         "personal_space": "مساحتي الشخصية",
+        "hotel_operations": "عمليات الفندق",
         "knowledge_sop": "المعرفة والأكاديمية",
+        "hr_staff": "الموارد البشرية والموظفون",
+        "finance_revenue": "المالية والتجارة",
         "administration": "الإدارة والذكاء المؤسسي",
         "platform_operations": "عمليات المنصة والمشغل",
         "favorites": "المفضلة والاختصارات",
-        "recents": "تمت زيارته مؤخراً"
+        "recents": "تمت زيارته مؤخراً",
+        "training": "التدريب والتعلم",
+        "communication": "التواصل والرسائل",
+        "admin": "الإدارة والتحكم",
+        "settings": "الإعدادات"
     },
+    "email_writer": "كاتب البريد الإلكتروني",
     "organizations_hub": "مركز المنظمات والعملاء",
     "global_master_library": "المكتبة الرئيسية للمعايير والدورات",
     "platform_analytics": "تحليلات المنصة الشاملة",
