@@ -11,6 +11,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
+import { useTenant } from '@/contexts/TenantContext';
 
 export interface UserInvitation {
   id: string;
@@ -51,6 +52,7 @@ export interface UseInvitationsReturn {
 }
 
 export function useInvitations(): UseInvitationsReturn {
+  const { currentOrganization } = useTenant();
   const [invitations, setInvitations] = useState<UserInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -134,6 +136,7 @@ export function useInvitations(): UseInvitationsReturn {
         body: {
           email: data.email.toLowerCase(),
           role: data.role,
+          organizationId: currentOrganization?.id,
           propertyIds: data.propertyId ? [data.propertyId] : [],
           departmentIds: data.departmentId ? [data.departmentId] : [],
           provisioningMethod: 'invite',

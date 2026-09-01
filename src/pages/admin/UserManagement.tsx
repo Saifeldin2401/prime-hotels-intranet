@@ -310,6 +310,7 @@ export default function UserManagement() {
           role,
           provisioningMethod: 'invite',
           appUrl,
+          organizationId: currentOrganization?.id,
           propertyIds: invitePropertyId ? [invitePropertyId] : [],
           departmentIds: inviteDepartmentId ? [inviteDepartmentId] : [],
         },

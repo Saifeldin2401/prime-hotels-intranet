@@ -118,6 +118,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
         phone: phone || undefined,
         jobTitle: jobTitle || undefined,
         role,
+        organizationId: currentOrganization?.id,
         propertyIds: validPropertyIds,
         departmentIds: validDepartmentIds,
         reportingTo: reportingTo && isValidUUID(reportingTo) ? reportingTo : undefined,
