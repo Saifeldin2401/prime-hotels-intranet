@@ -364,6 +364,20 @@ serve(async (req) => {
         });
 
         if (!isOp) {
+          if (authUserId) {
+            const { data: withinLimit } = await adminClient.rpc("check_user_rate_limit", {
+              p_action: "ai_request",
+              p_max_requests: 60,
+              p_window_seconds: 60,
+            });
+            if (withinLimit === false) {
+              return jsonResponse(
+                { error: "Rate limit exceeded. Please wait a moment before sending more AI requests.", success: false },
+                429
+              );
+            }
+          }
+
           const { data: userMembership } = await adminClient
             .from("organization_memberships")
             .select("organization_id")

@@ -52,6 +52,16 @@ export const TrainingRoutes = () => (
             errorElement={<RouteErrorBoundary section="Training" />}
         />
         <Route
+            path="/courses"
+            element={<PreserveQueryNavigate to="/training/hub" />}
+            errorElement={<RouteErrorBoundary section="Training" />}
+        />
+        <Route
+            path="/courses/*"
+            element={<PreserveQueryNavigate to="/training/hub" />}
+            errorElement={<RouteErrorBoundary section="Training" />}
+        />
+        <Route
             path="/training/modules"
             element={<PreserveQueryNavigate to="/training/hub?view=list" />}
             errorElement={<RouteErrorBoundary section="Training" />}

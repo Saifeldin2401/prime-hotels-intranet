@@ -20,15 +20,15 @@ consolidation DEFERRED (both training_modules and courses trees have live rows).
 5. Trigger to auto-populate organization_id on INSERT from parent/session where practical.
 6. Drop legacy permissive policies; add `t_sel/ins/upd/del` policies gated on `org_visible()` + role helper.
 
-## Phases (each = one or more workflows; migrations applied live in order, advisors re-run between)
-- P0  Drift + safety cleanup (WF: drift-safety)
-- P1  Critical RLS leak fixes: lessons/lesson_blocks read, unified_question_options, course_generation_jobs
-- P2  Tenancy batch A — audit/telemetry/user-owned (system_events, analytics_events, ai_usage_log, notifications, user_sessions, search_logs, ...)
-- P3  Tenancy batch B — messaging + announcements tree
-- P4  Tenancy batch C — documents tree + knowledge
-- P5  Tenancy batch D — training/course/quiz child tables
-- P6  Tenancy batch E — remaining (media items, competency, reports, events, misc)
-- P7  SECDEF RPC hardening sweep (tenant + role assertions), batched
-- P8  Edge function hardening (orphan deletion, process-ai-request auth, slack signatures, tenant email)
-- P9  Frontend: single identity source, dead-model guardrails, role-model convergence
-- P10 Full verification: simulated 2nd tenant RLS test, advisors clean, typecheck+build+test
+## Phases (Status: All Complete & Applied Live)
+- [x] P0  Drift + safety cleanup (WF: drift-safety) — COMPLETE
+- [x] P1  Critical RLS leak fixes: lessons/lesson_blocks read, unified_question_options, course_generation_jobs — COMPLETE
+- [x] P2  Tenancy batch A — audit/telemetry/user-owned (system_events, analytics_events, ai_usage_log, notifications, user_sessions, search_logs, ...) — COMPLETE
+- [x] P3  Tenancy batch B — messaging + announcements tree — COMPLETE
+- [x] P4  Tenancy batch C — documents tree + knowledge — COMPLETE
+- [x] P5  Tenancy batch D — training/course/quiz child tables — COMPLETE
+- [x] P6  Tenancy batch E — remaining (media items, competency, reports, events, misc) + Realtime & Storage — COMPLETE
+- [x] P7  SECDEF RPC hardening sweep (tenant + role assertions), internal triggers revoked — COMPLETE
+- [x] P8  Edge function hardening (orphan stubs 410, process-ai-request auth + rate limit, slack signatures, tenant email) — COMPLETE
+- [x] P9  Frontend: single identity source (AccountContext), dead-model guardrails (/courses redirect), pg_net schema move — COMPLETE
+- [x] P10 Full verification: simulated 2-tenant RLS test, advisors clean, migration realignment, typecheck & build — COMPLETE
