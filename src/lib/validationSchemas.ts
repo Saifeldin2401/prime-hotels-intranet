@@ -33,7 +33,22 @@ export const userSchema = z.object({
   is_active: z.boolean().default(true),
   property_ids: z.array(uuidSchema).default([]),
   department_ids: z.array(uuidSchema).default([]),
-  role: z.enum(['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager', 'staff'], {
+  role: z.enum([
+    'administrator',
+    'training_manager',
+    'knowledge_manager',
+    'author',
+    'learner',
+    'super_admin',
+    'corporate_admin',
+    'regional_admin',
+    'regional_hr',
+    'property_manager',
+    'property_hr',
+    'department_head',
+    'manager',
+    'staff'
+  ], {
     message: 'Please select a valid role'
   }),
   reporting_to: uuidSchema.optional()
