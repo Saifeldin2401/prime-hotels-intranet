@@ -51,15 +51,36 @@ interface EmployeeAssignmentDialogProps {
 }
 
 // Which roles can be assigned by which admin role
+const ALL_SYSTEM_ROLES = [
+    'administrator',
+    'training_manager',
+    'knowledge_manager',
+    'author',
+    'learner',
+    'super_admin',
+    'corporate_admin',
+    'regional_admin',
+    'regional_hr',
+    'property_manager',
+    'property_hr',
+    'department_head',
+    'manager',
+    'staff'
+]
+
 const ASSIGNABLE_ROLES: Record<string, string[]> = {
-    'corporate_admin': ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'],
-    'regional_admin': ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff'],
-    'regional_hr': ['property_hr', 'department_head', 'staff'],
-    'property_manager': ['property_hr', 'department_head', 'staff'],
-    'property_hr': ['department_head', 'staff'],
+    'administrator': ALL_SYSTEM_ROLES,
+    'super_admin': ALL_SYSTEM_ROLES,
+    'corporate_admin': ALL_SYSTEM_ROLES,
+    'training_manager': ['training_manager', 'knowledge_manager', 'author', 'learner', 'property_manager', 'property_hr', 'department_head', 'manager', 'staff'],
+    'knowledge_manager': ['knowledge_manager', 'author', 'learner', 'department_head', 'staff'],
+    'regional_admin': ['regional_admin', 'regional_hr', 'training_manager', 'knowledge_manager', 'author', 'learner', 'property_manager', 'property_hr', 'department_head', 'manager', 'staff'],
+    'regional_hr': ['property_hr', 'department_head', 'manager', 'staff', 'author', 'learner'],
+    'property_manager': ['property_hr', 'department_head', 'manager', 'staff', 'author', 'learner'],
+    'property_hr': ['department_head', 'manager', 'staff', 'learner'],
 }
 
-const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
+const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin', 'training_manager', 'administrator']
 
 export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: EmployeeAssignmentDialogProps) {
     const { currentOrganization } = useTenant()
@@ -79,21 +100,21 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const canEditEmployee = useMemo(() => {
         if (!employee || !primaryRole) return false
 
-        // Corporate admins can edit anyone
-        if (primaryRole === 'corporate_admin') return true
+        // Administrators and Corporate admins can edit anyone
+        if (['administrator', 'super_admin', 'corporate_admin'].includes(primaryRole)) return true
 
-        // Regional admins can edit anyone
-        if (primaryRole === 'regional_admin') return true
+        // Training / Regional admins
+        if (['training_manager', 'regional_admin'].includes(primaryRole)) return true
 
-        // Regional HR can edit anyone except regional_admin
+        // Regional HR can edit anyone except regional_admin / corporate_admin / administrator
         if (primaryRole === 'regional_hr') {
-            return !employee.roles.includes('regional_admin') && !employee.roles.includes('corporate_admin')
+            return !employee.roles.includes('regional_admin') && !employee.roles.includes('corporate_admin') && !employee.roles.includes('administrator')
         }
 
         // Property manager/HR can only edit employees at their property
         if (['property_manager', 'property_hr'].includes(primaryRole)) {
             // Cannot edit corporate employees
-            if (employee.roles.some(r => ['corporate_admin', 'regional_admin', 'regional_hr'].includes(r))) {
+            if (employee.roles.some(r => ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr'].includes(r))) {
                 return false
             }
             // Must be at same property
@@ -107,14 +128,22 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     // Get available roles based on admin's role
     const availableRoles = useMemo(() => {
         const assignable = ASSIGNABLE_ROLES[primaryRole || ''] || []
-        return [
+        const roleOptions: Array<{ value: string; label: string }> = [
+            { value: 'administrator', label: 'Administrator' },
+            { value: 'training_manager', label: 'Training Manager' },
+            { value: 'knowledge_manager', label: 'Knowledge Manager' },
+            { value: 'author', label: 'Author' },
+            { value: 'learner', label: 'Learner' },
             { value: 'staff', label: 'Staff' },
+            { value: 'manager', label: 'Manager' },
             { value: 'department_head', label: 'Department Head' },
             { value: 'property_hr', label: 'Property HR' },
             { value: 'property_manager', label: 'Property Manager' },
             { value: 'regional_hr', label: 'Regional HR' },
             { value: 'regional_admin', label: 'Regional Admin' },
-        ].filter(role => assignable.includes(role.value))
+            { value: 'corporate_admin', label: 'Corporate Admin' },
+        ]
+        return roleOptions.filter(role => assignable.includes(role.value))
     }, [primaryRole])
 
     // Fetch properties / hotels - filtered based on admin role
@@ -135,7 +164,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
     // Filter properties based on admin role
     const properties = useMemo(() => {
-        if (['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')) {
+        if (['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')) {
             return allProperties
         }
         // Property managers/HR can only assign to their properties
@@ -159,7 +188,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         enabled: !!selectedPropertyId
     })
 
-    const isCorpAdmin = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isCorpAdmin = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const allowedPropertyIds = useMemo(() => {
         if (isCorpAdmin) return null
         return userProperties?.map(p => p.id) || []

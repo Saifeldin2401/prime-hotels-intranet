@@ -133,7 +133,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
     { value: 'regional_admin', label: t('roles.regional_admin') || 'Regional Admin' },
   ].filter((roleOption) =>
     availableRoles.includes(roleOption.value as AppRole)
-    || (['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] as AppRole[])
+    || (['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'] as AppRole[])
       .some((role) => availableRoles.includes(role))
   )
 

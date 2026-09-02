@@ -185,7 +185,7 @@ export function CalendarWidget() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
   // Roles that can access the full scheduling/shift management tool
-  const schedulingRoles = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
+  const schedulingRoles = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
   const hasSchedulingPrivileges = schedulingRoles.includes(primaryRole || '')
   const schedulePath = hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
 

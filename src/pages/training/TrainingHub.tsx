@@ -123,9 +123,9 @@ export default function TrainingHub() {
   const isRTL = i18n.dir() === 'rtl'
   const { toast } = useToast()
 
-  const canManageModules = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
-  const canAssignTraining = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].includes(primaryRole || '')
-  const canReviewModules = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
+  const canManageModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'author', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
+  const canAssignTraining = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].includes(primaryRole || '')
+  const canReviewModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
 
   const rawViewParam = searchParams.get('view')
   const viewParam = (rawViewParam === 'analytics' ? 'insights' : rawViewParam) as ViewMode | null

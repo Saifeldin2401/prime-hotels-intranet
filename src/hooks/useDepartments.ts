@@ -16,15 +16,15 @@ export function useDepartments(propertyId?: string) { // Optional filter
   const { user, primaryRole, properties } = useAuth();
 
   // Auth helpers
-  const isCorporateAdmin = primaryRole === 'corporate_admin';
-  const isRegionalAccess = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '');
+  const isCorporateAdmin = ['administrator', 'super_admin', 'corporate_admin'].includes(primaryRole || '');
+  const isRegionalAccess = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '');
   const isPropertyAdmin = ['property_manager', 'property_hr'].includes(primaryRole || '');
   const canManage = isRegionalAccess || isPropertyAdmin;
 
   // Determine which property IDs this user can actually see/manage
   const allowedPropertyIds = properties?.map(p => p.id) || [];
   const validatePropertyAccess = (idToValidate: string) => {
-    if (isCorporateAdmin) return true; // corporate_admin can manage anywhere
+    if (isCorporateAdmin) return true; // administrators and corporate_admin can manage anywhere
     return allowedPropertyIds.includes(idToValidate);
   };
 

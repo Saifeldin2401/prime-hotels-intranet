@@ -197,7 +197,7 @@ export function getTourStepsForRole(role: AppRole | string | undefined): TourSte
     }
 
     // Admin roles
-    if (['corporate_admin', 'regional_admin'].includes(role || '')) {
+    if (['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin'].includes(role || '')) {
         steps.push(...ADMIN_STEPS)
     }
 

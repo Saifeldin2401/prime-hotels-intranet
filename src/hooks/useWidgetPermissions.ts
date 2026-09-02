@@ -47,7 +47,7 @@ export function useWidgetPermissions() {
             if (config.requiredDepartments && config.requiredDepartments.length > 0) {
                 const userDeptNames = departments.map(d => d.name)
                 const hasDeptAccess = config.requiredDepartments.some(reqDept => userDeptNames.includes(reqDept))
-                if (!hasDeptAccess && !['corporate_admin', 'regional_admin', 'property_manager'].includes(primaryRole)) {
+                if (!hasDeptAccess && !['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'property_manager'].includes(primaryRole)) {
                     // High-level roles bypass strict department checks
                     return false
                 }

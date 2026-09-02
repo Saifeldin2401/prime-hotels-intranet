@@ -113,6 +113,12 @@ const DEFAULT_INPUT = [
 ].join('\n')
 
 const VALID_ROLES = new Set([
+  'administrator',
+  'training_manager',
+  'knowledge_manager',
+  'author',
+  'learner',
+  'super_admin',
   'corporate_admin',
   'regional_admin',
   'regional_hr',
@@ -363,7 +369,7 @@ async function assertPrerequisites() {
 
   const roles = (roleRows || []).map((row) => row.role)
   const hasPermission = roles.some((role) =>
-    ['corporate_admin', 'regional_admin', 'regional_hr'].includes(role)
+    ['administrator', 'training_manager', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr'].includes(role)
   )
 
   if (!hasPermission) {
@@ -442,7 +448,7 @@ async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId:
   return (created as DepartmentRecord).id
 }
 
-async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputUserRow) {
+async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputUserRow, organizationId?: string) {
   const normalizedRole = normalizeText(row.role).replace(/\s+/g, '_')
   if (!VALID_ROLES.has(normalizedRole)) {
     throw new Error(`Invalid role "${row.role}"`)
@@ -460,6 +466,7 @@ async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputU
     fullName: row.name,
     phone: normalizePhone(row.phone),
     role: normalizedRole,
+    organizationId: organizationId || undefined,
     propertyIds: [property.id],
     departmentIds: [departmentId],
     provisioningMethod: config.provisioningMethod,
@@ -656,7 +663,7 @@ export default function BulkUserProvisioning() {
         seenInputEmails.add(email)
 
         try {
-          await createSingleUser(maps, config, row)
+          await createSingleUser(maps, config, row, currentOrganization?.id)
           localReport.created += 1
           appendLog(`${config.dryRun ? 'Dry-run validated' : 'Processed'}: ${email}`)
         } catch (error: any) {

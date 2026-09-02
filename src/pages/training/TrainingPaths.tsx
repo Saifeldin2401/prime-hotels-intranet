@@ -396,7 +396,7 @@ export default function TrainingPaths() {
         description={t('paths_description')}
         actions={
           <div className="flex items-center gap-2">
-            {['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
+            {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
               <Button onClick={() => setShowPathDialog(true)} className={isRTL ? "flex-row-reverse" : ""}>
                 <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('createPath')}
@@ -409,7 +409,7 @@ export default function TrainingPaths() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="my">{t('myPaths')}</TabsTrigger>
-          {['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
+          {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
             <TabsTrigger value="all">{t('allPaths')}</TabsTrigger>
           )}
         </TabsList>
@@ -470,7 +470,7 @@ export default function TrainingPaths() {
           </Card>
         </TabsContent>
 
-        {['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
+        {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
           <TabsContent value="all" className="space-y-4">
             <Card>
               <CardHeader>

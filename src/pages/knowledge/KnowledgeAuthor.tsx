@@ -1736,8 +1736,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         {t('editor.draft', 'Save Draft')}
                     </Button>
 
-                    {/* Submit for Review (Dept Head, HR, Prop Manager) */}
-                    {['department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
+                    {/* Submit for Review (Authors, Dept Head, HR, Prop Manager) */}
+                    {['author', 'department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
                         <Button
                             size="sm"
                             onClick={() => saveArticle('PENDING_REVIEW')}
@@ -1749,8 +1749,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         </Button>
                     )}
 
-                    {/* Publish (Prop Manager, Admin only) */}
-                    {['property_manager', 'regional_admin', 'corporate_admin', 'super_admin', 'admin'].includes(primaryRole || '') && (
+                    {/* Publish (Knowledge Manager, Training Manager, Admin) */}
+                    {['administrator', 'knowledge_manager', 'training_manager', 'property_manager', 'regional_admin', 'corporate_admin', 'super_admin', 'admin'].includes(primaryRole || '') && (
                         <Button
                             size="sm"
                             onClick={() => saveArticle('PUBLISHED')}

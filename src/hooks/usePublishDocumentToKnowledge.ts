@@ -196,7 +196,7 @@ export function useCanPublishToKnowledge(document?: Document | null): {
   }
 
   // Check if user has permission to publish
-  const allowedRoles = ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'corporate_admin', 'dept_head'];
+  const allowedRoles = ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'corporate_admin', 'department_head', 'dept_head'];
   if (!allowedRoles.includes(primaryRole || '')) {
     return { canPublish: false, reason: 'Insufficient permissions' };
   }

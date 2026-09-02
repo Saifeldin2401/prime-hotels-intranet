@@ -180,7 +180,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
 
       const userRoles = profile?.user_roles?.map((r: any) => r.role) || []
       const propertyIds = profile?.user_properties?.map((p: any) => p.property_id) || []
-      const isAdminByRole = userRoles.some(r => ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'compliance_officer'].includes(r))
+      const isAdminByRole = userRoles.some(r => ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'property_manager', 'property_hr', 'compliance_officer'].includes(r))
 
       const startDate = new Date()
       switch (timeRange) {

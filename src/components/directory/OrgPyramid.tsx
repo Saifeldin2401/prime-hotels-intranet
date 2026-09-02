@@ -75,7 +75,7 @@ export function OrgPyramid({
     const [expandAll, setExpandAll] = useState(false)
 
     // Admin mode state
-    const isAdmin = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
+    const isAdmin = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '')
     const [adminModeInternal, setAdminModeInternal] = useState(false)
     const adminMode = adminModeProp ?? adminModeInternal
     const setAdminMode = onAdminModeChange ?? setAdminModeInternal

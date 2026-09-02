@@ -595,7 +595,7 @@ export default function TrainingPlayer() {
     const { user, profile, properties, departments, primaryRole } = useAuth()
     const isValidModuleId = isValidUuid(id)
 
-    const canViewUnpublishedModules = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
+    const canViewUnpublishedModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'author', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
 
     useEffect(() => {
         if (id && !isValidModuleId) {

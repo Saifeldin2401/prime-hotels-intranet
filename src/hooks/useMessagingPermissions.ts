@@ -141,7 +141,7 @@ export function canSendMessageTo(
   if (!senderRole || !recipientRole) return false
 
   // Users can always message their direct manager or subordinates
-  const roleHierarchy = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'staff']
+  const roleHierarchy = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager', 'author', 'learner', 'staff']
   const senderIndex = roleHierarchy.indexOf(senderRole)
   const recipientIndex = roleHierarchy.indexOf(recipientRole)
 
@@ -171,7 +171,7 @@ export function validateMessageContent(
   }
 
   // System messages require higher privileges
-  if (messageType === 'system' && !['corporate_admin', 'regional_admin', 'regional_hr'].includes(userRole || '')) {
+  if (messageType === 'system' && !['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(userRole || '')) {
     return { isValid: false, error: 'You do not have permission to send system messages' }
   }
 

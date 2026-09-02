@@ -74,7 +74,7 @@ function getRelatedId(relation: RelatedEntityWithId | RelatedEntityWithId[]): st
 }
 
 // Role classifications
-const EXECUTIVE_ROLES = ['corporate_admin', 'regional_admin', 'regional_hr']
+const EXECUTIVE_ROLES = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr']
 const SUPERVISOR_JOB_TITLES = ['supervisor', 'lead', 'senior', 'chief', 'head waiter', 'captain']
 
 // Job Title Hierarchy - Lower numbers = higher rank
@@ -275,9 +275,9 @@ export function useOrgHierarchy(searchTerm?: string) {
     const { primaryRole, properties: userProperties, departments: userDepartments } = useAuth()
 
     // Determine access level for RBAC filtering
-    const isCorpLevel = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isCorpLevel = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const isPropLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
-    const isDeptLevel = primaryRole === 'department_head'
+    const isDeptLevel = ['department_head', 'author'].includes(primaryRole || '')
 
     // Fetch all profiles with their roles, properties, departments
     const { data: profiles, isLoading: profilesLoading } = useQuery({

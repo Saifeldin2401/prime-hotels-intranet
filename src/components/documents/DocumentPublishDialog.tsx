@@ -90,7 +90,7 @@ export function DocumentPublishDialog({
   const publishMutation = usePublishDocumentToKnowledge();
 
   const canPublish = useCanPublishToKnowledge(document);
-  const canAutoPublish = ['regional_admin', 'regional_hr', 'corporate_admin'].includes(
+  const canAutoPublish = ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'regional_admin', 'regional_hr', 'corporate_admin'].includes(
     primaryRole || ''
   );
 

@@ -70,7 +70,7 @@ export function DocumentKnowledgeLifecycleCard({
   const [removeReason, setRemoveReason] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const canManage = ['regional_admin', 'regional_hr', 'corporate_admin', 'property_manager', 'department_head'].includes(
+  const canManage = ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'regional_admin', 'regional_hr', 'corporate_admin', 'property_manager', 'department_head'].includes(
     primaryRole || ''
   );
 

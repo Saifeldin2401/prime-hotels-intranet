@@ -24,7 +24,7 @@ async function checkMediaAccess(assetId: string, userId: string): Promise<boolea
       .select('role')
       .eq('user_id', userId);
     
-    const adminRoles = ['corporate_admin', 'regional_admin', 'regional_hr'];
+    const adminRoles = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'knowledge_manager', 'regional_admin', 'regional_hr'];
     const isAdmin = roles?.some(r => adminRoles.includes(r.role)) ?? false;
     
     if (isAdmin) return true;

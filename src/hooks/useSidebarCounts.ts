@@ -41,9 +41,9 @@ export function useSidebarCounts() {
     const currentPropertyId = currentProperty?.id
 
     // Determine access level
-    const isRegionalAccess = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
+    const isRegionalAccess = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
     const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
-    const isDepartmentHead = primaryRole === 'department_head'
+    const isDepartmentHead = ['department_head', 'author'].includes(primaryRole || '')
 
     // Set up real-time subscriptions for immediate badge updates
     useEffect(() => {

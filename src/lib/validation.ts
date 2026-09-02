@@ -115,12 +115,19 @@ export const userSchema = z.object({
     .or(z.literal('')),
   
   role: z.enum([
+    'administrator',
+    'training_manager',
+    'knowledge_manager',
+    'author',
+    'learner',
+    'super_admin',
     'corporate_admin',
     'regional_admin', 
     'regional_hr', 
     'property_manager', 
     'property_hr', 
     'department_head', 
+    'manager',
     'staff'
   ]),
   
