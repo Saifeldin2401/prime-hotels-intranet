@@ -1947,7 +1947,7 @@ export default function KnowledgeRead() {
                                 </div>
                             ) : (
                                 /* AI Course & Quiz Generation Quick Actions for Authors/Managers */
-                                (hasPermission('training.create') || hasPermission('knowledge.publish') || profile?.role === 'admin' || profile?.role === 'super_admin') && (
+                                (hasPermission('training.create') || hasPermission('knowledge.publish') || profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'administrator') && (
                                     <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-500 via-hotel-gold to-yellow-600">
                                         <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
                                             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">

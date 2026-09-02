@@ -167,7 +167,7 @@ export function TeamWidget() {
                         <p className="font-semibold text-sm truncate group-hover:text-primary transition-colors">
                           {member.full_name}
                         </p>
-                        {index === 0 && member.role === 'department_head' && (
+                        {index === 0 && (member.role === 'department_head' || member.role === 'author' || member.role === 'training_manager') && (
                           <Award className="w-4 h-4 text-amber-500" />
                         )}
                       </div>

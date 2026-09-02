@@ -103,7 +103,7 @@ export function useApprovalStats() {
                 if (role === 'department_head' || role === 'author') {
                     return departmentIds.length > 0 ? scopedQuery.in('department_id', departmentIds) : null
                 }
-                if (role === 'property_hr' || role === 'property_manager') {
+                if (role === 'property_hr' || role === 'property_manager' || role === 'training_manager') {
                     return propertyIds.length > 0 ? scopedQuery.in('property_id', propertyIds) : null
                 }
                 return query
