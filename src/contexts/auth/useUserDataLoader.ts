@@ -207,13 +207,13 @@ export function useUserDataLoader(
           if (!membError && Array.isArray(memberships)) {
             memberships.forEach((m: any) => {
               const mappedRole = m.role === 'organization_owner' || m.role === 'organization_admin'
-                ? 'corporate_admin'
-                : m.role === 'training_manager'
+                ? 'administrator'
+                : m.role === 'training_manager' || m.role === 'hotel_admin'
                 ? 'training_manager'
-                : m.role === 'hotel_admin'
-                ? 'property_manager'
-                : m.role === 'department_manager'
-                ? 'department_head'
+                : m.role === 'knowledge_manager'
+                ? 'knowledge_manager'
+                : m.role === 'department_manager' || m.role === 'author'
+                ? 'author'
                 : 'learner'
 
               if (!userRoles.some((r) => r.role === mappedRole)) {

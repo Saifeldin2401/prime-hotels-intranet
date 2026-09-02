@@ -37,7 +37,7 @@ export interface UserDataContextType {
   setRolesLoading: (loading: boolean) => void
 }
 
-export const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
+const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useUserData() {
