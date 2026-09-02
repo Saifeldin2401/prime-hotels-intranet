@@ -405,7 +405,7 @@ export function useDepartmentHeadStats() {
         refetchInterval: 300000, // Increased to 5 min to save disk I/O
         refetchIntervalInBackground: false,
         staleTime: 60000,
-        enabled: primaryRole === 'department_head' && !!profile?.id
+        enabled: (primaryRole === 'department_head' || primaryRole === 'author') && !!profile?.id
     })
 }
 

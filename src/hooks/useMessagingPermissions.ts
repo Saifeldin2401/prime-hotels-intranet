@@ -37,6 +37,8 @@ export function useMessagingPermissions(): MessagingPermissions {
     if (!primaryRole) return permissions
 
     switch (primaryRole) {
+      case 'administrator':
+      case 'super_admin':
       case 'corporate_admin':
         return {
           ...permissions,
@@ -50,6 +52,7 @@ export function useMessagingPermissions(): MessagingPermissions {
           allowedPriorities: ['low', 'medium', 'high', 'urgent']
         }
 
+      case 'training_manager':
       case 'regional_admin':
         return {
           ...permissions,
@@ -63,6 +66,7 @@ export function useMessagingPermissions(): MessagingPermissions {
           allowedPriorities: ['low', 'medium', 'high', 'urgent']
         }
 
+      case 'knowledge_manager':
       case 'regional_hr':
         return {
           ...permissions,
@@ -102,6 +106,7 @@ export function useMessagingPermissions(): MessagingPermissions {
           allowedPriorities: ['low', 'medium', 'high']
         }
 
+      case 'author':
       case 'department_head':
         return {
           ...permissions,
@@ -115,6 +120,7 @@ export function useMessagingPermissions(): MessagingPermissions {
           allowedPriorities: ['low', 'medium', 'high']
         }
 
+      case 'learner':
       case 'staff':
         return {
           ...permissions,

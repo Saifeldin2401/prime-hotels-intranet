@@ -72,7 +72,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                     const { data: headUser } = await supabase
                         .from('user_roles')
                         .select('user_id')
-                        .eq('role', 'department_head')
+                        .in('role', ['department_head', 'author', 'manager'])
                         .in('user_id', userIds)
                         .limit(1)
                         .maybeSingle()

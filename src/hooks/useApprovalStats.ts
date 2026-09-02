@@ -100,7 +100,7 @@ export function useApprovalStats() {
             const applyScope = <T,>(query: T): T | null => {
                 const scopedQuery = query as any
                 if (!role) return query
-                if (role === 'department_head') {
+                if (role === 'department_head' || role === 'author') {
                     return departmentIds.length > 0 ? scopedQuery.in('department_id', departmentIds) : null
                 }
                 if (role === 'property_hr' || role === 'property_manager') {
@@ -257,7 +257,7 @@ export function usePendingApprovals() {
                 .order('created_at', { ascending: true })
 
             let skipLegacyQuery = false
-            if (userRole === 'department_head') {
+            if (userRole === 'department_head' || userRole === 'author') {
                 const deptIds = departments.map(d => d.id)
                 if (deptIds.length > 0) {
                     legacyQuery = legacyQuery.in('department_id', deptIds)

@@ -953,7 +953,7 @@ export default function KnowledgeAuthor() {
 
     // Permission check
     useEffect(() => {
-        if (primaryRole === 'staff') {
+        if (primaryRole === 'staff' || primaryRole === 'learner') {
             setIsForbidden(true)
             toast.error('You do not have permission to create or edit articles.')
             navigate('/knowledge')
@@ -1657,7 +1657,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
     }
 
-    if (isForbidden || primaryRole === 'staff') {
+    if (isForbidden || primaryRole === 'staff' || primaryRole === 'learner') {
         return null
     }
 

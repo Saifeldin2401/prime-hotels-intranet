@@ -683,7 +683,7 @@ export function getRouteByPath(path: string): RouteConfig | undefined {
 export function getMobileQuickActions(role: AppRole | null): RouteConfig[] {
     if (!role) return []
 
-    const priorityPaths = role === 'staff'
+    const priorityPaths = (role === 'staff' || role === 'learner')
         ? ['/dashboard', '/learning/my', '/knowledge', '/documents', '/profile']
         : ['/dashboard', '/learning/my', '/knowledge', '/training/hub', '/profile']
 

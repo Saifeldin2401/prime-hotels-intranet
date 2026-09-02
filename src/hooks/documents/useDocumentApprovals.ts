@@ -40,13 +40,13 @@ export function useSubmitForApproval() {
 
       let roleFilters: AppRole[] = []
       if (doc.visibility === 'all_properties') {
-        roleFilters = ['regional_admin']
+        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'knowledge_manager', 'regional_admin']
       } else if (doc.visibility === 'property') {
-        roleFilters = ['property_manager', 'property_hr']
+        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'property_manager', 'property_hr']
       } else if (doc.visibility === 'department') {
-        roleFilters = ['department_head']
+        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'department_head', 'author']
       } else if (doc.visibility === 'role') {
-        roleFilters = ['regional_admin']
+        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'knowledge_manager', 'regional_admin']
       }
 
       let approverQuery = supabase
