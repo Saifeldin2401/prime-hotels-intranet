@@ -18,67 +18,67 @@ const navigationItems = [
     name: 'Dashboard',
     href: '/dashboard',
     icon: Icons.LayoutDashboard,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'SOPs',
     href: '/knowledge',
     icon: Icons.ClipboardList,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Training',
     href: '/learning/my',
     icon: Icons.GraduationCap,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Documents',
     href: '/documents',
     icon: Icons.FileText,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Announcements',
     href: '/announcements',
     icon: Icons.Megaphone,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'HR',
     href: '/hr',
     icon: Icons.Users,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Tasks',
     href: '/tasks',
     icon: Icons.CheckSquare,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Jobs',
     href: '/jobs',
     icon: Icons.Briefcase,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Messages',
     href: '/messaging',
     icon: Icons.MessageSquare,
-    requiredRole: 'staff' as const
+    requiredRole: 'learner' as const
   },
   {
     name: 'Reports',
     href: '/reports',
     icon: Icons.BarChart3,
-    requiredRole: 'property_manager' as const
+    requiredRole: 'training_manager' as const
   },
   {
     name: 'Admin',
     href: '/admin/users',
     icon: Icons.Settings,
-    requiredRole: 'corporate_admin' as const
+    requiredRole: 'administrator' as const
   }
 ]
 

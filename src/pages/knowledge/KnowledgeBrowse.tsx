@@ -278,7 +278,7 @@ export default function KnowledgeBrowse() {
         return activeType === chipType
     }
 
-    const canManage = primaryRole !== 'staff'
+    const canManage = primaryRole !== 'staff' && primaryRole !== 'learner'
 
     const handleConfirmDelete = async () => {
         if (!deleteId) return

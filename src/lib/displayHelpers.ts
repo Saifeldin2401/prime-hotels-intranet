@@ -30,7 +30,14 @@ export function getDisplayJobTitle(profile: Profile | null | undefined): string 
  */
 export function canViewSystemRoles(currentUserRole: AppRole | null): boolean {
     if (!currentUserRole) return false
-    return currentUserRole === 'regional_admin' || currentUserRole === 'regional_hr'
+    return (
+        currentUserRole === 'administrator' ||
+        currentUserRole === 'super_admin' ||
+        currentUserRole === 'corporate_admin' ||
+        currentUserRole === 'training_manager' ||
+        currentUserRole === 'regional_admin' ||
+        currentUserRole === 'regional_hr'
+    )
 }
 
 /**

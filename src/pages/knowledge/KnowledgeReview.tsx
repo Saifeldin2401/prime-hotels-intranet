@@ -119,7 +119,7 @@ export default function KnowledgeReview() {
                 .order('created_at', { ascending: false })
 
             // Role-based filtering: Department heads only see their own department's items
-            if (primaryRole === 'department_head' && userDepts?.[0]?.id) {
+            if ((primaryRole === 'department_head' || primaryRole === 'author') && userDepts?.[0]?.id) {
                 query = query.eq('document.department_id', userDepts[0].id)
             }
 

@@ -15,61 +15,61 @@ interface PermissionConfig {
 const PERMISSION_CONFIG: PermissionConfig = {
   // Training permissions
   'training.view': { roles: ['all'] },
-  'training.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
-  'training.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
-  'training.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
-  'training.assign': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
-  'training.report': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
-  'training.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+  'training.create': { roles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'training.edit': { roles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'training.delete': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'] },
+  'training.assign': { roles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head'] },
+  'training.report': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+  'training.export': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
 
   // User management permissions
-  'users.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
-  'users.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
-  'users.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
-  'users.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
-  'users.assign_roles': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
+  'users.view': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
+  'users.create': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'] },
+  'users.edit': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'], requiresPropertyAccess: true },
+  'users.delete': { roles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr'] },
+  'users.assign_roles': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'] },
 
   // Document permissions
   'documents.view': { roles: ['all'] },
-  'documents.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
-  'documents.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
-  'documents.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
-  'documents.approve': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
-  'documents.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+  'documents.create': { roles: ['administrator', 'super_admin', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  'documents.edit': { roles: ['administrator', 'super_admin', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  'documents.delete': { roles: ['administrator', 'super_admin', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'] },
+  'documents.approve': { roles: ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'documents.export': { roles: ['administrator', 'super_admin', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
 
   // Announcement permissions
   'announcements.view': { roles: ['all'] },
-  'announcements.create': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
-  'announcements.edit': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
-  'announcements.delete': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.create': { roles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.edit': { roles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'announcements.delete': { roles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
 
   // Task permissions
-  'tasks.reassign': { roles: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'], requiresPropertyAccess: true },
-  'tasks.escalate': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'manager'] },
+  'tasks.reassign': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'property_manager', 'department_head'], requiresPropertyAccess: true },
+  'tasks.escalate': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'manager'] },
 
   // HR permissions
-  'hr.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'], requiresPropertyAccess: true },
-  'hr.manage_referrals': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
-  'hr.manage_candidates': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
+  'hr.export': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'], requiresPropertyAccess: true },
+  'hr.manage_referrals': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
+  'hr.manage_candidates': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager'] },
 
   // Operations permissions
-  'operations.export': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
+  'operations.export': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'], requiresPropertyAccess: true },
 
   // Approval permissions
-  'approvals.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'] },
+  'approvals.view': { roles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head'] },
 
-  'maintenance.view': { roles: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head', 'staff'] },
+  'maintenance.view': { roles: ['all'] },
 
   // Analytics permissions
-  'analytics.view': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
+  'analytics.view': { roles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] },
 
   // Scheduling permissions
-  'scheduling.manage': { roles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
+  'scheduling.manage': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'] },
 
   // System permissions
-  'system.view_logs': { roles: ['corporate_admin', 'regional_admin'] },
-  'system.manage_settings': { roles: ['corporate_admin', 'regional_admin'] },
-  'system.export_data': { roles: ['corporate_admin', 'regional_admin', 'regional_hr'] },
+  'system.view_logs': { roles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'] },
+  'system.manage_settings': { roles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'] },
+  'system.export_data': { roles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'] },
 }
 
 export function usePermissions() {
@@ -155,21 +155,23 @@ export function usePermissions() {
     }
   }, [hasPermission, canAccessDepartment])
 
+  const can = useMemo(() => {
+    return (action: string, subject: string, propertyId?: string, departmentId?: string) => {
+      const permission = `${subject}.${action}` as Permission
+      return hasPermission(permission, propertyId, departmentId)
+    }
+  }, [hasPermission])
+
   return {
     hasPermission,
     canAccessProperty,
-    canAccessConsolidatedView,
     canAccessDepartment,
     getAccessibleProperties,
     getAccessibleDepartments,
     getPropertyScopedPermissions,
     getDepartmentScopedPermissions,
+    can,
+    primaryRole,
+    isLoaded: true
   }
 }
-
-export function usePermission(permission: Permission, propertyId?: string, departmentId?: string) {
-  const { hasPermission } = usePermissions()
-  return hasPermission(permission, propertyId, departmentId)
-}
-
-export type { Permission }

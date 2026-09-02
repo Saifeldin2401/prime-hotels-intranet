@@ -471,7 +471,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const taskDepartmentIds =
               explicitDepartmentId
                 ? [explicitDepartmentId]
-                : primaryRole === 'department_head'
+                : (primaryRole === 'department_head' || primaryRole === 'author')
                   ? userDepartmentIds
                   : []
 
@@ -527,7 +527,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const ticketDepartmentIds =
               explicitDepartmentId
                 ? [explicitDepartmentId]
-                : primaryRole === 'department_head'
+                : (primaryRole === 'department_head' || primaryRole === 'author')
                   ? userDepartmentIds
                   : []
             ticketsQuery = applyIdsScope(ticketsQuery, 'department_id', ticketDepartmentIds)
