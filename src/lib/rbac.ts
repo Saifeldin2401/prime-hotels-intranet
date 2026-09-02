@@ -1,4 +1,5 @@
 import type { AppRole } from './constants'
+import { canRoleAccess } from '@/features/access/policy'
 
 export interface User {
     id: string
@@ -14,5 +15,5 @@ export interface User {
 export function canAccessPage(userRole: AppRole | null, requiredRoles: AppRole[]): boolean {
     if (!userRole) return false
     if (requiredRoles.length === 0) return true
-    return requiredRoles.includes(userRole)
+    return canRoleAccess(userRole, requiredRoles)
 }

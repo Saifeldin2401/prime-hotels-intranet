@@ -188,9 +188,9 @@ const LegacyAnalyticsRedirect = () => {
     }
 
     const destination = (
-        primaryRole === 'corporate_admin' || primaryRole === 'regional_admin'
+        ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'].includes(primaryRole || '')
             ? '/admin/analytics'
-            : primaryRole === 'regional_hr' || primaryRole === 'property_manager'
+            : ['training_manager', 'regional_hr', 'property_manager'].includes(primaryRole || '')
                 ? '/reports'
                 : '/learning/analytics'
     )

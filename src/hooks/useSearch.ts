@@ -62,7 +62,12 @@ const applyIdsScope = <T,>(query: T, column: string, ids: string[]): T => {
 }
 
 const SEARCH_DRAFT_ROLES = new Set([
+  'administrator',
+  'super_admin',
   'corporate_admin',
+  'training_manager',
+  'knowledge_manager',
+  'author',
   'regional_admin',
   'regional_hr',
   'property_manager',
@@ -70,7 +75,11 @@ const SEARCH_DRAFT_ROLES = new Set([
 ])
 
 const USER_SEARCH_ROLES = new Set([
+  'administrator',
+  'super_admin',
   'corporate_admin',
+  'training_manager',
+  'knowledge_manager',
   'regional_admin',
   'regional_hr',
   'property_manager',
@@ -78,7 +87,10 @@ const USER_SEARCH_ROLES = new Set([
 ])
 
 const ALL_TASKS_ROLES = new Set([
+  'administrator',
+  'super_admin',
   'corporate_admin',
+  'training_manager',
   'regional_admin',
   'regional_hr',
   'property_manager',
@@ -87,7 +99,10 @@ const ALL_TASKS_ROLES = new Set([
 ])
 
 const ALL_REFERRALS_ROLES = new Set([
+  'administrator',
+  'super_admin',
   'corporate_admin',
+  'training_manager',
   'regional_admin',
   'regional_hr',
   'property_hr',
@@ -114,7 +129,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     departmentId: explicitDepartmentId
   } = options
 
-  const isAdmin = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin'
+  const isAdmin = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin'].includes(primaryRole || '')
   const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')

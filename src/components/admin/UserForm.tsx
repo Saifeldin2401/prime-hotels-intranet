@@ -69,7 +69,7 @@ const isValidUUID = (id: string | null | undefined): boolean => {
   return uuidRegex.test(id)
 }
 
-const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
+const MANAGER_ROLES = ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
 
 export function UserForm({ user, onClose }: UserFormProps) {
   const { currentOrganization } = useTenant()
@@ -561,7 +561,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
       // Update organization memberships (hotel and department scope)
       const primaryHotelId = selectedProperties.find((id) => isValidUUID(id)) || null
       const primaryDeptId = selectedDepartments.find((id) => isValidUUID(id)) || null
-      const tenantRole = role === 'corporate_admin' || role === 'super_admin'
+      const tenantRole = role === 'administrator' || role === 'corporate_admin' || role === 'super_admin'
         ? 'organization_admin'
         : role === 'training_manager'
         ? 'training_manager'

@@ -184,16 +184,16 @@ export function getDashboardContext(
 export function getDynamicLayoutProfile(context: UserDashboardContext): LayoutProfile {
     const { primaryRole } = context
 
-    if (primaryRole === 'super_admin' || primaryRole === 'corporate_admin') {
+    if (primaryRole === 'administrator' || primaryRole === 'super_admin' || primaryRole === 'corporate_admin') {
         return 'corporate'
     }
-    if (primaryRole === 'regional_admin' || primaryRole === 'regional_hr') {
+    if (primaryRole === 'training_manager' || primaryRole === 'knowledge_manager' || primaryRole === 'regional_admin' || primaryRole === 'regional_hr') {
         return 'regional'
     }
     if (primaryRole === 'property_manager' || primaryRole === 'property_hr') {
         return 'property_mgmt'
     }
-    if (primaryRole === 'department_head') {
+    if (primaryRole === 'department_head' || primaryRole === 'author') {
         return 'department_head'
     }
     return 'staff'

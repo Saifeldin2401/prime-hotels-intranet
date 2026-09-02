@@ -292,7 +292,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
             // 1. Update organization_memberships (hotel and department scope)
             const actualDeptId = selectedDepartmentId === 'none' ? null : selectedDepartmentId
-            const tenantRole = selectedRole === 'corporate_admin' || selectedRole === 'super_admin'
+            const tenantRole = selectedRole === 'administrator' || selectedRole === 'corporate_admin' || selectedRole === 'super_admin'
                 ? 'organization_admin'
                 : selectedRole === 'training_manager'
                 ? 'training_manager'

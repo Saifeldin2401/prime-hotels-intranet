@@ -71,12 +71,19 @@ const DEPARTMENTS_LIST = [
 ]
 
 const ROLES_LIST = [
-  'staff',
-  'department_head',
-  'property_hr',
-  'property_manager',
+  'administrator',
+  'training_manager',
+  'knowledge_manager',
+  'author',
+  'learner',
+  'super_admin',
+  'corporate_admin',
+  'regional_admin',
   'regional_hr',
-  'corporate_admin'
+  'property_manager',
+  'property_hr',
+  'department_head',
+  'staff'
 ]
 
 export function AssignTrainingWizardModal({

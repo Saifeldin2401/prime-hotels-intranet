@@ -30,7 +30,7 @@ export function useCreateDocument() {
         throw new Error('A valid property_id is required for non-global documents')
       }
 
-      const canAutoPublish = primaryRole === 'regional_admin' || primaryRole === 'regional_hr' || primaryRole === 'corporate_admin'
+      const canAutoPublish = ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'regional_admin', 'regional_hr', 'corporate_admin'].includes(primaryRole || '')
       const now = new Date().toISOString()
 
       const { data, error } = await supabase

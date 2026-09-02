@@ -9,7 +9,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
     const { appName, companyName } = useAppBranding()
 
     const role = String(profile?.role || '')
-    const isAdmin = role === 'corporate_admin' || role === 'regional_admin' || role === 'property_manager'
+    const isAdmin = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'property_manager'].includes(role)
 
     // If maintenance mode is ON and user is NOT an admin, block access
     if (!isLoading && isMaintenance && !isAdmin) {
