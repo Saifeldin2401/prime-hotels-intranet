@@ -9,10 +9,25 @@
  * - Power-ups system (earned through participation)
  */
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+    usePlayerShell,
+    useRegisterPlayerAction,
+    type PlayerActionRegistration,
+} from '@/components/training/player/shell'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -29,6 +44,7 @@ import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
 import { decodeMatchingAnswer, encodeMatchingAnswer } from '@/lib/questionOrderingMatching'
+import { safeLocalStorage } from '@/lib/storage'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
@@ -74,6 +90,16 @@ interface QuizComponentEnhancedProps {
     enableImmediateFeedback?: boolean
     enablePowerUps?: boolean
     initialQuiz?: LearningQuiz | null
+    /**
+     * 'embedded' — inside the Training Player shell: the primary action is lifted
+     * into the shell's persistent action bar and the in-component nav row is hidden.
+     * 'standalone' (default) — the AssessmentPlayer surface: keeps its own sticky bar.
+     */
+    surface?: 'embedded' | 'standalone'
+    /** Fired when the learner has unsaved answers in progress (host owns the nav guard). */
+    onDirtyChange?: (dirty: boolean) => void
+    /** Advance to the next lesson (embedded surface only). */
+    onContinue?: () => void
 }
 
 interface QuizResult {
@@ -281,13 +307,18 @@ export function QuizComponentEnhanced({
     showBilingual: propShowBilingual,
     enableImmediateFeedback = true,
     enablePowerUps = true,
-    initialQuiz = null
+    initialQuiz = null,
+    surface = 'standalone',
+    onDirtyChange,
+    onContinue,
 }: QuizComponentEnhancedProps) {
     const { toast } = useToast()
     const { user, profile, properties, departments } = useAuth()
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.language === 'ar'
     const translateAI = useTranslationAI()
+    const isEmbedded = surface === 'embedded'
+    const shell = usePlayerShell()
 
     // Quiz data
     const [quiz, setQuiz] = useState<LearningQuiz | null>(null)
@@ -1097,6 +1128,187 @@ export function QuizComponentEnhanced({
         />
     )
 
+    // ── Player-shell integration ─────────────────────────────────────────────
+    const totalQuestions = quiz?.questions?.length ?? 0
+    const answeredCount = Object.keys(answers).length
+    const isLastQuestion = currentQuestionIndex >= totalQuestions - 1
+    const canRetryQuiz = !attemptLimitReached && (!quiz?.max_attempts || attemptCount < quiz.max_attempts)
+    const attemptsRemaining = quiz?.max_attempts ? Math.max(0, quiz.max_attempts - attemptCount) : null
+
+    const draftKey = user?.id ? `quiz-draft:${user.id}:${assignmentId ?? quizId}` : null
+    const quizVersion = quiz ? String((quiz as unknown as { updated_at?: string }).updated_at ?? quiz.id) : null
+    const draftRestoredRef = useRef(false)
+
+    const quizPhase: 'loading' | 'answering' | 'feedback' | 'submitting' | 'passed' | 'failed' | 'blocked' =
+        loading ? 'loading'
+            : result ? (result.passed ? 'passed' : 'failed')
+                : showFeedback ? 'feedback'
+                    : submitted ? 'submitting'
+                        : (!quiz || totalQuestions === 0) ? 'blocked'
+                            : 'answering'
+
+    const [showUnansweredWarn, setShowUnansweredWarn] = useState(false)
+
+    const requestFinalSubmit = useCallback(() => {
+        if (answeredCount < totalQuestions) {
+            setShowUnansweredWarn(true)
+            return
+        }
+        void submitRef.current?.()
+    }, [answeredCount, totalQuestions])
+
+    // Dirty-state signalling for the host's navigation guard.
+    useEffect(() => {
+        onDirtyChange?.(answeredCount > 0 && !result && !submitted)
+        return () => onDirtyChange?.(false)
+    }, [answeredCount, result, submitted, onDirtyChange])
+
+    // Results transition: bring the learner to the results state deliberately.
+    const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
+    const sawResultRef = useRef(false)
+    useEffect(() => {
+        if (result && !sawResultRef.current) {
+            sawResultRef.current = true
+            if (isEmbedded) shell.scrollToTop()
+            requestAnimationFrame(() => resultsHeadingRef.current?.focus())
+        }
+        if (!result) sawResultRef.current = false
+    }, [result, isEmbedded, shell])
+
+    const shellRegistration = useMemo<PlayerActionRegistration | null>(() => {
+        if (!isEmbedded) return null
+        const progressBar = quizPhase === 'answering' || quizPhase === 'feedback' || quizPhase === 'submitting'
+            ? {
+                value: totalQuestions > 0 ? ((currentQuestionIndex + 1) / totalQuestions) * 100 : 0,
+                label: t('training:quizzes.player.question_counter', {
+                    current: currentQuestionIndex + 1,
+                    total: totalQuestions,
+                }),
+            }
+            : null
+
+        switch (quizPhase) {
+            case 'feedback':
+                return { primary: null, hidePrevious: true, progressBar }
+            case 'submitting':
+                return {
+                    primary: {
+                        id: 'quiz:submitting', label: t('training:quizzes.player.submit', 'Submit'),
+                        onPress: () => {}, loading: true, icon: 'submit',
+                    },
+                    status: { text: t('training:quizzes.player.grading', 'Grading…'), tone: 'info', live: true },
+                    hidePrevious: true,
+                    progressBar,
+                }
+            case 'passed':
+                return {
+                    primary: {
+                        id: 'quiz:continue',
+                        label: t('continueTraining', 'Continue training'),
+                        onPress: () => (onContinue ?? shell.goNext)(),
+                        icon: 'continue',
+                        intent: 'success',
+                    },
+                    status: {
+                        text: t('quizScorePassMark', {
+                            score: result?.score ?? 0,
+                            mark: quiz?.passing_score_percentage ?? 0,
+                            defaultValue: `Score ${result?.score ?? 0}% · pass mark ${quiz?.passing_score_percentage ?? 0}%`,
+                        }),
+                        tone: 'success',
+                    },
+                    hidePrevious: true,
+                }
+            case 'failed':
+                return {
+                    primary: canRetryQuiz
+                        ? {
+                            id: 'quiz:retry',
+                            label: t('training:quizzes.player.retry_assessment', 'Retry quiz'),
+                            onPress: () => {
+                                if (!quiz) return
+                                if (draftKey) safeLocalStorage.removeItem(draftKey)
+                                draftRestoredRef.current = false
+                                resetQuizSession(quiz)
+                                void loadQuiz(quiz.id)
+                            },
+                            icon: 'retry',
+                        }
+                        : null,
+                    status: {
+                        text: canRetryQuiz && attemptsRemaining != null
+                            ? t('attemptsRemaining', { count: attemptsRemaining, defaultValue: `${attemptsRemaining} attempts remaining` })
+                            : t('training:quizzes.player.limit_reached_title', 'Attempt limit reached'),
+                        tone: 'danger',
+                    },
+                    hidePrevious: true,
+                }
+            case 'answering':
+                return {
+                    primary: {
+                        id: isLastQuestion ? 'quiz:submit-all' : 'quiz:submit-answer',
+                        label: isLastQuestion
+                            ? t('submitQuiz', 'Submit quiz')
+                            : t('training:quizzes.player.submit_answer', 'Submit answer'),
+                        onPress: isLastQuestion ? requestFinalSubmit : () => { void handleAnswerSubmit() },
+                        disabled: !hasAnswer(currentQuestion?.question_id) || attemptLimitReached,
+                        disabledReason: t('selectAnswerFirst', 'Choose an answer to continue.'),
+                        icon: 'submit',
+                    },
+                    hidePrevious: currentQuestionIndex === 0,
+                    secondary: currentQuestionIndex > 0
+                        ? { label: t('previous', 'Previous'), onPress: () => setCurrentQuestionIndex((p) => p - 1) }
+                        : null,
+                    progressBar,
+                }
+            default:
+                return { primary: null }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isEmbedded, quizPhase, totalQuestions, currentQuestionIndex, isLastQuestion, canRetryQuiz, attemptsRemaining,
+        result?.score, quiz?.passing_score_percentage, attemptLimitReached, answers, t])
+
+    useRegisterPlayerAction(shellRegistration)
+
+    // ── Draft-answer persistence ─────────────────────────────────────────────
+    // Answers within an attempt are otherwise lost if the learner navigates away
+    // (the quiz block remounts). Keep a device-local draft, guarded on the quiz
+    // version so a changed question set discards stale answers.
+    useEffect(() => {
+        if (!draftKey || !quiz || !quizVersion || draftRestoredRef.current) return
+        draftRestoredRef.current = true
+        if (submitted || result) return
+        const draft = safeLocalStorage.getObject<{
+            answers: Record<string, string | string[]>
+            currentQuestionIndex: number
+            quizVersion: string
+        }>(draftKey)
+        if (draft && draft.quizVersion === quizVersion && draft.answers && Object.keys(draft.answers).length > 0) {
+            setAnswers(draft.answers)
+            if (typeof draft.currentQuestionIndex === 'number') {
+                setCurrentQuestionIndex(Math.min(Math.max(0, draft.currentQuestionIndex), (quiz.questions?.length ?? 1) - 1))
+            }
+        }
+    }, [draftKey, quiz, quizVersion, submitted, result])
+
+    useEffect(() => {
+        if (!draftKey || !quizVersion) return
+        if (quizPhase !== 'answering' || answeredCount === 0) return
+        const handle = setTimeout(() => {
+            safeLocalStorage.setObject(draftKey, {
+                answers,
+                currentQuestionIndex,
+                quizVersion,
+                savedAt: new Date().toISOString(),
+            })
+        }, 500)
+        return () => clearTimeout(handle)
+    }, [draftKey, quizVersion, quizPhase, answers, answeredCount, currentQuestionIndex])
+
+    useEffect(() => {
+        if (draftKey && result) safeLocalStorage.removeItem(draftKey)
+    }, [draftKey, result])
+
     let mainContent: React.ReactNode
 
     if (loading) {
@@ -1166,17 +1378,23 @@ export function QuizComponentEnhanced({
             <QuizResultsScreen
                 result={result}
                 quiz={quiz}
-                onExit={onExit}
+                onExit={isEmbedded ? undefined : onExit}
+                onContinue={isEmbedded ? (onContinue ?? shell.goNext) : undefined}
                 onRetry={() => {
                     // Resets answers/streak/questionStates/feedback pauses AND
                     // quizStartTimeRef — without this, a retry's "time spent"
                     // would accumulate every prior attempt's duration plus all
                     // idle time spent on the results screen in between.
+                    if (draftKey) safeLocalStorage.removeItem(draftKey)
+                    draftRestoredRef.current = false
                     resetQuizSession(quiz)
                     void loadQuiz(quiz.id)
                 }}
                 isRTL={isRTL}
                 t={t}
+                headingRef={resultsHeadingRef}
+                passingScore={quiz.passing_score_percentage}
+                attemptsRemaining={attemptsRemaining}
                 translatedQuestions={translatedQuestions}
                 translationTarget={translationTarget}
                 showBilingual={showBilingual}
@@ -1707,26 +1925,33 @@ export function QuizComponentEnhanced({
                 )}
             </AnimatePresence>
 
-            {/* Navigation */}
-            <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
-                <Button
-                    variant="ghost"
-                    disabled={currentQuestionIndex === 0 || showFeedback}
-                    onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+            {/* Navigation — hidden when embedded (the shell action bar owns it) */}
+            {!isEmbedded && (
+                <div
+                    className={cn(
+                        "sticky bottom-0 z-10 -mx-4 flex items-center justify-between gap-3 border-t border-border/60 bg-card/95 px-4 py-3 backdrop-blur-xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6",
+                        isRTL && "flex-row-reverse",
+                    )}
                 >
-                    <ArrowLeft className={cn("h-4 w-4 me-2", isRTL && "rotate-180")} />
-                    Previous
-                </Button>
+                    <Button
+                        variant="ghost"
+                        disabled={currentQuestionIndex === 0 || showFeedback}
+                        onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
+                    >
+                        <ArrowLeft className={cn("h-4 w-4 me-2", isRTL && "rotate-180")} />
+                        {t('previous', 'Previous')}
+                    </Button>
 
-                <Button
-                    onClick={handleAnswerSubmit}
-                    disabled={!hasAnswer(currentQuestion?.question_id) || showFeedback || attemptLimitReached}
-                    className="bg-hotel-navy hover:bg-hotel-navy-dark text-white px-8 py-6 rounded-xl font-bold"
-                >
-                    Submit Answer
-                    <CheckCircle2 className="ms-2 h-5 w-5" />
-                </Button>
-            </div>
+                    <Button
+                        onClick={isLastQuestion ? requestFinalSubmit : () => { void handleAnswerSubmit() }}
+                        disabled={!hasAnswer(currentQuestion?.question_id) || showFeedback || attemptLimitReached}
+                        className="h-12 min-w-[10rem] bg-hotel-navy px-8 font-bold text-white hover:bg-hotel-navy-dark"
+                    >
+                        {isLastQuestion ? t('submitQuiz', 'Submit quiz') : t('training:quizzes.player.submit_answer', 'Submit answer')}
+                        <CheckCircle2 className="ms-2 h-5 w-5" />
+                    </Button>
+                </div>
+            )}
 
             {attemptLimitReached && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -1738,6 +1963,26 @@ export function QuizComponentEnhanced({
             <AnimatePresence>
                 {feedbackOverlay}
             </AnimatePresence>
+
+            <AlertDialog open={showUnansweredWarn} onOpenChange={setShowUnansweredWarn}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>{t('submitWithUnanswered', 'Submit with unanswered questions?')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            {t('unansweredCount', {
+                                count: Math.max(0, totalQuestions - answeredCount),
+                                defaultValue: `You have ${Math.max(0, totalQuestions - answeredCount)} unanswered question(s). They will be marked incorrect.`,
+                            })}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>{t('keepAnswering', 'Keep answering')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => { setShowUnansweredWarn(false); void submitRef.current?.() }}>
+                            {t('submitAnyway', 'Submit anyway')}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
         )
     }
@@ -1755,10 +2000,14 @@ interface QuizResultsScreenProps {
     result: QuizResult
     quiz: LearningQuiz
     onExit?: () => void
+    onContinue?: () => void
     onRetry: () => void
     canRetry: boolean
     isRTL: boolean
     t
+    headingRef?: React.RefObject<HTMLHeadingElement | null>
+    passingScore?: number | null
+    attemptsRemaining?: number | null
     translatedQuestions
     translationTarget: TranslationTargetLanguage | null
     showBilingual: boolean
@@ -1767,9 +2016,14 @@ interface QuizResultsScreenProps {
 function QuizResultsScreen({
     result,
     onExit,
+    onContinue,
     onRetry,
     canRetry,
-    t}: QuizResultsScreenProps) {
+    t,
+    headingRef,
+    passingScore,
+    attemptsRemaining,
+}: QuizResultsScreenProps) {
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60)
         const secs = seconds % 60
@@ -1827,8 +2081,14 @@ function QuizResultsScreen({
                             {result.passed ? 'Assessment Passed' : 'Assessment Incomplete'}
                         </Badge>
 
-                        <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-                            {result.passed ? 'Hospitality Standard Achieved' : 'Review & Practice Recommended'}
+                        <h2
+                            ref={headingRef}
+                            tabIndex={-1}
+                            className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground outline-none"
+                        >
+                            {result.passed
+                                ? t('quizPassedTitle', 'Assessment passed')
+                                : t('quizFailedTitle', 'Review & practice recommended')}
                         </h2>
 
                         <div className="flex items-center justify-center gap-2 pt-2">
@@ -1839,6 +2099,15 @@ function QuizResultsScreen({
                                 ({result.correctCount}/{result.totalQuestions} correct)
                             </span>
                         </div>
+                        <p className="text-xs font-medium text-muted-foreground">
+                            {typeof passingScore === 'number' && (
+                                <span>{t('passMarkLabel', { score: passingScore, defaultValue: `Pass mark: ${passingScore}%` })}</span>
+                            )}
+                            {typeof passingScore === 'number' && typeof attemptsRemaining === 'number' && <span className="mx-1.5">·</span>}
+                            {typeof attemptsRemaining === 'number' && (
+                                <span>{t('attemptsRemaining', { count: attemptsRemaining, defaultValue: `${attemptsRemaining} attempts remaining` })}</span>
+                            )}
+                        </p>
                     </div>
 
                     {/* Stats Grid */}
@@ -1890,7 +2159,7 @@ function QuizResultsScreen({
                                 variant="outline"
                                 className="px-6 h-11 rounded-xl text-xs sm:text-sm font-semibold hover:bg-muted/60"
                             >
-                                Back to Learning Dashboard
+                                {t('training:quizzes.player.back_to_learning', 'Back to Learning Dashboard')}
                             </Button>
                         )}
                         {!result.passed && canRetry && (
@@ -1898,23 +2167,30 @@ function QuizResultsScreen({
                                 onClick={onRetry}
                                 className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 h-11 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95"
                             >
-                                Retry Assessment
+                                {t('training:quizzes.player.retry_assessment', 'Retry quiz')}
                             </Button>
                         )}
-                        {result.passed && (
+                        {result.passed && onContinue && (
                             <Button
-                                onClick={() => {
-                                    if (onExit) onExit()
-                                }}
+                                onClick={onContinue}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 h-11 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95 gap-2"
+                            >
+                                {t('continueTraining', 'Continue training')}
+                                <ArrowRight className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {result.passed && !onContinue && onExit && (
+                            <Button
+                                onClick={onExit}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 h-11 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95 gap-2"
                             >
                                 <Award className="h-4 w-4" />
-                                Claim & View Credential
+                                {t('claimCredential', 'Claim & view credential')}
                             </Button>
                         )}
                         {!result.passed && !canRetry && (
                             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs font-semibold text-destructive">
-                                Maximum attempt limit reached
+                                {t('training:quizzes.player.limit_reached_title', 'Maximum attempt limit reached')}
                             </div>
                         )}
                     </div>

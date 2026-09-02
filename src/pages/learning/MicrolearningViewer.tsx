@@ -200,12 +200,23 @@ export default function MicrolearningViewer() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <Button variant="ghost" className="mb-4" onClick={() => navigate(-1)}>
-                    <ArrowLeft className="me-2 h-4 w-4" />
-                    {t_ext('back', 'Back')}</Button>
-
+        <div className="min-h-[100dvh] bg-slate-50">
+            {/* Compact sticky top bar - the app Header is not rendered on full-bleed routes */}
+            <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-slate-200 bg-white/95 px-4 backdrop-blur sm:px-6">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 gap-1.5 px-2.5"
+                    onClick={() => navigate(-1)}
+                >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t_ext('back', 'Back')}</span>
+                </Button>
+                <h1 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">
+                    {content.title}
+                </h1>
+            </header>
+            <div className="mx-auto max-w-4xl space-y-6 p-6">
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-lg group">
                     {isYouTubeOrVimeoUrl(content.video_url) ? (
                         <iframe
