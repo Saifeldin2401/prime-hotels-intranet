@@ -74,6 +74,33 @@ export function AppLayout({ children }: AppLayoutProps) {
     )
   }, [location.pathname])
 
+  // Full-bleed player routes own the entire viewport: no app Header, no <main>
+  // padding, no sidebar/mobile-nav/copilot. These pages render their own top bar
+  // and exit control. Kept stricter than isImmersiveOrFocusedPage so it can never
+  // catch /assessments/builder/* or other */take* editor routes.
+  const isFullBleedPage = useMemo(() => {
+    const p = location.pathname.toLowerCase()
+    return (
+      p.startsWith('/learning/training/') ||
+      p.startsWith('/learning/microlearning/') ||
+      /^\/assessments\/[^/]+\/take$/.test(p)
+    )
+  }, [location.pathname])
+
+  if (isFullBleedPage) {
+    return (
+      <div className="min-h-[100dvh] bg-background text-foreground antialiased">
+        <PlatformImpersonationBanner />
+        {children}
+        <Suspense fallback={null}>
+          {(deferredChromeReady || commandPaletteOpen) && (
+            <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+          )}
+        </Suspense>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
       {/* Desktop Sidebar */}

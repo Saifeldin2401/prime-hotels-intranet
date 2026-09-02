@@ -1,15 +1,5 @@
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import { Progress } from '@/components/ui/progress'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
@@ -49,34 +39,20 @@ import { skillsService } from '@/services/skillsService'
 import {
     AlertCircle,
     Award,
-    ArrowLeft,
     BookOpen,
-    Bot,
     CheckCircle,
     CheckCircle2,
-    ChevronLeft,
     ChevronRight,
-    Circle,
     Eye,
-    FileText,
     Gamepad2,
     Headphones,
     HelpCircle,
     Image as ImageIcon,
-    Languages,
-    Link as LinkIcon,
     Loader2,
-    Lock,
-    Maximize2,
-    Minimize2,
-    Menu,
     MousePointer2,
-    RotateCcw,
     Sparkles,
     Trophy,
-    Type,
     Video as VideoIcon,
-    Volume2,
     X,
     XCircle
 } from 'lucide-react'
@@ -84,6 +60,19 @@ import { PlayerAudioNarrator } from '@/components/training/player/PlayerAudioNar
 import { PlayerTutorDrawer } from '@/components/training/player/PlayerTutorDrawer'
 import { PlayerNotesDrawer } from '@/components/training/player/PlayerNotesDrawer'
 import { PlayerCelebrationModal } from '@/components/training/player/PlayerCelebrationModal'
+import {
+    PlayerShell,
+    PlayerShellSkeleton,
+    PlayerTopBar,
+    PlayerToolsMenu,
+    PlayerContextRail,
+    PlayerActionBar,
+    usePlayerShell,
+    type LessonRailItem,
+    type LessonRailItemState,
+    type PlayerPrimaryAction,
+    type PlayerSaveState,
+} from '@/components/training/player/shell'
 import { FlashcardDeckWidget } from '@/components/training/player/widgets/FlashcardDeckWidget'
 import { ScenarioBranchSimulator } from '@/components/training/player/widgets/ScenarioBranchSimulator'
 import { PracticalAssignmentBlockRenderer } from '@/components/training/player/PracticalAssignmentBlockRenderer'
@@ -584,6 +573,34 @@ function AudioPlayer({ src, blockId, onTrackProgress, onRegisterSeek, t }: Audio
     )
 }
 
+function useOnlineStatus() {
+    const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
+    useEffect(() => {
+        const on = () => setOnline(true)
+        const off = () => setOnline(false)
+        window.addEventListener('online', on)
+        window.addEventListener('offline', off)
+        return () => {
+            window.removeEventListener('online', on)
+            window.removeEventListener('offline', off)
+        }
+    }, [])
+    return online
+}
+
+/**
+ * Lives inside PlayerShell so it can reach the shell context. Resets scroll and
+ * moves focus to the active block heading whenever the block changes.
+ */
+function BlockChangeEffects({ blockKey }: { blockKey: string }) {
+    const { scrollToTop, focusHeading } = usePlayerShell()
+    useEffect(() => {
+        scrollToTop()
+        focusHeading()
+    }, [blockKey, scrollToTop, focusHeading])
+    return null
+}
+
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -636,6 +653,10 @@ export default function TrainingPlayer() {
     const [showNotesDrawer, setShowNotesDrawer] = useState(false)
     const [fontSizeModifier, setFontSizeModifier] = useState<'sm' | 'base' | 'lg'>('base')
     const [showCelebrationModal, setShowCelebrationModal] = useState(false)
+    const [saveState, setSaveState] = useState<PlayerSaveState>('idle')
+    const saveStateResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const quizDirtyRef = useRef(false)
+    const isOnline = useOnlineStatus()
 
     // Engagement State
     const [isFocused, setIsFocused] = useState(true)
@@ -686,7 +707,12 @@ export default function TrainingPlayer() {
     const applyRestoredProgress = useCallback((
         progress: PersistedModuleProgress | null,
         blocks: TrainingContentBlock[],
-        moduleInfo?: Partial<TrainingModule> | null
+        moduleInfo?: Partial<TrainingModule> | null,
+        // Only the first hydration (initial load / localStorage) may move the
+        // learner's cursor. Realtime echoes of the learner's own saves must sync
+        // completion/score state WITHOUT yanking activeBlockIndex — otherwise
+        // pressing Next bounces straight back to the recomputed "resume" index.
+        repositionCursor = false
     ) => {
         if (!progress) return
 
@@ -764,7 +790,7 @@ export default function TrainingPlayer() {
         )
 
         // Evaluate smart resume position using progression engine
-        if (!wasCompleted) {
+        if (!wasCompleted && repositionCursor) {
             const restoredLearnerState: LearnerProgressState = {
                 completedBlockIds: restoredCompleted,
                 completedMediaBlockIds: restoredMediaCompleted,
@@ -797,7 +823,7 @@ export default function TrainingPlayer() {
     }, [])
 
     // Fetch Module and Blocks
-    const { data: moduleData, isLoading } = useQuery({
+    const { data: moduleData, isLoading, isError, refetch } = useQuery({
         queryKey: ['training-module-full', id],
         queryFn: async () => {
             if (!id || !isValidModuleId) throw new Error('Invalid module ID')
@@ -1064,6 +1090,41 @@ export default function TrainingPlayer() {
         ? moduleTitleTranslations[translationTarget] as string
         : moduleData?.module.title
 
+    const resolveBlockTitle = useCallback((block: TrainingContentBlock, idx: number) => {
+        const cd = block.content_data as Record<string, unknown> | null
+        const refKey = (cd?.sop_id as string)
+            || (block as TrainingContentBlock).source_document_id
+            || (cd?.document_id as string)
+            || (block.type === 'quiz' ? (cd?.quiz_id as string) : '')
+        return block.title
+            || (refKey ? moduleData?.referencedTitles?.[refKey] : '')
+            || t('blockTitle', { number: idx + 1 })
+    }, [moduleData?.referencedTitles, t])
+
+    const railItems = useMemo<LessonRailItem[]>(() => {
+        const blocks = moduleData?.blocks || []
+        const mapState = (raw: string | undefined, isActive: boolean): LessonRailItemState => {
+            if (isActive) return 'current'
+            switch (raw) {
+                case 'LOCKED': return 'locked'
+                case 'COMPLETED': return 'completed'
+                case 'FAILED': return 'failed'
+                case 'RETRY_REQUIRED': return 'retry'
+                case 'PENDING_REVIEW': return 'pending-review'
+                case 'EXEMPTED': return 'exempted'
+                case 'SKIPPED': return 'skipped'
+                default: return 'available'
+            }
+        }
+        return blocks.map((block, idx) => ({
+            id: block.id,
+            index: idx,
+            title: resolveBlockTitle(block, idx),
+            subtitle: (block.type || '').replace('_', ' '),
+            state: mapState(progression.blockStates[block.id], idx === activeBlockIndex),
+        }))
+    }, [moduleData?.blocks, progression.blockStates, activeBlockIndex, resolveBlockTitle])
+
     const handleSelectBlock = useCallback((targetIndex: number) => {
         if (!moduleData?.blocks) return
         const validation = validateNavigationTarget({
@@ -1126,6 +1187,60 @@ export default function TrainingPlayer() {
         setActiveBlockIndex(prev => Math.max(0, prev - 1))
         scheduleProgressSave(400)
     }
+
+    // The shell action bar's default primary action. Individual blocks (the quiz)
+    // may override this by registering their own action via useRegisterPlayerAction.
+    const defaultPrimaryAction = useMemo<PlayerPrimaryAction>(() => {
+        const isModuleFinish = progression.isModuleComplete
+            || (isLastBlock && canProceedToNext && (!activeBlock || activeBlock.type !== 'quiz' || activeQuizPassed))
+
+        if (isModuleFinish) {
+            return {
+                id: 'module:complete',
+                label: t('completeModule', 'Complete Module'),
+                onPress: handleNext,
+                icon: 'complete',
+                intent: 'success',
+            }
+        }
+
+        if (activeBlock?.type === 'quiz') {
+            if (activeQuizPassed) {
+                return { id: 'quiz:next', label: t('continueToNextLesson', 'Next Lesson'), onPress: handleNext, icon: 'next' }
+            }
+            return {
+                id: 'quiz:blocked',
+                label: t('takeQuiz', 'Take Quiz'),
+                onPress: handleNext,
+                icon: 'quiz',
+                disabled: true,
+                disabledReason: (activeBlockState === 'RETRY_REQUIRED' || activeBlockState === 'FAILED')
+                    ? t('retryQuizToContinue', 'Retry and pass this quiz to continue.')
+                    : t('passQuizToContinue', 'Pass this quiz to unlock the next lesson.'),
+            }
+        }
+
+        let disabledReason: string | undefined
+        if (!canProceedToNext && activeBlock) {
+            const cd = activeBlock.content_data as Record<string, unknown> | null
+            if (activeBlock.type === 'video') disabledReason = t('finishVideoToContinue', 'Finish the video to continue.')
+            else if (activeBlock.type === 'audio') disabledReason = t('finishAudioToContinue', 'Finish the audio to continue.')
+            else if (activeBlock.type === 'interactive') disabledReason = t('finishActivityToContinue', 'Complete the activity to continue.')
+            else if (cd?.is_assignment || cd?.requires_submission || activeBlock.type === 'assignment' || activeBlock.type === 'practical') {
+                disabledReason = t('submitAssignmentToContinue', 'Submit your assignment to continue.')
+            }
+        }
+
+        return {
+            id: 'block:next',
+            label: t('nextStep', 'Next Step'),
+            onPress: handleNext,
+            icon: 'next',
+            disabled: !canProceedToNext,
+            disabledReason,
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [progression.isModuleComplete, isLastBlock, canProceedToNext, activeBlock, activeQuizPassed, activeBlockState, t])
 
     const handleMarkWatched = (blockId: string) => {
         mediaWatchProgressRef.current[blockId] = {
@@ -1412,13 +1527,6 @@ export default function TrainingPlayer() {
         }
     }
 
-    const formatDuration = useCallback((seconds: number) => {
-        const mins = Math.floor(seconds / 60)
-        const secs = seconds % 60
-        if (mins <= 0) return `${secs}s`
-        return `${mins}m ${secs.toString().padStart(2, '0')}s`
-    }, [])
-
     const storageKey = user && moduleData
         ? `training-player-progress:${user.id}:${moduleData.module.id}`
         : null
@@ -1443,6 +1551,9 @@ export default function TrainingPlayer() {
             active_block_id: activeBlock?.id || null
         }
 
+        if (saveStateResetRef.current) clearTimeout(saveStateResetRef.current)
+        setSaveState('saving')
+
         try {
             await learningService.submitQuizProgress({
                 assignment_id: assignmentId || undefined,
@@ -1462,9 +1573,12 @@ export default function TrainingPlayer() {
             if (storageKey) {
                 safeLocalStorage.removeItem(storageKey)
             }
+            setSaveState('saved')
+            saveStateResetRef.current = setTimeout(() => setSaveState('idle'), 2200)
         } catch (_error) {
             // Progress persistence failure is non-critical - continue silently.
             // Keep a local fallback to preserve learner context.
+            setSaveState('offline')
             if (storageKey) {
                 safeLocalStorage.setObject(storageKey, {
                     assignment_id: assignmentId || null,
@@ -1642,7 +1756,7 @@ export default function TrainingPlayer() {
                 : null
 
             if (localData && isActive) {
-                applyRestoredProgress(localData, moduleData.blocks, moduleData.module)
+                applyRestoredProgress(localData, moduleData.blocks, moduleData.module, true)
             }
 
             const { data } = await supabase
@@ -1659,7 +1773,7 @@ export default function TrainingPlayer() {
                 const localUpdated = localData?.saved_at ? new Date(localData.saved_at).getTime() : 0
                 const dbUpdated = data.updated_at ? new Date(data.updated_at).getTime() : 0
                 if (!localData || dbUpdated >= localUpdated) {
-                    applyRestoredProgress(data as any, moduleData.blocks, moduleData.module)
+                    applyRestoredProgress(data as any, moduleData.blocks, moduleData.module, true)
                 }
             }
         }
@@ -1746,8 +1860,12 @@ export default function TrainingPlayer() {
     }, [getCurrentSessionSeconds, scheduleProgressSave])
 
     useEffect(() => {
-        const handleBeforeUnload = () => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             void persistProgress()
+            if (quizDirtyRef.current) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
         }
         window.addEventListener('beforeunload', handleBeforeUnload)
         return () => {
@@ -2154,6 +2272,9 @@ export default function TrainingPlayer() {
                             contextEntityId={block.id}
                             assignmentId={assignmentId}
                             certificateEnabled={false}
+                            surface="embedded"
+                            onContinue={handleNext}
+                            onDirtyChange={(dirty) => { quizDirtyRef.current = dirty }}
                             translationTarget={translationTarget}
                             showBilingual={showBilingual}
                             onComplete={(result) => {
@@ -2209,9 +2330,9 @@ export default function TrainingPlayer() {
                                 if (result.passed) {
                                     toast({
                                         title: t('moduleQuizPassed', 'Quiz Passed!'),
-                                        description: t('quizScoreProceed', {
+                                        description: t('quizScorePassedReview', {
                                             score: result.score,
-                                            defaultValue: `Great job! You scored ${result.score}%. Proceeding to the next lesson.`
+                                            defaultValue: `Great job! You scored ${result.score}%. Review your answers, then continue.`
                                         })
                                     })
                                 } else {
@@ -2309,18 +2430,30 @@ export default function TrainingPlayer() {
         )
     }
 
-    if (isLoading) return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
-            <div className="animate-spin h-12 w-12 border-4 border-hotel-gold border-t-transparent rounded-full mb-4"></div>
-            <p className="text-hotel-navy font-medium animate-pulse">{t('loadingTraining')}</p>
+    if (isLoading) return <PlayerShellSkeleton />
+
+    if (isError) return (
+        <div className="flex h-[100dvh] flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+            <AlertCircle className="h-14 w-14 text-destructive" />
+            <p className="text-xl font-medium">{t('trainingLoadFailed', 'Could not load this training')}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+                {t('trainingLoadFailedHint', 'Check your connection and try again. Your progress is safe.')}
+            </p>
+            <div className="flex items-center gap-2">
+                <Button onClick={() => refetch()}>{t('retry', 'Retry')}</Button>
+                <Button variant="link" onClick={() => navigate('/learning/my')}>{t('backToList')}</Button>
+            </div>
         </div>
     )
 
     if (!moduleData) return (
-        <div className="flex flex-col items-center justify-center min-h-screen">
-            <X className="h-16 w-16 text-muted-foreground mb-4" />
+        <div className="flex h-[100dvh] flex-col items-center justify-center gap-3 bg-background p-6 text-center">
+            <X className="h-14 w-14 text-muted-foreground" />
             <p className="text-xl font-medium">{t('trainingNotFound')}</p>
-            <Button variant="link" onClick={() => navigate('/learning/my')}>{t('backToList')}</Button>
+            <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => refetch()}>{t('retry', 'Retry')}</Button>
+                <Button variant="link" onClick={() => navigate('/learning/my')}>{t('backToList')}</Button>
+            </div>
         </div>
     )
 
@@ -2469,388 +2602,154 @@ export default function TrainingPlayer() {
     }
 
     return (
-        <LazyMotion features={domAnimation}>
-            <div className={cn(
-                "flex h-[100dvh] min-h-[100dvh] bg-white overflow-hidden",
-                isRTL ? "flex-row-reverse" : "flex-row"
-            )}>
-                {/* Sidebar */}
-                <AnimatePresence mode="wait">
-                {sidebarOpen && (
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className={cn(
-                            "flex flex-col bg-hotel-navy-dark text-white shrink-0 relative z-[60] shadow-2xl transition-all duration-300",
-                            "fixed inset-y-0 lg:static lg:h-full",
-                            isRTL ? "end-0 border-l border-white/5" : "start-0 border-r border-white/5",
-                            sidebarOpen ? "translate-x-0 w-[88vw] max-w-[320px]" : (isRTL ? "translate-x-full w-0" : "-translate-x-full w-0"),
-                            "lg:translate-x-0 lg:w-[320px] lg:max-w-none"
-                        )}
-                    >
-                        <div className="p-8 border-b border-white/10 bg-hotel-navy/50">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="h-10 w-10 rounded-lg bg-hotel-gold/20 flex items-center justify-center shrink-0">
-                                    <BookOpen className="h-5 w-5 text-hotel-gold" />
-                                </div>
-                                <h2 className="font-bold text-lg font-serif leading-tight line-clamp-2">
-                                    {displayModuleTitle || moduleData.module.title}
-                                </h2>
-                            </div>
-                            {showBilingual && translationTarget && moduleTitleTranslations[translationTarget] && (
-                                <div className="text-xs text-white/60 mb-4" dir={translationDir}>
-                                    {moduleData.module.title}
-                                </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-end text-xs mb-1.5">
-                                    <span className="text-white/60 uppercase tracking-widest font-semibold">{t('overallProgress')}</span>
-                                    <span className="text-hotel-gold font-bold">{Math.round(progressPercentage)}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                                    <m.div
-                                        className="h-full bg-gradient-to-r from-hotel-gold to-hotel-gold-light"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${progressPercentage}%` }}
-                                        transition={{ duration: 1, ease: "circOut" }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
-                            <div className="space-y-1.5">
-                                {moduleData.blocks.map((block, idx) => {
-                                    const itemState = progression.blockStates[block.id] || 'AVAILABLE'
-                                    const isLocked = itemState === 'LOCKED'
-                                    const isActive = idx === activeBlockIndex
-                                    const isCompleted = itemState === 'COMPLETED'
-
-                                    return (
-                                        <button
-                                            key={block.id}
-                                            onClick={() => handleSelectBlock(idx)}
-                                            className={cn(
-                                                "w-full flex items-start gap-3.5 p-3.5 rounded-2xl text-sm transition-all duration-200 group relative overflow-hidden text-start",
-                                                isActive
-                                                    ? "bg-hotel-gold/20 text-white ring-1 ring-hotel-gold/40 shadow-sm"
-                                                    : isLocked
-                                                        ? "text-white/30 opacity-60 hover:bg-white/5 cursor-pointer"
-                                                        : isCompleted
-                                                            ? "text-white/80 hover:bg-white/10 hover:text-white"
-                                                            : "text-white/70 hover:bg-white/5 hover:text-white"
-                                            )}
-                                        >
-                                            {isActive && (
-                                                <m.div
-                                                    layoutId="active-pill"
-                                                    className={cn(
-                                                        "absolute top-0 bottom-0 w-1.5 bg-hotel-gold rounded-full",
-                                                        isRTL ? "end-0" : "start-0"
-                                                    )}
-                                                />
-                                            )}
-                                            
-                                            {/* Step Number / Status Icon */}
-                                            <div className="flex items-center gap-2 mt-0.5 shrink-0">
-                                                <span className={cn(
-                                                    "font-mono text-xs font-bold w-5 text-center",
-                                                    isActive ? "text-hotel-gold" : isCompleted ? "text-emerald-400" : "text-white/40"
-                                                )}>
-                                                    {String(idx + 1).padStart(2, '0')}
-                                                </span>
-                                                <div className={cn(
-                                                    "transition-colors",
-                                                    isActive
-                                                        ? "text-hotel-gold"
-                                                        : isCompleted
-                                                            ? "text-emerald-400"
-                                                            : isLocked
-                                                                ? "text-white/30"
-                                                                : "text-white/40 group-hover:text-white/70"
-                                                )}>
-                                                    {isLocked ? (
-                                                        <Lock className="w-4 h-4" />
-                                                    ) : block.type === 'video' ? (
-                                                        <VideoIcon className="w-4 h-4" />
-                                                    ) : block.type === 'audio' ? (
-                                                        <Headphones className="w-4 h-4" />
-                                                    ) : block.type === 'interactive' ? (
-                                                        <Gamepad2 className="w-4 h-4" />
-                                                    ) : block.type === 'quiz' ? (
-                                                        <HelpCircle className="w-4 h-4" />
-                                                    ) : block.type === 'image' ? (
-                                                        <ImageIcon className="w-4 h-4" />
-                                                    ) : block.type === 'text' ? (
-                                                        <FileText className="w-4 h-4" />
-                                                    ) : block.type === 'document_link' ? (
-                                                        <LinkIcon className="w-4 h-4" />
-                                                    ) : (
-                                                        <BookOpen className="w-4 h-4" />
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <div className={cn(
-                                                "flex-1 min-w-0 text-left",
-                                                isRTL && "text-right"
-                                            )}>
-                                                <p className={cn(
-                                                    "font-medium leading-snug line-clamp-2 text-xs sm:text-sm",
-                                                    isActive ? "text-white font-bold" : isLocked ? "text-white/40" : "text-white/90"
-                                                )}>
-                                                    {block.title ||
-                                                        (block.type === 'sop_reference'
-                                                            ? moduleData.referencedTitles?.[
-                                                                ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
-                                                                || (block as TrainingContentBlock).source_document_id
-                                                                || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
-                                                              ] : '') ||
-                                                        (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
-                                                        t('blockTitle', { number: idx + 1 })}
-                                                </p>
-                                                <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider font-mono">
-                                                    {(block.title ||
-                                                        (block.type === 'sop_reference'
-                                                            ? moduleData.referencedTitles?.[
-                                                                ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
-                                                                || (block as TrainingContentBlock).source_document_id
-                                                                || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
-                                                              ] : '') ||
-                                                        (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
-                                                        ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
-                                                        : block.type.replace('_', ' ')
-                                                    }
-                                                </p>
-                                            </div>
-
-                                            {isLocked ? (
-                                                <Lock className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
-                                            ) : isCompleted ? (
-                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                            ) : itemState === 'RETRY_REQUIRED' || itemState === 'FAILED' ? (
-                                                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                                            ) : null}
-                                        </button>
-                                    )
-                                })}
-                            </div>
-                        </div>
-                    </m.div>
-                )}
-                </AnimatePresence>
-
-            {/* Mobile Sidebar Overlay */}
-                <AnimatePresence>
-                {sidebarOpen && (
-                    <m.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={() => setSidebarOpen(false)}
-                        className="fixed inset-0 bg-black/60 z-50 lg:hidden backdrop-blur-sm"
-                    />
-                )}
-                </AnimatePresence>
-
-            {/* Main Player Component */}
-                <div className="flex-1 flex flex-col min-w-0 h-full relative z-10 overflow-hidden">
-                {/* Header */}
-                <header className={cn(
-                    "h-16 md:h-20 bg-white border-b border-slate-100 flex items-center px-4 md:px-10 justify-between shrink-0 sticky top-0 z-20",
-                    isRTL ? "flex-row-reverse" : "flex-row"
-                )}>
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className="bg-slate-50 hover:bg-slate-100 h-10 w-10 rounded-full"
-                            aria-label={t('accessibility.toggleSidebar', 'Toggle sidebar')}
-                        >
-                            <Menu className="h-5 w-5 text-hotel-navy" />
-                        </Button>
-                        <div className="hidden sm:block">
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-hotel-gold font-bold block mb-0.5">
-                                {t('learningInProgressBar')}
-                            </span>
-                            <h1 className="text-sm font-bold text-hotel-navy line-clamp-1">{moduleData.module.title}</h1>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1 sm:gap-1.5">
-                        <div className="hidden sm:flex bg-slate-100 px-3 py-1.5 rounded-full items-center gap-2 me-1">
-                            <div className="h-1.5 w-1.5 rounded-full bg-hotel-gold animate-pulse" />
-                            <span className="text-xs font-bold text-hotel-navy tabular-nums">
-                                {activeBlockIndex + 1} / {moduleData.blocks.length}
-                            </span>
-                        </div>
-
-                        {/* Voice Audio Narrator */}
-                        <Button
-                            variant={showAudioNarrator ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setShowAudioNarrator(prev => !prev)}
-                            className={cn(
-                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
-                                showAudioNarrator
-                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
-                                    : "bg-white text-slate-700 hover:bg-slate-50"
-                            )}
-                            title={isRTL ? 'القارئ الصوتي الذكي' : 'AI Voice Read-Aloud'}
-                        >
-                            <Volume2 className="h-4 w-4" />
-                            <span className="hidden lg:inline text-xs">{isRTL ? 'استماع' : 'Listen'}</span>
-                        </Button>
-
-                        {/* AI Tutor */}
-                        <Button
-                            variant={showTutorDrawer ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setShowTutorDrawer(prev => !prev)}
-                            className={cn(
-                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
-                                showTutorDrawer
-                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
-                                    : "bg-white text-slate-700 hover:bg-slate-50"
-                            )}
-                            title={isRTL ? 'المرشد الذكي ألتوس' : 'Ask Altus AI Coach'}
-                        >
-                            <Bot className="h-4 w-4 text-amber-500" />
-                            <span className="hidden lg:inline text-xs">{isRTL ? 'المرشد الذكي' : 'AI Tutor'}</span>
-                        </Button>
-
-                        {/* Study Notes */}
-                        <Button
-                            variant={showNotesDrawer ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setShowNotesDrawer(prev => !prev)}
-                            className={cn(
-                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
-                                showNotesDrawer
-                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
-                                    : "bg-white text-slate-700 hover:bg-slate-50"
-                            )}
-                            title={isRTL ? 'مفكرتي وملاحظاتي' : 'Study Notes'}
-                        >
-                            <FileText className="h-4 w-4" />
-                            <span className="hidden lg:inline text-xs">{isRTL ? 'ملاحظاتي' : 'Notes'}</span>
-                        </Button>
-
-                        {/* Font Size Sizer */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-9 px-2 gap-1 border-slate-200 bg-white text-slate-700 shrink-0"
-                                    title={isRTL ? 'حجم الخط' : 'Font Size'}
-                                >
-                                    <Type className="h-4 w-4" />
-                                    <span className="text-xs uppercase font-bold">{fontSizeModifier}</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-32">
-                                <DropdownMenuItem onClick={() => setFontSizeModifier('sm')}>
-                                    Small (A-)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFontSizeModifier('base')}>
-                                    Default (A)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setFontSizeModifier('lg')}>
-                                    Large (A+)
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* Zen / Theater Mode */}
-                        <Button
-                            variant={isZenMode ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                                setIsZenMode(prev => !prev)
-                                if (!isZenMode) setSidebarOpen(false)
+        <PlayerShell
+            isRTL={isRTL}
+            goNext={handleNext}
+            goPrevious={handlePrevious}
+            railOpen={sidebarOpen}
+            onRailOpenChange={setSidebarOpen}
+            contentWide
+            contentClassName={cn(isZenMode && 'bg-slate-950 text-slate-100')}
+            contentInnerClassName={cn(
+                'flex min-h-full flex-col',
+                fontSizeModifier === 'sm' ? 'text-sm' : fontSizeModifier === 'lg' ? 'text-lg' : 'text-base',
+            )}
+            topBar={
+                <PlayerTopBar
+                    title={displayModuleTitle || moduleData.module.title}
+                    contextLabel={cn(
+                        t('pageOf', { current: activeBlockIndex + 1, total: totalBlocks }),
+                        activeBlock?.type ? `· ${activeBlock.type.replace('_', ' ')}` : '',
+                    )}
+                    progress={progressPercentage}
+                    saveState={saveState}
+                    onExit={() => navigate('/learning/my')}
+                    onToggleRail={() => setSidebarOpen((o) => !o)}
+                    railOpen={sidebarOpen}
+                    tutor={{ active: showTutorDrawer, onToggle: () => setShowTutorDrawer((p) => !p) }}
+                    tools={
+                        <PlayerToolsMenu
+                            fontSize={{ value: fontSizeModifier, onChange: setFontSizeModifier }}
+                            focusMode={{
+                                active: isZenMode,
+                                onToggle: () => {
+                                    setIsZenMode((p) => !p)
+                                    if (!isZenMode) setSidebarOpen(false)
+                                },
                             }}
-                            className={cn(
-                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
-                                isZenMode
-                                    ? "bg-slate-900 text-amber-400 border-slate-800"
-                                    : "bg-white text-slate-700 hover:bg-slate-50"
-                            )}
-                            title={isRTL ? 'وضع التركيز' : 'Zen Focus Mode'}
-                        >
-                            {isZenMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                            <span className="hidden lg:inline text-xs">{isRTL ? 'تركيز' : 'Zen'}</span>
-                        </Button>
+                            audioNarrator={{ active: showAudioNarrator, onToggle: () => setShowAudioNarrator((p) => !p) }}
+                            notes={{ active: showNotesDrawer, onToggle: () => setShowNotesDrawer((p) => !p) }}
+                            translation={{
+                                languages: SUPPORTED_TRANSLATION_LANGUAGES.map((l) => ({ code: l.code, label: l.label })),
+                                active: translationTarget,
+                                activeLabel: translationTargetMeta?.label,
+                                onSelect: (code) => handleTranslate(code as TranslationTargetLanguage),
+                                onClear: handleClearTranslation,
+                                bilingual: showBilingual,
+                                onToggleBilingual: () => setShowBilingual((p) => !p),
+                                translating: isTranslating,
+                            }}
+                        />
+                    }
+                    isRTL={isRTL}
+                />
+            }
+            rail={
+                <PlayerContextRail
+                    moduleTitle={displayModuleTitle || moduleData.module.title}
+                    items={railItems}
+                    activeIndex={activeBlockIndex}
+                    onSelect={handleSelectBlock}
+                    progress={progressPercentage}
+                />
+            }
+            actionBar={
+                <PlayerActionBar
+                    isRTL={isRTL}
+                    previousDisabled={activeBlockIndex === 0}
+                    stepper={{ current: activeBlockIndex, total: totalBlocks }}
+                    defaultPrimary={defaultPrimaryAction}
+                />
+            }
+            banners={
+                <>
+                    {!isOnline && (
+                        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-900 sm:px-6" role="status">
+                            {t('offlineNotice', "You're offline — progress is saved on this device and will sync when you reconnect.")}
+                        </div>
+                    )}
+                    {resumeNotice && (
+                        <div className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-800 sm:px-6" role="status">
+                            {resumeNotice}
+                        </div>
+                    )}
+                    {!isFinished && !trainingCompletion.complete && trainingCompletion.blockers.length > 0 && (() => {
+                        const blocker = trainingCompletion.blockers[0]
+                        const blockerIndex = moduleData.blocks.findIndex((b) => b.id === blocker.blockId)
+                        const isOnBlockerAlready = blockerIndex === activeBlockIndex
+                        return (
+                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2 text-xs text-amber-900 sm:px-6" role="status">
+                                <span>
+                                    <span className="font-semibold">{t('requirementsRemaining', 'Requirements remaining')}:</span>{' '}
+                                    {blocker.reason === 'quiz-not-passed'
+                                        ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${blocker.label}" to finish.` })
+                                        : blocker.reason === 'quiz-not-submitted'
+                                            ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })
+                                            : t('requiredContentStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })}
+                                </span>
+                                {blockerIndex !== -1 && !isOnBlockerAlready && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 border-amber-300 text-xs text-amber-900 hover:bg-amber-100"
+                                        onClick={() => setActiveBlockIndex(blockerIndex)}
+                                    >
+                                        {t('goToRequirement', 'Go to it')}
+                                        <ChevronRight className={cn('ms-1 h-3 w-3', isRTL && 'rotate-180')} />
+                                    </Button>
+                                )}
+                            </div>
+                        )
+                    })()}
+                </>
+            }
+            overlays={
+                <>
+                    <PlayerTutorDrawer
+                        isOpen={showTutorDrawer}
+                        onClose={() => setShowTutorDrawer(false)}
+                        moduleTitle={moduleData?.module?.title}
+                        blockTitle={activeBlock?.title}
+                        blockContentText={activeBlock?.content || ''}
+                        isRTL={isRTL}
+                    />
+                    <PlayerNotesDrawer
+                        isOpen={showNotesDrawer}
+                        onClose={() => setShowNotesDrawer(false)}
+                        moduleId={moduleData?.module?.id || ''}
+                        moduleTitle={moduleData?.module?.title}
+                        activeBlockId={activeBlock?.id}
+                        activeBlockTitle={activeBlock?.title}
+                        isRTL={isRTL}
+                    />
+                    <PlayerCelebrationModal
+                        isOpen={showCelebrationModal}
+                        onClose={() => setShowCelebrationModal(false)}
+                        moduleTitle={moduleData?.module?.title || 'Hospitality Module'}
+                        recipientName={profile?.full_name || user?.email || 'Hospitality Professional'}
+                        score={completionScore}
+                        passed={completionPassed}
+                        timeSpentSeconds={timeSpentSeconds}
+                        isRTL={isRTL}
+                        onBackToDashboard={() => navigate('/learning/my')}
+                    />
+                </>
+            }
+        >
+            <BlockChangeEffects blockKey={activeBlock?.id || 'no-content'} />
 
-                        {/* Translation Dropdown */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-9 gap-1.5 border-slate-200 bg-white shrink-0"
-                                    disabled={isTranslating}
-                                >
-                                    {isTranslating ? (
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Languages className="h-4 w-4" />
-                                    )}
-                                    <span className="hidden md:inline text-xs">
-                                        {translationTargetMeta
-                                            ? translationTargetMeta.label
-                                            : t('translate', 'Translate')}
-                                    </span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <div className="px-2 py-1.5 text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                                    {t('translateTo', 'Translate to')}
-                                </div>
-                                {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
-                                    <DropdownMenuItem key={lang.code} onClick={() => handleTranslate(lang.code)}>
-                                        {lang.label}
-                                    </DropdownMenuItem>
-                                ))}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem
-                                    checked={showBilingual}
-                                    onCheckedChange={() => setShowBilingual(prev => !prev)}
-                                >
-                                    {t('showBilingual', 'Show bilingual')}
-                                </DropdownMenuCheckboxItem>
-                                <DropdownMenuItem onClick={handleClearTranslation}>
-                                    {t('viewOriginal', 'View original')}
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate('/learning/my')}
-                            className="text-hotel-navy hover:bg-slate-50 font-medium hidden sm:flex h-9"
-                        >
-                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ms-2 rotate-180" : "me-2")} />
-                            <span className="hidden md:inline text-xs">{t('exitLearning')}</span>
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate('/learning/my')}
-                            className="sm:hidden h-9 w-9 text-hotel-navy"
-                            aria-label={t('accessibility.exitTraining', 'Exit training')}
-                        >
-                            <X className="h-5 w-5" />
-                        </Button>
-                    </div>
-                </header>
-
-                {/* Audio Narrator Bar */}
-                {showAudioNarrator && activeBlock && (
+            {showAudioNarrator && activeBlock && (
+                <div className="mb-6 -mt-2">
                     <PlayerAudioNarrator
                         text={activeBlock.content || activeBlock.title || ''}
                         title={activeBlock.title}
@@ -2858,321 +2757,62 @@ export default function TrainingPlayer() {
                         targetLang={translationTarget}
                         onClose={() => setShowAudioNarrator(false)}
                     />
+                </div>
+            )}
+
+            <SmartObserver
+                className="relative flex-1"
+                onFocusChange={setIsFocused}
+                onIdleChange={setIsIdle}
+                idleTimeoutMs={60000}
+            >
+                {(!isFocused || isIdle) && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 z-40 mx-auto flex w-fit items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 shadow-sm">
+                        {isIdle ? <MousePointer2 className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                        {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
+                    </div>
                 )}
 
-                {/* Top Reading Progress Scrubber */}
-                <div className="w-full bg-slate-100 h-1 shrink-0 overflow-hidden">
-                    <div
-                        className="bg-amber-400 h-full transition-all duration-300 shadow-sm shadow-amber-400/50"
-                        style={{ width: `${persistedProgressPercentage}%` }}
-                    />
-                </div>
+                {activeBlockIndex === 0 && !componentTagsPresent.has('objectives') && courseOutcomes.terminalObjectives.length > 0 && (
+                    <BlockCallout tag="objectives" items={courseOutcomes.terminalObjectives} isRTL={isRTL} className="mb-6" />
+                )}
+                {isLastBlock && !componentTagsPresent.has('summary') && courseOutcomes.summaryTakeaways.length > 0 && (
+                    <BlockCallout tag="summary" items={courseOutcomes.summaryTakeaways} isRTL={isRTL} className="mb-6" />
+                )}
 
-                {/* Content Area */}
-                <SmartObserver
-                    className={cn(
-                        "flex-1 overflow-y-auto custom-scrollbar-light pt-4 pb-12 relative transition-colors duration-500",
-                        isZenMode ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"
-                    )}
-                    onFocusChange={setIsFocused}
-                    onIdleChange={setIsIdle}
-                    idleTimeoutMs={60000}
-                >
-                    {/* Ambient Glow in Zen Mode */}
-                    {isZenMode && (
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-                    )}
-
-                    {/* Anti-Cheat Status Toast/Indicator (Dev/User Feedback) */}
-                    {(!isFocused || isIdle) && (
-                        <div className="absolute top-4 start-4 end-4 sm:start-auto sm:end-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
-                            {isIdle ? <MousePointer2 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                            {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
-                        </div>
-                    )}
-                    <div className={cn(
-                        "max-w-4xl mx-auto py-4 md:py-12 px-4 md:px-12 lg:px-16 min-h-full flex flex-col transition-all",
-                        fontSizeModifier === 'sm' ? "text-sm" : fontSizeModifier === 'lg' ? "text-lg" : "text-base"
-                    )}>
-                        <div className="mb-6 space-y-3">
-                            {resumeNotice && (
-                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                    {resumeNotice}
+                <AnimatePresence mode="wait">
+                    <m.div
+                        key={activeBlock?.id || 'no-content'}
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.28, ease: 'circOut' }}
+                    >
+                        <h2 data-player-heading tabIndex={-1} className="sr-only">
+                            {activeBlock ? resolveBlockTitle(activeBlock, activeBlockIndex) : t('noContentYet', 'No Content Yet')}
+                        </h2>
+                        {activeBlock ? (
+                            renderBlockContent(activeBlock)
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                                    <BookOpen className="h-8 w-8 text-muted-foreground" />
                                 </div>
-                            )}
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-4">
-                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                    <div className="space-y-1">
-                                        <p className="text-xs uppercase tracking-[0.25em] text-slate-400 font-semibold">
-                                            {t('pageOf', { current: activeBlockIndex + 1, total: totalBlocks })}
-                                        </p>
-                                        <h2 className="text-lg font-semibold text-hotel-navy flex items-center gap-2">
-                                            {t('blockTitle', { number: activeBlockIndex + 1 })}
-                                            {activeBlock?.type && (
-                                                <Badge variant="secondary" className="capitalize">
-                                                    {activeBlock.type.replace('_', ' ')}
-                                                </Badge>
-                                            )}
-                                        </h2>
-                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                            <span>{t('estimatedDuration', 'Estimated duration')}</span>
-                                            <span className="font-semibold text-slate-700">
-                                                {moduleData.module.estimated_duration_minutes
-                                                    ? `${moduleData.module.estimated_duration_minutes} ${t('min', 'min')}`
-                                                    : t('unknown', 'Unknown')}
-                                            </span>
-                                            <span className="text-slate-300">•</span>
-                                            <span>{t('timeSpent', 'Time spent')}</span>
-                                            <span className="font-semibold text-slate-700">{formatDuration(timeSpentSeconds)}</span>
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:max-w-[220px] space-y-2">
-                                        <div className="flex items-center justify-between text-xs text-slate-500">
-                                            <span>{t('overallProgress', 'Overall progress')}</span>
-                                            <span className="font-semibold text-slate-700">{progressPercentage}%</span>
-                                        </div>
-                                        <Progress value={progressPercentage} className="h-2 bg-slate-200" />
-                                    </div>
-                                </div>
+                                <h3 className="mb-2 text-xl font-bold text-foreground">{t('noContentYet', 'No Content Yet')}</h3>
+                                <p className="max-w-md text-muted-foreground">
+                                    {t('moduleEmptyDescription', 'This module does not have any content blocks yet. Please add content in the Training Builder.')}
+                                </p>
                             </div>
-                        </div>
-
-                        {/* Module-level objectives (module start) / takeaways (module end),
-                            unless the course already ships a tagged component block for it. */}
-                        {activeBlockIndex === 0 && !componentTagsPresent.has('objectives') && courseOutcomes.terminalObjectives.length > 0 && (
-                            <BlockCallout
-                                tag="objectives"
-                                items={courseOutcomes.terminalObjectives}
-                                isRTL={isRTL}
-                                className="mb-6"
-                            />
                         )}
-                        {isLastBlock && !componentTagsPresent.has('summary') && courseOutcomes.summaryTakeaways.length > 0 && (
-                            <BlockCallout
-                                tag="summary"
-                                items={courseOutcomes.summaryTakeaways}
-                                isRTL={isRTL}
-                                className="mb-6"
-                            />
-                        )}
+                    </m.div>
+                </AnimatePresence>
 
-                        <AnimatePresence mode="wait">
-                            <m.div
-                                key={activeBlock?.id || 'no-content'}
-                                initial={{ opacity: 0, y: 15 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -15 }}
-                                transition={{ duration: 0.4, ease: "circOut" }}
-                                className="flex-1"
-                            >
-                                {activeBlock ? (
-                                    renderBlockContent(activeBlock)
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                                        <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-6">
-                                            <BookOpen className="h-8 w-8 text-slate-400" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-hotel-navy mb-2">
-                                            {t('noContentYet', 'No Content Yet')}
-                                        </h3>
-                                        <p className="text-muted-foreground max-w-md">
-                                            {t('moduleEmptyDescription', 'This module does not have any content blocks yet. Please add content in the Training Builder.')}
-                                        </p>
-                                    </div>
-                                )}
-                            </m.div>
-                        </AnimatePresence>
+                {isLastBlock && (
+                    <CourseSourceDocuments trainingModuleId={moduleData.module.id} variant="learner" className="mt-8" />
+                )}
 
-                        {isLastBlock && (
-                            <CourseSourceDocuments
-                                trainingModuleId={moduleData.module.id}
-                                variant="learner"
-                                className="mt-8"
-                            />
-                        )}
-
-                        <div className="h-12 shrink-0" /> {/* Spacer */}
-                    </div>
-                </SmartObserver>
-
-                {!isFinished && !trainingCompletion.complete && trainingCompletion.blockers.length > 0 && (() => {
-                    const blocker = trainingCompletion.blockers[0]
-                    const blockerIndex = moduleData.blocks.findIndex(b => b.id === blocker.blockId)
-                    const isOnBlockerAlready = blockerIndex === activeBlockIndex
-                    return (
-                        <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900 md:px-12 flex flex-wrap items-center justify-between gap-2" role="status">
-                            <span>
-                                <span className="font-semibold">{t('requirementsRemaining', 'Requirements remaining')}:</span>{' '}
-                                {blocker.reason === 'quiz-not-passed'
-                                    ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${blocker.label}" to finish.` })
-                                    : blocker.reason === 'quiz-not-submitted'
-                                        ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })
-                                        : t('requiredContentStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })}
-                            </span>
-                            {blockerIndex !== -1 && !isOnBlockerAlready && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 text-xs border-amber-300 text-amber-900 hover:bg-amber-100 transition-transform active:scale-95"
-                                    onClick={() => {
-                                        setActiveBlockIndex(blockerIndex)
-                                        window.scrollTo(0, 0)
-                                    }}
-                                >
-                                    {t('goToRequirement', 'Go to it')}
-                                    <ChevronRight className={cn("h-3 w-3 ms-1", isRTL && "rotate-180")} />
-                                </Button>
-                            )}
-                        </div>
-                    )
-                })()}
-
-                {/* Navigation Bar */}
-                <footer className={cn(
-                    "min-h-[5rem] md:min-h-[5.5rem] bg-card/95 backdrop-blur-xl border-t border-border/60 flex items-center justify-between gap-3 px-4 sm:px-6 md:px-12 py-3 md:py-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-0 shrink-0 z-20 sticky bottom-0 shadow-lg",
-                    isRTL ? "flex-row-reverse" : "flex-row"
-                )}>
-                    <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={handlePrevious}
-                        disabled={activeBlockIndex === 0}
-                        className={cn(
-                            "h-11 md:h-12 px-4 sm:px-5 md:px-6 text-xs sm:text-sm md:text-base font-bold tracking-wide border-border/80 hover:bg-muted/60 transition-all duration-150 ease-out active:scale-[0.96] rounded-xl shadow-sm",
-                            isRTL ? "flex-row-reverse" : ""
-                        )}
-                    >
-                        <ChevronLeft className={cn(
-                            "h-4 w-4 md:h-5 md:w-5",
-                            isRTL ? "ms-2 md:ms-3 rotate-180" : "me-2 md:me-3"
-                        )} />
-                        <span className="hidden md:inline">{t('previous', 'Previous')}</span>
-                        <ChevronLeft className="h-4 w-4 md:hidden" />
-                    </Button>
-
-                    <div className="hidden md:flex flex-col items-center">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                            {moduleData.blocks.map((block, i) => (
-                                <div
-                                    key={block.id}
-                                    className={cn(
-                                        "h-1.5 rounded-full transition-all duration-300",
-                                        i === activeBlockIndex
-                                            ? "w-8 bg-amber-500 shadow-sm shadow-amber-500/40"
-                                            : i < activeBlockIndex
-                                                ? "w-2 bg-emerald-500"
-                                                : "w-1.5 bg-border"
-                                    )}
-                                />
-                            ))}
-                        </div>
-                        <span className="text-[11px] font-mono text-muted-foreground">
-                            {t('pageOf', { current: activeBlockIndex + 1, total: totalBlocks })}
-                        </span>
-                    </div>
-
-                    <Button
-                        size="lg"
-                        onClick={handleNext}
-                        disabled={!canProceedToNext}
-                        className={cn(
-                            "h-11 md:h-12 min-w-[8rem] sm:min-w-[10.5rem] justify-center px-4 sm:px-5 md:px-8 text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all duration-150 ease-out shadow-md hover:shadow-xl active:scale-[0.96] rounded-xl",
-                            isLastBlock
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-                                : "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20 font-bold",
-                            isRTL ? "flex-row-reverse" : "",
-                        )}
-                    >
-                        {/* Intelligent Button Content */}
-                        {(() => {
-                            if (progression.isModuleComplete || (isLastBlock && canProceedToNext && (!activeBlock || activeBlock.type !== 'quiz' || activeQuizPassed))) {
-                                return (
-                                    <>
-                                        <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
-                                        <span>{t('completeModule', 'Complete Module')}</span>
-                                    </>
-                                )
-                            }
-
-                            if (activeBlock?.type === 'quiz') {
-                                if (activeQuizPassed) {
-                                    return (
-                                        <>
-                                            <span className="hidden md:inline">{t('continueToNextLesson', 'Next Lesson')}</span>
-                                            <span className="md:hidden">{t('next', 'Next')}</span>
-                                            <ChevronRight className={cn(
-                                                "h-4 w-4 md:h-5 md:w-5",
-                                                isRTL ? "me-2 md:me-3 rotate-180" : "ms-2 md:ms-3"
-                                            )} />
-                                        </>
-                                    )
-                                }
-                                if (activeBlockState === 'RETRY_REQUIRED' || activeBlockState === 'FAILED') {
-                                    return (
-                                        <>
-                                            <RotateCcw className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
-                                            <span>{t('retryQuiz', 'Retry Quiz')}</span>
-                                        </>
-                                    )
-                                }
-                                return (
-                                    <>
-                                        <HelpCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
-                                        <span>{t('takeQuiz', 'Take Quiz')}</span>
-                                    </>
-                                )
-                            }
-
-                            return (
-                                <>
-                                    <span className="hidden md:inline">{t('nextStep', 'Next Step')}</span>
-                                    <span className="md:hidden">{t('next', 'Next')}</span>
-                                    <ChevronRight className={cn(
-                                        "h-4 w-4 md:h-5 md:w-5",
-                                        isRTL ? "me-2 md:me-3 rotate-180" : "ms-2 md:ms-3"
-                                    )} />
-                                </>
-                            )
-                        })()}
-                    </Button>
-                </footer>
-                </div>
-
-                {/* AI Tutor Drawer */}
-                <PlayerTutorDrawer
-                    isOpen={showTutorDrawer}
-                    onClose={() => setShowTutorDrawer(false)}
-                    moduleTitle={moduleData?.module?.title}
-                    blockTitle={activeBlock?.title}
-                    blockContentText={activeBlock?.content || ''}
-                    isRTL={isRTL}
-                />
-
-                {/* Study Notes Drawer */}
-                <PlayerNotesDrawer
-                    isOpen={showNotesDrawer}
-                    onClose={() => setShowNotesDrawer(false)}
-                    moduleId={moduleData?.module?.id || ''}
-                    moduleTitle={moduleData?.module?.title}
-                    activeBlockId={activeBlock?.id}
-                    activeBlockTitle={activeBlock?.title}
-                    isRTL={isRTL}
-                />
-
-                {/* Luxury Celebration Modal */}
-                <PlayerCelebrationModal
-                    isOpen={showCelebrationModal}
-                    onClose={() => setShowCelebrationModal(false)}
-                    moduleTitle={moduleData?.module?.title || 'Hospitality Module'}
-                    recipientName={profile?.full_name || user?.email || 'Hospitality Professional'}
-                    score={completionScore}
-                    passed={completionPassed}
-                    timeSpentSeconds={timeSpentSeconds}
-                    isRTL={isRTL}
-                    onBackToDashboard={() => navigate('/learning/my')}
-                />
-            </div>
-        </LazyMotion>
+                <div className="h-8 shrink-0" />
+            </SmartObserver>
+        </PlayerShell>
     )
 }
-
