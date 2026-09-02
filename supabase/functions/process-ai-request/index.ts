@@ -351,8 +351,20 @@ serve(async (req) => {
       }
     }
 
-    if (!isServiceRoleCall && !isVerifiedUser && !isAnonKeyCall) {
-      return jsonResponse({ error: "Unauthorized: invalid or expired token", success: false }, 401);
+    // Require a verified end-user JWT or the service-role key. A bare anon /
+    // publishable key (what the supabase-js client falls back to when logged
+    // out) is NOT sufficient — this endpoint bills real provider spend and its
+    // credit/rate-limit gate below only runs for an identified user.
+    if (!isServiceRoleCall && !isVerifiedUser) {
+      return jsonResponse(
+        {
+          error: isAnonKeyCall
+            ? "Unauthorized: a signed-in user session is required for AI requests"
+            : "Unauthorized: invalid or expired token",
+          success: false,
+        },
+        401,
+      );
     }
 
     let callerOrgId: string | null = null;
