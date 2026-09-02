@@ -24,6 +24,7 @@ import {
   Palette,
   Mail,
   Building,
+  Globe,
   ShieldCheck,
   SlidersHorizontal,
   ChevronRight

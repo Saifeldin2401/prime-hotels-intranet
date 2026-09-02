@@ -29,7 +29,7 @@ import {
 } from '@/lib/authSecurityService'
 import { AuthIdentityContext } from './AuthIdentityContext'
 import { AuthSecurityContext } from './AuthSecurityContext'
-import { UserDataContext } from './UserDataContext'
+import { useUserData } from './UserDataContext'
 import { useAuthSession } from './useAuthSession'
 
 // ─── Logger helper ───────────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ export function useAuthActions() {
 export function AuthActionsProvider({ children }: { children: ReactNode }) {
   const identityContext = useContext(AuthIdentityContext)
   const securityContext = useContext(AuthSecurityContext)
-  const userDataContext = useContext(UserDataContext)
+  const userDataContext = useUserData()
   
   const { clearLocalSession } = useAuthSession()
 
