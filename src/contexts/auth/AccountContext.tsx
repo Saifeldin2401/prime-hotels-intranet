@@ -143,10 +143,25 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
 }
 
+const FALLBACK_ACCOUNT_VALUE: AccountContextValue = {
+  loading: true,
+  isPlatformOperator: false,
+  platformRoles: [],
+  platformPermissions: [],
+  can: () => false,
+  hasPlatformRole: () => false,
+  activePlatformSession: null,
+  tenantMemberships: [],
+  primaryOrganizationId: null,
+  isMultiOrg: false,
+  allOrgsSuspended: false,
+  recommendedDestination: '/home/learner',
+  refresh: async () => {},
+}
+
 export function useAccountContext(): AccountContextValue {
   const c = useContext(AccountContext)
-  if (!c) throw new Error('useAccountContext must be used within an AccountProvider')
-  return c
+  return c ?? FALLBACK_ACCOUNT_VALUE
 }
 
 export { AccountContext }

@@ -45,13 +45,16 @@ export interface AuthSecurityContextType {
 
 export const AuthSecurityContext = createContext<AuthSecurityContextType | undefined>(undefined)
 
+const FALLBACK_AUTH_SECURITY: AuthSecurityContextType = {
+  securityRequirements: null,
+  setSecurityRequirements: () => {},
+  resetSecurityState: () => {},
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useAuthSecurity() {
   const context = useContext(AuthSecurityContext)
-  if (context === undefined) {
-    throw new Error('useAuthSecurity must be used within an AuthSecurityProvider')
-  }
-  return context
+  return context ?? FALLBACK_AUTH_SECURITY
 }
 
 // ─── Configuration ───────────────────────────────────────────────────────────

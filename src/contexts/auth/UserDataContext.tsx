@@ -37,15 +37,26 @@ export interface UserDataContextType {
   setRolesLoading: (loading: boolean) => void
 }
 
-const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
+export const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
+
+const FALLBACK_USER_DATA: UserDataContextType = {
+  profile: null,
+  roles: [],
+  properties: [],
+  departments: [],
+  rolesLoading: true,
+  rolesError: null,
+  primaryRole: null,
+  loadUserData: async () => {},
+  shouldRefreshUserData: () => false,
+  resetUserData: () => {},
+  setRolesLoading: () => {},
+}
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useUserData() {
   const context = useContext(UserDataContext)
-  if (context === undefined) {
-    throw new Error('useUserData must be used within a UserDataProvider')
-  }
-  return context
+  return context ?? FALLBACK_USER_DATA
 }
 
 // ─── Role priority order (lower = higher privilege) ──────────────────────────

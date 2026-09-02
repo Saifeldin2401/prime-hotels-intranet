@@ -30,6 +30,7 @@ export {
 } from './AuthSecurityContext'
 
 export { 
+  UserDataContext,
   UserDataProvider,
   useUserData 
 } from './UserDataContext'

@@ -29,7 +29,7 @@ import {
 } from '@/lib/authSecurityService'
 import { AuthIdentityContext } from './AuthIdentityContext'
 import { AuthSecurityContext } from './AuthSecurityContext'
-import { useUserData } from './UserDataContext'
+import { UserDataContext } from './UserDataContext'
 import { useAuthSession } from './useAuthSession'
 
 // ─── Logger helper ───────────────────────────────────────────────────────────
@@ -62,20 +62,23 @@ export interface AuthActionsContextType {
 
 export const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
 
+const FALLBACK_AUTH_ACTIONS: AuthActionsContextType = {
+  signIn: async () => ({ error: new Error('Auth not initialized') }),
+  signOut: async () => {},
+  refreshSession: async () => {},
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useAuthActions() {
   const context = useContext(AuthActionsContext)
-  if (context === undefined) {
-    throw new Error('useAuthActions must be used within an AuthActionsProvider')
-  }
-  return context
+  return context ?? FALLBACK_AUTH_ACTIONS
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
 export function AuthActionsProvider({ children }: { children: ReactNode }) {
   const identityContext = useContext(AuthIdentityContext)
   const securityContext = useContext(AuthSecurityContext)
-  const userDataContext = useUserData()
+  const userDataContext = useContext(UserDataContext)
   
   const { clearLocalSession } = useAuthSession()
 

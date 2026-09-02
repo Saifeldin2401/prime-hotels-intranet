@@ -59,13 +59,17 @@ export interface AuthIdentityContextType {
 
 export const AuthIdentityContext = createContext<AuthIdentityContextType | undefined>(undefined)
 
+const FALLBACK_AUTH_IDENTITY: AuthIdentityContextType = {
+  user: null,
+  loading: true,
+  setUser: () => {},
+  setLoading: () => {},
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
 export function useAuthIdentity() {
   const context = useContext(AuthIdentityContext)
-  if (context === undefined) {
-    throw new Error('useAuthIdentity must be used within an AuthIdentityProvider')
-  }
-  return context
+  return context ?? FALLBACK_AUTH_IDENTITY
 }
 
 // ─── Provider ────────────────────────────────────────────────────────────────
