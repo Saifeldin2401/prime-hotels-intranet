@@ -62,19 +62,34 @@ export function useDepartments(propertyId?: string) { // Optional filter
         throw new Error('Unauthorized: Property access denied');
       }
 
-      const { data, error } = await supabase.from('departments').insert(dept).select().single();
+      let orgId: string | null = null;
+      if (dept.property_id) {
+        const { data: hotelRow } = await supabase.from('hotels').select('organization_id').eq('id', dept.property_id).maybeSingle();
+        if (hotelRow?.organization_id) orgId = hotelRow.organization_id;
+      }
+
+      const payload = {
+        ...dept,
+        organization_id: orgId || undefined,
+        hotel_id: dept.property_id
+      };
+
+      const { data, error } = await supabase.from('departments').insert(payload).select().single();
       if (error) throw error;
 
       // Audit log
-      supabase.from('system_events').insert({
-        event_type: 'audit',
-        actor_id: user.id,
-        entity_type: 'department',
-        entity_id: data.id,
-        metadata: { action: 'create', details: { name: dept.name, property_id: dept.property_id } }
-      }).then(({ error: auditError }) => {
-        if (auditError) console.error('Failed to write audit log:', auditError);
-      });
+      if (orgId) {
+        supabase.from('system_events').insert({
+          event_type: 'audit',
+          actor_id: user.id,
+          entity_type: 'department',
+          entity_id: data.id,
+          organization_id: orgId,
+          metadata: { action: 'create', details: { name: dept.name, property_id: dept.property_id } }
+        }).then(({ error: auditError }) => {
+          if (auditError) console.error('Failed to write audit log:', auditError);
+        });
+      }
 
       return data;
     },
