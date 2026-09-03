@@ -3,12 +3,13 @@
 -- — the edge function then burned two dead round-trips before reaching Groq.
 --
 -- Exclude any provider whose key_status is 'invalid' or 'missing', and treat
--- 'unavailable' like the other hard-down health states. Reflect key reality on
--- the gemini/huggingface rows so the admin panel and the planner agree.
+-- 'unavailable' like the other hard-down health states, so a provider with a
+-- dead key can never be ranked #1 in a routing plan.
 --
 -- NOTE: applied to live (dhbfaclkfysqwfppuxxa) alongside an ai_platform_config
--- change trimming enabled_providers to ['groq','openrouter','recraft'] and
--- setting max_concurrency=6 / max_retries=1 / text_model_priority=[gpt-oss-*].
+-- change setting max_concurrency=6 / max_retries=1 / text_model_priority=[gpt-oss-*].
+-- Gemini was re-verified working on 2026-09-03 (see 20260903100000) so it is NOT
+-- disabled here — only HuggingFace, whose token could not be verified.
 
 CREATE OR REPLACE FUNCTION public.get_ai_routing_plan(p_capability text, p_free_only boolean DEFAULT false, p_allow_premium boolean DEFAULT false, p_limit integer DEFAULT 8, p_agent_role text DEFAULT NULL::text)
  RETURNS jsonb
@@ -108,9 +109,9 @@ BEGIN
 END;
 $function$;
 
+-- HuggingFace token could not be verified; keep it out of routing (its provider
+-- row stays health_status='auth_failed') but don't assert a hard 'invalid' key.
 UPDATE public.ai_providers
-   SET health_status = 'auth_failed',
-       cooldown_until = now() + interval '30 days'
- WHERE id IN ('gemini','huggingface')
-   AND key_status = 'invalid'
-   AND health_status <> 'auth_failed';
+   SET key_status = 'unknown'
+ WHERE id = 'huggingface'
+   AND key_status = 'invalid';
