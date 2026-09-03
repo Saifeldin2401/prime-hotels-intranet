@@ -185,19 +185,17 @@ const DEFAULT_GROQ_MODELS = [
   "allam-2-7b",
 ];
 
-// All real, live OpenRouter slugs (verified via openrouter.ai/api/v1/models),
-// cheapest-first. No ":free" — that tier is dead for mainstream models.
+// All real, live OpenRouter slugs (verified via openrouter.ai/api/v1/models).
+// Legacy safety-net cascade only — the capability plan (Groq-first) is the
+// primary route. Ordered fast-first. `deepseek/deepseek-r1` and `openai/gpt-4o`
+// are deliberately excluded: measured 90-105s per call on this deployment.
 const DEFAULT_OPENROUTER_MODELS = [
-  "google/gemini-2.5-flash-lite",
   "openai/gpt-4o-mini",
-  "deepseek/deepseek-chat-v3-0324",
-  "deepseek/deepseek-chat",
-  "meta-llama/llama-3.3-70b-instruct",
-  "qwen/qwen-2.5-72b-instruct",
-  "deepseek/deepseek-r1",
   "anthropic/claude-haiku-4.5",
+  "google/gemini-2.5-flash-lite",
+  "deepseek/deepseek-chat-v3-0324",
+  "meta-llama/llama-3.3-70b-instruct",
   "google/gemini-2.5-flash",
-  "openai/gpt-4o",
   "anthropic/claude-opus-4.5",
   "openrouter/auto",
 ];
