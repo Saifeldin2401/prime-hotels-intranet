@@ -447,6 +447,108 @@ export class AICourseOrchestrator {
       return results
     }
 
+    // ========================================================================
+    // MULTIMEDIA (Visuals) — kicked off NOW, concurrently with content +
+    // assessments. Images only need lesson titles/descriptions from the
+    // curriculum blueprint, not the written lesson text, so there is no reason
+    // to wait for Phase 3/4. Awaited just before QA.
+    // ========================================================================
+    const imageConcurrency = Math.max(1, Math.ceil(concurrency / 2))
+    const runMultimediaPhase = async (): Promise<void> => {
+      await enforceDailySpendCap('image generation')
+      if (options.skipImages || config.imageConfig?.enableAIImages === false) return
+
+      const userMaxImages = typeof config.imageConfig?.maxImagesPerCourse === 'number'
+        ? config.imageConfig.maxImagesPerCourse
+        : 6
+      const userImageModel = config.imageConfig?.imageModel || 'recraft-vector'
+      const userStyle = config.imageConfig?.preferredStyle || 'technical_diagram'
+      const userAspectRatio = config.imageConfig?.preferredAspectRatio || '16:9'
+      const runCost = () => getPipelineTelemetry(pipelineRunId)?.estimatedCostUSD ?? 0
+
+      const allLessons = blueprint.modules.flatMap((m) => m.lessons.map((l) => ({ mod: m, les: l })))
+      const maxVisuals = Math.min(userMaxImages, allLessons.length)
+      const targetLessons = allLessons.slice(0, maxVisuals)
+      let generatedVisualCount = 0
+
+      emit({
+        phase: 'multimedia_generation',
+        agentRole: 'image_ai',
+        status: 'running',
+        progressPercentage: 40,
+        title: `AI Visual Generation (${userImageModel})`,
+        titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
+        detail: `[Model: ${userImageModel}] Synthesizing educational visuals in parallel (0/${maxVisuals} images)...`,
+        detailAr: `توليد الرسوم البيانية والصور التوضيحية (0/${maxVisuals} صور)...`,
+        modelUsed: userImageModel,
+      })
+
+      await pMap(
+        targetLessons,
+        async ({ mod, les }) => {
+          try {
+            const overCap = runCost() >= platformCfg.perCourseUsdCap
+            const forceFree = overCap || platformCfg.freeOnlyMode || isDailySpendLockedOut()
+            const premiumAllowed =
+              !platformCfg.freeOnlyMode &&
+              platformCfg.allowPremiumImages &&
+              config.imageConfig?.costTier !== 'free_only' &&
+              !forceFree
+            const imgRes = await imageAgent.process(
+              {
+                lesson: les,
+                courseTitle: blueprint.title,
+                moduleTitle: mod.title,
+                imageModel: forceFree ? 'auto' : userImageModel,
+                preferredStyle: userStyle,
+                preferredAspectRatio: userAspectRatio,
+                costTierPreference: premiumAllowed ? 'premium' : 'free_first',
+              },
+              { pipelineRunId, phase: 'multimedia_generation', silent: true }
+            )
+            if (imgRes.data) {
+              visualAssets.push(imgRes.data)
+              les.visualAssets = [imgRes.data]
+              ;(les as any).visualAsset = imgRes.data
+              generatedVisualCount++
+
+              emit({
+                phase: 'multimedia_generation',
+                agentRole: 'image_ai',
+                status: 'running',
+                title: `AI Visual Generation (${imgRes.data.model || userImageModel})`,
+                titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
+                detail: `[Model: ${imgRes.data.model || userImageModel}] Completed (${generatedVisualCount}/${maxVisuals}) visuals for lesson: "${les.title}"`,
+                detailAr: `تم إنجاز (${generatedVisualCount}/${maxVisuals}) صور للدرس: "${les.title}"`,
+                modelUsed: imgRes.data.model || userImageModel,
+              })
+            }
+          } catch (e) {
+            console.warn('[Orchestrator] Image agent skipped for lesson:', les.id, e)
+          }
+
+          if (!options.skipAudio && config.audioConfig?.enableAudio === true) {
+            try {
+              const audRes = await audioAgent.process(
+                { lessonTitle: les.title, lessonContentHtml: les.renderedHtml },
+                { pipelineRunId, phase: 'multimedia_generation', silent: true }
+              )
+              if (audRes.data) {
+                audioNarrations[les.id] = audRes.data
+              }
+            } catch (e) {
+              console.warn('[Orchestrator] Audio agent skipped for lesson:', les.id, e)
+            }
+          }
+        },
+        imageConcurrency
+      )
+      blueprint.visualAssets = visualAssets
+    }
+    const multimediaPromise: Promise<void> = runMultimediaPhase().catch((e) => {
+      console.warn('[Orchestrator] Multimedia phase error:', e)
+    })
+
     const researchContextStr = Array.isArray(researchResult?.data?.keyOperationalStandards)
       ? researchResult.data.keyOperationalStandards.join(', ')
       : ''
@@ -651,107 +753,10 @@ export class AICourseOrchestrator {
     checkCancelled("multimedia generation")
 
     // ========================================================================
-    // PHASE 5: MULTIMEDIA ENGINE (Visuals & Audio Shift Briefings)
-    // NOTE: multimedia + QA + revision always re-run on resume — visual assets
-    // are not individually checkpointed and QA must score the final blueprint.
+    // PHASE 5: MULTIMEDIA ENGINE — join the visuals task started right after
+    // curriculum (runs concurrently with content + assessments; see above).
     // ========================================================================
-    // Re-check the daily spend ceiling now that text/assessment phases have accrued cost.
-    await enforceDailySpendCap('image generation')
-    if (!options.skipImages && config.imageConfig?.enableAIImages !== false) {
-      const userMaxImages = typeof config.imageConfig?.maxImagesPerCourse === 'number'
-        ? config.imageConfig.maxImagesPerCourse
-        : 6
-      const userImageModel = config.imageConfig?.imageModel || 'recraft-vector'
-      const userStyle = config.imageConfig?.preferredStyle || 'technical_diagram'
-      const userAspectRatio = config.imageConfig?.preferredAspectRatio || '16:9'
-      // Spend-cap enforcement: once this course's estimated AI spend exceeds the
-      // per-course cap, force free-only for the rest of the run.
-      const runCost = () => getPipelineTelemetry(pipelineRunId)?.estimatedCostUSD ?? 0
-
-      const allLessons = blueprint.modules.flatMap((m) => m.lessons.map((l) => ({ mod: m, les: l })))
-      const maxVisuals = Math.min(userMaxImages, allLessons.length)
-      const targetLessons = allLessons.slice(0, maxVisuals)
-      let generatedVisualCount = 0
-
-      emit({
-        phase: 'multimedia_generation',
-        agentRole: 'image_ai',
-        status: 'running',
-        progressPercentage: 75,
-        title: `AI Visual Generation (${userImageModel})`,
-        titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
-        detail: `[Model: ${userImageModel}] Synthesizing educational visuals (0/${maxVisuals} images)...`,
-        detailAr: `توليد الرسوم البيانية والصور التوضيحية (0/${maxVisuals} صور)...`,
-        modelUsed: userImageModel,
-      })
-
-      await pMap(
-        targetLessons,
-        async ({ mod, les }) => {
-          try {
-            const overCap = runCost() >= platformCfg.perCourseUsdCap
-            const forceFree = overCap || platformCfg.freeOnlyMode || isDailySpendLockedOut()
-            const premiumAllowed =
-              !platformCfg.freeOnlyMode &&
-              platformCfg.allowPremiumImages &&
-              config.imageConfig?.costTier !== 'free_only' &&
-              !forceFree
-            const imgRes = await imageAgent.process(
-              {
-                lesson: les,
-                courseTitle: blueprint.title,
-                moduleTitle: mod.title,
-                imageModel: forceFree ? 'auto' : userImageModel,
-                preferredStyle: userStyle,
-                preferredAspectRatio: userAspectRatio,
-                costTierPreference: premiumAllowed ? 'premium' : 'free_first',
-              },
-              { pipelineRunId, phase: 'multimedia_generation', silent: true }
-            )
-            if (imgRes.data) {
-              visualAssets.push(imgRes.data)
-              les.visualAssets = [imgRes.data]
-              ;(les as any).visualAsset = imgRes.data
-              generatedVisualCount++
-
-              emit({
-                phase: 'multimedia_generation',
-                agentRole: 'image_ai',
-                status: 'running',
-                progressPercentage: Math.round(75 + (generatedVisualCount / maxVisuals) * 8),
-                title: `AI Visual Generation (${imgRes.data.model || userImageModel})`,
-                titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
-                detail: `[Model: ${imgRes.data.model || userImageModel}] Completed (${generatedVisualCount}/${maxVisuals}) visuals for lesson: "${les.title}"`,
-                detailAr: `تم إنجاز (${generatedVisualCount}/${maxVisuals}) صور للدرس: "${les.title}"`,
-                modelUsed: imgRes.data.model || userImageModel,
-              })
-            }
-          } catch (e) {
-            console.warn('[Orchestrator] Image agent skipped for lesson:', les.id, e)
-          }
-
-          // Audio Briefing (Strictly disabled by default, only runs if explicitly enabled)
-          if (!options.skipAudio && config.audioConfig?.enableAudio === true) {
-            try {
-              const audRes = await audioAgent.process(
-                {
-                  lessonTitle: les.title,
-                  lessonContentHtml: les.renderedHtml,
-                },
-                { pipelineRunId, phase: 'multimedia_generation', silent: true }
-              )
-              if (audRes.data) {
-                audioNarrations[les.id] = audRes.data
-              }
-            } catch (e) {
-              console.warn('[Orchestrator] Audio agent skipped for lesson:', les.id, e)
-            }
-          }
-        },
-        concurrency // admin "Max Parallel Generation Streams"
-      )
-      blueprint.visualAssets = visualAssets
-    }
+    await multimediaPromise
 
     checkCancelled("quality assurance")
 

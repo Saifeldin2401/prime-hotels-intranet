@@ -105,51 +105,49 @@ export class MultiProviderRouter {
   }
 
   private getDefaultCascade(task: AITaskCategory): ProviderCandidate[] {
+    // Groq LPU first everywhere — measured 2-5x faster than any alternative on
+    // this deployment. `deepseek/deepseek-r1` and `openai/gpt-4o` are excluded
+    // (90-105s here). Gemini/HuggingFace/Cloudflare keys are invalid or
+    // rate-limited on this project; kept only as deep fallbacks.
     switch (task) {
       case 'reasoning':
       case 'roleplay':
         return [
-          { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
-          { tier: 2, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
-          { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-r1', supportsJson: true },
-          { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-chat-v3-0324', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-20b', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'anthropic/claude-haiku-4.5', supportsJson: true },
-          { tier: 3, provider: 'openrouter', model: 'anthropic/claude-opus-4.5', supportsJson: true },
-          { tier: 3, provider: 'openrouter', model: 'openai/gpt-4o', supportsJson: true },
-          { tier: 4, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
-          { tier: 5, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
+          { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-chat-v3-0324', supportsJson: true },
+          { tier: 3, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
+          { tier: 4, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
 
       case 'compliance':
         return [
           { tier: 1, provider: 'groq', model: 'allam-2-7b', supportsJson: true },
-          { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'anthropic/claude-haiku-4.5', supportsJson: true },
-          { tier: 3, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
-          { tier: 4, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
-          { tier: 5, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
+          { tier: 3, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
+          { tier: 4, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
 
       case 'fast':
         return [
-          { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash-lite', supportsJson: true },
           { tier: 1, provider: 'groq', model: 'openai/gpt-oss-20b', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
-          { tier: 2, provider: 'openrouter', model: 'google/gemini-2.5-flash-lite', supportsJson: true },
-          { tier: 3, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
-          { tier: 4, provider: 'huggingface', model: 'mistralai/Mistral-7B-Instruct-v0.3', supportsJson: false },
+          { tier: 3, provider: 'gemini', model: 'gemini-2.5-flash-lite', supportsJson: true },
+          { tier: 4, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
 
       case 'general':
       default:
         return [
-          { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
-          { tier: 2, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-120b', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'openai/gpt-oss-20b', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
-          { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-chat-v3-0324', supportsJson: true },
-          { tier: 3, provider: 'openrouter', model: 'anthropic/claude-haiku-4.5', supportsJson: true },
-          { tier: 4, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
-          { tier: 5, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
+          { tier: 2, provider: 'openrouter', model: 'anthropic/claude-haiku-4.5', supportsJson: true },
+          { tier: 3, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
+          { tier: 4, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
     }
   }

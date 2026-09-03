@@ -880,108 +880,101 @@ export class AIModelRegistry {
     const combinedReq: TaskCapabilityRequirement = { ...baseReq, ...customReq }
 
     // Task-specific tailored cascade chains.
-    // NOTE: agents that request `jsonMode` lead with models that have a real
-    // JSON-object mode (Groq gpt-oss, gpt-4o-mini). `gemini-2.5-flash` resolves
-    // to Gemini-direct → on 429 the edge fn silently drops to gemini-*-lite,
-    // which frequently emits malformed JSON for large bilingual schemas.
+    // NOTE: Groq LPU (`openai/gpt-oss-*`) leads every chain — measured 2-5x faster
+    // than every alternative on this deployment (content_writer 8.6s vs 20s Gemini
+    // vs 105s OpenRouter gpt-4o). `deepseek/deepseek-r1` and `openai/gpt-4o` are
+    // deliberately excluded from text cascades (90-105s here). `gemini-2.5-flash`
+    // is kept only as a mid-tier fallback (its key is often invalid on this
+    // project and it silently drops to gemini-*-lite which mangles bilingual JSON).
     switch (role) {
       case 'research':
         return [
           'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
-          'gemini-2.5-flash',
-          'deepseek/deepseek-chat',
           'anthropic/claude-haiku-4.5',
+          'gemini-2.5-flash',
         ]
 
       case 'curriculum':
         return [
           'openai/gpt-oss-120b',
+          'anthropic/claude-haiku-4.5',
           'openai/gpt-4o-mini',
           'gemini-2.5-flash',
-          'meta-llama/llama-3.3-70b-instruct',
-          'anthropic/claude-opus-4.5',
-          'anthropic/claude-haiku-4.5',
         ]
 
       case 'knowledge':
         return [
+          'openai/gpt-oss-20b',
           'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
           'gemini-2.5-flash',
-          'deepseek/deepseek-chat',
         ]
 
       case 'content_writer':
         return [
-          'gemini-2.5-flash',
-          'meta-llama/llama-3.3-70b-instruct',
-          'openai/gpt-4o',
+          'openai/gpt-oss-120b',
+          'openai/gpt-oss-20b',
           'anthropic/claude-haiku-4.5',
-          'openai/gpt-4o-mini',
+          'gemini-2.5-flash',
         ]
 
       case 'activities':
       case 'scenarios':
         return [
-          'gemini-2.5-flash',
-          'meta-llama/llama-3.3-70b-instruct',
-          'anthropic/claude-opus-4.5',
-          'anthropic/claude-haiku-4.5',
           'openai/gpt-oss-120b',
+          'openai/gpt-oss-20b',
+          'anthropic/claude-haiku-4.5',
+          'gemini-2.5-flash',
         ]
 
       case 'assessments':
         return [
           'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
-          'gemini-2.5-flash',
           'anthropic/claude-haiku-4.5',
-          'deepseek/deepseek-chat',
+          'gemini-2.5-flash',
         ]
 
       case 'qa_critic':
         return [
-          'deepseek/deepseek-r1',
-          'gemini-2.5-flash',
-          'anthropic/claude-opus-4.5',
-          'meta-llama/llama-3.3-70b-instruct',
+          'openai/gpt-oss-120b',
           'anthropic/claude-haiku-4.5',
+          'openai/gpt-4o-mini',
+          'gemini-2.5-flash',
         ]
 
       case 'revision':
         return [
-          'gemini-2.5-flash',
-          'openai/gpt-4o-mini',
+          'openai/gpt-oss-20b',
           'openai/gpt-oss-120b',
           'anthropic/claude-haiku-4.5',
+          'openai/gpt-4o-mini',
         ]
 
       case 'compliance':
         return [
           'allam-2-7b',
-          'gemini-2.5-flash',
           'openai/gpt-oss-120b',
           'anthropic/claude-haiku-4.5',
+          'gemini-2.5-flash',
         ]
 
       case 'translator':
         return [
           'anthropic/claude-haiku-4.5',
-          'gemini-2.5-flash',
-          'openai/gpt-4o-mini',
-          'deepseek/deepseek-chat',
+          'openai/gpt-oss-120b',
           'allam-2-7b',
+          'gemini-2.5-flash',
         ]
 
       case 'image_ai': {
         // ImageAgent's executePrompt evaluates visual requirements via text reasoning.
-        // Fast, high-reliability text models with JSON support are used.
+        // Fast JSON-capable models only.
         return [
-          'gemini-2.5-flash',
           'openai/gpt-oss-20b',
           'openai/gpt-oss-120b',
-          'deepseek/deepseek-chat',
+          'gemini-2.5-flash',
         ]
       }
 
