@@ -16,15 +16,20 @@ describe('MultiProviderRouter', () => {
   })
 
   it('should return correct candidate chain based on task type', () => {
+    // Groq LPU leads every text cascade (measured 2-5x faster on this deployment).
     const fastCandidates = multiProviderRouter.getCandidateChain('fast')
     expect(fastCandidates.length).toBeGreaterThan(2)
-    expect(fastCandidates[0].model).toBe('gemini-2.5-flash-lite')
+    expect(fastCandidates[0].model).toBe('openai/gpt-oss-20b')
+    expect(fastCandidates[0].provider).toBe('groq')
 
     const complianceCandidates = multiProviderRouter.getCandidateChain('compliance')
     expect(complianceCandidates[0].model).toBe('allam-2-7b')
 
     const reasoningCandidates = multiProviderRouter.getCandidateChain('reasoning')
-    expect(reasoningCandidates[0].model).toBe('gemini-2.5-flash')
+    expect(reasoningCandidates[0].model).toBe('openai/gpt-oss-120b')
+    expect(reasoningCandidates[0].provider).toBe('groq')
+    // pathologically slow models must never be in a text cascade
+    expect(reasoningCandidates.every((c) => c.model !== 'deepseek/deepseek-r1' && c.model !== 'openai/gpt-4o')).toBe(true)
   })
 
   it('should prioritize preferred model if provided', () => {
@@ -36,8 +41,8 @@ describe('MultiProviderRouter', () => {
   it('MUST NOT prepend an image model to a text cascade (regression #1)', () => {
     const chain = multiProviderRouter.getCandidateChain('reasoning', 'recraft-vector')
     expect(chain.every((c) => c.model !== 'recraft-vector')).toBe(true)
-    // falls back to the default reasoning cascade
-    expect(chain[0].model).toBe('gemini-2.5-flash')
+    // falls back to the default reasoning cascade (Groq-first)
+    expect(chain[0].model).toBe('openai/gpt-oss-120b')
   })
 
   it('MUST skip an image model that reaches the cascade and never call the API with it', async () => {
