@@ -173,10 +173,43 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Unauthorized: Missing Authorization header",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const serviceRoleKey =
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
     const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
+
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseClient.auth.getUser(token);
+
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Unauthorized: Invalid token",
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     const body = await req.json().catch(() => ({}));
     let {

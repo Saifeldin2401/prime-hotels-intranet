@@ -123,30 +123,44 @@ function isProvisioningMethod(value: unknown): value is ProvisioningMethod {
 }
 
 type AppRole =
+  | "administrator"
+  | "super_admin"
   | "corporate_admin"
   | "regional_admin"
+  | "training_manager"
   | "regional_hr"
   | "property_manager"
   | "property_hr"
+  | "knowledge_manager"
   | "department_head"
+  | "author"
   | "manager"
+  | "learner"
   | "staff";
 
 const APP_ROLE_PRIORITY: Record<AppRole, number> = {
+  administrator: 0,
+  super_admin: 0,
   corporate_admin: 1,
+  training_manager: 2,
   regional_admin: 2,
+  knowledge_manager: 3,
   regional_hr: 3,
   property_manager: 4,
   property_hr: 5,
   department_head: 6,
+  author: 6,
   manager: 7,
+  learner: 8,
   staff: 8,
 };
 
 const CREATOR_ROLES = new Set<AppRole>([
+  "administrator",
   "corporate_admin",
   "regional_admin",
   "regional_hr",
+  "training_manager",
 ]);
 
 function isAppRole(value: unknown): value is AppRole {
@@ -451,12 +465,67 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Platform operators bypass entitlement check
+    // Platform operators bypass entitlement and tenant authority checks
     const { data: isOp } = await adminClient.rpc("is_platform_operator", {
       p_user_id: user.id,
     });
 
-    if (!isOp && targetOrgId) {
+    if (!isOp) {
+      if (!targetOrgId) {
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden: Cannot provision user without a valid target organization.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // Verify administrative authority over targetOrgId
+      let hasOrgAuthority = false;
+      const { data: isTenantAdminRpc } = await userClient.rpc("is_tenant_admin", {
+        p_org_id: targetOrgId,
+      });
+
+      if (isTenantAdminRpc === true) {
+        hasOrgAuthority = true;
+      } else {
+        const { data: callerOrgMembership } = await adminClient
+          .from("organization_memberships")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("organization_id", targetOrgId)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (
+          callerOrgMembership &&
+          [
+            "organization_owner",
+            "organization_admin",
+            "brand_admin",
+            "hotel_admin",
+            "training_manager",
+          ].includes(callerOrgMembership.role)
+        ) {
+          hasOrgAuthority = true;
+        }
+      }
+
+      if (!hasOrgAuthority) {
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden: You do not have administrative authority over this organization.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
       // 1. Verify organization is active and operational
       const { data: isOperational } = await adminClient.rpc("org_is_operational", {
         p_org_id: targetOrgId,
@@ -688,11 +757,35 @@ Deno.serve(async (req: Request) => {
     // 6. Assign Organization Membership (multi-tenant authoritative context)
     if (targetOrgId) {
       let mappedMembershipRole = "learner";
-      if (normalizedRole === "corporate_admin") mappedMembershipRole = "organization_admin";
-      else if (normalizedRole === "regional_admin" || normalizedRole === "property_manager") mappedMembershipRole = "hotel_admin";
-      else if (normalizedRole === "regional_hr" || normalizedRole === "property_hr") mappedMembershipRole = "training_manager";
-      else if (normalizedRole === "department_head") mappedMembershipRole = "author";
-      else if (normalizedRole === "manager" || normalizedRole === "staff") mappedMembershipRole = "learner";
+      if (
+        normalizedRole === "administrator" ||
+        normalizedRole === "corporate_admin" ||
+        normalizedRole === "super_admin"
+      )
+        mappedMembershipRole = "organization_admin";
+      else if (
+        normalizedRole === "regional_admin" ||
+        normalizedRole === "property_manager"
+      )
+        mappedMembershipRole = "hotel_admin";
+      else if (
+        normalizedRole === "training_manager" ||
+        normalizedRole === "regional_hr" ||
+        normalizedRole === "property_hr"
+      )
+        mappedMembershipRole = "training_manager";
+      else if (
+        normalizedRole === "knowledge_manager" ||
+        normalizedRole === "department_head" ||
+        normalizedRole === "author"
+      )
+        mappedMembershipRole = "author";
+      else if (
+        normalizedRole === "manager" ||
+        normalizedRole === "staff" ||
+        normalizedRole === "learner"
+      )
+        mappedMembershipRole = "learner";
 
       const { error: membershipError } = await adminClient
         .from("organization_memberships")

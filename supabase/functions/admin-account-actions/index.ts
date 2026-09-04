@@ -127,48 +127,51 @@ const VALID_ACTIONS: Set<string> = new Set([
 ]);
 
 type AppRole =
+  | "administrator"
+  | "super_admin"
   | "corporate_admin"
   | "regional_admin"
+  | "training_manager"
   | "regional_hr"
   | "property_manager"
   | "property_hr"
+  | "knowledge_manager"
   | "department_head"
+  | "author"
   | "manager"
+  | "learner"
   | "staff";
 
 const ALLOWED_ROLES = new Set<AppRole>([
+  "administrator",
+  "super_admin",
   "corporate_admin",
   "regional_admin",
+  "training_manager",
   "regional_hr",
   "property_manager",
   "property_hr",
 ]);
 
 const APP_ROLE_PRIORITY: Record<AppRole, number> = {
+  administrator: 0,
+  super_admin: 0,
   corporate_admin: 1,
+  training_manager: 2,
   regional_admin: 2,
+  knowledge_manager: 3,
   regional_hr: 3,
   property_manager: 4,
   property_hr: 5,
   department_head: 6,
+  author: 6,
   manager: 7,
+  learner: 8,
   staff: 8,
 };
 
 function isAppRole(value: unknown): value is AppRole {
-  return (
-    typeof value === "string" &&
-    [
-      "corporate_admin",
-      "regional_admin",
-      "regional_hr",
-      "property_manager",
-      "property_hr",
-      "department_head",
-      "manager",
-      "staff",
-    ].includes(value)
-  );
+  return typeof value === "string" && value in APP_ROLE_PRIORITY;
 }
 
 function getMostPrivilegedRole(roles: AppRole[]): AppRole | null {
@@ -338,6 +341,60 @@ Deno.serve(async (req: Request) => {
         {
           error:
             "Forbidden: cannot act on users with equal or higher privileges",
+        },
+        403,
+        corsHeaders,
+      );
+    }
+
+    // Check if caller is a platform operator
+    const { data: isOp } = await adminClient.rpc("is_platform_operator", {
+      p_user_id: caller.id,
+    });
+
+    let sharesActiveOrgWithAuth = !!isOp;
+
+    if (!sharesActiveOrgWithAuth) {
+      // Query caller's active admin organizations
+      const { data: callerMemberships } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id, role")
+        .eq("user_id", caller.id)
+        .eq("is_active", true);
+
+      const adminOrgIds = (callerMemberships || [])
+        .filter((m) =>
+          [
+            "organization_owner",
+            "organization_admin",
+            "brand_admin",
+            "hotel_admin",
+            "training_manager",
+          ].includes(m.role),
+        )
+        .map((m) => m.organization_id);
+
+      if (adminOrgIds.length > 0) {
+        const { data: targetInOrg } = await adminClient
+          .from("organization_memberships")
+          .select("id")
+          .eq("user_id", user_id)
+          .eq("is_active", true)
+          .in("organization_id", adminOrgIds)
+          .limit(1)
+          .maybeSingle();
+
+        if (targetInOrg) {
+          sharesActiveOrgWithAuth = true;
+        }
+      }
+    }
+
+    if (!sharesActiveOrgWithAuth) {
+      return jsonResponse(
+        {
+          error:
+            "Forbidden: Target user does not belong to an active organization where you have administrative authority.",
         },
         403,
         corsHeaders,

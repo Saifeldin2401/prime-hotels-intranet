@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Route, Navigate } from 'react-router-dom'
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -14,10 +14,11 @@ const ContentReviewQueue = lazy(() => import('@/pages/manage/ContentReviewQueue'
 export const ManageRoutes = () => (
     <>
         <Route
-            path="/manage/review-queue"
+            path="/manage/review"
             element={
                 <ProtectedRoute
                     allowedRoles={[
+                        'administrator',
                         'super_admin',
                         'corporate_admin',
                         'regional_admin',
@@ -31,6 +32,10 @@ export const ManageRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+        />
+        <Route
+            path="/manage/review-queue"
+            element={<Navigate to="/manage/review" replace />}
         />
     </>
 )

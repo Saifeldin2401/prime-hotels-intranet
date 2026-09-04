@@ -116,13 +116,18 @@ export const DashboardHeroHeader: React.FC = () => {
               {roleInfo.label}
             </span>
 
-            {/* Tenant Organization Context */}
-            {currentOrganization && (
+            {/* Tenant Organization / Platform Scope Context */}
+            {currentOrganization ? (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
                 <Building2 className="h-3 w-3 text-amber-500" />
                 {currentOrganization.name}
               </span>
-            )}
+            ) : isPlatformAdmin ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-0.5 text-xs font-bold text-amber-700 dark:text-amber-300">
+                <Crown className="h-3 w-3 text-amber-500" />
+                {isRTL ? 'التحكم العام بالمنصة' : 'Global Platform Scope'}
+              </span>
+            ) : null}
 
             {/* Brand Context */}
             {currentBrand && (

@@ -7,6 +7,11 @@
     "directory": "دليل المستخدمين",
     "search_placeholder": "البحث عن المستخدمين...",
     "loading": "جارٍ تحميل المستخدمين...",
+    "organization": "المنظمة",
+    "filter_by_org": "تصفية حسب المنظمة",
+    "all_organizations": "جميع المنظمات",
+    "all_personnel": "جميع الموظفين",
+    "all_properties": "جميع الفنادق",
     "status": {
         "active": "نشط",
         "inactive": "غير نشط",
@@ -53,6 +58,8 @@
     "form": {
         "edit_user": "تعديل مستخدم",
         "create_user": "إنشاء مستخدم",
+        "organization_label": "المنظمة المستهدفة *",
+        "select_organization": "اختر المنظمة...",
         "user_info": "معلومات المستخدم",
         "email": "البريد الإلكتروني",
         "full_name": "الاسم الكامل",

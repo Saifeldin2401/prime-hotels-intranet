@@ -59,6 +59,8 @@ export interface CapabilityCallContext {
   propertyId?: string | null
   /** Department scope for RLS-aware retrieval. */
   departmentId?: string | null
+  /** Organization scope for multi-tenant isolation. */
+  organizationId?: string | null
   /** Caller locale — drives answer language. */
   locale?: 'en' | 'ar'
   signal?: AbortSignal

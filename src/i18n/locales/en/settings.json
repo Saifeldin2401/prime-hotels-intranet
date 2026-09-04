@@ -3,9 +3,13 @@
     "description": "Manage your account settings and preferences",
     "save": "Save Changes",
     "tabs": {
-        "general": "General",
+        "general": "My Account",
+        "organization": "Organization Profile",
+        "properties": "Properties & Hotels",
         "notifications": "Notifications",
-        "security": "Security"
+        "security": "Security & Sessions",
+        "subscription": "Subscription & Limits",
+        "troubleshooting": "Troubleshooting"
     },
     "appearance": {
         "title": "App Appearance",

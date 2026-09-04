@@ -106,7 +106,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const hasPermission = roleRows?.some((r) =>
-      ["corporate_admin", "regional_admin", "regional_hr"].includes(r.role),
+      [
+        "administrator",
+        "super_admin",
+        "corporate_admin",
+        "regional_admin",
+        "regional_hr",
+      ].includes(r.role),
     );
 
     if (!hasPermission) {
@@ -137,6 +143,61 @@ Deno.serve(async (req: Request) => {
         }),
         {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Check if caller is a platform operator
+    const { data: isOp } = await adminClient.rpc("is_platform_operator", {
+      p_user_id: user.id,
+    });
+
+    let isAuthorizedTenantAdmin = !!isOp;
+
+    if (!isAuthorizedTenantAdmin) {
+      // Verify caller and target user share an active organization where caller has administrative authority
+      const { data: callerMemberships } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id, role")
+        .eq("user_id", user.id)
+        .eq("is_active", true);
+
+      const adminOrgIds = (callerMemberships || [])
+        .filter((m) =>
+          [
+            "organization_owner",
+            "organization_admin",
+            "brand_admin",
+            "hotel_admin",
+          ].includes(m.role),
+        )
+        .map((m) => m.organization_id);
+
+      if (adminOrgIds.length > 0) {
+        const { data: targetMembership } = await adminClient
+          .from("organization_memberships")
+          .select("id")
+          .eq("user_id", userIdRaw)
+          .eq("is_active", true)
+          .in("organization_id", adminOrgIds)
+          .limit(1)
+          .maybeSingle();
+
+        if (targetMembership) {
+          isAuthorizedTenantAdmin = true;
+        }
+      }
+    }
+
+    if (!isAuthorizedTenantAdmin) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Forbidden: Target user does not belong to your organization or you lack administrative authority.",
+        }),
+        {
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );

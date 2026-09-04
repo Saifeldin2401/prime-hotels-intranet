@@ -24,6 +24,7 @@ interface TenantContextType {
   userTenantRole: TenantRole | null
   isOrgAdmin: boolean
   isPlatformAdmin: boolean
+  isPlatformScope: boolean
 
   // Platform Operator Impersonation / "Act As" Mode
   isImpersonating: boolean
@@ -102,7 +103,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       const fetchedOrgs = orgRows || []
       setOrganizations(fetchedOrgs)
 
-      // 3. Check for active platform impersonation session if platform admin
+      // 3. Platform Admin / Operator handling
       if (isPlatformAdmin) {
         const { data: activeSession } = await (supabase
           .from('platform_access_sessions')
@@ -118,6 +119,55 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           setIsLoading(false)
           return
         }
+
+        const storedScope =
+          safeLocalStorage.getItem(`active_tenant_id_${user.id}`) ||
+          safeLocalStorage.getItem('altus_active_tenant_id')
+
+        if (storedScope === '__platform__') {
+          // Explicit global platform scope requested
+          setImpersonationSession(null)
+          setCurrentOrganization(null)
+          setAvailableBrands([])
+          setAvailableHotels([])
+          setCurrentBrand(null)
+          setCurrentHotel(null)
+          setIsLoading(false)
+          return
+        }
+
+        // Determine organization: stored preference > primary org > first membership > first org
+        const candidateOrgId =
+          (storedScope && storedScope !== '__platform__' ? storedScope : null) ||
+          account.primaryOrganizationId ||
+          activeMemberships.find(m => m.is_primary)?.organization_id ||
+          activeMemberships[0]?.organization_id ||
+          fetchedOrgs[0]?.id
+
+        const initialOrg =
+          (candidateOrgId ? fetchedOrgs.find(o => o.id === candidateOrgId) : null) ||
+          fetchedOrgs[0] ||
+          null
+
+        if (initialOrg) {
+          setImpersonationSession(null)
+          setCurrentOrganization(initialOrg)
+          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, initialOrg.id)
+          safeLocalStorage.setItem('altus_active_tenant_id', initialOrg.id)
+          await loadScopesForOrg(initialOrg.id)
+          setIsLoading(false)
+          return
+        }
+
+        // Fallback: Global Platform Control Plane
+        setImpersonationSession(null)
+        setCurrentOrganization(null)
+        setAvailableBrands([])
+        setAvailableHotels([])
+        setCurrentBrand(null)
+        setCurrentHotel(null)
+        setIsLoading(false)
+        return
       }
 
       // Priority 1: Server-authoritative primary organization from AccountContext
@@ -173,10 +223,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setAvailableHotels(hotelRows || [])
 
     // Restore scoped hotel
-    const storedHotelId = safeLocalStorage.getItem(`prime_hotel_scope_${orgId}`)
+    const storedHotelId =
+      safeLocalStorage.getItem(`altus_hotel_scope_${orgId}`) ||
+      safeLocalStorage.getItem(`prime_hotel_scope_${orgId}`)
     if (storedHotelId && hotelRows) {
       const matchedHotel = hotelRows.find(h => h.id === storedHotelId)
       if (matchedHotel) setCurrentHotel(matchedHotel)
+      else setCurrentHotel(null)
+    } else {
+      setCurrentHotel(null)
     }
   }
 
@@ -250,17 +305,15 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
         console.warn('Error ending platform session:', err)
       }
       setImpersonationSession(null)
-      // Switch back to primary or first accessible org
-      const defaultOrgId = account.primaryOrganizationId || memberships[0]?.organization_id || organizations[0]?.id
-      const defaultOrg = (defaultOrgId ? organizations.find(o => o.id === defaultOrgId) : null) || organizations[0] || null
-      if (defaultOrg) {
-        if (user) {
-          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, defaultOrg.id)
-        }
-        safeLocalStorage.setItem('altus_active_tenant_id', defaultOrg.id)
-        setCurrentOrganization(defaultOrg)
-        await loadScopesForOrg(defaultOrg.id)
+      if (user) {
+        safeLocalStorage.removeItem(`active_tenant_id_${user.id}`)
       }
+      safeLocalStorage.removeItem('altus_active_tenant_id')
+      setCurrentOrganization(null)
+      setAvailableBrands([])
+      setAvailableHotels([])
+      setCurrentBrand(null)
+      setCurrentHotel(null)
       await account.refresh()
     }
   }
@@ -308,11 +361,17 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [currentOrganization, memberships])
 
   const userTenantRole = useMemo<TenantRole | null>(() => {
-    if (isPlatformAdmin) return 'organization_owner'
+    if (isPlatformAdmin) {
+      if (isImpersonating && impersonationSession) {
+        return (impersonationSession.acting_role as TenantRole) || 'organization_owner'
+      }
+      return currentMembership?.role || 'organization_owner'
+    }
     return currentMembership?.role || 'learner'
-  }, [isPlatformAdmin, currentMembership])
+  }, [isPlatformAdmin, isImpersonating, impersonationSession, currentMembership])
 
   const isOrgAdmin = userTenantRole === 'organization_owner' || userTenantRole === 'organization_admin'
+  const isPlatformScope = isPlatformAdmin && !isImpersonating && !currentOrganization
 
   const value = useMemo<TenantContextType>(() => ({
     currentOrganization,
@@ -326,6 +385,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     userTenantRole,
     isOrgAdmin,
     isPlatformAdmin,
+    isPlatformScope,
     isImpersonating,
     impersonationSession,
     enterOrganization,
@@ -346,6 +406,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     userTenantRole,
     isOrgAdmin,
     isPlatformAdmin,
+    isPlatformScope,
     isImpersonating,
     impersonationSession,
     enterOrganization,

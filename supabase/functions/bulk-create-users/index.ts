@@ -204,7 +204,14 @@ async function requirePrivilegedUser(
   const hasPermission = (
     roles as Array<{ role: string }> | null | undefined
   )?.some((r: { role: string }) =>
-    ["regional_admin", "regional_hr"].includes(r.role),
+    [
+      "administrator",
+      "super_admin",
+      "corporate_admin",
+      "regional_admin",
+      "training_manager",
+      "regional_hr",
+    ].includes(r.role),
   );
   if (!hasPermission) return null;
 
@@ -214,10 +221,15 @@ async function requirePrivilegedUser(
 function mapRoleLevel(roleLevel: string): AppRole {
   const normalized = normalizeText(roleLevel);
 
-  if (normalized.includes("owner") || normalized.includes("super admin"))
+  if (
+    normalized.includes("owner") ||
+    normalized.includes("super admin") ||
+    normalized.includes("administrator")
+  )
     return "regional_admin";
   if (normalized.includes("group director")) return "regional_admin";
   if (normalized.includes("group admin")) return "regional_admin";
+  if (normalized.includes("training manager")) return "regional_hr";
   if (normalized.includes("property leader")) return "property_manager";
   if (normalized.includes("front office leader")) return "department_head";
   if (normalized.includes("department head")) return "department_head";
@@ -228,6 +240,7 @@ function mapRoleLevel(roleLevel: string): AppRole {
 
 async function resolveProperties(
   propertyCell: string,
+  organizationId: string,
 ): Promise<{ ids: string[]; matches: NameMatch[]; errors: string[] }> {
   const trimmed = propertyCell.trim();
   if (!trimmed) return { ids: [], matches: [], errors: ["Missing property"] };
@@ -238,6 +251,7 @@ async function resolveProperties(
     const { data, error } = await adminClient
       .from("properties")
       .select("id,name")
+      .eq("organization_id", organizationId)
       .eq("is_deleted", false);
     if (error)
       return {
@@ -271,6 +285,7 @@ async function resolveProperties(
     const { data, error } = await adminClient
       .from("properties")
       .select("id,name")
+      .eq("organization_id", organizationId)
       .eq("is_deleted", false)
       .ilike("name", `%${city}%`);
 
@@ -321,7 +336,7 @@ async function resolveProperties(
   const errors: string[] = [];
 
   for (const part of parts) {
-    const m = await fuzzyResolveByName("properties", part);
+    const m = await fuzzyResolveByName("properties", part, organizationId);
     matches.push(m);
     if (!m.matched) {
       errors.push(`Property not found: ${part}`);
@@ -336,6 +351,7 @@ async function resolveProperties(
 async function resolveDepartment(
   departmentCell: string,
   propertyIds: string[],
+  organizationId: string,
 ): Promise<{ ids: string[]; match: NameMatch; errors: string[] }> {
   const trimmed = departmentCell.trim();
   if (!trimmed) {
@@ -352,7 +368,7 @@ async function resolveDepartment(
     };
   }
 
-  const match = await fuzzyResolveDepartment(trimmed, propertyIds);
+  const match = await fuzzyResolveDepartment(trimmed, propertyIds, organizationId);
   if (!match.matched) {
     return { ids: [], match, errors: [`Department not found: ${trimmed}`] };
   }
@@ -364,7 +380,7 @@ async function resolveDepartment(
     const candidates: { id: string; name: string; score: number }[] = [];
 
     for (const propertyId of propertyIds) {
-      const perProp = await fuzzyResolveDepartment(trimmed, [propertyId]);
+      const perProp = await fuzzyResolveDepartment(trimmed, [propertyId], organizationId);
       if (perProp.matched) {
         ids.push(perProp.matched.id);
         candidates.push(
@@ -391,14 +407,16 @@ async function resolveDepartment(
 async function fuzzyResolveDepartment(
   name: string,
   propertyIds: string[],
+  organizationId: string,
 ): Promise<NameMatch> {
   const normalizedInput = normalizeText(name);
 
-  // Exact (normalized) match first.
+  // Exact (normalized) match first, scoped to organization_id.
   {
     let query = adminClient
       .from("departments")
       .select("id,name,property_id")
+      .eq("organization_id", organizationId)
       .eq("is_deleted", false);
     if (propertyIds.length > 0) {
       query = query.in("property_id", propertyIds);
@@ -432,7 +450,7 @@ async function fuzzyResolveDepartment(
       {
         search_text: name,
         property_ids: propertyIds,
-        result_limit: 5,
+        result_limit: 10,
       },
     );
 
@@ -447,11 +465,25 @@ async function fuzzyResolveDepartment(
     }
 
     const rows = (data ?? []) as { id: string; name: string; score: number }[];
-    const candidates = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      score: r.score,
-    }));
+    if (rows.length === 0) {
+      return {
+        input: name,
+        matched: null,
+        score: null,
+        candidates: [],
+        kind: "none",
+      };
+    }
+
+    // Filter similarity results to target organization_id
+    const { data: orgDepts } = await adminClient
+      .from("departments")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .in("id", rows.map((r) => r.id));
+
+    const validDeptIds = new Set((orgDepts ?? []).map((d: any) => d.id));
+    const candidates = rows.filter((r) => validDeptIds.has(r.id)).slice(0, 5);
     const best = candidates[0];
 
     if (!best || best.score < 0.25) {
@@ -485,12 +517,14 @@ async function fuzzyResolveDepartment(
 async function fuzzyResolveByName(
   table: "properties",
   input: string,
+  organizationId: string,
 ): Promise<NameMatch> {
   const normalizedInput = normalizeText(input);
 
   const { data: allRows, error: allError } = await adminClient
     .from(table)
     .select("id,name")
+    .eq("organization_id", organizationId)
     .eq("is_deleted", false);
 
   if (allError) {
@@ -516,7 +550,7 @@ async function fuzzyResolveByName(
     "search_properties_by_similarity",
     {
       search_text: input,
-      result_limit: 5,
+      result_limit: 10,
     },
   );
 
@@ -525,11 +559,19 @@ async function fuzzyResolveByName(
   }
 
   const rows = (data ?? []) as { id: string; name: string; score: number }[];
-  const candidates = rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    score: r.score,
-  }));
+  if (rows.length === 0) {
+    return { input, matched: null, score: null, candidates: [], kind: "none" };
+  }
+
+  // Filter similarity results to target organization_id
+  const { data: orgProps } = await adminClient
+    .from("properties")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .in("id", rows.map((r) => r.id));
+
+  const validPropIds = new Set((orgProps ?? []).map((p: any) => p.id));
+  const candidates = rows.filter((r) => validPropIds.has(r.id)).slice(0, 5);
   const best = candidates[0];
 
   if (!best || best.score < 0.25) {
@@ -636,10 +678,100 @@ Deno.serve(async (req: Request) => {
       csv?: string;
       rows?: InputRow[];
       approve?: boolean;
+      organizationId?: string;
+      organization_id?: string;
     };
 
     const mode = body.mode ?? "dry-run";
     const approve = body.approve ?? false;
+
+    // Resolve target organization context
+    let targetOrgId: string | null =
+      body.organizationId || body.organization_id || null;
+
+    if (!targetOrgId) {
+      const { data: userMembership } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", privileged.userId)
+        .eq("is_active", true)
+        .order("is_primary", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (userMembership?.organization_id) {
+        targetOrgId = userMembership.organization_id;
+      }
+    }
+
+    if (!targetOrgId) {
+      return new Response(
+        JSON.stringify({ error: "Missing target organization context" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    // Verify organization operational status before processing
+    const { data: isOp } = await adminClient.rpc("is_platform_operator", {
+      p_user_id: privileged.userId,
+    });
+
+    if (!isOp) {
+      // 1. Verify organization is active and operational
+      const { data: isOperational } = await adminClient.rpc(
+        "org_is_operational",
+        {
+          p_org_id: targetOrgId,
+        },
+      );
+
+      if (isOperational === false) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Forbidden: Cannot process users for a suspended or inactive organization.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      // 2. Verify caller has administrative authority over targetOrgId
+      const { data: callerMembership } = await adminClient
+        .from("organization_memberships")
+        .select("role")
+        .eq("user_id", privileged.userId)
+        .eq("organization_id", targetOrgId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (
+        !callerMembership ||
+        ![
+          "organization_owner",
+          "organization_admin",
+          "brand_admin",
+          "hotel_admin",
+          "training_manager",
+        ].includes(callerMembership.role)
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Forbidden: You do not have administrative authority over this organization.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
 
     let rows: InputRow[] = [];
     if (typeof body.csv === "string") {
@@ -690,12 +822,13 @@ Deno.serve(async (req: Request) => {
         errors.push(e instanceof Error ? e.message : String(e));
       }
 
-      const prop = await resolveProperties(row.property);
+      const prop = await resolveProperties(row.property, targetOrgId);
       errors.push(...prop.errors);
 
       const dept = await resolveDepartment(
         normalizeDepartmentAlias(row.department),
         prop.ids,
+        targetOrgId,
       );
       errors.push(...dept.errors);
 
@@ -795,6 +928,7 @@ Deno.serve(async (req: Request) => {
             propertyIds: r.propertyIds,
             departmentIds: r.departmentIds,
             reportingTo: null,
+            organizationId: targetOrgId,
           }),
         });
 

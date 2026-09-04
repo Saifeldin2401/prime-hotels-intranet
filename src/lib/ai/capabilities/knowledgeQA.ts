@@ -132,6 +132,7 @@ export async function askKnowledgeBase(input: KnowledgeQAInput): Promise<Knowled
     p_query_text: input.query,
     p_match_count: matchCount,
     p_min_similarity: minSimilarity,
+    p_organization_id: ctx?.organizationId ?? null,
   })
 
   if (error) {

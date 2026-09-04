@@ -22,15 +22,16 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTenant } from '@/contexts/TenantContext'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Globe } from 'lucide-react'
+import { Building2, Globe, Crown, Building } from 'lucide-react'
+import { CONSOLIDATED_PROPERTY_ID } from '@/lib/propertyScope'
 
 export function Sidebar() {
-  const { t } = useTranslation('nav')
+  const { t } = useTranslation(['nav', 'admin'])
   const { t: t_ext } = useTranslation('extracted')
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
-  const { currentOrganization, currentHotel, isPlatformAdmin } = useTenant()
+  const { currentOrganization, currentHotel, isPlatformAdmin, isImpersonating, isPlatformScope } = useTenant()
   const { groupedNavigation } = useNavigation()
 
   // Track open states for collapsible groups
@@ -50,10 +51,12 @@ export function Sidebar() {
     return group.isExpanded
   }
 
+  const logoHref = isPlatformAdmin && !isImpersonating ? '/platform' : '/dashboard'
+
   return (
     <div className="flex flex-col w-64 bg-card border-e border-border/60 h-screen select-none">
       <div className="flex flex-col gap-2.5 p-4 border-b border-border/60 bg-white/50 dark:bg-hotel-navy/50 backdrop-blur-md overflow-hidden">
-        <Link to="/dashboard" className="flex items-center justify-center gap-3 py-1 group">
+        <Link to={logoHref} className="flex items-center justify-center gap-3 py-1 group">
           <img
             src="/altus-emblem-icon.png"
             alt="ALTUS Advisory"
@@ -69,8 +72,35 @@ export function Sidebar() {
           </div>
         </Link>
 
-        {/* Tenant Organization & Scope context */}
-        {currentOrganization && (
+        {/* Scope Context Banner */}
+        {isPlatformScope ? (
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-600 dark:text-amber-400 text-[11px] font-semibold max-w-full truncate shadow-xs">
+              <Crown className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+              <span className="truncate">{t('groups.platform_operations', 'Platform Control Center')}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium truncate max-w-full">
+              {t('admin:global_saas_scope', 'Global SaaS Scope')}
+            </p>
+          </div>
+        ) : isImpersonating && currentOrganization ? (
+          <div className="flex flex-col items-center gap-1 text-center">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-700 dark:text-amber-300 text-[11px] font-semibold max-w-full truncate shadow-xs">
+              <Building2 className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+              <span className="truncate">{currentOrganization.name}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Badge className="bg-amber-500 text-hotel-navy text-[8px] font-bold px-1.5 py-0 h-3.5">
+                {t('admin:acting_as', 'Acting As')}
+              </Badge>
+              {currentHotel && (
+                <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[120px]">
+                  {currentHotel.name}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : currentOrganization ? (
           <div className="flex flex-col items-center gap-1 text-center">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-hotel-gold/10 border border-hotel-gold/25 text-hotel-navy dark:text-hotel-gold text-[11px] font-semibold max-w-full truncate shadow-xs">
               <Building2 className="w-3.5 h-3.5 shrink-0 text-hotel-gold" />
@@ -82,24 +112,29 @@ export function Sidebar() {
               </p>
             )}
           </div>
-        )}
+        ) : null}
 
-        {isMultiPropertyUser && !currentOrganization && (
-          <Select
-            value={currentProperty?.id ?? ''}
-            onValueChange={switchProperty}
-          >
-            <SelectTrigger className="w-full h-9 text-xs font-medium border-border/80 bg-muted/50">
-              <SelectValue placeholder={t_ext('select_property', 'Select Property')} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableProperties.map(prop => (
-                <SelectItem key={prop.id} value={prop.id} className="text-xs">
-                  {prop.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {!isPlatformScope && availableProperties.length > 1 && (
+          <div className="w-full mt-1">
+            <Select
+              value={currentProperty?.id ?? CONSOLIDATED_PROPERTY_ID}
+              onValueChange={switchProperty}
+            >
+              <SelectTrigger className="w-full h-8 text-xs font-medium border-border/70 bg-muted/40 hover:bg-muted/70 transition-colors">
+                <div className="flex items-center gap-1.5 truncate">
+                  <Building className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                  <SelectValue placeholder={t_ext('select_property', 'Select Property')} />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                {availableProperties.map(prop => (
+                  <SelectItem key={prop.id} value={prop.id} className="text-xs">
+                    {prop.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
 

@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { ROLES } from '@/lib/constants'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { supabase } from '@/lib/supabase'
@@ -49,6 +50,8 @@ interface AnnouncementEditorProps {
     allow_comments?: boolean
     target_audience?: unknown
     attachments?: unknown
+    organization_id?: string | null
+    organizationId?: string | null
   }
   onClose?: () => void
   onSave?: (announcement: Record<string, unknown>) => void
@@ -166,7 +169,10 @@ const buildInitialFormState = (initialData?: AnnouncementEditorProps['initialDat
 export function AnnouncementEditor({ initialData, onClose, onSave }: AnnouncementEditorProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const { currentOrganization } = useTenant()
   const queryClient = useQueryClient()
+
+  const organizationId = initialData?.organizationId || initialData?.organization_id || currentOrganization?.id
 
   const [formData, setFormData] = useState<AnnouncementFormState>(buildInitialFormState(initialData))
 
@@ -235,6 +241,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           target_audience: target_audience as unknown as Json,
           attachments: attachments as unknown as Json,
           created_by: user?.id,
+          ...(organizationId ? { organization_id: organizationId } : {}),
         })
         .select()
         .single()
@@ -441,10 +448,15 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   })
 
   const handleFileUpload = async (files: FileList) => {
+    if (!organizationId) {
+      toast.error(t('common:errors.org_context_required', 'Active organization context is required to upload attachments'))
+      return
+    }
+
     const uploadPromises = Array.from(files).map(async (file) => {
       const fileExt = file.name.split('.').pop()
       const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`
-      const filePath = `announcements/${fileName}`
+      const filePath = `${organizationId}/${fileName}`
 
       const { error: uploadError } = await supabase.storage
         .from('announcement-attachments')

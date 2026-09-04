@@ -21,6 +21,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
 import { useNavigationStore } from '@/stores/navigationStore'
+import { useTenant } from '@/contexts/TenantContext'
 import { useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 
@@ -81,6 +82,7 @@ const PLATFORM_ITEM_PERMISSION: Record<string, string> = {
 export function useNavigation(): UseNavigationReturn {
     const { primaryRole } = useAuth()
     const account = useAccountContext()
+    const { isImpersonating, isPlatformScope } = useTenant()
     const location = useLocation()
     const { data: counts } = useSidebarCounts()
     const favorites = useNavigationStore((state) => state.favorites)
@@ -150,15 +152,29 @@ export function useNavigation(): UseNavigationReturn {
             }
             const hasActiveItem = items.some(item => item.isActive)
 
+            const isOperatorInPlatformScope = account.isPlatformOperator && isPlatformScope
+            const effectiveOrder =
+                groupId === PLATFORM_GROUP && isOperatorInPlatformScope
+                    ? 0
+                    : config.order
+
+            const isExpanded =
+                (groupId === PLATFORM_GROUP && isOperatorInPlatformScope) ||
+                hasActiveItem ||
+                !config.collapsible
+
             groups.push({
-                config,
+                config: {
+                    ...config,
+                    order: effectiveOrder
+                },
                 items,
-                isExpanded: hasActiveItem || !config.collapsible
+                isExpanded
             })
         }
 
         return groups.sort((a, b) => a.config.order - b.config.order)
-    }, [primaryRole, enrichRoute, account])
+    }, [primaryRole, enrichRoute, account, isImpersonating, isPlatformScope])
 
     // Drop platform-console routes for anyone who is not a platform operator
     // (or lacks the specific permission), regardless of their tenant role.

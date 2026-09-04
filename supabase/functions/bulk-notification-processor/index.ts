@@ -92,6 +92,8 @@ interface NotificationRequest {
   departmentId?: string;
   emailSubject?: string;
   emailHtml?: string;
+  organizationId?: string;
+  organization_id?: string;
 }
 
 interface NotificationBatchRow {
@@ -145,8 +147,11 @@ interface RuntimeConfig {
 }
 
 const allowedRoles = [
+  "administrator",
+  "super_admin",
   "corporate_admin",
   "regional_admin",
+  "training_manager",
   "property_manager",
   "department_head",
   "property_hr",
@@ -382,23 +387,83 @@ Deno.serve(async (req) => {
       let targetUserIds = userIds || [];
 
       if (body.all) {
-        // Fetch all active profile IDs
-        const { data: allProfiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("is_active", true);
+        // Resolve caller's organization context
+        let callerOrgId =
+          body.organizationId ||
+          body.organization_id ||
+          (notificationData?.organizationId as string) ||
+          (notificationData?.organization_id as string) ||
+          null;
 
-        if (profilesError) {
+        if (!callerOrgId) {
+          const { data: callerMembership } = await supabase
+            .from("organization_memberships")
+            .select("organization_id")
+            .eq("user_id", user.id)
+            .eq("is_active", true)
+            .order("is_primary", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (callerMembership?.organization_id) {
+            callerOrgId = callerMembership.organization_id;
+          }
+        }
+
+        if (!callerOrgId) {
           return jsonResponse(
             {
-              error: "Failed to fetch all profiles",
-              details: profilesError.message,
+              error:
+                "Cannot broadcast to all users: unable to resolve caller organization",
+            },
+            400,
+            corsHeaders,
+          );
+        }
+
+        // Fetch users belonging to caller's organization
+        const { data: orgMembers, error: membersError } = await supabase
+          .from("organization_memberships")
+          .select("user_id")
+          .eq("organization_id", callerOrgId)
+          .eq("is_active", true);
+
+        if (membersError) {
+          return jsonResponse(
+            {
+              error: "Failed to fetch organization members",
+              details: membersError.message,
             },
             500,
             corsHeaders,
           );
         }
-        targetUserIds = (allProfiles || []).map((p) => p.id);
+
+        const orgUserIds = (orgMembers || []).map((m) => m.user_id);
+
+        if (orgUserIds.length === 0) {
+          targetUserIds = [];
+        } else {
+          // Fetch active profile IDs belonging to caller's organization
+          const { data: orgProfiles, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id")
+            .in("id", orgUserIds)
+            .eq("is_active", true);
+
+          if (profilesError) {
+            return jsonResponse(
+              {
+                error: "Failed to fetch organization profiles",
+                details: profilesError.message,
+              },
+              500,
+              corsHeaders,
+            );
+          }
+
+          targetUserIds = (orgProfiles || []).map((p) => p.id);
+        }
       } else if (body.propertyId) {
         // Fetch profiles assigned to this property
         const { data: propertyUsers, error: propertyError } = await supabase

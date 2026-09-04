@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
+import { TenantBreadcrumbs } from '@/components/layout/TenantBreadcrumbs'
 import { AltusCopilotTrigger } from '@/components/ai/AltusCopilotTrigger'
 import { PlatformImpersonationBanner } from '@/components/platform/PlatformImpersonationBanner'
 import { getRouteByPath } from '@/config/navigation'
@@ -102,7 +103,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
+    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
       {/* Desktop Sidebar */}
       {!isImmersiveOrFocusedPage && (
         <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-border/60 bg-card/80 backdrop-blur-2xl shadow-sm">
@@ -111,15 +112,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <div className={`flex flex-1 flex-col ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
+      <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
         <PlatformImpersonationBanner />
         {/* Top Header */}
         <Header onOpenSearch={() => setCommandPaletteOpen(true)} />
 
         {/* Main Content Stage */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-none pb-24 lg:pb-12">
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
           {!isImmersiveOrFocusedPage && <HolidayCelebration />}
-          <PageTransition className="w-full">{children}</PageTransition>
+          {!isImmersiveOrFocusedPage && <TenantBreadcrumbs />}
+          <PageTransition className="w-full min-w-0">{children}</PageTransition>
         </main>
 
         {/* Mobile Bottom Navigation */}

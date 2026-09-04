@@ -14,6 +14,7 @@ type ReportDefinition = {
   schedule_frequency: "hourly" | "daily" | "weekly" | "monthly" | null;
   is_active: boolean;
   created_by: string | null;
+  organization_id: string;
 };
 
 type ReportRun = {
@@ -57,6 +58,7 @@ const applyDateRange = (
 const fetchReportData = async (
   supabaseClient: any,
   reportType: string,
+  organizationId: string,
   filters?: Record<string, unknown> | null,
 ): Promise<ReportDataMap> => {
   const dateFrom =
@@ -71,6 +73,7 @@ const fetchReportData = async (
           supabaseClient
             .from("tasks")
             .select("id,title,status,priority,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -80,6 +83,7 @@ const fetchReportData = async (
           supabaseClient
             .from("maintenance_tickets")
             .select("id,title,status,priority,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -97,6 +101,7 @@ const fetchReportData = async (
           supabaseClient
             .from("profiles")
             .select("id,full_name,job_title,is_active,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -106,6 +111,7 @@ const fetchReportData = async (
           supabaseClient
             .from("leave_requests")
             .select("id,type,status,start_date,end_date,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -123,6 +129,7 @@ const fetchReportData = async (
           supabaseClient
             .from("learning_assignments")
             .select("id,status,due_date,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -132,6 +139,7 @@ const fetchReportData = async (
           supabaseClient
             .from("learning_progress")
             .select("id,status,completion_percentage,updated_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "updated_at",
           dateFrom,
@@ -149,6 +157,7 @@ const fetchReportData = async (
           supabaseClient
             .from("audit_runs")
             .select("id,status,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -158,6 +167,7 @@ const fetchReportData = async (
           supabaseClient
             .from("audit_findings")
             .select("id,status,notes,created_at")
+            .eq("organization_id", organizationId)
             .limit(500),
           "created_at",
           dateFrom,
@@ -185,7 +195,7 @@ const processRun = async (
   outputPath?: string;
 }> => {
   const startedAt = new Date().toISOString();
-  const outputPath = `${definition.id}/${run.id}.csv`;
+  const outputPath = `${definition.organization_id}/${definition.id}/${run.id}.csv`;
 
   const { error: markRunningError } = await supabaseClient
     .from("report_runs")
@@ -206,6 +216,7 @@ const processRun = async (
     const dataMap = await fetchReportData(
       supabaseClient,
       definition.report_type,
+      definition.organization_id,
       definition.filters,
     );
     const rowCount = Object.values(dataMap).reduce(
@@ -316,7 +327,7 @@ Deno.serve(async (req: Request) => {
     if (requestedReportId) {
       const { data: definition, error: definitionError } = await supabaseClient
         .from("report_definitions")
-        .select("id, created_by, is_active")
+        .select("id, created_by, is_active, organization_id")
         .eq("id", requestedReportId)
         .single();
 
@@ -342,6 +353,7 @@ Deno.serve(async (req: Request) => {
 
       await supabaseClient.from("report_runs").insert({
         report_id: requestedReportId,
+        organization_id: definition.organization_id,
         status: "queued",
         triggered_by: definition.created_by,
         triggered_via: "manual-edge-trigger",
@@ -374,7 +386,7 @@ Deno.serve(async (req: Request) => {
       const { data: definition, error: definitionError } = await supabaseClient
         .from("report_definitions")
         .select(
-          "id, name, report_type, filters, schedule_frequency, is_active, created_by",
+          "id, name, report_type, filters, schedule_frequency, is_active, created_by, organization_id",
         )
         .eq("id", run.report_id)
         .maybeSingle();
@@ -403,6 +415,50 @@ Deno.serve(async (req: Request) => {
           })
           .eq("id", run.id);
         results.push({ run_id: run.id, success: false, error: "inactive" });
+        continue;
+      }
+
+      // Gating check: query org_is_operational(definition.organization_id) before running; if false, skip the run.
+      if (!definition.organization_id) {
+        const message = "Report definition missing organization_id";
+        await supabaseClient
+          .from("report_runs")
+          .update({
+            status: "failed",
+            finished_at: new Date().toISOString(),
+            error_message: message,
+          })
+          .eq("id", run.id);
+        results.push({ run_id: run.id, success: false, error: message });
+        continue;
+      }
+
+      const { data: isOperational } = await supabaseClient.rpc(
+        "org_is_operational",
+        {
+          p_org_id: definition.organization_id,
+        },
+      );
+
+      if (isOperational === false) {
+        console.warn(
+          `Skipping run ${run.id}: organization ${definition.organization_id} is not operational.`,
+        );
+        await supabaseClient
+          .from("report_runs")
+          .update({
+            status: "failed",
+            finished_at: new Date().toISOString(),
+            error_message: "Organization is not operational",
+          })
+          .eq("id", run.id);
+        results.push({
+          run_id: run.id,
+          report_id: run.report_id,
+          success: false,
+          error: "Organization is not operational",
+          skipped: true,
+        });
         continue;
       }
 

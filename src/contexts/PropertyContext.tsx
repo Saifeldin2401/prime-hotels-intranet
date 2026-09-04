@@ -29,6 +29,7 @@ const createPseudoProperty = (name: string, address: string): Property => ({
 
 export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const { 
+        currentOrganization,
         availableHotels, 
         currentHotel, 
         setHotelScope, 
@@ -39,6 +40,8 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     } = useTenant()
 
     const availableProperties = useMemo<Property[]>(() => {
+        if (!currentOrganization) return []
+
         const mapped: Property[] = availableHotels.map(h => ({
             id: h.id,
             name: h.name,
@@ -60,7 +63,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         }
 
         return mapped
-    }, [availableHotels, isOrgAdmin, isPlatformAdmin])
+    }, [currentOrganization, availableHotels, isOrgAdmin, isPlatformAdmin])
 
     const currentProperty = useMemo<Property | null>(() => {
         if (!currentHotel) {

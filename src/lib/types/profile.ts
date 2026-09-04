@@ -46,6 +46,23 @@ export interface Profile {
   salary_grade?: string | null
 
   // Relations
+  organization_id?: string
+  organizations?: {
+    id: string
+    name: string
+    name_ar?: string | null
+  } | null
+  user_roles?: { role: AppRole }[]
+  organization_memberships?: {
+    id: string
+    organization_id: string
+    hotel_id?: string | null
+    department_id?: string | null
+    role?: string
+    hotel?: { id: string; name: string; name_ar?: string | null } | null
+    department?: { id: string; name: string; name_ar?: string | null } | null
+    organization?: { id: string; name: string; name_ar?: string | null } | null
+  }[]
   reporting_to_profile?: Profile // Populated when fetching with joins
   roles?: AppRole[]
   role?: AppRole | null
@@ -88,11 +105,27 @@ export interface Property {
   address: string | null
   phone: string | null
   is_active: boolean
-  latitude: number | null
-  longitude: number | null
+  latitude?: number | null
+  longitude?: number | null
   created_at: string
   company_id?: string | null
   brand_id?: string | null
+  organization_id?: string | null
+  city?: string | null
+  country?: string | null
+  hotel_code?: string | null
+  name_ar?: string | null
+  is_headquarters?: boolean
+  organizations?: {
+    id: string
+    name: string
+    name_ar?: string | null
+  } | null
+  brands?: {
+    id: string
+    name: string
+    name_ar?: string | null
+  } | null
 }
 
 export interface Department {

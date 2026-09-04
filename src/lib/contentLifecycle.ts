@@ -170,6 +170,7 @@ export function resolveActor(opts: {
 
 /** Role names (app_role) that count as content managers for the queue. */
 export const CONTENT_MANAGER_ROLES = [
+  'administrator',
   'super_admin',
   'corporate_admin',
   'regional_admin',

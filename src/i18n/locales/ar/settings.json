@@ -3,9 +3,13 @@
     "description": "إدارة إعدادات حسابك وتفضيلاتك",
     "save": "حفظ التغييرات",
     "tabs": {
-        "general": "عام",
+        "general": "حسابي الشخصي",
+        "organization": "الملف التعريفي للمنظمة",
+        "properties": "الفنادق والمنشآت",
         "notifications": "الإشعارات",
-        "security": "الأمان"
+        "security": "الأمان والجلسات",
+        "subscription": "الاشتراك والحدود",
+        "troubleshooting": "استكشاف الأخطاء"
     },
     "appearance": {
         "title": "مظهر التطبيق",

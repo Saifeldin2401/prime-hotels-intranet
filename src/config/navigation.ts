@@ -1,15 +1,14 @@
 /**
  * Navigation Configuration - Single Source of Truth
  * 
- * This file defines ALL navigation routes, access control, and grouping.
- * Used by: SidebarNavigation, MobileNavigation, App routes, permission checks
- * 
- * Best Practices Applied:
- * - Configuration-driven: No hardcoded menus
- * - Role inheritance: Higher roles see everything lower roles see
- * - Logical grouping: Organized by 6 intuitive operational domains
- * - Badge integration: Dynamic counts for pending items
- * - i18n ready: All labels use translation keys
+ * Defines all navigation routes, access control, and 7-domain SaaS grouping:
+ * 1. Home & Cockpit (home_workspace)
+ * 2. Organization & Governance (organization_hub)
+ * 3. Learning & Academy (learning_academy)
+ * 4. Knowledge & SOPs (knowledge_governance)
+ * 5. Analytics & Reports (analytics_reports)
+ * 6. Administration & Settings (tenant_admin)
+ * 7. Platform Control Center (platform_operations - Operator only)
  */
 
 import { canRoleAccess, type AllowedRoles } from '@/features/access/policy'
@@ -70,10 +69,17 @@ import {
 // ============================================================================
 
 export type NavigationGroup =
+    | 'home_workspace'
+    | 'organization_hub'
+    | 'learning_academy'
+    | 'knowledge_governance'
+    | 'analytics_reports'
+    | 'tenant_admin'
+    | 'platform_operations'
+    // Legacy fallbacks for backwards compatibility
     | 'personal_space'
     | 'knowledge_sop'
     | 'administration'
-    | 'platform_operations'
 
 export type Permission = 'read' | 'write' | 'approve' | 'delete' | 'manage'
 
@@ -121,38 +127,62 @@ export interface NavigationGroupConfig {
 }
 
 // ============================================================================
-// NAVIGATION GROUPS
+// NAVIGATION GROUPS (7 SaaS Domains)
 // ============================================================================
 
 export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     {
-        id: 'personal_space',
-        title: 'groups.personal_space',
-        icon: User,
+        id: 'home_workspace',
+        title: 'groups.home_workspace',
+        icon: Home,
         order: 1,
         visibleTo: 'all',
         collapsible: false
     },
     {
-        id: 'knowledge_sop',
-        title: 'groups.knowledge_sop',
-        icon: BookOpen,
+        id: 'organization_hub',
+        title: 'groups.organization_hub',
+        icon: Building2,
+        order: 2,
+        visibleTo: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        collapsible: true
+    },
+    {
+        id: 'learning_academy',
+        title: 'groups.learning_academy',
+        icon: GraduationCap,
         order: 3,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'administration',
-        title: 'groups.administration',
+        id: 'knowledge_governance',
+        title: 'groups.knowledge_governance',
+        icon: BookOpen,
+        order: 4,
+        visibleTo: 'all',
+        collapsible: true
+    },
+    {
+        id: 'analytics_reports',
+        title: 'groups.analytics_reports',
+        icon: BarChart3,
+        order: 5,
+        visibleTo: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        collapsible: true
+    },
+    {
+        id: 'tenant_admin',
+        title: 'groups.tenant_admin',
         icon: Shield,
         order: 6,
-        visibleTo: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        visibleTo: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         collapsible: true
     },
     {
         id: 'platform_operations',
         title: 'groups.platform_operations',
-        icon: Building2,
+        icon: Crown,
         order: 7,
         visibleTo: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
         collapsible: true
@@ -165,7 +195,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
 
 export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
-    // 1. MY WORKSPACE (personal_space)
+    // 1. HOME & COCKPIT (home_workspace)
     // -------------------------------------------------------------------------
     {
         path: '/dashboard',
@@ -174,7 +204,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Personalized dashboard and daily summary',
         allowedRoles: 'all',
         keywords: ['home', 'overview', 'dashboard', 'analytics', 'welcome'],
-        group: 'personal_space',
+        group: 'home_workspace',
         order: 1,
     },
     {
@@ -184,7 +214,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Learner cockpit with streaks, progress, courses and assessments',
         allowedRoles: 'all',
         keywords: ['learner', 'cockpit', 'study', 'streak', 'quizzes', 'my learning'],
-        group: 'personal_space',
+        group: 'home_workspace',
         order: 2,
     },
     {
@@ -195,7 +225,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: 'all',
         badgeKey: 'pendingTraining',
         keywords: ['training', 'learning', 'courses', 'modules', 'masterclass'],
-        group: 'personal_space',
+        group: 'home_workspace',
         order: 3,
     },
     {
@@ -205,12 +235,140 @@ export const ROUTES: RouteConfig[] = [
         description: 'Your user profile, settings, and credentials',
         allowedRoles: 'all',
         keywords: ['profile', 'account', 'me', 'credentials'],
-        group: 'personal_space',
-        order: 7,
+        group: 'home_workspace',
+        order: 4,
     },
 
     // -------------------------------------------------------------------------
-    // 3. KNOWLEDGE & TRAINING HUB (knowledge_sop)
+    // 2. ORGANIZATION & GOVERNANCE (organization_hub)
+    // -------------------------------------------------------------------------
+    {
+        path: '/admin/organization',
+        title: 'org_structure',
+        icon: Building2,
+        description: 'Organizational hierarchy, reporting lines, departments and org chart',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        keywords: ['organization', 'org chart', 'reporting lines', 'hierarchy', 'departments'],
+        group: 'organization_hub',
+        order: 1,
+    },
+    {
+        path: '/admin/properties',
+        title: 'property_management',
+        icon: Building,
+        description: 'Manage hotel properties, locations, and facilities within the organization',
+        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        keywords: ['properties', 'hotels', 'locations', 'branches', 'resorts'],
+        group: 'organization_hub',
+        order: 2,
+    },
+    {
+        path: '/admin/users',
+        title: 'user_management',
+        icon: Users,
+        description: 'Manage organization user accounts, roles, and property assignments',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'],
+        keywords: ['users', 'roles', 'permissions', 'accounts', 'people', 'team'],
+        group: 'organization_hub',
+        order: 3,
+    },
+    {
+        path: '/dashboard/executive',
+        title: 'executive_dashboard',
+        icon: Target,
+        description: 'General Manager scorecard: department compliance ranking, overdue bottlenecks, and skill risk',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'property_manager'],
+        keywords: ['executive', 'gm', 'general manager', 'scorecard', 'compliance ranking'],
+        group: 'organization_hub',
+        order: 4,
+    },
+    {
+        path: '/admin/users/bulk',
+        title: 'user_management',
+        icon: Users,
+        description: 'Bulk user provisioning and CSV imports',
+        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr'],
+        group: 'organization_hub',
+        order: 5,
+        hideFromNav: true,
+    },
+
+    // -------------------------------------------------------------------------
+    // 3. LEARNING & ACADEMY (learning_academy)
+    // -------------------------------------------------------------------------
+    {
+        path: '/training/hub',
+        title: 'lms_admin',
+        icon: GraduationCap,
+        description: 'ALTUS Academy training control center, course catalog, and curricula',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        keywords: ['academy', 'lms', 'curriculum', 'training creator', 'courses'],
+        group: 'learning_academy',
+        order: 1,
+    },
+    {
+        path: '/training/paths',
+        title: 'training_paths',
+        icon: BookOpen,
+        description: 'Role-based learning journeys and onboarding roadmaps',
+        allowedRoles: 'all',
+        keywords: ['paths', 'roadmaps', 'curricula', 'learning paths'],
+        group: 'learning_academy',
+        order: 2,
+    },
+    {
+        path: '/training/skills',
+        title: 'skills_matrix',
+        icon: Shield,
+        description: 'Department skill matrix, proficiency coverage, and gaps',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        keywords: ['skills', 'competencies', 'matrix', 'proficiencies'],
+        group: 'learning_academy',
+        order: 3,
+    },
+    {
+        path: '/training/competencies',
+        title: 'competency_matrix',
+        icon: Target,
+        description: 'Hospitality competency framework, required vs actual proficiency, and skill gap analysis',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        keywords: ['competency', 'competencies', 'skills gap', 'proficiency', 'matrix', 'framework'],
+        group: 'learning_academy',
+        order: 4,
+    },
+    {
+        path: '/training/instructor',
+        title: 'instructor_workspace',
+        icon: ClipboardCheck,
+        description: 'Instructor-led session rosters, attendance check-in, and supervisor practical checklists',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        keywords: ['instructor', 'ILT', 'classroom', 'attendance', 'roster', 'practical', 'observation'],
+        group: 'learning_academy',
+        order: 5,
+    },
+    {
+        path: '/training/certificates',
+        title: 'my_certificates',
+        icon: Award,
+        description: 'Earned certificates, accreditations, and verification codes',
+        allowedRoles: 'all',
+        keywords: ['certificates', 'accreditation', 'awards', 'diploma'],
+        group: 'learning_academy',
+        order: 6,
+    },
+    {
+        path: '/assessments',
+        title: 'quizzes',
+        icon: CheckSquare,
+        description: 'Manage knowledge question bank and assessments',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'learning_academy',
+        order: 7,
+        hideFromNav: true,
+    },
+
+    // -------------------------------------------------------------------------
+    // 4. KNOWLEDGE & SOPS (knowledge_governance)
     // -------------------------------------------------------------------------
     {
         path: '/knowledge',
@@ -220,78 +378,28 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: 'all',
         keywords: ['sop', 'policy', 'guide', 'manual', 'knowledge', 'standard'],
         badgeKey: 'requiredReading',
-        group: 'knowledge_sop',
+        group: 'knowledge_governance',
         order: 1,
     },
     {
         path: '/documents',
         title: 'documents',
         icon: FileText,
-        description: 'Document library, official manuals, and file management',
+        description: 'Official organization document library, manuals, and files',
         allowedRoles: 'all',
         keywords: ['documents', 'files', 'pdf', 'manuals', 'policies'],
-        group: 'knowledge_sop',
+        group: 'knowledge_governance',
+        order: 2,
+    },
+    {
+        path: '/manage/review',
+        title: 'knowledge_review',
+        icon: ClipboardList,
+        description: 'SOP and course content review, approval workflows, and quality governance',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr'],
+        keywords: ['review', 'approval', 'publish', 'governance', 'quality'],
+        group: 'knowledge_governance',
         order: 3,
-    },
-    {
-        path: '/training/hub',
-        title: 'lms_admin',
-        icon: GraduationCap,
-        description: 'ALTUS Academy training control center and course management',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        keywords: ['academy', 'lms', 'curriculum', 'training creator', 'courses'],
-        group: 'knowledge_sop',
-        order: 4,
-    },
-    {
-        path: '/training/paths',
-        title: 'training_paths',
-        icon: BookOpen,
-        description: 'Role-based learning journeys and onboarding roadmaps',
-        allowedRoles: 'all',
-        keywords: ['paths', 'roadmaps', 'curricula', 'learning paths'],
-        group: 'knowledge_sop',
-        order: 5,
-    },
-    {
-        path: '/training/skills',
-        title: 'skills_matrix',
-        icon: Shield,
-        description: 'Department skill matrix, proficiency coverage, and gaps',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        keywords: ['skills', 'competencies', 'matrix', 'proficiencies'],
-        group: 'knowledge_sop',
-        order: 6,
-    },
-    {
-        path: '/training/competencies',
-        title: 'competency_matrix',
-        icon: Target,
-        description: 'Hospitality competency framework, required vs actual proficiency, and skill gap analysis',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'training_manager', 'administrator'],
-        keywords: ['competency', 'competencies', 'skills gap', 'proficiency', 'matrix', 'framework'],
-        group: 'knowledge_sop',
-        order: 6,
-    },
-    {
-        path: '/training/instructor',
-        title: 'instructor_workspace',
-        icon: ClipboardCheck,
-        description: 'Instructor-led session rosters, attendance check-in, and supervisor practical checklists',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'training_manager', 'administrator'],
-        keywords: ['instructor', 'ILT', 'classroom', 'attendance', 'roster', 'practical', 'observation'],
-        group: 'knowledge_sop',
-        order: 6,
-    },
-    {
-        path: '/training/certificates',
-        title: 'my_certificates',
-        icon: Award,
-        description: 'Earned certificates, accreditations, and verification codes',
-        allowedRoles: 'all',
-        keywords: ['certificates', 'accreditation', 'awards', 'diploma'],
-        group: 'knowledge_sop',
-        order: 7,
     },
     {
         path: '/media',
@@ -300,69 +408,12 @@ export const ROUTES: RouteConfig[] = [
         description: 'Hotel photos, video training assets, and brand media',
         allowedRoles: 'all',
         keywords: ['media', 'photos', 'videos', 'images', 'assets', 'gallery'],
-        group: 'knowledge_sop',
-        order: 8,
-    },
-    // NOTE: the standalone System Wiki page was removed in the KB 8->3 consolidation.
-    // The `system_wiki` table is retained; a later data-migration slice folds it into articles.
-    // Secondary sub-routes (hidden from main sidebar navigation to keep UI clean)
-    // NOTE: quiz + question bank surfaces consolidated into one page at /assessments
-    // (src/pages/assessments/QuestionBank.tsx). Legacy /learning/quizzes and
-    // /questions paths still redirect there. Keep this minimal if another branch
-    // also edits navigation.ts.
-    {
-        path: '/assessments?section=assessments',
-        title: 'quizzes',
-        icon: CheckSquare,
-        description: 'Manage quizzes',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
-        group: 'knowledge_sop',
-        order: 10,
-        hideFromNav: true,
-    },
-    {
-        path: '/assessments',
-        title: 'questions',
-        icon: FileQuestion,
-        description: 'Manage knowledge question bank',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'knowledge_sop',
-        order: 11,
-        hideFromNav: true,
-    },
-    {
-        path: '/training/hub?view=list',
-        title: 'training_modules',
-        icon: BookOpen,
-        description: 'Module management',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'knowledge_sop',
-        order: 12,
-        hideFromNav: true,
-    },
-    {
-        path: '/training/hub?view=builder',
-        title: 'training_builder',
-        icon: ListTodo,
-        description: 'Training builder',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'knowledge_sop',
-        order: 13,
-        hideFromNav: true,
-    },
-    {
-        path: '/training/hub?view=assignments',
-        title: 'training_assignments',
-        icon: Users,
-        description: 'Training assignments',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'knowledge_sop',
-        order: 14,
-        hideFromNav: true,
+        group: 'knowledge_governance',
+        order: 4,
     },
 
     // -------------------------------------------------------------------------
-    // 6. INTELLIGENCE & GOVERNANCE (administration)
+    // 5. ANALYTICS & REPORTS (analytics_reports)
     // -------------------------------------------------------------------------
     {
         path: '/reports',
@@ -371,17 +422,41 @@ export const ROUTES: RouteConfig[] = [
         description: 'Executive analytics, occupancy trends, and business intelligence',
         allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         keywords: ['reports', 'analytics', 'bi', 'occupancy', 'revpar'],
-        group: 'administration',
+        group: 'analytics_reports',
         order: 1,
     },
     {
-        path: '/dashboard/executive',
-        title: 'executive_dashboard',
-        icon: Building2,
-        description: 'General Manager scorecard: department compliance ranking, overdue bottlenecks, and skill risk',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager', 'training_manager', 'administrator'],
-        keywords: ['executive', 'gm', 'general manager', 'scorecard', 'compliance ranking'],
-        group: 'administration',
+        path: '/admin/analytics',
+        title: 'training_dashboard',
+        icon: Activity,
+        description: 'Organization-wide training completion, progress metrics, and compliance rates',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        keywords: ['analytics', 'training stats', 'completion rate', 'metrics'],
+        group: 'analytics_reports',
+        order: 2,
+    },
+
+    // -------------------------------------------------------------------------
+    // 6. ADMINISTRATION & SETTINGS (tenant_admin)
+    // -------------------------------------------------------------------------
+    {
+        path: '/admin/audit',
+        title: 'audit_logs',
+        icon: ClipboardList,
+        description: 'System audit logs, event tracking, and compliance trails',
+        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        keywords: ['audit logs', 'security events', 'traceability'],
+        group: 'tenant_admin',
+        order: 1,
+    },
+    {
+        path: '/admin/ai-course-generator',
+        title: 'ai_course_generator',
+        icon: Bot,
+        description: 'AI Course Generator routing mode, providers, models, spend caps and QA thresholds',
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin'],
+        keywords: ['ai', 'course generator', 'model routing', 'ai settings', 'providers', 'spend cap'],
+        group: 'tenant_admin',
         order: 2,
     },
     {
@@ -391,78 +466,37 @@ export const ROUTES: RouteConfig[] = [
         description: 'Full organization data archive (users, transcripts, SOPs, certificates) for compliance and offboarding',
         allowedRoles: ['administrator', 'super_admin', 'corporate_admin'],
         keywords: ['export', 'data archive', 'offboarding', 'portability', 'gdpr', 'backup'],
-        group: 'administration',
-        order: 19,
+        group: 'tenant_admin',
+        order: 3,
     },
     {
-        path: '/admin/users',
-        title: 'user_management',
-        icon: Users,
-        description: 'Manage platform user accounts, roles, and property assignments',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'],
-        keywords: ['users', 'roles', 'permissions', 'accounts'],
-        group: 'administration',
-        order: 6,
-    },
-    {
-        path: '/admin/organization',
-        title: 'org_structure',
-        icon: Target,
-        description: 'Organizational hierarchy, reporting lines, and org chart',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        keywords: ['organization', 'org chart', 'reporting lines', 'hierarchy'],
-        group: 'administration',
-        order: 8,
-    },
-    {
-        path: '/admin/properties',
-        title: 'property_management',
-        icon: Building,
-        description: 'Manage hotel properties, locations, and facilities',
+        path: '/admin/settings',
+        title: 'system_settings',
+        icon: Settings,
+        description: 'Configure organization workspace settings, branding, and global policies',
         allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
-        keywords: ['properties', 'hotels', 'locations', 'branches'],
-        group: 'administration',
-        order: 9,
+        keywords: ['settings', 'config', 'branding', 'preferences'],
+        group: 'tenant_admin',
+        order: 4,
     },
     {
-        path: '/admin/ai-course-generator',
-        title: 'ai_course_generator',
-        icon: Bot,
-        description: 'AI Course Generator routing mode, providers, models, spend caps and QA thresholds',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin'],
-        keywords: ['ai', 'course generator', 'model routing', 'ai settings', 'providers', 'spend cap'],
-        group: 'administration',
-        order: 12,
-    },
-    {
-        path: '/admin/audit',
-        title: 'audit_logs',
-        icon: ClipboardList,
-        description: 'System audit logs, event tracking, and compliance trails',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
-        keywords: ['audit logs', 'security events', 'traceability'],
-        group: 'administration',
-        order: 13,
+        path: '/settings',
+        title: 'settings',
+        icon: Settings,
+        description: 'Personal application preferences, theme, language, and security',
+        allowedRoles: 'all',
+        keywords: ['settings', 'preferences', 'dark mode', 'theme'],
+        group: 'tenant_admin',
+        order: 5,
     },
     {
         path: '/admin/pii-access',
         title: 'pii_access_logs',
         icon: Shield,
         description: 'PII access tracking and compliance data governance',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr'],
-        keywords: ['pii', 'gdpr', 'privacy', 'security'],
-        group: 'administration',
-        order: 14,
-        hideFromNav: true,
-    },
-    {
-        path: '/admin/certificates',
-        title: 'all_certificates',
-        icon: Award,
-        description: 'Organization-wide certificate ledger',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'administration',
-        order: 17,
+        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'],
+        group: 'tenant_admin',
+        order: 6,
         hideFromNav: true,
     },
     {
@@ -471,29 +505,9 @@ export const ROUTES: RouteConfig[] = [
         icon: Bell,
         description: 'Bulk notification jobs and broadcast queue',
         allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'],
-        group: 'administration',
-        order: 18,
+        group: 'tenant_admin',
+        order: 7,
         hideFromNav: true,
-    },
-    {
-        path: '/admin/settings',
-        title: 'system_settings',
-        icon: Settings,
-        description: 'Configure platform settings, branding, and global policies',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
-        keywords: ['settings', 'config', 'branding', 'preferences'],
-        group: 'administration',
-        order: 19,
-    },
-    {
-        path: '/settings',
-        title: 'settings',
-        icon: Settings,
-        description: 'Personal application preferences, theme, and language',
-        allowedRoles: 'all',
-        keywords: ['settings', 'preferences', 'dark mode', 'theme'],
-        group: 'administration',
-        order: 20,
     },
 
     // -------------------------------------------------------------------------
@@ -585,8 +599,8 @@ export const ROUTES: RouteConfig[] = [
         icon: Search,
         description: 'Global search',
         allowedRoles: 'all',
-        group: 'administration',
-        order: 21,
+        group: 'home_workspace',
+        order: 99,
         hideFromNav: true,
     }
 ]
@@ -685,7 +699,7 @@ export function getMobileQuickActions(role: AppRole | null): RouteConfig[] {
 
     const priorityPaths = (role === 'staff' || role === 'learner')
         ? ['/dashboard', '/learning/my', '/knowledge', '/documents', '/profile']
-        : ['/dashboard', '/learning/my', '/knowledge', '/training/hub', '/profile']
+        : ['/dashboard', '/admin/organization', '/training/hub', '/knowledge', '/profile']
 
     return priorityPaths
         .map(path => ROUTES.find(r => r.path === path))

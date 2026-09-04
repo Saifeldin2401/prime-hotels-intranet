@@ -100,7 +100,7 @@ export const KnowledgeRoutes = () => (
         <Route
             path="/knowledge/review"
             element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                <ProtectedRoute allowedRoles={['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <KnowledgeReview />
                     </AppLayout>

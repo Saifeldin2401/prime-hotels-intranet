@@ -6,19 +6,27 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUserSettings } from '@/contexts/UserSettingsContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAppRecovery } from '@/hooks/useAppRecovery'
 import { supabase } from '@/lib/supabase'
-import { Accessibility, Globe, Keyboard, Loader2, RefreshCw, Shield, Wrench } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { Accessibility, Globe, Keyboard, Loader2, RefreshCw, Shield, Wrench, Building2, Building, CreditCard, User as UserIcon, Bell } from 'lucide-react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { NotificationSettings } from './NotificationSettings'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 import { SessionList } from '@/components/auth/SessionList'
+import { OrganizationProfileSettings } from '@/pages/admin/components/OrganizationProfileSettings'
+import { HotelsManagement } from '@/pages/admin/components/HotelsManagement'
+import { SubscriptionEntitlementsCard } from '@/pages/admin/components/SubscriptionEntitlementsCard'
 
 export default function Settings() {
     const { t: t_ext } = useTranslation('extracted');
-    const { user } = useAuth()
+    const { user, primaryRole } = useAuth()
+    const { currentOrganization, isOrgAdmin, isPlatformAdmin } = useTenant()
+    const [searchParams, setSearchParams] = useSearchParams()
     const { t, i18n } = useTranslation('settings')
     const {
         reduced_motion,
@@ -36,6 +44,26 @@ export default function Settings() {
     const [updatingPassword, setUpdatingPassword] = useState(false)
     const { forceRefresh } = useAppRecovery()
     const [clearingCache, setClearingCache] = useState(false)
+
+    const canManageOrg = isOrgAdmin || isPlatformAdmin || ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'].includes(primaryRole || '')
+    const currentTab = searchParams.get('tab') || 'general'
+    const validTabs = useMemo(() => {
+        return canManageOrg
+            ? ['general', 'organization', 'properties', 'subscription', 'notifications', 'security', 'troubleshooting']
+            : ['general', 'notifications', 'security', 'troubleshooting']
+    }, [canManageOrg])
+
+    const activeTab = validTabs.includes(currentTab) ? currentTab : 'general'
+
+    const handleTabChange = (val: string) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev)
+            next.set('tab', val)
+            return next
+        })
+    }
+
+    const isBroadTab = ['organization', 'properties', 'subscription'].includes(activeTab)
 
     const loadSettings = useCallback(async () => {
         try {
@@ -130,21 +158,52 @@ export default function Settings() {
     }
 
     return (
-        <div className="container mx-auto py-8 max-w-4xl">
-            <h1 className="text-3xl font-bold mb-8 text-gray-900">{t('title')}</h1>
+        <div className={cn("container mx-auto py-8 transition-all duration-200", isBroadTab ? "max-w-6xl" : "max-w-4xl")}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold font-serif text-foreground">{t('title')}</h1>
+                    <p className="text-sm text-muted-foreground mt-1">
+                        {canManageOrg && currentOrganization
+                            ? `${currentOrganization.name} • ${t('description')}`
+                            : t('description')}
+                    </p>
+                </div>
+            </div>
 
-            <Tabs defaultValue="general" className="w-full">
-                <TabsList className="mb-8 p-1 bg-slate-100 dark:bg-hotel-navy-dark rounded-xl border border-border/50">
-                    <TabsTrigger value="general" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+                <TabsList className="mb-8 p-1.5 bg-slate-100 dark:bg-hotel-navy-dark rounded-xl border border-border/50 flex flex-wrap h-auto gap-1">
+                    <TabsTrigger value="general" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                        <UserIcon className="h-4 w-4 me-1.5" />
                         {t('tabs.general')}
                     </TabsTrigger>
-                    <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
+                    {canManageOrg && (
+                        <TabsTrigger value="organization" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                            <Building2 className="h-4 w-4 me-1.5 text-hotel-gold" />
+                            {t('tabs.organization')}
+                        </TabsTrigger>
+                    )}
+                    {canManageOrg && (
+                        <TabsTrigger value="properties" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                            <Building className="h-4 w-4 me-1.5 text-emerald-500" />
+                            {t('tabs.properties')}
+                        </TabsTrigger>
+                    )}
+                    {canManageOrg && (
+                        <TabsTrigger value="subscription" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                            <CreditCard className="h-4 w-4 me-1.5 text-purple-500" />
+                            {t('tabs.subscription')}
+                        </TabsTrigger>
+                    )}
+                    <TabsTrigger value="notifications" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                        <Bell className="h-4 w-4 me-1.5" />
                         {t('tabs.notifications')}
                     </TabsTrigger>
-                    <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
+                    <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                        <Shield className="h-4 w-4 me-1.5" />
                         {t('tabs.security')}
                     </TabsTrigger>
-                    <TabsTrigger value="troubleshooting" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
+                    <TabsTrigger value="troubleshooting" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm text-xs sm:text-sm font-medium">
+                        <Wrench className="h-4 w-4 me-1.5" />
                         {t('tabs.troubleshooting', { defaultValue: 'Troubleshooting' })}
                     </TabsTrigger>
                 </TabsList>
@@ -246,6 +305,24 @@ export default function Settings() {
                         </Card>
                     </div>
                 </TabsContent>
+
+                {canManageOrg && (
+                    <TabsContent value="organization" className="space-y-6">
+                        <OrganizationProfileSettings />
+                    </TabsContent>
+                )}
+
+                {canManageOrg && (
+                    <TabsContent value="properties" className="space-y-6">
+                        <HotelsManagement />
+                    </TabsContent>
+                )}
+
+                {canManageOrg && (
+                    <TabsContent value="subscription" className="space-y-6">
+                        <SubscriptionEntitlementsCard />
+                    </TabsContent>
+                )}
 
                 <TabsContent value="notifications">
                     <div className="grid gap-6">

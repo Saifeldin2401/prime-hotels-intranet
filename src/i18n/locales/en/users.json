@@ -7,6 +7,11 @@
     "directory": "User Directory",
     "search_placeholder": "Search users...",
     "loading": "Loading users...",
+    "organization": "Organization",
+    "filter_by_org": "Filter Organization",
+    "all_organizations": "All Organizations",
+    "all_personnel": "All Personnel",
+    "all_properties": "All Properties",
     "status": {
         "active": "Active",
         "inactive": "Inactive",
@@ -53,6 +58,8 @@
     "form": {
         "edit_user": "Edit User",
         "create_user": "Create User",
+        "organization_label": "Target Organization *",
+        "select_organization": "Select organization...",
         "user_info": "User Information",
         "email": "Email",
         "full_name": "Full Name",

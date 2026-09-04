@@ -1,19 +1,19 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
+import { useLens } from '@/contexts/LensContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
+import { TenantOnboardingGuide } from '@/components/onboarding/TenantOnboardingGuide'
 
 import {
   DashboardHeroHeader,
-  DashboardMetricsDeck,
-  DashboardActionDeck,
-  RecentKnowledgeWidget,
-  ActiveLearningsWidget,
-  ReviewQueueWidget,
-  AICopilotAssistantWidget,
-  CertificationsAndSkillsWidget,
-  TasksWidget,
+  DashboardLensBar,
+  PlatformOverviewCockpit,
+  CorporateExecutiveBento,
+  PropertyOperationsBento,
+  LearnerCockpitBento,
 } from './components'
 
 const containerVariants = {
@@ -39,12 +39,17 @@ const itemVariants = {
 }
 
 export function Dashboard() {
-  const { t, i18n } = useTranslation(['dashboard', 'common'])
+  const { t } = useTranslation(['dashboard', 'common', 'admin'])
   const { loading } = useAuth()
+  const { activeLens } = useLens()
+  const { isPlatformScope } = useTenant()
 
   if (loading) {
     return <PageSkeleton />
   }
+
+  // Determine effective operational lens (platform scope takes precedence if operator is in global plane)
+  const effectiveLens = isPlatformScope ? 'platform' : activeLens
 
   return (
     <motion.div
@@ -58,43 +63,35 @@ export function Dashboard() {
         <DashboardHeroHeader />
       </motion.div>
 
-      {/* 2. Key Operational Performance Metrics Deck (Completion rates, Active learners, Open tasks, SOPs) */}
+      {/* 2. Interactive Operational Lens Switcher Bar (Platform, Corporate, Property, Learner) */}
       <motion.div variants={itemVariants}>
-        <DashboardMetricsDeck />
+        <DashboardLensBar />
       </motion.div>
 
-      {/* 3. Core Operational Quick Action Portals */}
-      <motion.div variants={itemVariants}>
-        <DashboardActionDeck />
-      </motion.div>
+      {/* 2.5 SaaS Organization Workspace Onboarding Readiness Guide */}
+      {!isPlatformScope && effectiveLens !== 'learner' && (
+        <motion.div variants={itemVariants}>
+          <TenantOnboardingGuide />
+        </motion.div>
+      )}
 
-      {/* 4. Executive Command Bento Grid */}
-      <motion.div variants={itemVariants} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Column (2/3): Primary Workflows & Operational Content */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Active Training & Knowledge Library */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <ActiveLearningsWidget />
-            <RecentKnowledgeWidget />
-          </div>
-
-          {/* Action Items / Tasks & Quality Review Queue */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <TasksWidget focusMode="my_work" />
-            <ReviewQueueWidget />
-          </div>
-        </div>
-
-        {/* Right Column (1/3): AI Copilot & Verified Digital Credentials */}
-        <div className="space-y-6">
-          <AICopilotAssistantWidget />
-          <CertificationsAndSkillsWidget />
-        </div>
-      </motion.div>
+      {/* 3. Role-Adaptive Cockpit Bento Stage */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={effectiveLens}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+        >
+          {effectiveLens === 'platform' && <PlatformOverviewCockpit />}
+          {effectiveLens === 'corporate' && <CorporateExecutiveBento />}
+          {effectiveLens === 'property' && <PropertyOperationsBento />}
+          {effectiveLens === 'learner' && <LearnerCockpitBento />}
+        </motion.div>
+      </AnimatePresence>
     </motion.div>
   )
 }
 
 export default Dashboard
-
-

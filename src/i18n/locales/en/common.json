@@ -227,7 +227,8 @@
         "validation_failed": "Validation Failed",
         "operation_failed": "Operation Failed",
         "load_failed": "Load Failed",
-        "delete_failed": "Failed to delete"
+        "delete_failed": "Failed to delete",
+        "org_context_required": "Active organization context is required to upload attachments"
     },
     "ui": {
         "board": "Board",

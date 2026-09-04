@@ -1,7 +1,8 @@
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { SyncStatus } from '@/components/common/SyncStatus'
-import { TenantScopeSelector } from '@/components/layout/TenantScopeSelector'
+import { FacetedScopeCapsule } from '@/components/layout/FacetedScopeCapsule'
+import { useLens } from '@/contexts/LensContext'
 import {
     AlertDialogAction,
     AlertDialogCancel,
@@ -33,11 +34,13 @@ import {
     DropdownMenuSub as DropdownSub,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { cn } from '@/lib/utils'
 import {
     Bell,
     Check,
     ChevronDown,
+    Crown,
     LogOut,
     Menu,
     Search,
@@ -64,8 +67,13 @@ export function Header({
 }: HeaderProps) {
   const navigate = useNavigate()
   const { user, profile, primaryRole, signOut } = useAuth()
-  const { t } = useTranslation(['common', 'nav'])
+  const { isPlatformAdmin, isImpersonating } = useTenant()
+  const { activeLens, availableLenses, switchLens } = useLens()
+  const { t, i18n } = useTranslation(['common', 'nav', 'admin'])
+  const isRtl = i18n.dir() === 'rtl'
   const [userStatus, setUserStatus] = useState<'online' | 'away' | 'busy'>('online')
+
+  const logoHref = isPlatformAdmin && !isImpersonating ? '/platform' : '/dashboard'
 
   const statusColors = {
     online: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
@@ -104,7 +112,7 @@ export function Header({
               </Button>
             )}
 
-            <Link to="/dashboard" className="flex items-center gap-2.5 group lg:hidden">
+            <Link to={logoHref} className="flex items-center gap-2.5 group lg:hidden">
               <img
                 src="/altus-emblem-icon.png"
                 alt="ALTUS Advisory"
@@ -122,55 +130,66 @@ export function Header({
           </div>
 
           {/* Center Search - Premium Sleek Style */}
-          <div className="flex-1 max-w-3xl mx-2 lg:mx-6 hidden md:flex items-center gap-2">
+          <div className="flex-1 min-w-0 max-w-xs xl:max-w-md mx-2 lg:mx-4 hidden xl:flex items-center gap-2">
             <Button
               variant="outline"
               className="w-full justify-start text-sm text-slate-300 bg-hotel-navy-dark/80 border-hotel-navy-light/60 hover:bg-hotel-navy-light hover:text-white hover:border-hotel-gold/40 active:scale-[0.99] transition-all duration-150 shadow-inner"
               onClick={handleOpenSearch}
             >
-              <Search className="me-2 h-4 w-4 text-hotel-gold/80" />
+              <Search className="me-2 h-4 w-4 text-hotel-gold/80 shrink-0" />
               <span className="truncate">{t('nav:search_placeholder', 'Search pages, people, documents...')}</span>
             </Button>
-            <kbd className="hidden lg:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/90 px-2 font-mono text-[10px] font-semibold text-hotel-gold shadow-sm" aria-hidden="true">
+            <kbd className="hidden 2xl:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/90 px-2 font-mono text-[10px] font-semibold text-hotel-gold shadow-sm shrink-0" aria-hidden="true">
               Ctrl+K
             </kbd>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Multi-Tenant Scope Hierarchy Selector (Org / Brand / Hotel) */}
-            <div className="hidden sm:flex items-center me-1 sm:me-2">
-              <TenantScopeSelector />
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {/* Quick Search icon on medium/large screens before xl */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex xl:hidden text-slate-300 hover:text-white hover:bg-hotel-navy-light h-8 w-8 shrink-0"
+              onClick={handleOpenSearch}
+              title={t('nav:search_placeholder', 'Search (Ctrl+K)')}
+            >
+              <Search className="h-4 w-4 text-hotel-gold" />
+            </Button>
+
+            {/* Multi-Tenant Scope Faceted Capsule (Org › Brand › Hotel) */}
+            <div className="hidden sm:flex items-center me-0.5 sm:me-1 shrink-0">
+              <FacetedScopeCapsule />
             </div>
 
             {/* Sync Status */}
-            <SyncStatus className="hidden md:flex" />
+            <SyncStatus className="hidden 2xl:flex shrink-0" />
 
             {/* Language Switcher */}
-            <div id="language-switcher" className="text-white">
+            <div id="language-switcher" className="text-white shrink-0">
               <LanguageSwitcher
                 variant="ghost"
-                className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2.5 rounded-lg border-transparent active:scale-[0.98] transition-transform duration-150"
+                className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2 rounded-lg border-transparent active:scale-[0.98] transition-transform duration-150"
               />
             </div>
 
             {/* Notification Bell - Light Variant for Navy Header */}
-            <div id="notifications-button" className="text-white">
+            <div id="notifications-button" className="text-white shrink-0">
               <NotificationBell />
             </div>
 
             {/* Divider */}
-            <div className="h-8 w-px bg-hotel-navy-dark mx-1" />
+            <div className="h-8 w-px bg-hotel-navy-dark mx-0.5 shrink-0" />
 
             {/* User Menu - Enhanced Premium Dropdown */}
-            <div id="user-menu" className="ms-1">
+            <div id="user-menu" className="ms-0.5 shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark active:scale-[0.98] transition-all duration-150 group"
+                    className="flex items-center gap-2 hover:bg-hotel-navy-light px-2 py-1.5 rounded-full border border-transparent hover:border-hotel-navy-dark active:scale-[0.98] transition-all duration-150 group"
                     aria-label={t('nav:user_menu', "User menu")}
                   >
-                    <div className="hidden md:flex flex-col items-end">
+                    <div className="hidden xl:flex flex-col items-end">
                       <span className="text-sm font-medium text-white leading-none mb-1 group-hover:text-hotel-gold transition-colors capitalize">
                         {profile?.full_name || user?.email?.split('@')[0]}
                       </span>
@@ -181,9 +200,9 @@ export function Header({
                     </div>
 
                     <div className="relative">
-                      <Avatar className="h-9 w-9 border-2 border-hotel-gold/40 group-hover:border-hotel-gold transition-all duration-200 shadow-sm ring-2 ring-hotel-navy/50">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-hotel-gold/40 group-hover:border-hotel-gold transition-all duration-200 shadow-sm ring-2 ring-hotel-navy/50">
                         <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
-                        <AvatarFallback className="bg-hotel-gold text-hotel-navy font-bold">
+                        <AvatarFallback className="bg-hotel-gold text-hotel-navy font-bold text-xs">
                           {profile?.full_name
                             ? profile.full_name.split(' ').map((n) => n[0]).join('').substring(0, 2).toUpperCase()
                             : (user?.email?.[0]?.toUpperCase() || 'U')}
@@ -269,6 +288,54 @@ export function Header({
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownSub>
+
+                    {/* Operational Perspective / Lens Switcher */}
+                    <DropdownSub>
+                      <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-hotel-gold m-1 font-semibold">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-hotel-gold animate-pulse" />
+                          <span>{t('nav:operational_lens', 'Operational Lens')}</span>
+                        </div>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/30 text-white shadow-2xl min-w-[250px] p-1">
+                        <DropdownMenuLabel className="text-[11px] text-hotel-gold uppercase tracking-wider px-2 py-1">
+                          {t('nav:switch_lens_tooltip', 'Switch Viewpoint')}
+                        </DropdownMenuLabel>
+                        {availableLenses.filter((l) => l.isAvailable).map((lens) => {
+                          const isCurrent = activeLens === lens.id
+                          return (
+                            <DropdownMenuItem
+                              key={lens.id}
+                              onClick={() => void switchLens(lens.id, navigate)}
+                              className={cn(
+                                "focus:bg-hotel-navy-light focus:text-white cursor-pointer py-2 px-2 text-white/90 flex items-center justify-between",
+                                isCurrent && "bg-hotel-navy-light/90 font-bold text-hotel-gold"
+                              )}
+                            >
+                              <div className="flex flex-col text-start">
+                                <span className="text-xs font-semibold">
+                                  {isRtl ? lens.labelAr : lens.labelEn}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-sans">
+                                  {isRtl ? lens.subtitleAr : lens.subtitleEn}
+                                </span>
+                              </div>
+                              {isCurrent && <Check className="w-4 h-4 text-hotel-gold shrink-0 ms-2" />}
+                            </DropdownMenuItem>
+                          )
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownSub>
+
+                    {isPlatformAdmin && (
+                      <DropdownMenuItem
+                        className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-amber-300 font-semibold m-1"
+                        onSelect={() => navigate('/platform')}
+                      >
+                        <Crown className="me-3 h-4 w-4 text-amber-400 transition-transform group-hover:scale-110" />
+                        <span>{t('admin:platform_control_plane', 'Platform Control Center')}</span>
+                      </DropdownMenuItem>
+                    )}
 
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"

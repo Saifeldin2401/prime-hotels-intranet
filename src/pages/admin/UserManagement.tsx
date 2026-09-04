@@ -68,9 +68,11 @@ type AccountActionNoteRow = Omit<AccountActionNote, 'created_by'> & {
 
 export default function UserManagement() {
   const { t: t_ext } = useTranslation('extracted');
-  const { t } = useTranslation('users')
-  const { currentOrganization } = useTenant()
+  const { t, i18n } = useTranslation('users')
+  const isRTL = i18n.language === 'ar'
+  const { currentOrganization, organizations, isPlatformAdmin, isPlatformScope } = useTenant()
   const { isPlatformOperator } = useAccountContext()
+  const isPlatformUser = isPlatformAdmin || isPlatformOperator
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -82,11 +84,39 @@ export default function UserManagement() {
 
   const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100)
 
+  const [orgFilter, setOrgFilter] = useState<string>(
+    isPlatformScope ? 'all' : (currentOrganization?.id || 'all')
+  )
+
+  useEffect(() => {
+    if (!isPlatformUser || !isPlatformScope) {
+      if (currentOrganization?.id) {
+        setOrgFilter(currentOrganization.id)
+      }
+    }
+  }, [currentOrganization?.id, isPlatformUser, isPlatformScope])
+
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AccountStatusFilter>('all')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
+  const [inviteOrgId, setInviteOrgId] = useState<string>(
+    currentOrganization?.id || organizations[0]?.id || ''
+  )
+
+  useEffect(() => {
+    if (currentOrganization?.id) {
+      setInviteOrgId(currentOrganization.id)
+    } else if (organizations.length > 0 && !inviteOrgId) {
+      setInviteOrgId(organizations[0].id)
+    }
+  }, [currentOrganization?.id, organizations, inviteOrgId])
+
+  const effectiveInviteOrgId = isPlatformUser
+    ? (inviteOrgId || currentOrganization?.id || organizations[0]?.id)
+    : currentOrganization?.id
+
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AppRole | ''>('staff')
   const [invitePropertyId, setInvitePropertyId] = useState('')
@@ -110,50 +140,141 @@ export default function UserManagement() {
   const { suspendAccount, reactivateAccount, forcePasswordReset, cancelPasswordReset, unlockAccount, resendCredentials, isLoading: isActionLoading } = useAccountActions()
 
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['users'],
+    queryKey: ['users', orgFilter, currentOrganization?.id, isPlatformUser],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          organizations (
+            id,
+            name,
+            name_ar
+          ),
+          user_roles (
+            role
+          ),
+          organization_memberships (
+            id,
+            organization_id,
+            hotel_id,
+            department_id,
+            role,
+            is_primary,
+            hotel:hotels (
+              id,
+              name,
+              name_ar
+            ),
+            department:departments (
+              id,
+              name,
+              name_ar
+            ),
+            organization:organizations (
+              id,
+              name,
+              name_ar
+            )
+          )
+        `)
         .order('created_at', { ascending: false })
 
+      const effectiveOrgFilter = !isPlatformUser
+        ? (currentOrganization?.id || null)
+        : (orgFilter !== 'all' ? orgFilter : null)
+
+      if (effectiveOrgFilter) {
+        query = query.eq('organization_id', effectiveOrgFilter)
+      }
+
+      const { data, error } = await query
+
       if (error) throw error
-      return (data || []) as unknown as Profile[]
+
+      return (data || []).map((p: any) => {
+        const rolesList = (p.user_roles || []).map((r: any) => r.role)
+        const primaryAppRole = rolesList[0] || p.role || 'staff'
+
+        const propMap = new Map<string, { id: string; name: string }>()
+        const deptMap = new Map<string, { id: string; name: string }>()
+
+        if (Array.isArray(p.organization_memberships)) {
+          p.organization_memberships.forEach((m: any) => {
+            if (m.hotel?.id && m.hotel?.name) {
+              propMap.set(m.hotel.id, {
+                id: m.hotel.id,
+                name: isRTL && m.hotel.name_ar ? m.hotel.name_ar : m.hotel.name,
+              })
+            }
+            if (m.department?.id && m.department?.name) {
+              deptMap.set(m.department.id, {
+                id: m.department.id,
+                name: isRTL && m.department.name_ar ? m.department.name_ar : m.department.name,
+              })
+            }
+          })
+        }
+
+        const orgInfo = p.organizations 
+          || p.organization_memberships?.[0]?.organization 
+          || (p.organization_id ? organizations.find((o) => o.id === p.organization_id) : null)
+          || null
+
+        return {
+          ...p,
+          role: primaryAppRole,
+          organizations: orgInfo,
+          properties: Array.from(propMap.values()),
+          departments: Array.from(deptMap.values()),
+        } as Profile
+      })
     },
   })
 
   const { data: properties } = useQuery({
-    queryKey: ['properties', 'invite'],
+    queryKey: ['properties', 'invite', effectiveInviteOrgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('hotels')
-        .select('id, name')
+        .select('id, name, name_ar')
         .eq('is_active', true)
         .eq('is_deleted', false)
         .order('name', { ascending: true })
 
-      if (error) throw error
-      return (data || []) as Array<{ id: string; name: string }>
-    },
-  })
-
-  const { data: departments } = useQuery({
-    queryKey: ['departments', 'invite', invitePropertyId],
-    queryFn: async () => {
-      let query = supabase
-        .from('departments')
-        .select('id, name, property_id')
-        .eq('is_active', true)
-        .order('name', { ascending: true })
-
-      if (invitePropertyId) {
-        query = query.eq('property_id', invitePropertyId)
+      if (effectiveInviteOrgId) {
+        query = query.eq('organization_id', effectiveInviteOrgId)
       }
 
       const { data, error } = await query
       if (error) throw error
-      return (data || []) as Array<{ id: string; name: string; property_id: string }>
+      return (data || []) as Array<{ id: string; name: string; name_ar?: string | null }>
     },
+    enabled: !!effectiveInviteOrgId,
+  })
+
+  const { data: departments } = useQuery({
+    queryKey: ['departments', 'invite', invitePropertyId, effectiveInviteOrgId],
+    queryFn: async () => {
+      let query = supabase
+        .from('departments')
+        .select('id, name, name_ar, property_id, hotel_id, organization_id')
+        .eq('is_active', true)
+        .order('name', { ascending: true })
+
+      if (effectiveInviteOrgId) {
+        query = query.eq('organization_id', effectiveInviteOrgId)
+      }
+
+      if (invitePropertyId) {
+        query = query.or(`property_id.eq.${invitePropertyId},hotel_id.eq.${invitePropertyId}`)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+      return (data || []) as Array<{ id: string; name: string; name_ar?: string | null; property_id: string }>
+    },
+    enabled: !!effectiveInviteOrgId,
   })
 
   useEffect(() => {
@@ -303,6 +424,11 @@ export default function UserManagement() {
         throw new Error('Please select a role for the invited user.')
       }
 
+      const targetOrg = effectiveInviteOrgId
+      if (!targetOrg) {
+        throw new Error(t('form.error.select_org', 'Please select a target organization.'))
+      }
+
       const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
       const { data, error: fnError } = await supabase.functions.invoke('create-user', {
         body: {
@@ -310,7 +436,7 @@ export default function UserManagement() {
           role,
           provisioningMethod: 'invite',
           appUrl,
-          organizationId: currentOrganization?.id,
+          organizationId: targetOrg,
           propertyIds: invitePropertyId ? [invitePropertyId] : [],
           departmentIds: inviteDepartmentId ? [inviteDepartmentId] : [],
         },
@@ -603,7 +729,11 @@ export default function UserManagement() {
 
   if (showForm) {
     return (
-      <UserForm user={selectedUser || undefined} onClose={handleCloseForm} />
+      <UserForm
+        user={selectedUser || undefined}
+        initialOrgId={orgFilter !== 'all' ? orgFilter : (currentOrganization?.id || organizations[0]?.id)}
+        onClose={handleCloseForm}
+      />
     )
   }
 
@@ -680,24 +810,50 @@ export default function UserManagement() {
       <PendingUserApprovals onCountChange={setPendingApprovalCount} />
 
       {/* Status Filter Tabs & Search Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-          {(['all', 'active', 'suspended', 'locked', 'inactive'] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
-                statusFilter === status
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-amber-500/20'
-                  : 'bg-card/80 text-muted-foreground border border-border/60 hover:border-amber-500/40 hover:text-foreground'
-              }`}
-            >
-              <span>{status === 'all' ? 'All Personnel' : t(`status.${status}`)}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === status ? 'bg-slate-950/20 text-slate-950' : 'bg-muted text-muted-foreground'}`}>
-                {statusCounts[status]}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {isPlatformUser && (
+            <div className="flex items-center gap-2 pe-3 border-e border-border/60">
+              <Building className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
+                {t('organization', 'Organization')}:
               </span>
-            </button>
-          ))}
+              <select
+                value={orgFilter}
+                onChange={(e) => {
+                  setOrgFilter(e.target.value)
+                  setSelectedUserIds(new Set())
+                }}
+                className="h-8 rounded-xl border border-border/60 bg-card/90 px-2.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+              >
+                <option value="all">{t('all_organizations', 'All Organizations')}</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {isRTL && (org as any).name_ar ? (org as any).name_ar : org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {(['all', 'active', 'suspended', 'locked', 'inactive'] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
+                  statusFilter === status
+                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-amber-500/20'
+                    : 'bg-card/80 text-muted-foreground border border-border/60 hover:border-amber-500/40 hover:text-foreground'
+                }`}
+              >
+                <span>{status === 'all' ? t('all_personnel', 'All Personnel') : t(`status.${status}`)}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === status ? 'bg-slate-950/20 text-slate-950' : 'bg-muted text-muted-foreground'}`}>
+                  {statusCounts[status]}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {filteredUsers && filteredUsers.length > 0 && (
@@ -819,6 +975,14 @@ export default function UserManagement() {
                           </Badge>
                         )}
                         {getRoleBadge(user.role)}
+                        {(user.organizations || organizations.find(o => o.id === user.organization_id)) && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 gap-1">
+                            <Building className="h-2.5 w-2.5" />
+                            {isRTL && (user.organizations as any)?.name_ar 
+                              ? (user.organizations as any).name_ar 
+                              : (user.organizations?.name || organizations.find(o => o.id === user.organization_id)?.name)}
+                          </Badge>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -845,7 +1009,7 @@ export default function UserManagement() {
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] text-muted-foreground">
                             <Building className="h-2.5 w-2.5 text-amber-500" />
-                            All Properties
+                            {t('all_properties', 'All Properties')}
                           </span>
                         )}
 
@@ -1095,6 +1259,16 @@ export default function UserManagement() {
                   </h4>
                   <div className="rounded-2xl border border-border/50 bg-background/50 p-4 space-y-3 text-xs">
                     <div>
+                      <span className="text-muted-foreground block mb-1">{t('organization', 'Organization')}:</span>
+                      <Badge variant="secondary" className="text-xs font-semibold gap-1.5 py-1">
+                        <Building className="h-3.5 w-3.5 text-amber-500" />
+                        {isRTL && (detailUser.organizations as any)?.name_ar 
+                          ? (detailUser.organizations as any).name_ar 
+                          : (detailUser.organizations?.name || organizations.find(o => o.id === detailUser.organization_id)?.name || t('organization', 'Organization'))}
+                      </Badge>
+                    </div>
+
+                    <div>
                       <span className="text-muted-foreground block mb-1">Assigned Properties:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {detailUser.properties && detailUser.properties.length > 0 ? (
@@ -1105,7 +1279,7 @@ export default function UserManagement() {
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-muted-foreground italic">All Properties (Consolidated)</span>
+                          <span className="text-muted-foreground italic">{t('all_properties', 'All Properties')}</span>
                         )}
                       </div>
                     </div>
@@ -1221,6 +1395,47 @@ export default function UserManagement() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Target Organization Selector or Badge */}
+          {isPlatformUser ? (
+            <div className="space-y-2 py-2">
+              <Label htmlFor="invite-org" className="flex items-center gap-1.5">
+                <Building className="h-3.5 w-3.5 text-amber-500" />
+                <span>{t('form.organization_label', 'Target Organization')}</span>
+              </Label>
+              <select
+                id="invite-org"
+                value={effectiveInviteOrgId}
+                onChange={(e) => {
+                  setInviteOrgId(e.target.value)
+                  setInvitePropertyId('')
+                  setInviteDepartmentId('')
+                }}
+                disabled={inviteUserMutation.isPending}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium"
+                required
+              >
+                <option value="">{t('form.select_organization', 'Select Organization')}</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {isRTL && (org as any).name_ar ? (org as any).name_ar : org.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            currentOrganization && (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border text-xs my-1">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Building className="h-3.5 w-3.5 text-amber-500" />
+                  {t('organization', 'Organization')}:
+                </span>
+                <Badge variant="secondary" className="font-semibold text-xs">
+                  {isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}
+                </Badge>
+              </div>
+            )
+          )}
+
           <div className="space-y-2 py-2">
             <Label htmlFor="invite-email">{t('form.email')}</Label>
             <Input
@@ -1282,7 +1497,7 @@ export default function UserManagement() {
               <option value="">{t('form.select_property', 'Select property (optional)')}</option>
               {(properties || []).map((property) => (
                 <option key={property.id} value={property.id}>
-                  {property.name}
+                  {isRTL && (property as any).name_ar ? (property as any).name_ar : property.name}
                 </option>
               ))}
             </select>
@@ -1307,7 +1522,7 @@ export default function UserManagement() {
               </option>
               {(departments || []).map((department) => (
                 <option key={department.id} value={department.id}>
-                  {department.name}
+                  {isRTL && (department as any).name_ar ? (department as any).name_ar : department.name}
                 </option>
               ))}
             </select>
