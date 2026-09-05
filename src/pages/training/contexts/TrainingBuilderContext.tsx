@@ -1637,6 +1637,30 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }))
       addRecentUpload({ url: filePath, name: file.name, type })
 
+      // Best-effort: register in media_assets so training builder uploads show in Media Library
+      try {
+        const { data: publicUrlData } = supabase.storage.from('training-content').getPublicUrl(filePath)
+        await supabase.from('media_assets').insert({
+          title: displayName || file.name,
+          filename: fileName,
+          original_filename: file.name,
+          storage_path: filePath,
+          storage_bucket: 'training-content',
+          public_url: publicUrlData?.publicUrl || filePath,
+          media_type: type === 'video' ? 'video' : type === 'audio' ? 'audio' : type === 'image' ? 'image' : 'document',
+          category: 'training',
+          file_size_bytes: file.size,
+          mime_type: inferredContentType,
+          tags: ['training-builder'],
+          uploaded_by: profile?.id ?? null,
+          organization_id: profile?.organization_id ?? null,
+          is_public: true,
+          metadata: { source: 'training-builder', uploaded_at: new Date().toISOString() },
+        })
+      } catch (err) {
+        console.warn('[TrainingBuilder] could not register in media library:', err)
+      }
+
       const successDescriptions: Record<string, string> = {
         image: t('imageUploaded', 'Image uploaded successfully'),
         video: t('videoUploaded', 'Video uploaded successfully'),

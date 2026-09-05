@@ -115,8 +115,17 @@ function MediaPickerItem({
       <div className="relative aspect-video bg-muted">
         {asset.thumbnail_url ? (
           <img src={asset.thumbnail_url} alt={asset.title} className="w-full h-full object-cover" />
-        ) : asset.media_type === 'image' ? (
+        ) : asset.media_type === 'image' && asset.public_url ? (
           <img src={asset.public_url} alt={asset.title} className="w-full h-full object-cover" />
+        ) : asset.media_type === 'video' && asset.public_url ? (
+          <div className="relative w-full h-full flex items-center justify-center bg-slate-950">
+            <video src={asset.public_url} className="w-full h-full object-cover opacity-80 pointer-events-none" muted preload="metadata" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-rose-500/90 text-white flex items-center justify-center shadow">
+                <Video className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className={cn('w-12 h-12 rounded-lg flex items-center justify-center', typeConfig.bg)}>

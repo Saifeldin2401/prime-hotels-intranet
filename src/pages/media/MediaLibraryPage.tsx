@@ -442,11 +442,18 @@ export default function MediaLibraryPage() {
                   >
                     {asset.media_type === 'video' ? (
                       <div className="relative w-full h-full flex items-center justify-center bg-slate-950">
-                        {imageUrl ? (
+                        {asset.thumbnail_url ? (
                           <img
-                            src={imageUrl}
+                            src={asset.thumbnail_url}
                             alt={asset.title}
                             className="h-full w-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : imageUrl ? (
+                          <video
+                            src={imageUrl}
+                            className="h-full w-full object-cover opacity-80 pointer-events-none"
+                            muted
+                            preload="metadata"
                           />
                         ) : (
                           <div className="h-12 w-12 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center">
@@ -590,8 +597,16 @@ export default function MediaLibraryPage() {
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-14 rounded-lg bg-muted overflow-hidden shrink-0 flex items-center justify-center">
-                              {imageUrl ? (
+                              {asset.thumbnail_url ? (
+                                <img src={asset.thumbnail_url} alt={asset.title} className="h-full w-full object-cover" />
+                              ) : asset.media_type === 'video' && imageUrl ? (
+                                <video src={imageUrl} className="h-full w-full object-cover pointer-events-none" muted preload="metadata" />
+                              ) : imageUrl && asset.media_type === 'image' ? (
                                 <img src={imageUrl} alt={asset.title} className="h-full w-full object-cover" />
+                              ) : asset.media_type === 'video' ? (
+                                <VideoIcon className="h-4 w-4 text-amber-500" />
+                              ) : asset.media_type === 'audio' ? (
+                                <FileAudio className="h-4 w-4 text-purple-500" />
                               ) : (
                                 <ImageIcon className="h-4 w-4 text-muted-foreground" />
                               )}
