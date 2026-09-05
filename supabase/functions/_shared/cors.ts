@@ -6,6 +6,7 @@ export const DEFAULT_ALLOWED_ORIGINS = [
   "https://www.altus-advisory.com",
   "https://connect.altusadvisory.com",
   "https://prime-hotels-intranet.vercel.app",
+  "https://altus-hospitality-erp.vercel.app",
   "https://www.phg-connect.com",
   "https://phg-connect.com"
 ] as const;
@@ -26,7 +27,7 @@ export function resolveCorsOrigin(req: Request): string {
   const origin = req.headers.get("origin") || "";
   const allowedOrigins = getAllowedOrigins();
 
-  if (!origin) return allowedOrigins[0] || "https://phg-connect.com";
+  if (!origin) return allowedOrigins[0] || "https://altus-hospitality-erp.vercel.app";
 
   const cleanOrigin = origin.trim().replace(/\/$/, "");
 
@@ -36,6 +37,11 @@ export function resolveCorsOrigin(req: Request): string {
     );
   if (isLocalDevOrigin) return origin;
 
+  const isVercelOrNetlify =
+    /^https:\/\/([a-z0-9-]+)\.vercel\.app$/i.test(cleanOrigin) ||
+    /^https:\/\/([a-z0-9-]+)\.netlify\.app$/i.test(cleanOrigin);
+  if (isVercelOrNetlify) return origin;
+
   const isAllowed = allowedOrigins.some((ao) => {
     const cleanAo = ao.trim().replace(/\/$/, "");
     return cleanAo === cleanOrigin;
@@ -43,7 +49,7 @@ export function resolveCorsOrigin(req: Request): string {
 
   return isAllowed
     ? origin
-    : allowedOrigins[allowedOrigins.length - 1] || "https://phg-connect.com";
+    : allowedOrigins[0] || "https://altus-hospitality-erp.vercel.app";
 }
 
 export function buildCorsHeaders(req: Request): Record<string, string> {

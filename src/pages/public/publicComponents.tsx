@@ -41,14 +41,14 @@ export function FadeInSection({ children, className = '', delay = 0, y = 12, sty
         ? { opacity: 1, transform: 'translateY(0px)' }
         : prefersReducedMotion ? { opacity: 0 } : { opacity: 0, transform: `translateY(${y}px)` }
       }
-      transition={{ duration: 0.5, ease: EASE_OUT, delay }}
+      transition={{ duration: 0.32, ease: EASE_OUT, delay }}
     >
       {children}
     </motion.div>
   );
 }
 
-export function StaggerChildren({ children, className = '', staggerDelay = 0.05, style }: {
+export function StaggerChildren({ children, className = '', staggerDelay = 0.04, style }: {
   children: React.ReactNode;
   className?: string;
   staggerDelay?: number;

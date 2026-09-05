@@ -1,27 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { COLOR, canela, inter, mono, neueHaas } from './publicConstants';
+import { COLOR, cairo, canela, inter, mono, neueHaas } from './publicConstants';
 
 export default function VisionPage() {
   const { i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  useEffect(() => {
+    const handleLangChange = (lng: string) => setCurrentLang(lng);
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
+  const isRTL = currentLang === 'ar' || currentLang.startsWith('ar') || i18n.dir() === 'rtl';
+
+  const fontSans = isRTL ? cairo : neueHaas;
+  const fontSerif = isRTL ? cairo : canela;
+  const fontBody = isRTL ? cairo : inter;
 
   return (
-    <div className="flex flex-col pt-20">
+    <div className="flex flex-col pt-20" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ═══════════════ SAUDI VISION 2030 ═══════════════ */}
       <section id="vision2030" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
               {isRTL ? '12 — التوافق الوطني' : '12 — National Alignment'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={fontSans}>
               {isRTL ? (
-                <>مهندسة لخدمة <span className="italic" style={{ ...canela, color: COLOR.copper }}>رؤية السعودية 2030.</span></>
+                <>مهندسة لخدمة <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>رؤية السعودية 2030.</span></>
               ) : (
-                <>Engineered for <span className="italic" style={{ ...canela, color: COLOR.copper }}>Saudi Vision 2030.</span></>
+                <>Engineered for <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>Saudi Vision 2030.</span></>
               )}
             </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...fontBody, color: '#94A3B8' }}>
               {isRTL
                 ? 'رؤية 2030 ليست مخططاً للمستقبل، بل تحوّل حي وعالمي النطاق. عملت ألتوس استشارات على مواءمة رسالتها وبنية خدماتها مع الركائز الأساسية للمملكة.'
                 : 'Vision 2030 is not a blueprint of the future. It is a live, global-scale transformation. Altus Advisory has aligned its mission and service architecture to directly support the Kingdom’s core pillars.'}
@@ -60,9 +73,9 @@ export default function VisionPage() {
               },
             ].map((pillar) => (
               <div key={pillar.p} className="p-8 sm:p-9 border border-white/10" style={{ backgroundColor: COLOR.charcoalDeep }}>
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...neueHaas, color: COLOR.copper }}>{pillar.p}</div>
-                <h4 className="text-lg sm:text-xl text-white font-medium mb-3" style={neueHaas}>{pillar.t}</h4>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>{pillar.d}</p>
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...fontSans, color: COLOR.copper }}>{pillar.p}</div>
+                <h4 className="text-lg sm:text-xl text-white font-medium mb-3" style={fontSans}>{pillar.t}</h4>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed" style={{ ...fontBody, color: '#94A3B8' }}>{pillar.d}</p>
               </div>
             ))}
           </div>
@@ -74,17 +87,17 @@ export default function VisionPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-5 gap-12 items-start mb-14">
             <div className="lg:col-span-3">
-              <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
                 {isRTL ? '13 — مسار النمو السعودي' : '13 — The Saudi Growth Runway'}
               </div>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...fontSans, color: COLOR.charcoal }}>
                 {isRTL ? (
-                  <>فرصة <span className="italic" style={{ ...canela, color: COLOR.emerald }}>السوق.</span></>
+                  <>فرصة <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>السوق.</span></>
                 ) : (
-                  <>Market <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Opportunity.</span></>
+                  <>Market <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>Opportunity.</span></>
                 )}
               </h2>
-              <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
+              <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...fontBody, color: COLOR.slate }}>
                 {isRTL
                   ? 'تنفّذ المملكة أطمح توسّع فندقي في العالم. الأرقام تحدد حجم الفرصة وعلاوة التنفيذ المنضبط لصالح المالك.'
                   : 'The Kingdom is executing the most ambitious hospitality build-out in the world. The numbers define both the scale of the opportunity and the premium on disciplined, owner-side execution.'}
@@ -104,14 +117,14 @@ export default function VisionPage() {
             ].map((s) => (
               <div key={s.l}>
                 <div className="text-3xl sm:text-4xl font-semibold tracking-tight" style={{ ...mono, color: COLOR.emerald }}>{s.v}</div>
-                <div className="text-[11px] leading-snug font-medium mt-2" style={{ ...neueHaas, color: COLOR.slate }}>{s.l}</div>
+                <div className="text-[11px] leading-snug font-medium mt-2" style={{ ...fontSans, color: COLOR.slate }}>{s.l}</div>
               </div>
             ))}
           </div>
 
           {/* Visitor trajectory bar chart */}
           <div className="mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...neueHaas, color: COLOR.charcoal }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...fontSans, color: COLOR.charcoal }}>
               {isRTL ? 'مسار الزوّار نحو هدف 150 مليون (بالملايين)' : 'Visitor Trajectory Toward the 150M Target (Millions of Visits)'}
             </h3>
             <div className="flex items-end gap-3 sm:gap-6 h-48">
@@ -132,7 +145,7 @@ export default function VisionPage() {
                       opacity: bar.target ? 1 : 0.85,
                     }}
                   />
-                  <div className="text-xs font-medium" style={{ ...neueHaas, color: COLOR.slate }}>{bar.target ? (isRTL ? 'هدف 2030' : '2030 Target') : bar.y}</div>
+                  <div className="text-xs font-medium" style={{ ...fontSans, color: COLOR.slate }}>{bar.target ? (isRTL ? 'هدف 2030' : '2030 Target') : bar.y}</div>
                 </div>
               ))}
             </div>

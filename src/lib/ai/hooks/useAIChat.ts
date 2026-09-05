@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { HOTEL_PROMPTS } from '../prompts/hotelPrompts'
 import type { AIMessage, AIRequestOptions } from '../types'
+import { altusAI } from '../client'
 import { useAIStream } from './useAIStream'
 
 export interface UseAIChatOptions {
@@ -75,13 +76,38 @@ export function useAIChat(options: UseAIChatOptions = {}) {
           setMessages((prev) => [...prev, assistantMessage])
         }
       } catch (err) {
-        console.error('Chat error:', err)
+        console.warn('Chat stream error, attempting non-streaming fallback:', err)
+        try {
+          const fallbackRes = await altusAI.executePrompt(fullPrompt, {
+            systemPrompt,
+            task: 'chat',
+            ...overrideOptions,
+          })
+          if (fallbackRes.data) {
+            const assistantMessage: AIMessage = {
+              id: crypto.randomUUID(),
+              role: 'assistant',
+              content: fallbackRes.data,
+              timestamp: new Date(),
+            }
+            setMessages((prev) => [...prev, assistantMessage])
+            return
+          }
+        } catch (fallbackErr) {
+          console.error('Chat fallback also failed:', fallbackErr)
+        }
+
+        const rawMessage = err instanceof Error ? err.message : 'An error occurred while generating a response.'
+        const friendlyMessage = isArabic
+          ? 'عذراً، تعذر الاتصال بخدمة المساعد الذكي في الوقت الحالي. يرجى المحاولة مرة أخرى.'
+          : (rawMessage === 'Failed to fetch'
+              ? 'Unable to connect to the AI assistant service. Please check your network connection or try again shortly.'
+              : rawMessage)
+
         const errorMessage: AIMessage = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: isArabic
-            ? 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
-            : (err instanceof Error ? err.message : 'An error occurred while generating a response. Please try again.'),
+          content: friendlyMessage,
           timestamp: new Date(),
         }
         setMessages((prev) => [...prev, errorMessage])

@@ -1,27 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FadeInSection, StaggerChildren } from './publicComponents';
-import { COLOR, canela, inter, mono, neueHaas } from './publicConstants';
+import { COLOR, cairo, canela, inter, mono, neueHaas } from './publicConstants';
 
 export default function CaseStudiesPage() {
   const { i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  useEffect(() => {
+    const handleLangChange = (lng: string) => setCurrentLang(lng);
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
+  const isRTL = currentLang === 'ar' || currentLang.startsWith('ar') || i18n.dir() === 'rtl';
+
+  const fontSans = isRTL ? cairo : neueHaas;
+  const fontSerif = isRTL ? cairo : canela;
+  const fontBody = isRTL ? cairo : inter;
 
   return (
-    <div className="flex flex-col pt-20">
+    <div className="flex flex-col pt-20" dir={isRTL ? 'rtl' : 'ltr'}>
       <section id="case-studies" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <FadeInSection className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
               {isRTL ? '14–15 — إثبات المفهوم' : '14–15 — Proof of Concept'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...fontSans, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>دراسات حالة <span className="italic" style={{ ...canela, color: COLOR.emerald }}>توضيحية.</span></>
+                <>دراسات حالة <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>توضيحية.</span></>
               ) : (
-                <>Illustrative <span className="italic" style={{ ...canela, color: COLOR.emerald }}>case studies.</span></>
+                <>Illustrative <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>case studies.</span></>
               )}
             </h2>
-            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...fontBody, color: COLOR.slate }}>
               {isRTL
                 ? 'تكليفات مركّبة، مجهّلة، وموسومة بوضوح كتوضيحية. كل منها يعكس مهام قادها شركاؤنا شخصياً داخل علامات عالمية ومحافظ مستقلة.'
                 : 'Composite engagements, anonymised and clearly labelled as illustrative. Each reflects mandates our principals have personally led inside global brands and independent portfolios.'}
@@ -84,14 +97,14 @@ export default function CaseStudiesPage() {
               },
             ].map((cs) => (
               <div key={cs.title} className="p-8 sm:p-9 border hover:shadow-md transition-shadow duration-300" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
-                <div className="text-xs font-bold uppercase tracking-[0.15em] mb-3" style={{ ...neueHaas, color: COLOR.emerald }}>{cs.tag}</div>
-                <h4 className="text-lg sm:text-xl font-medium mb-3" style={{ ...neueHaas, color: COLOR.charcoal }}>{cs.title}</h4>
-                <p className="text-sm leading-relaxed mb-6" style={{ ...inter, color: COLOR.slate }}>{cs.challenge}</p>
+                <div className="text-xs font-bold uppercase tracking-[0.15em] mb-3" style={{ ...fontSans, color: COLOR.emerald }}>{cs.tag}</div>
+                <h4 className="text-lg sm:text-xl font-medium mb-3" style={{ ...fontSans, color: COLOR.charcoal }}>{cs.title}</h4>
+                <p className="text-sm leading-relaxed mb-6" style={{ ...fontBody, color: COLOR.slate }}>{cs.challenge}</p>
                 <div className="grid grid-cols-4 gap-2 pt-5 border-t" style={{ borderColor: COLOR.sand }}>
                   {cs.stats.map((s) => (
                     <div key={s.l}>
                       <div className="text-base sm:text-lg font-semibold" style={{ ...mono, color: COLOR.copper }}>{s.v}</div>
-                      <div className="text-[10px] uppercase tracking-wide leading-tight font-medium mt-1" style={{ ...neueHaas, color: COLOR.slate }}>{s.l}</div>
+                      <div className="text-[10px] uppercase tracking-wide leading-tight font-medium mt-1" style={{ ...fontSans, color: COLOR.slate }}>{s.l}</div>
                     </div>
                   ))}
                 </div>

@@ -1,41 +1,55 @@
 import { Button } from '@/components/ui/button';
 import { Check, Lock, ShieldCheck, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useBriefing } from './PublicLayout';
 import { FadeInSection, StaggerChildren } from './publicComponents';
-import { COLOR, canela, inter, neueHaas } from './publicConstants';
+import { COLOR, cairo, canela, inter, neueHaas, staggerItem } from './publicConstants';
 
 export default function DigitalAIPage() {
   const { i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  useEffect(() => {
+    const handleLangChange = (lng: string) => setCurrentLang(lng);
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
+  const isRTL = currentLang === 'ar' || currentLang.startsWith('ar') || i18n.dir() === 'rtl';
   const navigate = useNavigate();
   const { openBriefing } = useBriefing();
 
+  const fontSans = isRTL ? cairo : neueHaas;
+  const fontSerif = isRTL ? cairo : canela;
+  const fontBody = isRTL ? cairo : inter;
+
   return (
-    <div className="flex flex-col pt-20">
+    <div className="flex flex-col pt-20" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ═══════════════ DIGITAL & AI ═══════════════ */}
       <section id="digital-ai" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+          <FadeInSection className="max-w-2xl mb-14">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
               {isRTL ? '21 — طبقة الذكاء' : '21 — The Intelligence Layer'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={fontSans}>
               {isRTL ? (
-                <>الرقمنة <span className="italic" style={{ ...canela, color: COLOR.copper }}>والذكاء الاصطناعي.</span></>
+                <>الرقمنة <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>والذكاء الاصطناعي.</span></>
               ) : (
-                <>Digital <span className="italic" style={{ ...canela, color: COLOR.copper }}>&amp; AI.</span></>
+                <>Digital <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>&amp; AI.</span></>
               )}
             </h2>
-            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...fontBody, color: '#94A3B8' }}>
               {isRTL
                 ? 'كل تكليف من ألتوس يأتي مزوّداً بطبقة ذكاء: الأدوات التي تحوّل العمليات إلى أدلة، والأدلة إلى ميزة تنافسية.'
                 : 'Every Altus mandate ships with an intelligence layer: the instrumentation that turns operations into evidence, and evidence into advantage.'}
             </p>
-          </div>
+          </FadeInSection>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
                 t: isRTL ? 'ذكاء الأعمال' : 'Business Intelligence',
@@ -62,12 +76,17 @@ export default function DigitalAIPage() {
                 d: isRTL ? 'بنية CRM، الانتقال إلى السحابة، ومخططات تقنية متكاملة.' : 'CRM architecture, cloud migration, and integrated technology blueprints.',
               },
             ].map((d) => (
-              <div key={d.t} className="p-7 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.charcoalDeep }}>
-                <h4 className="text-sm font-bold uppercase tracking-wide mb-2.5" style={{ ...neueHaas, color: COLOR.copper }}>{d.t}</h4>
-                <p className="text-xs sm:text-sm leading-relaxed text-slate-300" style={{ ...inter, color: '#94A3B8' }}>{d.d}</p>
-              </div>
+              <motion.div
+                key={d.t}
+                variants={staggerItem}
+                className="p-7 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 bg-[#141820] hover:bg-[#181D26] transition-[transform,border-color,background-color] duration-150 ease-out hover:-translate-y-1 shadow-xl group"
+              >
+                <div className="w-2 h-2 rounded-full bg-[#C45B2F] mb-4 group-hover:scale-125 transition-transform duration-150" />
+                <h4 className="text-sm font-bold uppercase tracking-wide mb-2.5" style={{ ...fontSans, color: COLOR.copper }}>{d.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed text-slate-300" style={{ ...fontBody, color: '#94A3B8' }}>{d.d}</p>
+              </motion.div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
@@ -75,25 +94,25 @@ export default function DigitalAIPage() {
       <section id="why-clients" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
               {isRTL ? '22 — القرار في صفحة واحدة' : '22 — The Decision in One Page'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...fontSans, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>لماذا يختار العملاء <span className="italic" style={{ ...canela, color: COLOR.emerald }}>ألتوس.</span></>
+                <>لماذا يختار العملاء <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>ألتوس.</span></>
               ) : (
-                <>Why clients choose <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Altus.</span></>
+                <>Why clients choose <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>Altus.</span></>
               )}
             </h2>
           </div>
 
           <div className="overflow-x-auto border" style={{ borderColor: COLOR.sand }}>
-            <table className="w-full text-start" style={inter}>
+            <table className="w-full text-start" style={fontBody}>
               <thead>
                 <tr className="border-b" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
-                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.charcoal }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
-                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.slate }}>{isRTL ? 'الاستشارات التقليدية' : 'Traditional Consulting'}</th>
-                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.emerald }}>{isRTL ? 'ألتوس استشارات' : 'Altus Advisory'}</th>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...fontSans, color: COLOR.charcoal }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...fontSans, color: COLOR.slate }}>{isRTL ? 'الاستشارات التقليدية' : 'Traditional Consulting'}</th>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...fontSans, color: COLOR.emerald }}>{isRTL ? 'ألتوس استشارات' : 'Altus Advisory'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -120,11 +139,11 @@ export default function DigitalAIPage() {
                   },
                 ].map((row) => (
                   <tr key={row.d} className="border-b last:border-0" style={{ borderColor: COLOR.sand }}>
-                    <td className="p-4 text-xs font-bold align-top" style={{ ...neueHaas, color: COLOR.charcoal }}>{row.d}</td>
-                    <td className="p-4 text-xs align-top" style={{ ...inter, color: COLOR.slate }}>
+                    <td className="p-4 text-xs font-bold align-top" style={{ ...fontSans, color: COLOR.charcoal }}>{row.d}</td>
+                    <td className="p-4 text-xs align-top" style={{ ...fontBody, color: COLOR.slate }}>
                       <span className="flex items-start gap-2"><X className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-400/70" />{row.a}</span>
                     </td>
-                    <td className="p-4 text-xs align-top font-medium" style={{ ...inter, color: COLOR.emerald, backgroundColor: `${COLOR.emerald}0D` }}>
+                    <td className="p-4 text-xs align-top font-medium" style={{ ...fontBody, color: COLOR.emerald, backgroundColor: `${COLOR.emerald}0D` }}>
                       <span className="flex items-start gap-2"><Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: COLOR.emerald }} />{row.c}</span>
                     </td>
                   </tr>
@@ -139,17 +158,17 @@ export default function DigitalAIPage() {
       <section id="portal" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto grid lg:grid-cols-5 gap-10 lg:gap-16 items-center">
           <div className="lg:col-span-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...fontSans, color: COLOR.copper }}>
               {isRTL ? 'الدخول الآمن' : 'Secure Access'}
             </div>
-            <h2 className="text-3xl sm:text-5xl text-white font-normal leading-tight mb-5" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl text-white font-normal leading-tight mb-5" style={fontSans}>
               {isRTL ? (
-                <>البوابة <span className="italic" style={{ ...canela, color: COLOR.copper }}>الرقمية لألتوس.</span></>
+                <>البوابة <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>الرقمية لألتوس.</span></>
               ) : (
-                <>The Altus <span className="italic" style={{ ...canela, color: COLOR.copper }}>Portal.</span></>
+                <>The Altus <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>Portal.</span></>
               )}
             </h2>
-            <p className="text-sm text-slate-300 leading-relaxed mb-8 max-w-xl" style={{ ...inter, color: '#94A3B8' }}>
+            <p className="text-sm text-slate-300 leading-relaxed mb-8 max-w-xl" style={{ ...fontBody, color: '#94A3B8' }}>
               {isRTL
                 ? 'هذا الموقع هو أيضاً بوابتك: مساحة عمل آمنة لفرق ألتوس، والمنشآت الشريكة، وموظفي الخط الأمامي.'
                 : 'This site is also your gateway: a secure workspace for Altus teams, partner properties, and front-line staff.'}
@@ -158,8 +177,8 @@ export default function DigitalAIPage() {
             <div className="flex flex-wrap gap-4">
               <Button
                 onClick={() => navigate('/login')}
-                className="h-11 px-7 rounded-none text-xs font-bold tracking-[0.15em] uppercase text-white shadow-md hover:opacity-90"
-                style={{ background: COLOR.copper }}
+                className="h-11 px-7 rounded-none text-xs font-bold tracking-[0.15em] uppercase text-white shadow-md hover:opacity-90 transition-all duration-150 active:scale-[0.97]"
+                style={{ ...fontSans, background: COLOR.copper }}
               >
                 <Lock className="me-2 h-3.5 w-3.5" />
                 {isRTL ? 'الدخول إلى البوابة' : 'SIGN IN TO YOUR PORTAL'}
@@ -167,8 +186,8 @@ export default function DigitalAIPage() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/verify')}
-                className="h-11 px-7 rounded-none border border-white/20 bg-transparent hover:bg-white/5 text-white/90 text-xs font-semibold tracking-[0.15em] uppercase"
-                style={neueHaas}
+                className="h-11 px-7 rounded-none border border-white/20 bg-transparent hover:bg-white/5 text-white/90 text-xs font-semibold tracking-[0.15em] uppercase transition-all duration-150 active:scale-[0.97]"
+                style={fontSans}
               >
                 {isRTL ? 'التحقق من شهادة' : 'VERIFY A CERTIFICATE'}
               </Button>
@@ -181,15 +200,15 @@ export default function DigitalAIPage() {
                 <ShieldCheck className="w-5 h-5" style={{ color: COLOR.copper }} />
               </div>
               <div>
-                <div className="text-white text-sm font-bold" style={neueHaas}>{isRTL ? 'هل أنت مالك أو مستثمر جديد؟' : 'New owner or investor?'}</div>
-                <div className="text-xs text-slate-400" style={inter}>{isRTL ? 'ابدأ بمحادثة، لا حساب' : 'Start with a conversation, not an account'}</div>
+                <div className="text-white text-sm font-bold" style={fontSans}>{isRTL ? 'هل أنت مالك أو مستثمر جديد؟' : 'New owner or investor?'}</div>
+                <div className="text-xs text-slate-400" style={fontBody}>{isRTL ? 'ابدأ بمحادثة، لا حساب' : 'Start with a conversation, not an account'}</div>
               </div>
             </div>
             <Button
               onClick={openBriefing}
               variant="outline"
-              className="w-full h-11 rounded-none border bg-transparent text-xs font-bold tracking-[0.15em] uppercase transition-[background-color] duration-200 hover:bg-amber-600/10"
-              style={{ borderColor: COLOR.copper, color: COLOR.copper }}
+              className="w-full h-11 rounded-none border bg-transparent text-xs font-bold tracking-[0.15em] uppercase transition-all duration-150 active:scale-[0.97] hover:bg-amber-600/10"
+              style={{ ...fontSans, borderColor: COLOR.copper, color: COLOR.copper }}
             >
               {isRTL ? 'طلب إحاطة شريك' : 'REQUEST A BRIEFING'}
             </Button>
@@ -202,21 +221,21 @@ export default function DigitalAIPage() {
         <FadeInSection className="relative z-10 max-w-3xl mx-auto space-y-6">
           <h2
             className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight"
-            style={neueHaas}
+            style={fontSans}
           >
             {isRTL ? (
-              <>حوار خاص ومباشر <br /><span className="italic" style={{ ...canela, color: COLOR.copper }}>مع أحد الشركاء.</span></>
+              <>حوار خاص ومباشر <br /><span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>مع أحد الشركاء.</span></>
             ) : (
-              <>A private conversation <br /><span className="italic" style={{ ...canela, color: COLOR.copper }}>with a partner.</span></>
+              <>A private conversation <br /><span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>with a partner.</span></>
             )}
           </h2>
 
-          <div className="pt-4" style={neueHaas}>
+          <div className="pt-4" style={fontSans}>
             <Button
               size="lg"
               onClick={openBriefing}
-              className="h-12 px-8 rounded-none text-xs font-bold tracking-[0.2em] uppercase text-white shadow-lg transition-opacity duration-200 hover:opacity-90"
-              style={{ background: COLOR.copper }}
+              className="h-12 px-8 rounded-none text-xs font-bold tracking-[0.2em] uppercase text-white shadow-lg transition-all duration-150 active:scale-[0.97] hover:opacity-90"
+              style={{ ...fontSans, background: COLOR.copper }}
             >
               {isRTL ? 'طلب إحاطة شريك' : 'REQUEST A BRIEFING'}
             </Button>

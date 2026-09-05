@@ -1,28 +1,45 @@
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBriefing } from './PublicLayout';
 import { FadeInSection, StaggerChildren } from './publicComponents';
-import { COLOR, canela, inter, neueHaas, staggerItem } from './publicConstants';
+import { COLOR, cairo, canela, inter, neueHaas, staggerItem } from './publicConstants';
 
 export default function LeadershipPage() {
   const { i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  useEffect(() => {
+    const handleLangChange = (lng: string) => setCurrentLang(lng);
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
+  const isRTL = currentLang === 'ar' || currentLang.startsWith('ar') || i18n.dir() === 'rtl';
   const { openBriefing } = useBriefing();
 
+  const fontSans = isRTL ? cairo : neueHaas;
+  const fontSerif = isRTL ? cairo : canela;
+  const fontBody = isRTL ? cairo : inter;
+
   return (
-    <div className="flex flex-col pt-20">
+    <div className="flex flex-col pt-20" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ═══════════════ EXECUTIVE LEADERSHIP ═══════════════ */}
       <section id="leadership" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <FadeInSection className="max-w-5xl mx-auto text-center space-y-4 mb-14">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...neueHaas, color: COLOR.copper }}>
-            {isRTL ? '16–17 — القيادة التنفيذية' : '16–17 — Executive Leadership'}
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...fontSans, color: COLOR.copper }}>
+            {isRTL ? '١٦–١٧ — القيادة التنفيذية' : '16–17 — Executive Leadership'}
           </div>
           <h2
             className="text-3xl sm:text-5xl md:text-6xl text-white font-normal"
-            style={neueHaas}
+            style={fontSans}
           >
-            Named. <span className="italic" style={{ ...canela, color: COLOR.copper }}>Present.</span> Accountable.
+            {isRTL ? (
+              <>حاضرون. <span className="italic" style={{ ...fontSerif, color: COLOR.copper }}>معروفون.</span> مسؤولون.</>
+            ) : (
+              <>Named. <span className="italic" style={{ ...canela, color: COLOR.copper }}>Present.</span> Accountable.</>
+            )}
           </h2>
         </FadeInSection>
 
@@ -38,13 +55,15 @@ export default function LeadershipPage() {
                   style={{ borderColor: COLOR.copper }}
                 />
                 <div>
-                  <h3 className="text-xl text-white font-medium" style={canela}>Islam Mahrous</h3>
-                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...neueHaas, color: COLOR.copper }}>
+                  <h3 className="text-xl text-white font-medium" style={fontSerif}>
+                    {isRTL ? 'إسلام محروس' : 'Islam Mahrous'}
+                  </h3>
+                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...fontSans, color: COLOR.copper }}>
                     {isRTL ? 'مؤسس مشارك: العلامة، الاستراتيجية التجارية، والتحول الرقمي' : 'Co-Founder: Brand, Commercial Strategy & AI-Driven Digital Transformation'}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>
+              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...fontBody, color: '#94A3B8' }}>
                 {isRTL
                   ? 'إسلام هو مبتكر النمو في الشركة وحافتها التقنية المستقبلية: الجسر الحيوي بين نماذج الأعمال التقليدية ومتطلبات العصر الحديث. عبر ثلاثة عقود من القيادة متعددة العلامات مع ماريوت وIHG وستارووود وأكور، وإدارة أصول مستقلة عبر السعودية والخليج ومصر وشمال أفريقيا.'
                   : 'Islam is the firm’s growth innovator and its forward-looking technological edge: the vital bridge between traditional business models and the demands of the modern era. Across three decades of multi-brand leadership with Marriott, IHG, Starwood, and Accor, and independent asset management across Saudi Arabia, the GCC, Egypt, and North Africa.'}
@@ -61,13 +80,15 @@ export default function LeadershipPage() {
                   style={{ borderColor: COLOR.copper }}
                 />
                 <div>
-                  <h3 className="text-xl text-white font-medium" style={canela}>Hossam Smadi</h3>
-                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...neueHaas, color: COLOR.copper }}>
+                  <h3 className="text-xl text-white font-medium" style={fontSerif}>
+                    {isRTL ? 'حسام صمادي' : 'Hossam Smadi'}
+                  </h3>
+                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...fontSans, color: COLOR.copper }}>
                     {isRTL ? 'مؤسس مشارك: عمليات الضيافة وإدارة الأصول' : 'Co-Founder: Hospitality Operations & Asset Management'}
                   </p>
                 </div>
               </div>
-              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>
+              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...fontBody, color: '#94A3B8' }}>
                 {isRTL
                   ? 'حسام هو المهندس التشغيلي للشركة. بخبرة عميقة في تعقيدات تشغيل الضيافة الدولية، يركّز على تحويل الأصول المادية إلى مؤسسات عالية العائد وخالية من العيوب التشغيلية.'
                   : 'Hossam is the firm’s operational architect. With deep expertise in the operating complexities of international hospitality, his focus is converting physical assets into high-yield, operationally flawless institutions.'}
@@ -78,8 +99,8 @@ export default function LeadershipPage() {
           <div className="text-center mt-10">
             <button
               onClick={openBriefing}
-              className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 mx-auto transition-colors duration-300 hover:opacity-80"
-              style={{ ...neueHaas, color: COLOR.copper }}
+              className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 mx-auto transition-all duration-150 active:scale-[0.97] hover:opacity-80"
+              style={{ ...fontSans, color: COLOR.copper }}
             >
               <span>{isRTL ? 'تعرف على الشركاء' : 'MEET THE FIRM'}</span>
               <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />

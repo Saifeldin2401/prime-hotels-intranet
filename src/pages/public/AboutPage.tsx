@@ -1,14 +1,27 @@
 import { ArrowRight, Award, CheckCircle2, ChevronRight, Compass, Quote, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBriefing } from './PublicLayout';
 import { CopperDivider, FadeInSection, StaggerChildren } from './publicComponents';
-import { COLOR, canela, inter, mono, neueHaas, staggerItem } from './publicConstants';
+import { COLOR, cairo, canela, inter, mono, neueHaas, staggerItem } from './publicConstants';
 
 export default function AboutPage() {
   const { i18n } = useTranslation();
-  const isRTL = i18n.dir() === 'rtl';
+  const [currentLang, setCurrentLang] = useState(i18n.language || 'en');
+
+  useEffect(() => {
+    const handleLangChange = (lng: string) => setCurrentLang(lng);
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [i18n]);
+
+  const isRTL = currentLang === 'ar' || currentLang.startsWith('ar') || i18n.dir() === 'rtl';
   const { openBriefing } = useBriefing();
+
+  const fontSans = isRTL ? cairo : neueHaas;
+  const fontSerif = isRTL ? cairo : canela;
+  const fontBody = isRTL ? cairo : inter;
 
   const practices = [
     {
@@ -60,7 +73,7 @@ export default function AboutPage() {
   ];
 
   return (
-    <div className="flex flex-col pt-16 selection:bg-[#C45B2F]/30 selection:text-white">
+    <div className="flex flex-col pt-16 selection:bg-[#C45B2F]/30 selection:text-white" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ═══════════════ SECTION 1: FIRM PHILOSOPHY & EDITORIAL HERO ═══════════════ */}
       <section className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: COLOR.charcoalDeep }}>
         {/* Subtle Ambient Art Deco Lines */}
@@ -71,14 +84,14 @@ export default function AboutPage() {
         <FadeInSection className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
           <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-[#C45B2F]/40 bg-[#C45B2F]/10">
             <span className="w-2 h-2 rounded-full bg-[#C45B2F] animate-pulse" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E07A5F]" style={neueHaas}>
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E07A5F]" style={fontSans}>
               {isRTL ? '٠١ — فلسفة المنظومة وميثاق الأمانة' : '01 — FIRM PHILOSOPHY & MANDATE'}
             </span>
           </div>
 
           <h1
             className="text-4xl sm:text-6xl md:text-7xl text-white font-normal leading-[1.08] tracking-tight"
-            style={canela}
+            style={fontSerif}
           >
             {isRTL ? (
               <>
@@ -93,7 +106,7 @@ export default function AboutPage() {
             )}
           </h1>
 
-          <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-slate-300 max-w-3xl mx-auto" style={inter}>
+          <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-slate-300 max-w-3xl mx-auto" style={fontBody}>
             {isRTL
               ? 'صُممت ألتوس استشارات كمنظومة نخبوية متكاملة تسد الفجوة الهيكلية بين العمليات التشغيلية الفندقية التقليدية وذكاء الأعمال الرقمي المتقدم، بقيادة تنفيذية مسؤولة عن النتيجة وليس مجرد التقارير.'
               : 'Altus Advisory was engineered as an elite strategy house closing the structural gap between traditional hospitality operations and advanced AI business intelligence — led by principals accountable for returns, not reports.'}
@@ -110,7 +123,7 @@ export default function AboutPage() {
             <div className="relative z-10 space-y-6 text-center">
               <div className="w-12 h-1 bg-[#C45B2F] mx-auto rounded-full" />
               
-              <blockquote className="text-xl sm:text-2xl md:text-3xl text-white font-normal leading-relaxed" style={canela}>
+              <blockquote className="text-xl sm:text-2xl md:text-3xl text-white font-normal leading-relaxed" style={fontSerif}>
                 {isRTL ? (
                   <>
                     «لا ننتج تقارير استشارية لتُحفظ على الرفوف؛ بل <span className="italic text-[#E07A5F]">نهندس قدرات تشغيلية</span> ونظم عمل حية تتحول مباشرة إلى عوائد استثمارية للمالك.»
@@ -123,10 +136,10 @@ export default function AboutPage() {
               </blockquote>
 
               <div className="pt-2">
-                <div className="text-xs uppercase tracking-[0.25em] font-bold text-[#E07A5F]" style={neueHaas}>
+                <div className="text-xs uppercase tracking-[0.25em] font-bold text-[#E07A5F]" style={fontSans}>
                   {isRTL ? 'ميثاق ألتوس الاستشاري' : 'THE ALTUS ADVISORY CREED'}
                 </div>
-                <div className="text-xs text-slate-400 mt-1" style={inter}>
+                <div className="text-xs text-slate-400 mt-1" style={fontBody}>
                   {isRTL ? 'المملكة العربية السعودية • الرياض' : 'Kingdom of Saudi Arabia • Riyadh'}
                 </div>
               </div>
@@ -139,17 +152,17 @@ export default function AboutPage() {
       <section id="why-altus" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoalDeep }}>
         <FadeInSection className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={fontSans}>
               {isRTL ? '٠٣ — ميزة ألتوس التنافسية' : '03 — The Altus Edge'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={fontSans}>
               {isRTL ? (
-                <>لماذا <span className="italic" style={{ ...canela, color: '#E07A5F' }}>ألتوس استشارات.</span></>
+                <>لماذا <span className="italic" style={{ ...fontSerif, color: '#E07A5F' }}>ألتوس استشارات.</span></>
               ) : (
                 <>Why <span className="italic" style={{ ...canela, color: '#E07A5F' }}>Altus Advisory.</span></>
               )}
             </h2>
-            <p className="text-sm sm:text-base leading-relaxed mt-5 text-slate-300" style={inter}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5 text-slate-300" style={fontBody}>
               {isRTL
                 ? 'يعمل قطاع الاستشارات غالباً بمعزل: العمليات التقليدية من جهة، والتحول الرقمي من جهة أخرى. صُممت ألتوس لسد هذه الفجوة الهيكلية بولاية واحدة متكاملة.'
                 : 'The consulting landscape too often operates in silos: traditional operations on one side, digital transformation on the other. Altus was engineered to close that structural gap with a single, integrated mandate.'}
@@ -201,17 +214,17 @@ export default function AboutPage() {
                 className="p-8 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-300 shadow-xl group"
               >
                 <div className="w-2 h-2 rounded-full bg-[#C45B2F] mb-4 group-hover:scale-150 transition-transform" />
-                <h4 className="text-lg text-white font-bold mb-3" style={neueHaas}>{edge.title}</h4>
-                <p className="text-sm leading-relaxed text-slate-300" style={inter}>{edge.desc}</p>
+                <h4 className="text-lg text-white font-bold mb-3" style={fontSans}>{edge.title}</h4>
+                <p className="text-sm leading-relaxed text-slate-300" style={fontBody}>{edge.desc}</p>
               </motion.div>
             ))}
           </StaggerChildren>
 
           <div className="mt-12 p-8 sm:p-10 rounded-2xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 shadow-2xl">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2 text-[#E07A5F]" style={neueHaas}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2 text-[#E07A5F]" style={fontSans}>
               {isRTL ? 'عرض القيمة الفريد' : 'Unique Value Proposition'}
             </div>
-            <p className="text-base sm:text-xl leading-relaxed text-white" style={canela}>
+            <p className="text-base sm:text-xl leading-relaxed text-white" style={fontSerif}>
               {isRTL
                 ? 'تميّز تشغيلي رفيع في الضيافة، مندمج مع ذكاء إيرادي مدعوم بالذكاء الاصطناعي: أثر ملموس عبر وضوح استراتيجي، وانضباط تشغيلي، وابتكار رقمي متواصل.'
                 : 'High-level hospitality operational excellence, integrated with AI-driven revenue intelligence: delivering measurable impact through strategic clarity, operational rigour, and continuous digital innovation.'}
@@ -224,12 +237,12 @@ export default function AboutPage() {
       <section id="practices" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
           <FadeInSection className="mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={fontSans}>
               {isRTL ? '٠٤–٠٥ — محفظة الممارسة الاستشارية' : '04–05 — Service Portfolio'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={fontSans}>
               {isRTL ? (
-                <>قسمان استشاريان. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>منصة حصريّة واحدة.</span></>
+                <>قسمان استشاريان. <span className="italic" style={{ ...fontSerif, color: '#E07A5F' }}>منصة حصريّة واحدة.</span></>
               ) : (
                 <>Two divisions. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>One proprietary platform.</span></>
               )}
@@ -244,15 +257,15 @@ export default function AboutPage() {
                 className="p-8 sm:p-10 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 transition-all duration-300 group relative overflow-hidden flex flex-col shadow-2xl bg-[#141820]"
               >
                 <div className="relative z-10 flex-1">
-                  <div className="inline-block text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#E07A5F] px-3 py-1 rounded bg-[#C45B2F]/15 border border-[#C45B2F]/30" style={neueHaas}>
+                  <div className="inline-block text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#E07A5F] px-3 py-1 rounded bg-[#C45B2F]/15 border border-[#C45B2F]/30" style={fontSans}>
                     {pr.tag}
                   </div>
-                  <h3 className="text-2xl text-white font-bold mb-3" style={neueHaas}>{pr.title}</h3>
-                  <p className="text-sm leading-relaxed mb-6 text-slate-300" style={inter}>{pr.desc}</p>
+                  <h3 className="text-2xl text-white font-bold mb-3" style={fontSans}>{pr.title}</h3>
+                  <p className="text-sm leading-relaxed mb-6 text-slate-300" style={fontBody}>{pr.desc}</p>
 
                   <ul className="space-y-3 mb-8 border-t border-white/10 pt-6">
                     {pr.services.map((s) => (
-                      <li key={s} className="text-sm text-slate-200 flex items-start gap-3" style={inter}>
+                      <li key={s} className="text-sm text-slate-200 flex items-start gap-3" style={fontBody}>
                         <span className="mt-1.5 h-2 w-2 rounded-full shrink-0 bg-[#C45B2F]" />
                         <span>{s}</span>
                       </li>
@@ -261,8 +274,8 @@ export default function AboutPage() {
 
                   <button
                     onClick={openBriefing}
-                    className="text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 text-[#E07A5F] hover:text-white transition-colors duration-300"
-                    style={neueHaas}
+                    className="text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 text-[#E07A5F] hover:text-white transition-all duration-150 active:scale-[0.97]"
+                    style={fontSans}
                   >
                     <span>{isRTL ? 'طلب إحاطة للخدمة' : 'REQUEST SERVICE BRIEFING'}</span>
                     <ArrowRight className="w-4 h-4 rtl:rotate-180" />
@@ -278,17 +291,17 @@ export default function AboutPage() {
       <section id="leadership" className="py-24 sm:py-32 px-4 sm:px-6 relative border-t border-white/10" style={{ backgroundColor: COLOR.charcoalDeep }}>
         <div className="max-w-6xl mx-auto">
           <FadeInSection className="text-center space-y-4 mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={neueHaas}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={fontSans}>
               {isRTL ? '٠٦ — القيادة والشركاء المؤسسون' : '06 — Executive Leadership'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal" style={neueHaas}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal" style={fontSans}>
               {isRTL ? (
-                <>أسماء موثوقة. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>حضور ميداني.</span> مسؤولية كاملة.</>
+                <>أسماء موثوقة. <span className="italic" style={{ ...fontSerif, color: '#E07A5F' }}>حضور ميداني.</span> مسؤولية كاملة.</>
               ) : (
                 <>Named. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>Present.</span> Accountable.</>
               )}
             </h2>
-            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto" style={inter}>
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto" style={fontBody}>
               {isRTL
                 ? 'يقود كل مهمة استشارية الشركاء المؤسسون مباشرة، بخبرة تراكمية تزيد عن 60 عاماً داخل كبرى المجموعات الفندقية العالمية.'
                 : 'Every advisory engagement is directly orchestrated by principals, backed by 60+ combined years of operating leadership across global hotel powerhouses.'}
@@ -314,8 +327,10 @@ export default function AboutPage() {
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl text-white font-normal" style={canela}>Islam Mahrous</h3>
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={neueHaas}>
+                    <h3 className="text-2xl text-white font-normal" style={fontSerif}>
+                      {isRTL ? 'إسلام محروس' : 'Islam Mahrous'}
+                    </h3>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={fontSans}>
                       {isRTL ? 'مؤسس مشارك: الاستراتيجية التجارية والتحول الرقمي' : 'Co-Founder: Brand, Commercial Strategy & AI Transformation'}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -324,7 +339,7 @@ export default function AboutPage() {
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-300 leading-relaxed" style={inter}>
+                <p className="text-sm text-slate-300 leading-relaxed" style={fontBody}>
                   {isRTL
                     ? 'إسلام هو مبتكر النمو في الشركة وحافتها التقنية المستقبلية: الجسر الحيوي بين نماذج الأعمال التقليدية ومتطلبات العصر الحديث. عبر ثلاثة عقود من القيادة متعددة العلامات مع ماريوت وIHG وستارووود وأكور، وإدارة أصول مستقلة عبر السعودية والخليج ومصر وشمال أفريقيا.'
                     : 'Islam is the firm’s growth innovator and forward-looking technological edge: the vital bridge between traditional business models and modern digital agility. Over three decades of multi-brand leadership across Marriott, IHG, Starwood, and Accor systems in Saudi Arabia and the MENA region.'}
@@ -335,8 +350,8 @@ export default function AboutPage() {
                 <span className="text-xs font-mono text-[#E07A5F]">P&L Accountability • 30+ Yrs</span>
                 <button
                   onClick={openBriefing}
-                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-colors flex items-center gap-1.5"
-                  style={neueHaas}
+                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-all duration-150 active:scale-[0.97] flex items-center gap-1.5"
+                  style={fontSans}
                 >
                   <span>{isRTL ? 'حجز جلسة' : 'Request Briefing'}</span>
                   <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
@@ -362,8 +377,10 @@ export default function AboutPage() {
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl text-white font-normal" style={canela}>Hossam Smadi</h3>
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={neueHaas}>
+                    <h3 className="text-2xl text-white font-normal" style={fontSerif}>
+                      {isRTL ? 'حسام صمادي' : 'Hossam Smadi'}
+                    </h3>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={fontSans}>
                       {isRTL ? 'مؤسس مشارك: العمليات الفندقية وإدارة الأصول' : 'Co-Founder: Hospitality Operations & Asset Management'}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
@@ -372,7 +389,7 @@ export default function AboutPage() {
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-300 leading-relaxed" style={inter}>
+                <p className="text-sm text-slate-300 leading-relaxed" style={fontBody}>
                   {isRTL
                     ? 'حسام هو المهندس التشغيلي للشركة. بخبرة عميقة في تعقيدات تشغيل الضيافة الدولية وحوكمة عقود الإدارة الفندقية، يركّز على تحويل الأصول المادية إلى مؤسسات عالية العائد وخالية من العيوب التشغيلية.'
                     : 'Hossam is the firm’s operational architect. With deep expertise in the operational complexities of international hospitality and HMA governance, his focus is converting physical hotel assets into high-yield, operationally flawless institutions.'}
@@ -383,8 +400,8 @@ export default function AboutPage() {
                 <span className="text-xs font-mono text-[#E07A5F]">Operations Architect • 30+ Yrs</span>
                 <button
                   onClick={openBriefing}
-                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-colors flex items-center gap-1.5"
-                  style={neueHaas}
+                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-all duration-150 active:scale-[0.97] flex items-center gap-1.5"
+                  style={fontSans}
                 >
                   <span>{isRTL ? 'حجز جلسة' : 'Request Briefing'}</span>
                   <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
@@ -400,17 +417,17 @@ export default function AboutPage() {
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl mb-14">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded bg-[#2E7D5A] text-white" style={neueHaas}>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded bg-[#2E7D5A] text-white" style={fontSans}>
                 {isRTL ? 'المنصة الرقمية' : 'PROPRIETARY PLATFORM'}
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={neueHaas}>
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={fontSans}>
                 {isRTL ? '٠٧ — معهد المعرفة والأداء' : '07 — Knowledge & Performance System'}
               </span>
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight text-[#1E2329]" style={neueHaas}>
-              altus <span className="italic" style={{ ...canela, color: COLOR.emerald }}>{isRTL ? 'للمعرفة وأداء الضيافة' : 'Hospitality Knowledge & Performance'}</span>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight text-[#1E2329]" style={fontSans}>
+              altus <span className="italic" style={{ ...fontSerif, color: COLOR.emerald }}>{isRTL ? 'للمعرفة وأداء الضيافة' : 'Hospitality Knowledge & Performance'}</span>
             </h2>
-            <p className="text-sm sm:text-base leading-relaxed mt-5 text-[#5B6775]" style={inter}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5 text-[#5B6775]" style={fontBody}>
               {isRTL
                 ? 'منتج استراتيجي حصري يحوّل ثلاثة عقود من الخبرة الفندقية ومعايير التشغيل إلى نظام رقمي منظم للتعلم وإدارة المعرفة وقياس الأداء، مصمم خصيصاً للفنادق المستقلة والشقق الفندقية والمنشآت في المملكة والمنطقة.'
                 : 'A proprietary Altus product converting three decades of hotel operating standards into a structured digital system for learning, SOP governance, and performance measurement — purpose-built for hospitality establishments across Saudi Arabia.'}
@@ -419,7 +436,7 @@ export default function AboutPage() {
 
           {/* Five integrated layers */}
           <div className="mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#1E2329]" style={neueHaas}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#1E2329]" style={fontSans}>
               {isRTL ? 'خمس طبقات معمارية متكاملة' : 'Five Integrated Architectural Layers'}
             </h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -452,8 +469,8 @@ export default function AboutPage() {
               ].map((layer) => (
                 <div key={layer.n} className="p-6 rounded-xl border border-[#D9C6A3]/60 bg-white/80 shadow-sm hover:shadow-md transition-shadow">
                   <div className="text-2xl font-bold mb-3 text-[#C45B2F]" style={mono}>{layer.n}</div>
-                  <h4 className="text-sm font-bold mb-2 text-[#1E2329]" style={neueHaas}>{layer.t}</h4>
-                  <p className="text-xs leading-relaxed text-[#5B6775]" style={inter}>{layer.d}</p>
+                  <h4 className="text-sm font-bold mb-2 text-[#1E2329]" style={fontSans}>{layer.t}</h4>
+                  <p className="text-xs leading-relaxed text-[#5B6775]" style={fontBody}>{layer.d}</p>
                 </div>
               ))}
             </div>
@@ -461,10 +478,10 @@ export default function AboutPage() {
 
           {/* Master curriculum */}
           <div className="mb-12">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-2 text-[#1E2329]" style={neueHaas}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-2 text-[#1E2329]" style={fontSans}>
               {isRTL ? 'المنهج الرئيسي: عشرة مجالات مهنية معتمدة' : 'Master Curriculum: Ten Professional Domains'}
             </h3>
-            <p className="text-xs mb-6 text-[#5B6775]" style={inter}>
+            <p className="text-xs mb-6 text-[#5B6775]" style={fontBody}>
               {isRTL
                 ? 'نموذج محتوى منظم: المجال المهني ← المسار ← الوحدة التدريبية ← الدرس ← التقييم والشهادة المعتمدة'
                 : 'Structured content model: Professional Domain → Track → Module → Lesson → Assessment & Certification'}
@@ -474,7 +491,7 @@ export default function AboutPage() {
                 ? ['أساسيات الفندقة', 'الاستقبال وخدمات النزلاء', 'التدبير المنزلي', 'الأغذية والمشروبات', 'المطبخ وفنون الطهي', 'المبيعات والتسويق', 'إدارة الإيرادات والحجوزات', 'تجربة النزيل الفاخرة', 'الجودة والتدقيق التشغيلي', 'الأمن والسلامة والصحة المهنية']
                 : ['Hotel Fundamentals', 'Front Office & Concierge', 'Housekeeping Operations', 'Food & Beverage Service', 'Culinary & Kitchen', 'Sales & Marketing', 'Revenue & Reservations', 'Guest Experience', 'Quality & Operational Audit', 'Safety, Security & Health']
               ).map((d) => (
-                <span key={d} className="text-xs px-4 py-2 rounded-lg border border-[#D9C6A3]/80 bg-white text-[#1E2329] font-medium shadow-sm" style={neueHaas}>
+                <span key={d} className="text-xs px-4 py-2 rounded-lg border border-[#D9C6A3]/80 bg-white text-[#1E2329] font-medium shadow-sm" style={fontSans}>
                   {d}
                 </span>
               ))}
@@ -486,17 +503,17 @@ export default function AboutPage() {
       {/* ═══════════════ SECTION 7: INDUSTRIES WE SERVE ═══════════════ */}
       <section id="industries" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-5xl mx-auto text-center">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={fontSans}>
             {isRTL ? '٠٨ — تغطية القطاعات' : '08 — Sector Coverage'}
           </div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight mb-6" style={neueHaas}>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight mb-6" style={fontSans}>
             {isRTL ? (
-              <>القطاعات <span className="italic" style={{ ...canela, color: '#E07A5F' }}>التي نخدمها.</span></>
+              <>القطاعات <span className="italic" style={{ ...fontSerif, color: '#E07A5F' }}>التي نخدمها.</span></>
             ) : (
               <>Industries <span className="italic" style={{ ...canela, color: '#E07A5F' }}>we serve.</span></>
             )}
           </h2>
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-14" style={inter}>
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-14" style={fontBody}>
             {isRTL
               ? 'فلسفة تشغيلية واحدة، مطبقة عبر القطاعات الحيوية التي تقود تحول المملكة، أينما تحدّد الخدمة الرفيعة وأداء الأصل وتجربة النزيل النتيجة الاستثمارية.'
               : 'One operating philosophy, applied across the sectors driving the Kingdom’s transformation, wherever service, asset performance, and guest experience decide the outcome.'}
@@ -510,7 +527,7 @@ export default function AboutPage() {
               <span
                 key={ind}
                 className="text-xs px-5 py-3 rounded-xl border border-white/15 text-slate-300 hover:border-[#C45B2F] hover:text-white transition-all duration-300 font-medium bg-[#16191E] shadow-md"
-                style={neueHaas}
+                style={fontSans}
               >
                 {ind}
               </span>

@@ -1539,17 +1539,20 @@ select:focus-visible {
   transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), filter 1s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.super-travel-card:hover .super-travel-img,
-.super-travel-img-wrapper:hover .super-travel-img,
-.super-travel-img:hover {
-  filter: grayscale(0%);
-  transform: scale(1.08);
+@media (hover: hover) and (pointer: fine) {
+  .super-travel-card:hover .super-travel-img,
+  .super-travel-img-wrapper:hover .super-travel-img,
+  .super-travel-img:hover {
+    filter: grayscale(0%);
+    transform: scale(1.04);
+  }
 }
 
 .reveal-up {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(16px);
+  transition: opacity 350ms cubic-bezier(0.23, 1, 0.32, 1), transform 350ms cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform, opacity;
 }
 
 .reveal-up.is-visible {
