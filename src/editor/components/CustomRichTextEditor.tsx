@@ -178,7 +178,7 @@ export function CustomRichTextEditor({
     async (files: File[], position?: number) => {
       const currentEditor = editorRef.current || editor
       if (!currentEditor || !isMountedRef.current) return
-      const imageFiles = files.filter((f) => f.type.startsWith('image/'))
+      const imageFiles = files.filter((f) => f.type.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg)$/i.test(f.name))
       if (!imageFiles.length) return
 
       setIsUploadingImage(true)
@@ -207,7 +207,7 @@ export function CustomRichTextEditor({
     async (files: File[]) => {
       const currentEditor = editorRef.current || editor
       if (!currentEditor || !isMountedRef.current) return
-      const file = files.find((f) => f.type.startsWith('video/'))
+      const file = files.find((f) => f.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi|m4v|ogv|3gp)$/i.test(f.name))
       if (!file) return
 
       setVideoPhase({ stage: 'idle' })

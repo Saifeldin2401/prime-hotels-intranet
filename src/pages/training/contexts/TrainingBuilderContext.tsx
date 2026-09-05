@@ -1588,7 +1588,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         return
       }
 
-      if (type !== 'video' && file.size > MAX_UPLOAD_SIZE_BYTES[type]) {
+      if (file.size > (MAX_UPLOAD_SIZE_BYTES[type] ?? 500 * 1024 * 1024)) {
         toast({
           title: t('uploadFailed'),
           description: t('builder.uploadTooLarge', {
@@ -1600,24 +1600,35 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }
 
       setUploading(true)
-      const fileExt = file.name.split('.').pop()
+      const fileExt = (file.name.split('.').pop() || '').toLowerCase()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
       const filePath = `training/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
 
+      // Infer appropriate content type if missing or octet-stream
+      let inferredContentType = file.type
+      if (!inferredContentType || inferredContentType === 'application/octet-stream') {
+        if (type === 'video') {
+          inferredContentType = fileExt === 'webm' ? 'video/webm' : fileExt === 'mov' ? 'video/quicktime' : fileExt === 'mkv' ? 'video/x-matroska' : 'video/mp4'
+        } else if (type === 'audio') {
+          inferredContentType = fileExt === 'wav' ? 'audio/wav' : fileExt === 'ogg' ? 'audio/ogg' : 'audio/mpeg'
+        } else if (type === 'image') {
+          inferredContentType = fileExt === 'png' ? 'image/png' : fileExt === 'webp' ? 'image/webp' : fileExt === 'gif' ? 'image/gif' : 'image/jpeg'
+        } else {
+          inferredContentType = 'application/pdf'
+        }
+      }
+
       const { error: uploadError } = await supabase.storage
-        .from('documents')
+        .from('training-content')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false,
-          contentType: file.type
+          contentType: inferredContentType
         })
 
       if (uploadError) throw uploadError
 
-      // The 'documents' bucket is private -- a public URL here 404s, which is
-      // what silently broke every uploaded image/audio/document training block.
-      // Store the object path; the player signs it at view time via
-      // resolveStorageUrl(value, ttl, 'documents').
+      // Store the object path; the player resolves it via resolveStorageUrl(value, ttl, 'training-content').
       const displayName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').trim()
       setCurrentBlock(prev => ({
         ...prev,
@@ -1626,9 +1637,16 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }))
       addRecentUpload({ url: filePath, name: file.name, type })
 
+      const successDescriptions: Record<string, string> = {
+        image: t('imageUploaded', 'Image uploaded successfully'),
+        video: t('videoUploaded', 'Video uploaded successfully'),
+        audio: t('audioUploaded', 'Audio uploaded successfully'),
+        document: t('documentUploaded', 'Document uploaded successfully')
+      }
+
       toast({
         title: t('uploadSuccessful'),
-        description: type === 'image' ? t('imageUploaded') : t('documentUploaded')
+        description: successDescriptions[type] || t('uploadSuccessful')
       })
     } catch (error) {
       const errorDetails = getUserFriendlyError(error)

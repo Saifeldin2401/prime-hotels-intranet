@@ -474,9 +474,9 @@ function useResolvedStorageUrl(src: string | undefined) {
             setResolvedSrc(null)
             return
         }
-        // Builder uploads are stored as a bare path in the private 'documents'
-        // bucket; external URLs (YouTube etc.) pass through untouched.
-        resolveStorageUrl(src, 300, 'documents').then((url) => {
+        // Training media uploads are stored in 'training-content' (or legacy 'documents');
+        // external URLs (YouTube etc.) pass through untouched.
+        resolveStorageUrl(src, 3600, 'training-content').then((url) => {
             if (!cancelled) {
                 setResolvedSrc(url)
                 setResolving(false)

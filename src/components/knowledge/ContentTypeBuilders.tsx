@@ -196,7 +196,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                         ref={fileInputRef}
                         type="file"
                         className="hidden"
-                        accept="video/mp4,video/quicktime,video/webm"
+                        accept="video/*"
                         onChange={async (e) => {
                             const file = e.target.files?.[0]
                             if (!file) return

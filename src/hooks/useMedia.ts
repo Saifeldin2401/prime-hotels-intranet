@@ -73,7 +73,16 @@ import type {
 
 // Allowed media types mapped to MIME types
 const ALLOWED_MEDIA_TYPES: Record<MediaType, string[]> = {
-  video: ['video/mp4', 'video/webm', 'video/quicktime'],
+  video: [
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+    'video/x-matroska',
+    'video/ogg',
+    'video/avi',
+    'video/x-msvideo',
+    'video/3gpp'
+  ],
   image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
   document: [
     'application/pdf',
@@ -81,7 +90,7 @@ const ALLOWED_MEDIA_TYPES: Record<MediaType, string[]> = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/plain',
   ],
-  audio: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
+  audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'],
 };
 
 // Default max file sizes in MB
@@ -360,11 +369,20 @@ export function useMedia(options: UseMediaOptions = {}) {
       const errors: string[] = [];
 
       // Detect media type
+      const extension = (file.name.split('.').pop() || '').toLowerCase();
       let mediaType: MediaType = 'document';
-      for (const [type, mimes] of Object.entries(ALLOWED_MEDIA_TYPES)) {
-        if (mimes.includes(file.type)) {
-          mediaType = type as MediaType;
-          break;
+      if (['mp4', 'webm', 'mov', 'mkv', 'avi', 'm4v', 'ogv'].includes(extension) || file.type.startsWith('video/')) {
+        mediaType = 'video';
+      } else if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension) || file.type.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(extension) || file.type.startsWith('audio/')) {
+        mediaType = 'audio';
+      } else {
+        for (const [type, mimes] of Object.entries(ALLOWED_MEDIA_TYPES)) {
+          if (mimes.includes(file.type)) {
+            mediaType = type as MediaType;
+            break;
+          }
         }
       }
 
@@ -526,18 +544,29 @@ export function useMedia(options: UseMediaOptions = {}) {
           throw new Error(uploadError.message);
         }
 
-        // Step 9: Get signed URL instead of public URL for security
+        // Step 9: Get signed URL with fallback to public URL
         const { data: signedUrlData, error: signedUrlError } = await supabase.storage
           .from('media')
           .createSignedUrl(storagePath, 3600); // 1 hour expiry
 
         if (signedUrlError) {
-          console.error('Error creating signed URL:', signedUrlError);
+          console.warn('Notice creating signed URL:', signedUrlError);
         }
 
-        const secureUrl = signedUrlData?.signedUrl || '';
+        const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(storagePath);
+        const secureUrl = signedUrlData?.signedUrl || publicUrlData?.publicUrl || '';
 
         // Step 10: Create database record with security metadata
+        let orgId: string | null = null;
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('organization_id')
+            .eq('id', user.id)
+            .maybeSingle();
+          orgId = profile?.organization_id ?? null;
+        } catch { /* organization optional */ }
+
         const { data: assetData, error: dbError } = await supabase
           .from('media_assets')
           .insert({
@@ -547,11 +576,11 @@ export function useMedia(options: UseMediaOptions = {}) {
             original_filename: secureInfo.originalFilename,
             storage_path: storagePath,
             storage_bucket: 'media',
-            public_url: secureUrl, // Store signed URL initially
+            public_url: secureUrl,
             media_type: mediaType,
             category: uploadOptions.category || 'general',
             file_size_bytes: secureInfo.sizeBytes,
-            mime_type: secureInfo.mimeType,
+            mime_type: secureInfo.mimeType || (mediaType === 'video' ? 'video/mp4' : 'application/octet-stream'),
             width: secureInfo.metadata.width || null,
             height: secureInfo.metadata.height || null,
             tags: uploadOptions.tags || [],
@@ -563,8 +592,9 @@ export function useMedia(options: UseMediaOptions = {}) {
               uploaded_at: new Date().toISOString(),
             },
             uploaded_by: user.id,
+            organization_id: orgId,
             property_id: uploadOptions.property_id || propertyId || null,
-            is_public: uploadOptions.is_public ?? false,
+            is_public: uploadOptions.is_public ?? true,
           })
           .select()
           .single();

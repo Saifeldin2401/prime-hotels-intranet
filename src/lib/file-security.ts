@@ -294,6 +294,59 @@ export const ALLOWED_FILE_TYPES: Record<string, FileTypeDefinition> = {
     ],
     maxSizeBytes: 100 * 1024 * 1024, // 100MB
   },
+  // Video
+  'video/mp4': {
+    mimeType: 'video/mp4',
+    extensions: ['mp4', 'm4v'],
+    magicNumbers: [], // MP4 ftyp box at offset 4
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/webm': {
+    mimeType: 'video/webm',
+    extensions: ['webm'],
+    magicNumbers: [
+      [0x1A, 0x45, 0xDF, 0xA3], // EBML
+    ],
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/quicktime': {
+    mimeType: 'video/quicktime',
+    extensions: ['mov', 'qt'],
+    magicNumbers: [], // QuickTime ftyp/moov at offset 4
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/x-matroska': {
+    mimeType: 'video/x-matroska',
+    extensions: ['mkv'],
+    magicNumbers: [
+      [0x1A, 0x45, 0xDF, 0xA3], // Matroska EBML
+    ],
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/ogg': {
+    mimeType: 'video/ogg',
+    extensions: ['ogv'],
+    magicNumbers: [
+      [0x4F, 0x67, 0x67, 0x53], // OggS
+    ],
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/avi': {
+    mimeType: 'video/avi',
+    extensions: ['avi'],
+    magicNumbers: [
+      [0x52, 0x49, 0x46, 0x46], // RIFF
+    ],
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
+  'video/x-msvideo': {
+    mimeType: 'video/x-msvideo',
+    extensions: ['avi'],
+    magicNumbers: [
+      [0x52, 0x49, 0x46, 0x46], // RIFF
+    ],
+    maxSizeBytes: 500 * 1024 * 1024, // 500MB
+  },
 };
 
 // Blocked extensions (executable files)
@@ -355,8 +408,8 @@ export async function validateFileSignature(
     };
   }
 
-  // Read first 8 bytes for magic number detection
-  const headerBytes = await readFileBytes(file, 0, 8);
+  // Read first 16 bytes for magic number detection
+  const headerBytes = await readFileBytes(file, 0, 16);
   
   // Detect MIME type from file signature
   let detectedMimeType: string | null = null;
@@ -365,6 +418,36 @@ export async function validateFileSignature(
     if (checkMagicNumbers(headerBytes, definition.magicNumbers)) {
       detectedMimeType = mimeType;
       break;
+    }
+  }
+
+  // Special handling for MP4 / QuickTime (ftyp / moov / wide box at offset 4)
+  if (!detectedMimeType && headerBytes.length >= 8) {
+    const isFtyp = headerBytes[4] === 0x66 && headerBytes[5] === 0x74 && headerBytes[6] === 0x79 && headerBytes[7] === 0x70;
+    const isMoov = headerBytes[4] === 0x6D && headerBytes[5] === 0x6F && headerBytes[6] === 0x6F && headerBytes[7] === 0x76;
+    if (isFtyp || isMoov) {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      detectedMimeType = (ext === 'mov' || ext === 'qt' || expectedMimeType === 'video/quicktime')
+        ? 'video/quicktime'
+        : 'video/mp4';
+    }
+  }
+
+  // Fallback for valid video files where headers vary
+  if (!detectedMimeType && file.name) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (['mp4', 'm4v'].includes(ext)) {
+      detectedMimeType = 'video/mp4';
+    } else if (ext === 'webm') {
+      detectedMimeType = 'video/webm';
+    } else if (['mov', 'qt'].includes(ext)) {
+      detectedMimeType = 'video/quicktime';
+    } else if (ext === 'mkv') {
+      detectedMimeType = 'video/x-matroska';
+    } else if (ext === 'ogv') {
+      detectedMimeType = 'video/ogg';
+    } else if (ext === 'avi') {
+      detectedMimeType = 'video/avi';
     }
   }
 
@@ -399,7 +482,13 @@ export async function validateFileSignature(
 
   // If expected MIME type is provided, verify it matches
   if (expectedMimeType && detectedMimeType) {
-    if (expectedMimeType !== detectedMimeType) {
+    const isCompatible = (
+      (expectedMimeType === 'video/mp4' && detectedMimeType === 'video/quicktime') ||
+      (expectedMimeType === 'video/quicktime' && detectedMimeType === 'video/mp4') ||
+      (expectedMimeType === 'video/x-msvideo' && detectedMimeType === 'video/avi') ||
+      (expectedMimeType === 'video/avi' && detectedMimeType === 'video/x-msvideo')
+    );
+    if (expectedMimeType !== detectedMimeType && !isCompatible) {
       errors.push(
         `MIME type mismatch: expected ${expectedMimeType}, detected ${detectedMimeType}`
       );

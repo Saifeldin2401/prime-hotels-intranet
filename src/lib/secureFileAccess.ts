@@ -329,7 +329,7 @@ export async function resolveStorageUrl(
     }
 
     // Try other known buckets in case the bucket name in the URL differed
-    for (const altBucket of ['documents', 'media', 'content-media', 'avatars']) {
+    for (const altBucket of ['training-content', 'content-media', 'media', 'documents', 'avatars']) {
       if (altBucket === bucket) continue
       try {
         const { data: altData, error: altError } = await supabase.storage.from(altBucket).createSignedUrl(path, ttlSeconds)
@@ -348,9 +348,10 @@ export async function resolveStorageUrl(
   if (!/^https?:\/\//i.test(trimmed)) {
     const candidateBuckets = [
       fallbackBucket,
-      'documents',
-      'media',
+      'training-content',
       'content-media',
+      'media',
+      'documents',
       'avatars'
     ].filter((b, idx, arr): b is string => !!b && arr.indexOf(b) === idx)
 
