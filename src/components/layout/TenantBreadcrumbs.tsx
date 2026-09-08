@@ -31,7 +31,11 @@ export function TenantBreadcrumbs() {
     setHotelScope,
     isPlatformScope,
     isImpersonating,
+    isPlatformAdmin,
   } = useTenant()
+
+  const isPlatformPath = location.pathname.startsWith('/platform')
+  const showPlatformBreadcrumb = (isPlatformScope || isPlatformPath) && isPlatformAdmin
 
   // Identify matching route configuration
   const activeRoute = React.useMemo(() => {
@@ -67,7 +71,7 @@ export function TenantBreadcrumbs() {
   }, [activeRoute])
 
   // Don't display empty breadcrumb on root landing or missing context
-  if (location.pathname === '/' && !currentOrganization && !isPlatformScope) {
+  if (location.pathname === '/' && !currentOrganization && !showPlatformBreadcrumb) {
     return null
   }
 
@@ -76,13 +80,13 @@ export function TenantBreadcrumbs() {
   return (
     <nav
       aria-label="Hierarchy Breadcrumb"
-      className="mb-4 flex items-center justify-between rounded-lg border border-border/50 bg-card/60 px-3 py-2 text-xs backdrop-blur-sm shadow-xs"
+      className="mb-4 flex items-center justify-between rounded-xl border border-border/50 bg-card/60 px-3 py-2 text-xs backdrop-blur-sm shadow-xs overflow-hidden"
     >
-      <Breadcrumb>
-        <BreadcrumbList className="gap-1 sm:gap-1.5 text-xs">
+      <Breadcrumb className="w-full min-w-0">
+        <BreadcrumbList className="flex-nowrap overflow-x-auto no-scrollbar gap-1 sm:gap-1.5 text-xs">
           {/* Level 1: Organization / Platform Global Scope */}
           <BreadcrumbItem>
-            {isPlatformScope ? (
+            {showPlatformBreadcrumb ? (
               <BreadcrumbLink asChild>
                 <Link
                   to="/platform"
@@ -92,28 +96,45 @@ export function TenantBreadcrumbs() {
                   <span>{t('nav:groups.platform_operations', 'Platform Control Center')}</span>
                 </Link>
               </BreadcrumbLink>
-            ) : (
+            ) : currentOrganization ? (
               <BreadcrumbLink asChild>
                 <Link
                   to="/dashboard"
                   className={cn(
                     'flex items-center gap-1.5 font-semibold transition-colors hover:text-hotel-gold',
-                    isImpersonating
+                    isImpersonating || isPlatformAdmin
                       ? 'text-amber-600 dark:text-amber-400'
                       : 'text-foreground'
                   )}
                 >
                   <Building2 className="h-3.5 w-3.5 text-hotel-gold shrink-0" />
                   <span className="truncate max-w-[140px] sm:max-w-[200px]">
-                    {currentOrganization?.name || t('nav:breadcrumbs.organization_scope', 'Organization')}
+                    {currentOrganization.name}
+                  </span>
+                  {isPlatformAdmin && !isImpersonating && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium">
+                      {t('admin:operator_view', 'Operator')}
+                    </span>
+                  )}
+                </Link>
+              </BreadcrumbLink>
+            ) : (
+              <BreadcrumbLink asChild>
+                <Link
+                  to="/select-tenant"
+                  className="flex items-center gap-1.5 font-semibold text-hotel-gold hover:underline"
+                >
+                  <Building2 className="h-3.5 w-3.5 text-hotel-gold shrink-0" />
+                  <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                    {t('admin:select_organization', 'Select Organization')}
                   </span>
                 </Link>
               </BreadcrumbLink>
             )}
           </BreadcrumbItem>
 
-          {/* Level 2: Property Context (when not in platform scope) */}
-          {!isPlatformScope && (
+          {/* Level 2: Property Context (only when inside an organization and not in platform scope) */}
+          {!showPlatformBreadcrumb && currentOrganization && (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
@@ -171,7 +192,7 @@ export function TenantBreadcrumbs() {
           )}
 
           {/* Level 3: SaaS Domain / Section Group */}
-          {groupConfig && groupConfig.id !== 'home_workspace' && (
+          {groupConfig && groupConfig.id !== 'home_workspace' && groupConfig.id !== 'platform_operations' && (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>

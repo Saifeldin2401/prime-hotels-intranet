@@ -54,15 +54,18 @@ import {
   Search,
   FileText,
   Crown,
-  BellRing
+  BellRing,
+  ShieldCheck
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import type { Organization } from '@/lib/types/tenant'
 
 export default function MasterContentLibrary() {
   const { user } = useAuth()
   const { toast } = useToast()
+  const navigate = useNavigate()
   const { t, i18n } = useTranslation(['admin', 'training', 'knowledge', 'common'])
   const isRTL = i18n.dir() === 'rtl'
 
@@ -72,6 +75,10 @@ export default function MasterContentLibrary() {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [allDeployments, setAllDeployments] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+
+  // Compliance Radar State
+  const [complianceFilter, setComplianceFilter] = useState<'all' | 'pending' | 'synced'>('all')
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null)
 
   // Search filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -301,7 +308,7 @@ export default function MasterContentLibrary() {
     if (!newCourse.title.trim() || !user) return
     setIsCreatingCourse(true)
     try {
-      await platformService.createMasterCourse({
+      const created = await platformService.createMasterCourse({
         title: newCourse.title,
         description: newCourse.description,
         category: newCourse.category,
@@ -322,6 +329,9 @@ export default function MasterContentLibrary() {
         estimated_duration_minutes: 45
       })
       await loadData()
+      if (created?.id) {
+        navigate(`/training/hub/${created.id}?view=builder&master=true`)
+      }
     } catch (err: any) {
       toast({
         title: t('common:error', 'Error'),
@@ -365,6 +375,33 @@ export default function MasterContentLibrary() {
     }
   }
 
+  const handleSendReminder = async (deploymentId: string, orgName: string) => {
+    if (!user) return
+    setSendingReminderId(deploymentId)
+    try {
+      const success = await platformService.sendSyncReminder({
+        deploymentId,
+        actorId: user.id
+      })
+      if (success) {
+        toast({
+          title: t('common:success', 'Reminder Dispatched'),
+          description: `Synchronization notification sent to ${orgName} administrators.`
+        })
+      } else {
+        throw new Error('Could not deliver sync reminder')
+      }
+    } catch (err: any) {
+      toast({
+        title: t('common:error', 'Error'),
+        description: err?.message || 'Could not send reminder',
+        variant: 'destructive'
+      })
+    } finally {
+      setSendingReminderId(null)
+    }
+  }
+
   const filteredSops = masterSops.filter((sop) => {
     if (!searchQuery) return true
     const q = searchQuery.toLowerCase()
@@ -401,21 +438,41 @@ export default function MasterContentLibrary() {
               {t('common:refresh', 'Refresh')}
             </Button>
             {activeTab === 'sops' ? (
-              <Button
-                onClick={() => setIsCreateSopOpen(true)}
-                className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold"
-              >
-                <Plus className="h-4 w-4" />
-                {t('admin:create_master_sop', 'New Master SOP')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/knowledge/create?isMaster=true')}
+                  className="gap-1.5 shadow-2xs font-semibold text-xs border-amber-300/80 bg-amber-50/50 hover:bg-amber-100/70 text-amber-950 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800"
+                >
+                  <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                  <span>Open Full Studio</span>
+                </Button>
+                <Button
+                  onClick={() => setIsCreateSopOpen(true)}
+                  className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold text-xs h-9"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('admin:create_master_sop', 'New Master SOP')}
+                </Button>
+              </div>
             ) : activeTab === 'courses' ? (
-              <Button
-                onClick={() => setIsCreateCourseOpen(true)}
-                className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold"
-              >
-                <Plus className="h-4 w-4" />
-                {t('admin:create_master_course', 'New Master Course')}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/training/hub/new?view=builder&master=true')}
+                  className="gap-1.5 shadow-2xs font-semibold text-xs border-indigo-300/80 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-950 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800"
+                >
+                  <Crown className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>{t('admin:open_training_builder', 'Open Training Builder')}</span>
+                </Button>
+                <Button
+                  onClick={() => setIsCreateCourseOpen(true)}
+                  className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold text-xs h-9"
+                >
+                  <Plus className="h-4 w-4" />
+                  {t('admin:create_master_course', 'New Master Course')}
+                </Button>
+              </div>
             ) : null}
           </div>
         }
@@ -504,7 +561,7 @@ export default function MasterContentLibrary() {
             </TabsTrigger>
             <TabsTrigger value="deployments" className="gap-2 text-xs">
               <Layers className="h-4 w-4" />
-              <span>{t('admin:deployments_tracker', 'Deployments Tracker')}</span>
+              <span>{t('admin:deployments_tracker', 'Compliance Radar')}</span>
               <Badge variant="secondary" className="ms-1 text-[10px] py-0 px-1.5">
                 {allDeployments.length}
               </Badge>
@@ -549,6 +606,9 @@ export default function MasterContentLibrary() {
                   ) : (
                     filteredSops.map((sop) => {
                       const ver = sop.current_version || 1
+                      const depList = allDeployments.filter(d => d.master_content_id === sop.id)
+                      const pendingCount = depList.filter(d => d.has_update_available || d.current_master_version > d.deployed_version).length
+
                       return (
                         <TableRow key={sop.id} className="hover:bg-muted/30">
                           <TableCell className="font-medium">
@@ -561,6 +621,28 @@ export default function MasterContentLibrary() {
                               </div>
                               {sop.title_ar && <div className="text-xs text-muted-foreground font-arabic mt-0.5">{sop.title_ar}</div>}
                               <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{sop.description}</p>
+
+                              {/* Deployment Telemetry Badge */}
+                              <div className="mt-1.5 flex items-center gap-2">
+                                {depList.length === 0 ? (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-4 text-muted-foreground border-dashed">
+                                    Not yet deployed
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px] py-0 h-4 border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                                    Deployed to {depList.length} {depList.length === 1 ? 'hotel' : 'hotels'}
+                                    {pendingCount > 0 ? (
+                                      <span className="text-amber-600 dark:text-amber-400 font-bold ms-1">
+                                        • {pendingCount} update pending
+                                      </span>
+                                    ) : (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium ms-1">
+                                        • 100% in sync
+                                      </span>
+                                    )}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -580,6 +662,17 @@ export default function MasterContentLibrary() {
                           </TableCell>
                           <TableCell className="text-end">
                             <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/knowledge/edit/${sop.id}?isMaster=true`)}
+                                className="h-8 px-2.5 text-xs gap-1 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                                title="Open in Full Authoring Studio"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                <span className="hidden md:inline">Edit in Studio</span>
+                              </Button>
+
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -684,12 +777,23 @@ export default function MasterContentLibrary() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setPreviewItem({ type: 'course', item: course })}
-                                className="h-8 px-2.5 text-xs gap-1"
-                                title="Preview Course Structure"
+                                onClick={() => navigate(`/training/hub/${course.id}?view=builder&master=true`)}
+                                className="h-8 px-2.5 text-xs gap-1 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                                title={t('admin:edit_in_builder', 'Edit in Training Builder')}
+                              >
+                                <GraduationCap className="h-3.5 w-3.5" />
+                                <span className="hidden md:inline">{t('admin:edit_in_builder', 'Edit in Builder')}</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => navigate(`/training/player/${course.id}`)}
+                                className="h-8 px-2.5 text-xs gap-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                title={t('admin:preview_player', 'Player Preview')}
                               >
                                 <Eye className="h-3.5 w-3.5" />
-                                <span className="hidden md:inline">{t('common:preview', 'Preview')}</span>
+                                <span className="hidden md:inline">{t('admin:preview_player', 'Player Preview')}</span>
                               </Button>
 
                               <Button
@@ -723,108 +827,229 @@ export default function MasterContentLibrary() {
           </Card>
         </TabsContent>
 
-        {/* Deployments & Sync Tracker Tab */}
+        {/* Deployments & Sync Tracker Tab (Brand Compliance Radar) */}
         <TabsContent value="deployments" className="mt-4 space-y-4">
-          <Card className="border shadow-sm overflow-hidden">
-            <CardHeader className="bg-muted/20 border-b py-3 px-4">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary" />
-                <span>Active Master Deployments Across Customer Tenants</span>
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Real-time tracking of deployed master SOPs and courses, synchronized versions, and pending tenant updates.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead>Target Customer Tenant</TableHead>
-                    <TableHead>Content Type</TableHead>
-                    <TableHead>Deployed Version</TableHead>
-                    <TableHead>Master Version</TableHead>
-                    <TableHead>Sync Status</TableHead>
-                    <TableHead>Last Synced Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {allDeployments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                        <Layers className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                        <p>No deployments recorded yet. Deploy master content above to begin tracking.</p>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    allDeployments.map((dep) => {
-                      const hasUpdate = dep.has_update_available || dep.current_master_version > dep.deployed_version
-                      return (
-                        <TableRow key={dep.id} className="hover:bg-muted/30">
-                          <TableCell className="font-semibold text-foreground">
-                            <div>
-                              <span>{dep.target_organization?.name || 'Customer Organization'}</span>
-                              {dep.target_organization?.slug && (
-                                <span className="text-xs text-muted-foreground font-mono block">
-                                  @{dep.target_organization.slug}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize text-xs flex items-center gap-1 w-fit">
-                              {dep.content_type === 'document_sop' ? (
-                                <>
-                                  <BookOpen className="h-3 w-3 text-blue-600" />
-                                  <span>SOP</span>
-                                </>
-                              ) : (
-                                <>
-                                  <GraduationCap className="h-3 w-3 text-indigo-600" />
-                                  <span>Course</span>
-                                </>
-                              )}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="font-mono text-xs">
-                              v{dep.deployed_version || 1}.0
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono text-xs font-bold">
-                              v{dep.current_master_version || dep.deployed_version || 1}.0
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {hasUpdate ? (
-                              <Badge className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1">
-                                <BellRing className="h-3 w-3 animate-bounce" />
-                                Update Available
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs gap-1">
-                                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                                In Sync
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground font-mono">
-                            {dep.last_synced_at
-                              ? new Date(dep.last_synced_at).toLocaleDateString(undefined, {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })
-                              : 'Initial'}
-                          </TableCell>
+          {/* Compliance KPI Strip */}
+          {(() => {
+            const total = allDeployments.length
+            const pending = allDeployments.filter(d => d.has_update_available || d.current_master_version > d.deployed_version).length
+            const inSync = total - pending
+            const alignmentRate = total > 0 ? Math.round((inSync / total) * 100) : 100
+
+            const filteredList = allDeployments.filter((dep) => {
+              const hasUp = dep.has_update_available || dep.current_master_version > dep.deployed_version
+              if (complianceFilter === 'pending') return hasUp
+              if (complianceFilter === 'synced') return !hasUp
+              return true
+            })
+
+            return (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border shadow-xs bg-card">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Group Alignment Health</p>
+                        <h4 className="text-2xl font-bold text-foreground mt-1">{alignmentRate}%</h4>
+                        <Progress value={alignmentRate} className="h-1.5 mt-2 w-36" />
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border shadow-xs bg-card">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Synced Deployments</p>
+                        <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{inSync}</h4>
+                        <p className="text-[11px] text-muted-foreground mt-1">Properties running current standards</p>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border shadow-xs bg-card">
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Pending Upstream Updates</p>
+                        <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{pending}</h4>
+                        <p className="text-[11px] text-muted-foreground mt-1">Properties with unapplied revisions</p>
+                      </div>
+                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                        <BellRing className="h-5 w-5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border shadow-sm overflow-hidden">
+                  <CardHeader className="bg-muted/20 border-b py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <Layers className="h-4 w-4 text-primary" />
+                        <span>Corporate Brand Standard Compliance Radar</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Real-time tracking of deployed master SOPs and courses, synchronized versions, and pending tenant updates.
+                      </CardDescription>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-background p-1 rounded-lg border text-xs self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setComplianceFilter('all')}
+                        className={cn(
+                          "px-2.5 py-1 rounded font-medium transition-all text-xs",
+                          complianceFilter === 'all' ? "bg-muted text-foreground font-bold shadow-2xs" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        All ({total})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setComplianceFilter('pending')}
+                        className={cn(
+                          "px-2.5 py-1 rounded font-medium transition-all text-xs flex items-center gap-1",
+                          complianceFilter === 'pending' ? "bg-amber-500/15 text-amber-900 dark:text-amber-300 font-bold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <span>Pending ({pending})</span>
+                        {pending > 0 && <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setComplianceFilter('synced')}
+                        className={cn(
+                          "px-2.5 py-1 rounded font-medium transition-all text-xs",
+                          complianceFilter === 'synced' ? "bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 font-bold" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        In Sync ({inSync})
+                      </button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/40">
+                          <TableHead>Target Customer Tenant</TableHead>
+                          <TableHead>Content Type</TableHead>
+                          <TableHead>Deployed Version</TableHead>
+                          <TableHead>Master Version</TableHead>
+                          <TableHead>Sync Status</TableHead>
+                          <TableHead>Last Synced Date</TableHead>
+                          <TableHead className="text-end">Actions</TableHead>
                         </TableRow>
-                      )
-                    })
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredList.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                              <Layers className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                              <p>No deployments found matching filter.</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredList.map((dep) => {
+                            const hasUpdate = dep.has_update_available || dep.current_master_version > dep.deployed_version
+                            return (
+                              <TableRow key={dep.id} className="hover:bg-muted/30">
+                                <TableCell className="font-semibold text-foreground">
+                                  <div>
+                                    <span>{dep.target_organization?.name || 'Customer Organization'}</span>
+                                    {dep.target_organization?.slug && (
+                                      <span className="text-xs text-muted-foreground font-mono block">
+                                        @{dep.target_organization.slug}
+                                      </span>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="capitalize text-xs flex items-center gap-1 w-fit">
+                                    {dep.content_type === 'document_sop' ? (
+                                      <>
+                                        <BookOpen className="h-3 w-3 text-blue-600" />
+                                        <span>SOP</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <GraduationCap className="h-3 w-3 text-indigo-600" />
+                                        <span>Course</span>
+                                      </>
+                                    )}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="font-mono text-xs">
+                                    v{dep.deployed_version || 1}.0
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="font-mono text-xs font-bold">
+                                    v{dep.current_master_version || dep.deployed_version || 1}.0
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {hasUpdate ? (
+                                    <Badge className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1">
+                                      <BellRing className="h-3 w-3 animate-bounce" />
+                                      Update Available
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs gap-1">
+                                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                      In Sync
+                                    </Badge>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground font-mono">
+                                  {dep.last_synced_at
+                                    ? new Date(dep.last_synced_at).toLocaleDateString(undefined, {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })
+                                    : 'Initial'}
+                                </TableCell>
+                                <TableCell className="text-end">
+                                  {hasUpdate ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={sendingReminderId === dep.id}
+                                      onClick={() => handleSendReminder(dep.id, dep.target_organization?.name || 'Customer Organization')}
+                                      className="h-7 text-xs gap-1 text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/50"
+                                      title="Send Sync Notification to Tenant Admins"
+                                    >
+                                      {sendingReminderId === dep.id ? (
+                                        <RefreshCw className="h-3 w-3 animate-spin" />
+                                      ) : (
+                                        <BellRing className="h-3 w-3 text-amber-600" />
+                                      )}
+                                      <span className="hidden sm:inline">Remind</span>
+                                    </Button>
+                                  ) : (
+                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+                                      <CheckCircle2 className="h-3 w-3" />
+                                      <span>Aligned</span>
+                                    </span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            )
+          })()}
         </TabsContent>
       </Tabs>
 

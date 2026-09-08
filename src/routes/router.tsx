@@ -1,26 +1,25 @@
-import { PageTracker } from '@/components/analytics/PageTracker'
 import { RouteErrorBoundary } from '@/components/common'
-import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
-import { NotificationProvider } from '@/contexts/NotificationContext'
-import { useAuth } from '@/hooks/useAuth'
-import { useAccountContext } from '@/hooks/useAccountContext'
-import {
-    buildLoginUrl,
-    consumePostLoginRedirect,
-    getRedirectFromSearch,
-    getSpaRedirectFromSearch,
-} from '@/lib/authRedirect'
-import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { PreserveQueryNavigate } from './utils/QueryPreserveRedirect'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy } from 'react'
 import {
     createBrowserRouter,
     createRoutesFromElements,
     Navigate,
     Outlet,
     Route,
-    useLocation,
 } from 'react-router-dom'
+
+import {
+    AuthenticatedNotFound,
+    LearnerHomeRoute,
+    LegacyAnalyticsRedirect,
+    LegacyScheduleRedirect,
+    NotFoundWrapper,
+    RootIndex,
+    RootLayout,
+} from './RouteComponents'
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
@@ -33,172 +32,14 @@ import { LegacyDomainRedirects } from './redirects'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 const PublicLayout = lazy(() => import('@/pages/public/PublicLayout'))
-const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
 const AboutPage = lazy(() => import('@/pages/public/AboutPage'))
 const MethodologyPage = lazy(() => import('@/pages/public/MethodologyPage'))
 const VisionPage = lazy(() => import('@/pages/public/VisionPage'))
 const CaseStudiesPage = lazy(() => import('@/pages/public/CaseStudiesPage'))
 const LeadershipPage = lazy(() => import('@/pages/public/LeadershipPage'))
 const DigitalAIPage = lazy(() => import('@/pages/public/DigitalAIPage'))
-const NotFound = lazy(() => import('@/pages/NotFound'))
-
-// Learner platform landing page (Training + Knowledge Base + Quiz).
-// Minimal wiring: routed at /home/learner and made the default post-login
-// destination for learner roles (see RootIndex below). NOTE: navigation.ts /
-// DashboardRoutes are churned by other branches — on conflict, keep this route
-// plus the RootIndex learner branch and re-apply on top.
-const LearnerHome = lazy(() => import('@/pages/home/LearnerHome'))
 const OrgSuspended = lazy(() => import('@/pages/OrgSuspended'))
-
-
-
-import { MaintenanceGuard } from '@/components/common/MaintenanceGuard'
-import { PageSkeleton } from '@/components/ui/loading-skeleton'
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { AppLayout } from '@/components/layout/AppLayout'
-
-const LearnerHomeRoute = () => (
-    <ProtectedRoute>
-        <AppLayout>
-            <LearnerHome />
-        </AppLayout>
-    </ProtectedRoute>
-)
-
-const RootLayout = () => {
-    const { loading } = useAuth()
-
-    if (loading) {
-        return <PageSkeleton />
-    }
-
-    return (
-        <NotificationProvider>
-            <PageTracker />
-            <MaintenanceGuard>
-                <Suspense fallback={<PageSkeleton />}>
-                    <Outlet />
-                </Suspense>
-            </MaintenanceGuard>
-            <SessionTimeoutWarning />
-        </NotificationProvider>
-    )
-}
-
-const RootIndex = () => {
-    const { user, loading } = useAuth()
-    const account = useAccountContext()
-    const location = useLocation()
-
-    const destination = useMemo(() => {
-        if (!user) return null
-
-        const GENERIC = new Set(['', '/', '/dashboard', '/home', '/home/learner'])
-        const isDeepLink = (p: string | null | undefined): p is string =>
-            !!p && !GENERIC.has(p.split('?')[0].replace(/\/$/, '') || '/')
-
-        const pendingAuthFlowPath = getAuthFlowRedirectPath()
-        const spaRedirect = getSpaRedirectFromSearch(location.search)
-        const urlRedirect = getRedirectFromSearch(location.search)
-        const sessionRedirect = consumePostLoginRedirect()
-
-        // A genuine deep-link wins; a stale generic landing ('/dashboard', '/') does
-        // NOT override the account-aware destination. `recommendedDestination` is
-        // resolved server-side (resolve_account_context) from platform-operator
-        // status + highest tenant membership role.
-        const deepLink = [pendingAuthFlowPath, spaRedirect, urlRedirect, sessionRedirect].find(isDeepLink) ?? null
-        return deepLink ?? account.recommendedDestination ?? '/dashboard'
-    }, [user, location.search, account.recommendedDestination])
-
-    useEffect(() => {
-        if (user && getAuthFlowRedirectPath()) {
-            clearAuthFlowState()
-        }
-    }, [user])
-
-    if (loading || (user && account.loading)) {
-        return <PageSkeleton />
-    }
-
-    if (user && destination) {
-        return <Navigate to={destination} replace />
-    }
-
-    const spaRedirect = getSpaRedirectFromSearch(location.search)
-    if (spaRedirect) {
-        return <Navigate to={spaRedirect} replace />
-    }
-
-    const redirectPath = getRedirectFromSearch(location.search)
-    if (redirectPath) {
-        const loginTarget = `/login?redirect=${encodeURIComponent(redirectPath)}`
-        return <Navigate to={loginTarget} replace />
-    }
-
-    return <PublicHome />
-}
-
-/**
- * AuthenticatedNotFound - NotFound page wrapped in AppLayout for authenticated users
- */
-const AuthenticatedNotFound = () => {
-    const [AppLayoutComponent, setAppLayoutComponent] = useState<React.ComponentType<{ children: React.ReactNode }> | null>(null)
-
-    useEffect(() => {
-        import('@/components/layout/AppLayout').then((module) => {
-            setAppLayoutComponent(() => module.AppLayout)
-        })
-    }, [])
-
-    if (!AppLayoutComponent) {
-        return <PageSkeleton />
-    }
-
-    return (
-        <AppLayoutComponent>
-            <NotFound />
-        </AppLayoutComponent>
-    )
-}
-
-/**
- * NotFoundWrapper
- * Wraps NotFound component with AppLayout for authenticated users
- */
-const NotFoundWrapper = () => {
-    const { user } = useAuth()
-
-    if (!user) {
-        return <NotFound />
-    }
-
-    return <AuthenticatedNotFound />
-}
-
-const LegacyAnalyticsRedirect = () => {
-    const { user, loading, primaryRole, rolesLoading } = useAuth()
-    const location = useLocation()
-
-    if (loading || rolesLoading) {
-        return <PageSkeleton />
-    }
-
-    if (!user) {
-        return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
-    }
-
-    const destination = (
-        ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'].includes(primaryRole || '')
-            ? '/admin/analytics'
-            : ['training_manager', 'regional_hr', 'property_manager'].includes(primaryRole || '')
-                ? '/reports'
-                : '/learning/analytics'
-    )
-
-    return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
-}
-
-const LegacyScheduleRedirect = () => <Navigate to="/" replace />
+const SelectTenant = lazy(() => import('@/pages/auth/SelectTenant'))
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
@@ -238,6 +79,14 @@ export const router = createBrowserRouter(
                     element={
                         <ProtectedRoute smartFallback={false}>
                             <OrgSuspended />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path="/select-tenant"
+                    element={
+                        <ProtectedRoute smartFallback={false}>
+                            <SelectTenant />
                         </ProtectedRoute>
                     }
                 />

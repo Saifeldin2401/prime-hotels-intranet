@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { supabase } from '@/lib/supabase'
@@ -6,6 +7,7 @@ import type { Organization, Brand, Hotel, OrganizationMembership, TenantRole } f
 import type { PlatformAccessSession } from '@/lib/types/platform'
 import { platformService } from '@/services/platformService'
 import { safeLocalStorage } from '@/lib/storage'
+import { queryClient as defaultQueryClient } from '@/lib/queryClient'
 
 interface TenantContextType {
   // Active Tenant / Organization
@@ -34,6 +36,7 @@ interface TenantContextType {
 
   // Actions
   switchOrganization: (orgId: string) => Promise<void>
+  returnToPlatformScope: () => Promise<void>
   setBrandScope: (brandId: string | null) => void
   setHotelScope: (hotelId: string | null) => void
   refreshTenantData: () => Promise<void>
@@ -42,6 +45,7 @@ interface TenantContextType {
 const TenantContext = createContext<TenantContextType | undefined>(undefined)
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const account = useAccountContext()
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -69,6 +73,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setMemberships([])
       setImpersonationSession(null)
       setIsLoading(false)
+      return
+    }
+
+    // Critical: Do NOT proceed if account is still resolving.
+    // Platform-operator status (resolve_account_context) takes a moment on initial boot.
+    // Proceeding before account resolves causes isPlatformAdmin to be false, mistakenly
+    // falling into tenant-user handling and polluting localStorage with a customer tenant.
+    if (account.loading) {
       return
     }
 
@@ -120,78 +132,91 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           return
         }
 
-        const storedScope =
+        // Check whether the operator is navigating on a platform route
+        const isPlatformRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/platform')
+        const storedOrgId =
           safeLocalStorage.getItem(`active_tenant_id_${user.id}`) ||
           safeLocalStorage.getItem('altus_active_tenant_id')
 
-        if (storedScope === '__platform__') {
-          // Explicit global platform scope requested
+        // If the operator is browsing /platform, or stored preference is '__platform__' or empty:
+        // Always default to Platform Scope (currentOrganization = null).
+        if (isPlatformRoute || !storedOrgId || storedOrgId === '__platform__') {
           setImpersonationSession(null)
           setCurrentOrganization(null)
           setAvailableBrands([])
           setAvailableHotels([])
           setCurrentBrand(null)
           setCurrentHotel(null)
+          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+          safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
           setIsLoading(false)
           return
         }
 
-        // Determine organization: stored preference > primary org > first membership > first org
-        const candidateOrgId =
-          (storedScope && storedScope !== '__platform__' ? storedScope : null) ||
-          account.primaryOrganizationId ||
-          activeMemberships.find(m => m.is_primary)?.organization_id ||
-          activeMemberships[0]?.organization_id ||
-          fetchedOrgs[0]?.id
-
-        const initialOrg =
-          (candidateOrgId ? fetchedOrgs.find(o => o.id === candidateOrgId) : null) ||
-          fetchedOrgs[0] ||
-          null
-
-        if (initialOrg) {
+        // Only restore stored tenant if navigating a tenant route AND tenant exists in accessible orgs
+        const selectedOrg = fetchedOrgs.find(o => o.id === storedOrgId)
+        if (selectedOrg) {
           setImpersonationSession(null)
-          setCurrentOrganization(initialOrg)
-          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, initialOrg.id)
-          safeLocalStorage.setItem('altus_active_tenant_id', initialOrg.id)
-          await loadScopesForOrg(initialOrg.id)
+          setCurrentOrganization(selectedOrg)
+          await loadScopesForOrg(selectedOrg.id)
           setIsLoading(false)
           return
         }
 
-        // Fallback: Global Platform Control Plane
+        // Default to Platform Scope if no specific valid tenant selected
         setImpersonationSession(null)
         setCurrentOrganization(null)
         setAvailableBrands([])
         setAvailableHotels([])
         setCurrentBrand(null)
         setCurrentHotel(null)
+        safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+        safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
         setIsLoading(false)
         return
       }
 
-      // Priority 1: Server-authoritative primary organization from AccountContext
-      // Priority 2: User's primary active membership organization
-      // Priority 3: User-scoped active tenant in localStorage
-      // Priority 4: First accessible organization
-      const storedOrgId = safeLocalStorage.getItem(`active_tenant_id_${user.id}`) || safeLocalStorage.getItem('altus_active_tenant_id')
-      
-      const candidateOrgId =
-        account.primaryOrganizationId ||
-        activeMemberships.find(m => m.is_primary)?.organization_id ||
-        activeMemberships[0]?.organization_id ||
-        storedOrgId
+      // 4. Tenant Users Handling
+      // Case A: User belongs to exactly 1 organization -> Auto-establish tenant context
+      // Case B: User belongs to multiple organizations -> Require explicit tenant selection or restore valid saved preference
+      const storedOrgId =
+        safeLocalStorage.getItem(`active_tenant_id_${user.id}`) ||
+        safeLocalStorage.getItem('altus_active_tenant_id')
 
-      const initialOrg =
-        (candidateOrgId ? fetchedOrgs.find(o => o.id === candidateOrgId) : null) ||
-        fetchedOrgs[0] ||
-        null
+      const isMultiTenant = account.isMultiOrg || activeMemberships.length > 1
+
+      let initialOrg: Organization | null = null
+
+      if (!isMultiTenant) {
+        // Single-tenant user: establish context automatically
+        const singleOrgId =
+          activeMemberships[0]?.organization_id ||
+          account.primaryOrganizationId ||
+          fetchedOrgs[0]?.id
+
+        initialOrg = (singleOrgId ? fetchedOrgs.find(o => o.id === singleOrgId) : null) || fetchedOrgs[0] || null
+      } else {
+        // Multi-tenant user: verify stored preference against accessible memberships
+        if (storedOrgId && storedOrgId !== '__platform__') {
+          const isPermittedOrg = activeMemberships.some(m => m.organization_id === storedOrgId)
+          if (isPermittedOrg) {
+            initialOrg = fetchedOrgs.find(o => o.id === storedOrgId) || null
+          }
+        }
+        // If no valid stored preference, initialOrg stays null so the user selects their tenant context
+      }
 
       setCurrentOrganization(initialOrg)
 
       if (initialOrg) {
         safeLocalStorage.setItem(`active_tenant_id_${user.id}`, initialOrg.id)
+        safeLocalStorage.setItem('altus_active_tenant_id', initialOrg.id)
         await loadScopesForOrg(initialOrg.id)
+      } else {
+        setAvailableBrands([])
+        setAvailableHotels([])
+        setCurrentBrand(null)
+        setCurrentHotel(null)
       }
     } catch (err) {
       console.error('Failed to load tenant data:', err)
@@ -199,7 +224,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, isPlatformAdmin, account.primaryOrganizationId])
+  }, [user, isPlatformAdmin, account.primaryOrganizationId, account.isMultiOrg, account.loading])
 
   const loadScopesForOrg = async (orgId: string) => {
     // Fetch brands
@@ -254,6 +279,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const targetOrg = organizations.find(o => o.id === orgId)
     if (!targetOrg) return
 
+    // Immediately clear query cache so no data from the previous tenant lingers
+    queryClient.clear()
+
     if (user) {
       safeLocalStorage.setItem(`active_tenant_id_${user.id}`, orgId)
     }
@@ -273,6 +301,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (!reason || reason.trim().length < 10) {
       throw new Error('A substantive access reason (at least 10 characters) is required')
     }
+
+    // Invalidate query cache before entering new tenant
+    queryClient.clear()
 
     // The RPC (start_platform_session) is the authority — it re-checks the
     // operator permission, records the audit log, and enforces the TTL.
@@ -304,11 +335,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn('Error ending platform session:', err)
       }
+      queryClient.clear()
       setImpersonationSession(null)
       if (user) {
-        safeLocalStorage.removeItem(`active_tenant_id_${user.id}`)
+        safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
       }
-      safeLocalStorage.removeItem('altus_active_tenant_id')
+      safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
       setCurrentOrganization(null)
       setAvailableBrands([])
       setAvailableHotels([])
@@ -330,6 +362,24 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [impersonationSession?.id, impersonationSession?.expires_at])
+
+  const returnToPlatformScope = useCallback(async () => {
+    if (impersonationSession) {
+      await exitImpersonation()
+    }
+    setCurrentOrganization(null)
+    setAvailableBrands([])
+    setAvailableHotels([])
+    setCurrentBrand(null)
+    setCurrentHotel(null)
+    safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+    if (user) {
+      safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+    }
+    queryClient.clear()
+    await account.refresh()
+    await fetchTenantData()
+  }, [impersonationSession, exitImpersonation, user, queryClient, account, fetchTenantData])
 
   const setBrandScope = (brandId: string | null) => {
     if (!brandId) {
@@ -391,6 +441,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     enterOrganization,
     exitImpersonation,
     switchOrganization,
+    returnToPlatformScope,
     setBrandScope,
     setHotelScope,
     refreshTenantData: fetchTenantData,
@@ -411,6 +462,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     impersonationSession,
     enterOrganization,
     exitImpersonation,
+    switchOrganization,
+    returnToPlatformScope,
     fetchTenantData
   ])
 

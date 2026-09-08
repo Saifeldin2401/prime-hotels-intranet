@@ -1495,7 +1495,7 @@ export function QuizComponentEnhanced({
                                 }}
                                 disabled={showFeedback}
                                 className={cn(
-                                    "flex-1 min-w-[20px] max-w-[40px] h-2 rounded-full transition-all duration-300 relative",
+                                    "flex-1 min-w-[20px] max-w-[40px] h-2 rounded-full transition-all duration-300 relative before:absolute before:-inset-y-3 before:-inset-x-0.5 before:content-['']",
                                     isCurrent
                                         ? "h-2.5 bg-amber-500 shadow-sm shadow-amber-500/40"
                                         : isAnswered
@@ -1928,10 +1928,7 @@ export function QuizComponentEnhanced({
             {/* Navigation — hidden when embedded (the shell action bar owns it) */}
             {!isEmbedded && (
                 <div
-                    className={cn(
-                        "sticky bottom-0 z-10 -mx-4 flex items-center justify-between gap-3 border-t border-border/60 bg-card/95 px-4 py-3 backdrop-blur-xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6",
-                        isRTL && "flex-row-reverse",
-                    )}
+                    className="sticky bottom-0 z-10 -mx-4 flex items-center justify-between gap-3 border-t border-border/60 bg-card/95 px-4 py-3 backdrop-blur-xl pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:-mx-6 sm:px-6"
                 >
                     <Button
                         variant="ghost"
@@ -1945,7 +1942,7 @@ export function QuizComponentEnhanced({
                     <Button
                         onClick={isLastQuestion ? requestFinalSubmit : () => { void handleAnswerSubmit() }}
                         disabled={!hasAnswer(currentQuestion?.question_id) || showFeedback || attemptLimitReached}
-                        className="h-12 min-w-[10rem] bg-hotel-navy px-8 font-bold text-white hover:bg-hotel-navy-dark"
+                        className="h-11 sm:h-12 min-w-[7rem] sm:min-w-[10rem] bg-hotel-navy px-4 sm:px-8 font-bold text-white hover:bg-hotel-navy-dark"
                     >
                         {isLastQuestion ? t('submitQuiz', 'Submit quiz') : t('training:quizzes.player.submit_answer', 'Submit answer')}
                         <CheckCircle2 className="ms-2 h-5 w-5" />

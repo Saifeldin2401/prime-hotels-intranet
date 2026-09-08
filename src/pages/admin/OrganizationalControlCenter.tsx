@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
 import { OrgChartStats, OrgChartTree } from '@/components/admin/OrgChartTree'
 import { ReportingLineEditor } from '@/components/admin/ReportingLineEditor'

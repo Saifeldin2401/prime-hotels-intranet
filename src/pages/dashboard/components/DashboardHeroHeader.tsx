@@ -102,7 +102,7 @@ export const DashboardHeroHeader: React.FC = () => {
   const RoleIcon = roleInfo.icon
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/75 to-card/40 p-6 sm:p-8 backdrop-blur-2xl shadow-lg transition-all">
+    <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/75 to-card/40 p-4 sm:p-6 lg:p-8 backdrop-blur-2xl shadow-lg transition-all">
       {/* Ambient luxury metallic gradient mesh */}
       <div className="pointer-events-none absolute -top-24 -end-24 h-72 w-72 rounded-full bg-amber-500/[0.08] blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-emerald-500/[0.06] blur-3xl" />

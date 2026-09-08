@@ -7,7 +7,8 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface UnsavedChangesDialogProps {
@@ -21,21 +22,54 @@ export function UnsavedChangesDialog({
     onContinue,
     onCancel,
 }: UnsavedChangesDialogProps) {
-    const { t } = useTranslation()
+    const { t } = useTranslation('common')
+    const isContinuingRef = useRef(false)
+
+    useEffect(() => {
+        if (open) {
+            isContinuingRef.current = false
+        }
+    }, [open])
+
+    const handleOpenChange = (newOpen: boolean) => {
+        if (!newOpen) {
+            if (!isContinuingRef.current) {
+                onCancel()
+            }
+        }
+    }
+
+    const handleContinue = (e: React.MouseEvent) => {
+        e.preventDefault()
+        isContinuingRef.current = true
+        onContinue()
+    }
+
+    const handleCancel = () => {
+        isContinuingRef.current = false
+        onCancel()
+    }
 
     return (
-        <AlertDialog open={open} onOpenChange={onCancel}>
+        <AlertDialog open={open} onOpenChange={handleOpenChange}>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+                    <AlertDialogTitle>
+                        {t('confirm.unsaved_changes_title', 'Unsaved Changes')}
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                        You have unsaved changes. Are you sure you want to leave? Your changes will be lost.
+                        {t('confirm.unsaved_changes_message', 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={onCancel}>{t('common:cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={onContinue} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                        Leave Page
+                <AlertDialogFooter className="gap-2">
+                    <AlertDialogCancel onClick={handleCancel}>
+                        {t('action.cancel', 'Cancel')}
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={handleContinue}
+                        className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    >
+                        {t('confirm.leave_page', 'Leave Page')}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

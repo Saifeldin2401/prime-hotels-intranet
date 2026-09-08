@@ -35,7 +35,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
-import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, GraduationCap, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -47,8 +47,8 @@ import { platformService } from '@/services/platformService'
 import type { Profile, AppRole } from '@/lib/types'
 import { ROLE_HIERARCHY, ROLES } from '@/lib/constants'
 
-
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive' | 'pending_approval'
+type RoleCategoryFilter = 'all' | 'learners' | 'instructors' | 'admins'
 
 interface AccountActionNote {
   id: string
@@ -84,38 +84,12 @@ export default function UserManagement() {
 
   const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100)
 
-  const [orgFilter, setOrgFilter] = useState<string>(
-    isPlatformScope ? 'all' : (currentOrganization?.id || 'all')
-  )
-
-  useEffect(() => {
-    if (!isPlatformUser || !isPlatformScope) {
-      if (currentOrganization?.id) {
-        setOrgFilter(currentOrganization.id)
-      }
-    }
-  }, [currentOrganization?.id, isPlatformUser, isPlatformScope])
-
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [roleCategoryFilter, setRoleCategoryFilter] = useState<RoleCategoryFilter>('all')
   const [statusFilter, setStatusFilter] = useState<AccountStatusFilter>('all')
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false)
-  const [inviteOrgId, setInviteOrgId] = useState<string>(
-    currentOrganization?.id || organizations[0]?.id || ''
-  )
-
-  useEffect(() => {
-    if (currentOrganization?.id) {
-      setInviteOrgId(currentOrganization.id)
-    } else if (organizations.length > 0 && !inviteOrgId) {
-      setInviteOrgId(organizations[0].id)
-    }
-  }, [currentOrganization?.id, organizations, inviteOrgId])
-
-  const effectiveInviteOrgId = isPlatformUser
-    ? (inviteOrgId || currentOrganization?.id || organizations[0]?.id)
-    : currentOrganization?.id
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AppRole | ''>('staff')
@@ -140,9 +114,12 @@ export default function UserManagement() {
   const { suspendAccount, reactivateAccount, forcePasswordReset, cancelPasswordReset, unlockAccount, resendCredentials, isLoading: isActionLoading } = useAccountActions()
 
   const { data: users, isLoading, refetch } = useQuery({
-    queryKey: ['users', orgFilter, currentOrganization?.id, isPlatformUser],
+    queryKey: ['users', currentOrganization?.id],
+    enabled: !!currentOrganization?.id,
     queryFn: async () => {
-      let query = supabase
+      if (!currentOrganization?.id) return []
+
+      const { data, error } = await supabase
         .from('profiles')
         .select(`
           *,
@@ -178,17 +155,8 @@ export default function UserManagement() {
             )
           )
         `)
+        .eq('organization_id', currentOrganization.id)
         .order('created_at', { ascending: false })
-
-      const effectiveOrgFilter = !isPlatformUser
-        ? (currentOrganization?.id || null)
-        : (orgFilter !== 'all' ? orgFilter : null)
-
-      if (effectiveOrgFilter) {
-        query = query.eq('organization_id', effectiveOrgFilter)
-      }
-
-      const { data, error } = await query
 
       if (error) throw error
 
@@ -218,8 +186,7 @@ export default function UserManagement() {
 
         const orgInfo = p.organizations 
           || p.organization_memberships?.[0]?.organization 
-          || (p.organization_id ? organizations.find((o) => o.id === p.organization_id) : null)
-          || null
+          || currentOrganization
 
         return {
           ...p,
@@ -233,38 +200,33 @@ export default function UserManagement() {
   })
 
   const { data: properties } = useQuery({
-    queryKey: ['properties', 'invite', effectiveInviteOrgId],
+    queryKey: ['properties', 'invite', currentOrganization?.id],
     queryFn: async () => {
-      let query = supabase
+      if (!currentOrganization?.id) return []
+      const { data, error } = await supabase
         .from('hotels')
         .select('id, name, name_ar')
         .eq('is_active', true)
         .eq('is_deleted', false)
+        .eq('organization_id', currentOrganization.id)
         .order('name', { ascending: true })
 
-      if (effectiveInviteOrgId) {
-        query = query.eq('organization_id', effectiveInviteOrgId)
-      }
-
-      const { data, error } = await query
       if (error) throw error
       return (data || []) as Array<{ id: string; name: string; name_ar?: string | null }>
     },
-    enabled: !!effectiveInviteOrgId,
+    enabled: !!currentOrganization?.id,
   })
 
   const { data: departments } = useQuery({
-    queryKey: ['departments', 'invite', invitePropertyId, effectiveInviteOrgId],
+    queryKey: ['departments', 'invite', invitePropertyId, currentOrganization?.id],
     queryFn: async () => {
+      if (!currentOrganization?.id) return []
       let query = supabase
         .from('departments')
         .select('id, name, name_ar, property_id, hotel_id, organization_id')
         .eq('is_active', true)
+        .eq('organization_id', currentOrganization.id)
         .order('name', { ascending: true })
-
-      if (effectiveInviteOrgId) {
-        query = query.eq('organization_id', effectiveInviteOrgId)
-      }
 
       if (invitePropertyId) {
         query = query.or(`property_id.eq.${invitePropertyId},hotel_id.eq.${invitePropertyId}`)
@@ -274,7 +236,7 @@ export default function UserManagement() {
       if (error) throw error
       return (data || []) as Array<{ id: string; name: string; name_ar?: string | null; property_id: string }>
     },
-    enabled: !!effectiveInviteOrgId,
+    enabled: !!currentOrganization?.id,
   })
 
   useEffect(() => {
@@ -424,9 +386,8 @@ export default function UserManagement() {
         throw new Error('Please select a role for the invited user.')
       }
 
-      const targetOrg = effectiveInviteOrgId
-      if (!targetOrg) {
-        throw new Error(t('form.error.select_org', 'Please select a target organization.'))
+      if (!currentOrganization?.id) {
+        throw new Error(t('form.error.select_org', 'Tenant context required.'))
       }
 
       const appUrl = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, '')
@@ -436,7 +397,7 @@ export default function UserManagement() {
           role,
           provisioningMethod: 'invite',
           appUrl,
-          organizationId: targetOrg,
+          organizationId: currentOrganization.id,
           propertyIds: invitePropertyId ? [invitePropertyId] : [],
           departmentIds: inviteDepartmentId ? [inviteDepartmentId] : [],
         },
@@ -504,16 +465,30 @@ export default function UserManagement() {
     }
   }
 
-  // Filter users by search + status
+  // Filter users by search + role category + status
   const filteredUsers = useMemo(() => {
     return users?.filter((user) => {
       const includesSearch = (value?: string | null) =>
         (value || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesSearch =
         includesSearch(user.full_name) ||
-        includesSearch(user.email)
+        includesSearch(user.email) ||
+        includesSearch(user.staff_id) ||
+        includesSearch(user.job_title)
 
       if (!matchesSearch) return false
+
+      // Role category filter (Academy mental model)
+      if (roleCategoryFilter === 'learners') {
+        const isLearner = ['learner', 'staff'].includes(user.role || '') || !user.role
+        if (!isLearner) return false
+      } else if (roleCategoryFilter === 'instructors') {
+        const isInstructor = ['training_manager', 'manager', 'department_head', 'author', 'knowledge_manager', 'property_manager'].includes(user.role || '')
+        if (!isInstructor) return false
+      } else if (roleCategoryFilter === 'admins') {
+        const isAdmin = ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'property_hr', 'regional_hr'].includes(user.role || '')
+        if (!isAdmin) return false
+      }
 
       switch (statusFilter) {
         case 'active':
@@ -528,7 +503,7 @@ export default function UserManagement() {
           return true
       }
     })
-  }, [users, searchTerm, statusFilter])
+  }, [users, searchTerm, roleCategoryFilter, statusFilter])
 
   const handleEdit = (user: Profile) => {
     setSelectedUser(user)
@@ -723,15 +698,64 @@ export default function UserManagement() {
     inactive: users?.filter(u => !u.is_active).length || 0,
   }), [users])
 
+  // Role category counts (Academy mental model)
+  const roleCounts = useMemo(() => ({
+    all: users?.length || 0,
+    learners: users?.filter(u => ['learner', 'staff'].includes(u.role || '') || !u.role).length || 0,
+    instructors: users?.filter(u => ['training_manager', 'manager', 'department_head', 'author', 'knowledge_manager', 'property_manager'].includes(u.role || '')).length || 0,
+    admins: users?.filter(u => ['administrator', 'super_admin', 'corporate_admin', 'regional_admin', 'property_hr', 'regional_hr'].includes(u.role || '')).length || 0,
+  }), [users])
+
+  const seatUsage = entitlements?.usage?.learners ?? users?.length ?? 0
+  const maxSeats = entitlements?.max_learners ?? 100
+  const percentUsed = Math.min(100, Math.round((seatUsage / (maxSeats || 1)) * 100))
+  const seatsAvailable = Math.max(0, maxSeats - seatUsage)
+  const isNearSeatLimit = percentUsed >= 90
+
   const selectedResetCount = useMemo(() => filteredUsers
     ? filteredUsers.filter((u) => selectedUserIds.has(u.id) && u.force_password_reset).length
     : 0, [filteredUsers, selectedUserIds])
+
+  if (!currentOrganization?.id) {
+    return (
+      <div className="max-w-xl mx-auto py-16 px-4 text-center animate-in fade-in duration-300">
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4">
+          <Building className="h-7 w-7 text-amber-500" />
+        </div>
+        <h2 className="text-xl font-bold font-serif text-foreground">
+          {t('no_tenant_selected_title', 'Tenant Organization Context Required')}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-2 leading-relaxed max-w-md mx-auto">
+          {t(
+            'no_tenant_selected_desc',
+            'Organization User Management manages team members, learners, and role assignments for an active tenant organization.'
+          )}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {isPlatformUser && (
+            <Link to="/platform/users">
+              <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                <span>{t('go_to_global_directory', 'Go to Platform User Directory')}</span>
+              </Button>
+            </Link>
+          )}
+          <Link to="/platform/organizations">
+            <Button variant="outline" className="text-xs gap-1.5">
+              <Building className="h-3.5 w-3.5" />
+              <span>{t('select_organization', 'Select Customer Organization')}</span>
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   if (showForm) {
     return (
       <UserForm
         user={selectedUser || undefined}
-        initialOrgId={orgFilter !== 'all' ? orgFilter : (currentOrganization?.id || organizations[0]?.id)}
+        initialOrgId={currentOrganization.id}
         onClose={handleCloseForm}
       />
     )
@@ -747,30 +771,46 @@ export default function UserManagement() {
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-0.5">
-                <Users className="me-1.5 h-3.5 w-3.5" />
-                {t('title', 'Employee Directory & Access Control')}
+              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-0.5 flex items-center gap-1.5">
+                <Building className="h-3.5 w-3.5" />
+                <span>{isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}</span>
+              </Badge>
+              <Badge variant="outline" className="border-border/60 text-xs font-medium px-2.5 py-0.5 text-muted-foreground">
+                <GraduationCap className="me-1.5 h-3.5 w-3.5 text-amber-500" />
+                <span>{t('academy_badge', 'Organization Academy & Team')}</span>
               </Badge>
               <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs font-mono text-muted-foreground">
-                {users?.length || 0} Total Staff Records
+                {users?.length || 0} {t('members_count', 'Members')}
               </span>
             </div>
 
             <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl font-serif">
-              {t('title', 'Employee Directory & Access Control')}
+              {t('academy_user_management_title', 'Academy Learners & Team Management')}
             </h1>
             <p className="text-xs text-muted-foreground sm:text-sm font-normal max-w-2xl leading-relaxed">
-              {t('description', 'Comprehensive personnel directory, security credentials, property assignments, and role-based permissions.')}
+              {t('academy_user_management_desc', 'Manage learners, course instructors, department managers, and administrators for {{orgName}}.', { orgName: isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name })}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 sm:flex-nowrap">
+            {isPlatformUser && (
+              <Link
+                to="/platform/users"
+                className="inline-flex h-9 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-700 dark:text-amber-300 backdrop-blur-xl hover:bg-amber-500/20 shadow-xs transition-colors"
+                title="Open Global SaaS Platform User Directory"
+              >
+                <Shield className="me-1.5 h-3.5 w-3.5 text-amber-500" />
+                <span>{t('platform_directory_button', 'Platform Directory')}</span>
+                <ExternalLink className="ms-1 h-3 w-3 opacity-70" />
+              </Link>
+            )}
+
             <Link
               to="/admin/users/bulk"
               className="inline-flex h-9 items-center justify-center rounded-2xl border border-border/60 bg-background/70 px-3.5 text-xs font-semibold text-foreground backdrop-blur-xl hover:border-amber-500/40 hover:bg-background/90 shadow-xs transition-colors"
             >
               <Upload className="me-1.5 h-3.5 w-3.5 text-blue-500" />
-              <span>{t('form.bulk_provisioning', 'Bulk Provisioning')}</span>
+              <span>{t('bulk_provisioning_btn', 'Bulk CSV Provisioning')}</span>
             </Link>
 
             <Button
@@ -781,26 +821,66 @@ export default function UserManagement() {
               className="h-9 rounded-2xl border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shadow-xs"
             >
               <MailPlus className="me-1.5 h-3.5 w-3.5 text-amber-500" />
-              <span>{t('form.invite_user', 'Invite User')}</span>
+              <span>{t('invite_learner_btn', 'Invite Learner')}</span>
             </Button>
 
             <Button
               onClick={openCreateForm}
               disabled={isSeatLimitReached}
-              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add employees.' : undefined}
+              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add members.' : undefined}
               className="h-9 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="me-1.5 h-3.5 w-3.5" />
-              <span>{t('add_user', 'Add Employee')}</span>
+              <span>{t('add_member_btn', 'Add Member')}</span>
             </Button>
           </div>
         </div>
 
+        {/* Learner Seats Entitlement Quota Bar */}
+        <div className="mt-5 pt-4 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 rounded-2xl bg-card/70 border border-border/50">
+            <div className="text-[11px] text-muted-foreground font-medium flex items-center justify-between">
+              <span>{t('learner_seat_quota', 'Learner Seats')}</span>
+              <span className="font-mono font-bold text-foreground">{percentUsed}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-2 mt-2 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  percentUsed >= 100
+                    ? 'bg-rose-500'
+                    : percentUsed >= 90
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
+                }`}
+                style={{ width: `${Math.min(100, percentUsed)}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1.5 font-mono">
+              {t('seats_used', { used: seatUsage, max: maxSeats, defaultValue: `${seatUsage} / ${maxSeats} Seats Used` })} · {t('seats_available', { available: seatsAvailable, defaultValue: `${seatsAvailable} Available` })}
+            </div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.learners', 'Enrolled Learners')}</div>
+            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.learners}</div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.instructors', 'Instructors & Trainers')}</div>
+            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.instructors}</div>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.admins', 'Academy Admins')}</div>
+            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.admins}</div>
+          </div>
+        </div>
+
         {isSeatLimitReached && (
-          <div className="mt-4 p-3 bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-700 dark:text-amber-300 text-xs">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+          <div className="mt-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-2xl flex items-center gap-3 text-rose-700 dark:text-rose-300 text-xs">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
             <span>
-              User seat limit reached ({entitlements?.usage?.learners ?? 0} / {entitlements?.max_learners ?? 100} seats used). Contact your platform administrator to upgrade subscription tier.
+              {t('seat_limit_reached_alert', { used: seatUsage, max: maxSeats, defaultValue: `Learner seat limit reached (${seatUsage} / ${maxSeats}). Upgrade subscription to invite or provision more learners.` })}
             </span>
           </div>
         )}
@@ -809,67 +889,64 @@ export default function UserManagement() {
       {/* Pending User Approvals */}
       <PendingUserApprovals onCountChange={setPendingApprovalCount} />
 
-      {/* Status Filter Tabs & Search Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          {isPlatformUser && (
-            <div className="flex items-center gap-2 pe-3 border-e border-border/60">
-              <Building className="h-4 w-4 text-amber-500 shrink-0" />
-              <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
-                {t('organization', 'Organization')}:
+      {/* Role Category Tabs & Status Filter Controls */}
+      <div className="space-y-3">
+        {/* Layer 1: Learning Role Filter Tabs (Academy Mental Model) */}
+        <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-muted/60 border border-border/50 max-w-fit">
+          {(['all', 'learners', 'instructors', 'admins'] as const).map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setRoleCategoryFilter(cat)}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                roleCategoryFilter === cat
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span>{t(`role_filters.${cat}`, cat === 'all' ? 'All Members' : cat === 'learners' ? 'Learners' : cat === 'instructors' ? 'Instructors' : 'Admins')}</span>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${roleCategoryFilter === cat ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold' : 'bg-muted text-muted-foreground'}`}>
+                {roleCounts[cat]}
               </span>
-              <select
-                value={orgFilter}
-                onChange={(e) => {
-                  setOrgFilter(e.target.value)
-                  setSelectedUserIds(new Set())
-                }}
-                className="h-8 rounded-xl border border-border/60 bg-card/90 px-2.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-              >
-                <option value="all">{t('all_organizations', 'All Organizations')}</option>
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {isRTL && (org as any).name_ar ? (org as any).name_ar : org.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+            </button>
+          ))}
+        </div>
 
+        {/* Layer 2: Status Filter Pills */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-2">
             {(['all', 'active', 'suspended', 'locked', 'inactive'] as const).map((status) => (
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
                   statusFilter === status
-                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-amber-500/20'
-                    : 'bg-card/80 text-muted-foreground border border-border/60 hover:border-amber-500/40 hover:text-foreground'
+                    ? 'bg-foreground text-background font-bold shadow-xs'
+                    : 'bg-card text-muted-foreground border border-border/60 hover:text-foreground'
                 }`}
               >
-                <span>{status === 'all' ? t('all_personnel', 'All Personnel') : t(`status.${status}`)}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === status ? 'bg-slate-950/20 text-slate-950' : 'bg-muted text-muted-foreground'}`}>
+                <span>{status === 'all' ? t('all_personnel', 'All Statuses') : t(`status.${status}`)}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === status ? 'bg-background/20 text-background font-bold' : 'bg-muted text-muted-foreground'}`}>
                   {statusCounts[status]}
                 </span>
               </button>
             ))}
           </div>
-        </div>
 
-        {filteredUsers && filteredUsers.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={selectedUserIds.size === filteredUsers.length ? deselectAll : selectAllVisible}
-            className="text-xs font-semibold text-muted-foreground hover:text-foreground h-8"
-          >
-            {selectedUserIds.size === filteredUsers.length ? (
-              <><CheckSquare className="w-3.5 h-3.5 me-1.5 text-amber-500" />{t('bulk.deselect_all', 'Deselect All')}</>
-            ) : (
-              <><Square className="w-3.5 h-3.5 me-1.5" />{t('bulk.select_all', 'Select All Visible')}</>
-            )}
-          </Button>
-        )}
+          {filteredUsers && filteredUsers.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={selectedUserIds.size === filteredUsers.length ? deselectAll : selectAllVisible}
+              className="text-xs font-semibold text-muted-foreground hover:text-foreground h-8"
+            >
+              {selectedUserIds.size === filteredUsers.length ? (
+                <><CheckSquare className="w-3.5 h-3.5 me-1.5 text-amber-500" />{t('bulk.deselect_all', 'Deselect All')}</>
+              ) : (
+                <><Square className="w-3.5 h-3.5 me-1.5" />{t('bulk.select_all', 'Select All Visible')}</>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Bulk Actions Bar */}
@@ -882,16 +959,16 @@ export default function UserManagement() {
         />
       )}
 
-      {/* Employee Directory Luxury Table Card */}
-      <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-6 shadow-md backdrop-blur-2xl">
+      {/* Academy Members Roster Table Card */}
+      <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-4 sm:p-6 shadow-md backdrop-blur-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/40">
           <div>
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-              <Users className="h-4 w-4 text-amber-500" />
-              <span>{t('directory', 'Employee Master Records')}</span>
+              <GraduationCap className="h-4 w-4 text-amber-500" />
+              <span>{t('academy_badge', 'Academy & Team Roster')}</span>
             </h3>
             <p className="text-xs text-muted-foreground">
-              {filteredUsers?.length || 0} employees matching filter criteria. Click any row for slide-over detail.
+              {filteredUsers?.length || 0} {t('members_count', 'members')} matching role and status filters. Click any row for slide-over details.
             </p>
           </div>
 
@@ -1395,45 +1472,17 @@ export default function UserManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Target Organization Selector or Badge */}
-          {isPlatformUser ? (
-            <div className="space-y-2 py-2">
-              <Label htmlFor="invite-org" className="flex items-center gap-1.5">
+          {/* Target Organization Badge */}
+          {currentOrganization && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border text-xs my-1">
+              <span className="text-muted-foreground flex items-center gap-1.5">
                 <Building className="h-3.5 w-3.5 text-amber-500" />
-                <span>{t('form.organization_label', 'Target Organization')}</span>
-              </Label>
-              <select
-                id="invite-org"
-                value={effectiveInviteOrgId}
-                onChange={(e) => {
-                  setInviteOrgId(e.target.value)
-                  setInvitePropertyId('')
-                  setInviteDepartmentId('')
-                }}
-                disabled={inviteUserMutation.isPending}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-medium"
-                required
-              >
-                <option value="">{t('form.select_organization', 'Select Organization')}</option>
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {isRTL && (org as any).name_ar ? (org as any).name_ar : org.name}
-                  </option>
-                ))}
-              </select>
+                {t('organization', 'Organization')}:
+              </span>
+              <Badge variant="secondary" className="font-semibold text-xs">
+                {isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}
+              </Badge>
             </div>
-          ) : (
-            currentOrganization && (
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border text-xs my-1">
-                <span className="text-muted-foreground flex items-center gap-1.5">
-                  <Building className="h-3.5 w-3.5 text-amber-500" />
-                  {t('organization', 'Organization')}:
-                </span>
-                <Badge variant="secondary" className="font-semibold text-xs">
-                  {isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}
-                </Badge>
-              </div>
-            )
           )}
 
           <div className="space-y-2 py-2">

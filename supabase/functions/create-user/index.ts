@@ -156,6 +156,7 @@ const APP_ROLE_PRIORITY: Record<AppRole, number> = {
 };
 
 const CREATOR_ROLES = new Set<AppRole>([
+  "super_admin",
   "administrator",
   "corporate_admin",
   "regional_admin",
@@ -375,64 +376,89 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check Roles (Must be Regional Admin, HR, or Corporate Admin)
-    // Use adminClient to bypass RLS — the caller's identity is already verified
-    // via getUser() above. Using userClient here was causing false permission
-    // denials when RLS policies didn't return the caller's own role rows.
-    const { data: roles, error: rolesError } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
-
-    if (rolesError) {
-      return new Response(
-        JSON.stringify({ error: "Failed to verify inviter permissions" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    // Platform operators have root authority across the entire platform
+    let isPlatformOp = false;
+    try {
+      const { data: rpcOp } = await adminClient.rpc("is_platform_operator", {
+        _user_id: user.id,
+      });
+      if (rpcOp === true) isPlatformOp = true;
+    } catch (e) {
+      console.warn("RPC is_platform_operator check failed:", e);
     }
 
-    const inviterRoles = (roles || []).map((r) => r.role).filter(isAppRole);
-    const inviterBestRole = getMostPrivilegedRole(inviterRoles);
-    const hasPermission = inviterRoles.some((currentRole) =>
-      CREATOR_ROLES.has(currentRole),
-    );
-
-    if (!hasPermission) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: Insufficient privileges" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    if (!isPlatformOp) {
+      const { data: platUser } = await adminClient
+        .from("platform_users")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (platUser?.user_id) {
+        isPlatformOp = true;
+      }
     }
 
-    if (!inviterBestRole) {
-      return new Response(
-        JSON.stringify({ error: "Forbidden: No valid inviter role found" }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    if (!isPlatformOp) {
+      // Check Roles (Must be Regional Admin, HR, or Corporate Admin)
+      // Use adminClient to bypass RLS — the caller's identity is already verified
+      // via getUser() above. Using userClient here was causing false permission
+      // denials when RLS policies didn't return the caller's own role rows.
+      const { data: roles, error: rolesError } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id);
 
-    if (
-      APP_ROLE_PRIORITY[normalizedRole] <= APP_ROLE_PRIORITY[inviterBestRole]
-    ) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Forbidden: You cannot assign a role equal to or higher than your own.",
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
+      if (rolesError) {
+        return new Response(
+          JSON.stringify({ error: "Failed to verify inviter permissions" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      const inviterRoles = (roles || []).map((r) => r.role).filter(isAppRole);
+      const inviterBestRole = getMostPrivilegedRole(inviterRoles);
+      const hasPermission = inviterRoles.some((currentRole) =>
+        CREATOR_ROLES.has(currentRole),
       );
+
+      if (!hasPermission) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: Insufficient privileges" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (!inviterBestRole) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden: No valid inviter role found" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+
+      if (
+        APP_ROLE_PRIORITY[normalizedRole] <= APP_ROLE_PRIORITY[inviterBestRole]
+      ) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Forbidden: You cannot assign a role equal to or higher than your own.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
     }
     // =================================================================
     // SECURITY CHECK: END
@@ -466,11 +492,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Platform operators bypass entitlement and tenant authority checks
-    const { data: isOp } = await adminClient.rpc("is_platform_operator", {
-      p_user_id: user.id,
-    });
-
-    if (!isOp) {
+    if (!isPlatformOp) {
       if (!targetOrgId) {
         return new Response(
           JSON.stringify({
@@ -609,6 +631,7 @@ Deno.serve(async (req: Request) => {
     const authMetadata: Record<string, string> = {};
     if (normalizedFullName) authMetadata.full_name = normalizedFullName;
     if (normalizedDob) authMetadata.date_of_birth = normalizedDob;
+    if (targetOrgId) authMetadata.organization_id = targetOrgId;
     try {
       if (provisioningMethod === "invite") {
         const generatedInvite = await generateInviteLink(
@@ -638,6 +661,33 @@ Deno.serve(async (req: Request) => {
     }
 
     if (authError) {
+      const isAlreadyRegistered =
+        String(authError.message || '').toLowerCase().includes('already been registered') ||
+        String(authError.message || '').toLowerCase().includes('already registered');
+
+      if (isAlreadyRegistered) {
+        const { data: existingProfile } = await adminClient
+          .from("profiles")
+          .select("id")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+
+        if (existingProfile?.id) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              userId: existingProfile.id,
+              isExisting: true,
+              message: "User account already exists. Existing profile resolved.",
+            }),
+            {
+              status: 200,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
+      }
+
       console.error("Auth creation failed:", authError);
       const message = authError.message?.includes("date_of_birth")
         ? "Failed to create user: date of birth is required by profile constraints."
@@ -704,9 +754,11 @@ Deno.serve(async (req: Request) => {
     // 3. Assign Role (user_roles)
     const roleToAssign = normalizedRole;
     if (roleToAssign) {
+      const roleRow: Record<string, unknown> = { user_id: userId, role: roleToAssign };
+      if (targetOrgId) roleRow.organization_id = targetOrgId;
       const { error: roleError } = await adminClient
         .from("user_roles")
-        .insert({ user_id: userId, role: roleToAssign });
+        .insert(roleRow);
 
       if (roleError) {
         console.error("Role assignment failed:", roleError);
@@ -820,7 +872,7 @@ Deno.serve(async (req: Request) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: authHeader!,
+              Authorization: `Bearer ${serviceRoleKey}`,
             },
             body: JSON.stringify({
               to: normalizedEmail,
@@ -846,14 +898,16 @@ Deno.serve(async (req: Request) => {
 
         if (!emailResponse.ok) {
           const errorData = await emailResponse.json().catch(() => ({}));
-          console.error("Failed to send welcome email:", errorData);
+          console.warn("Failed to send welcome email (non-fatal):", errorData);
         } else {
           console.log("Welcome email successfully sent to " + normalizedEmail);
         }
       } catch (emailErr) {
-        console.error("Error calling send-email function:", emailErr);
+        console.warn("Error calling send-email function (non-fatal):", emailErr);
       }
     }
+
+    let emailSent = false;
 
     // 7. Send invite email via Resend (all environments).
     if (provisioningMethod === "invite") {
@@ -879,7 +933,7 @@ Deno.serve(async (req: Request) => {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: authHeader!,
+              Authorization: `Bearer ${serviceRoleKey}`,
             },
             body: JSON.stringify({
               to: normalizedEmail,
@@ -902,32 +956,23 @@ Deno.serve(async (req: Request) => {
 
         if (!emailResponse.ok) {
           const errorData = await emailResponse.json().catch(() => ({}));
-          console.error("Failed to send invite email:", errorData);
-          await adminClient.auth.admin.deleteUser(userId);
-          return new Response(
-            JSON.stringify({ error: "Failed to send invitation email." }),
-            {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            },
-          );
+          console.warn("Failed to send invite email (non-fatal):", errorData);
+          emailSent = false;
+        } else {
+          emailSent = true;
+          console.log("Invite email successfully sent to " + normalizedEmail);
         }
       } catch (inviteEmailErr) {
-        console.error("Error sending invite email:", inviteEmailErr);
-        await adminClient.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: "Failed to send invitation email." }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        console.warn("Error sending invite email (non-fatal):", inviteEmailErr);
+        emailSent = false;
       }
 
       const invitationMetadata = {
         full_name: normalizedFullName || null,
         created_via: "create-user",
-        organization_id: targetOrgId,
+        organization_id: targetOrgId || null,
+        is_platform_operator: !targetOrgId,
+        email_sent: emailSent,
       };
 
       const { error: invitationError } = await adminClient
@@ -938,6 +983,7 @@ Deno.serve(async (req: Request) => {
           role: normalizedRole,
           property_id: propertyIds[0] || null,
           department_id: departmentIds[0] || null,
+          organization_id: targetOrgId || null,
           invited_by: user.id,
           invited_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -952,15 +998,7 @@ Deno.serve(async (req: Request) => {
         });
 
       if (invitationError) {
-        console.error("Failed to store invitation record:", invitationError);
-        await adminClient.auth.admin.deleteUser(userId);
-        return new Response(
-          JSON.stringify({ error: "Failed to store invitation details." }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        console.warn("Failed to store invitation record (non-fatal):", invitationError);
       }
     }
 
@@ -969,7 +1007,8 @@ Deno.serve(async (req: Request) => {
         userId: userId,
         success: true,
         provisioningMethod,
-        invitationSent: provisioningMethod === "invite",
+        invitationSent: provisioningMethod === "invite" ? emailSent : false,
+        inviteUrl: provisioningMethod === "invite" ? inviteUrl : undefined,
         ...(provisioningMethod === "temporary_password"
           ? { tempPassword: temporaryPassword }
           : {}),

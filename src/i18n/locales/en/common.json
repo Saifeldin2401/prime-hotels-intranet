@@ -342,7 +342,10 @@
         "discard_title": "Discard Changes",
         "discard_message": "You have unsaved changes. Are you sure you want to discard them?",
         "discard": "Discard",
-        "keep_editing": "Keep Editing"
+        "keep_editing": "Keep Editing",
+        "unsaved_changes_title": "Unsaved Changes",
+        "unsaved_changes_message": "You have unsaved changes. Are you sure you want to leave? Your changes will be lost.",
+        "leave_page": "Leave Page"
     },
     "action": {
         "next": "Next",

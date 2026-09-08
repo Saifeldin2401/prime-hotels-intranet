@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   Check,
   ChevronLeft,
+  Crown,
   Edit3,
   Eye,
   Loader2,
@@ -26,6 +27,7 @@ interface BuilderHeaderProps {
   onPreview: () => void
   onMagic: () => void
   onTitleChange?: (title: string) => void
+  isMasterTemplate?: boolean
 
   // Navigation steps
   steps?: readonly { key: BuilderStep; label: string; description?: string }[]
@@ -54,6 +56,7 @@ export const BuilderHeader = ({
   onPreview,
   onMagic,
   onTitleChange,
+  isMasterTemplate = false,
   steps,
   activeStep,
   onStepChange,
@@ -78,13 +81,13 @@ export const BuilderHeader = ({
         isRTL ? "flex-row-reverse" : ""
       )}>
         {/* Left Section: Back, Title & Status */}
-        <div className={cn("flex items-center gap-2 min-w-0 max-w-[340px] xl:max-w-[400px]", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex items-center gap-2 min-w-0 max-w-[400px] xl:max-w-[460px]", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-            onClick={() => navigate('/training/hub')}
-            title={t('back', 'Back to Hub')}
+            onClick={() => navigate(isMasterTemplate ? '/platform/master-library' : '/training/hub')}
+            title={isMasterTemplate ? t('builder.backToMasterLibrary', 'Back to Master Library') : t('back', 'Back to Hub')}
           >
             <ChevronLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
           </Button>
@@ -110,6 +113,12 @@ export const BuilderHeader = ({
                 title={t('builder.clickToRename', 'Click to edit course name')}
               />
             </div>
+            {isMasterTemplate && (
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1">
+                <Crown className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                <span className="hidden sm:inline">{t('builder.globalMasterTemplate', 'Global Master')}</span>
+              </Badge>
+            )}
             {hasUnsavedChanges && (
               <Badge variant="outline" className="h-5 px-1.5 text-[9px] uppercase font-mono bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 shrink-0">
                 {t('builder.unsaved', 'Unsaved')}

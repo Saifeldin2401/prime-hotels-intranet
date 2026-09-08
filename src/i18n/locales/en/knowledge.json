@@ -137,6 +137,16 @@
         "updated_at": "Updated on {{date}}"
     },
     "viewer": {
+        "master_sop": "Master SOP",
+        "corporate_standard": "Corporate Master Standard",
+        "inherited_master": "Inherited Brand Standard",
+        "release_notes_title": "Revision Release Notes & Guidance",
+        "release_notes_desc": "Key operational updates and standard procedural directives introduced in this revision.",
+        "local_addendum_title": "Property Local Addendum & Operational Annex",
+        "local_addendum_desc": "Local operational modifications and property-specific protocols preserved from central blueprint synchronization.",
+        "property_specific": "Property Specific",
+        "english_version": "English Version",
+        "arabic_version": "Arabic Version",
         "ask_ai_title": "Ask AI",
         "ask_ai_desc": "Get instant answers grounded in this article.",
         "ask_ai_button": "Ask AI about this",
@@ -586,5 +596,17 @@
     "common": {
         "no_data": "No Data"
     },
-    "required_reading": "Required Reading"
+    "required_reading": "Required Reading",
+    "editor": {
+        "video_linked": "Video linked from media library: {{title}}",
+        "video_inserted_and_linked": "Video selected from media library and inserted",
+        "media_inserted": "Image inserted from media library",
+        "media_attached": "Media asset attached to document",
+        "select_video_title": "Select Video from Hotel Library",
+        "select_media_title": "Select Media from Hotel Library",
+        "linked_video": "Linked Video",
+        "unlink_video": "Remove Video",
+        "replace_video": "Replace Video",
+        "video_preview": "Video Preview"
+    }
 }

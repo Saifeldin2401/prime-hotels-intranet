@@ -237,8 +237,10 @@ export function CustomRichTextEditor({
           type: 'image',
           attrs: { src: url, alt: '', width: '100%', align: 'center' },
         }).run()
+        toast.success('Image inserted into editor')
       } else {
         currentEditor.chain().focus().setVideo({ src: url }).run()
+        toast.success('Video linked and inserted into editor')
       }
     },
     [editor, onPickMedia],

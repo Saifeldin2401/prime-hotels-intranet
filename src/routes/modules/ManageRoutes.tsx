@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { Route, Navigate } from 'react-router-dom'
 
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 
 const ContentReviewQueue = lazy(() => import('@/pages/manage/ContentReviewQueue'))
@@ -12,7 +13,7 @@ const ContentReviewQueue = lazy(() => import('@/pages/manage/ContentReviewQueue'
  * src/config/navigation.ts (churned elsewhere).
  */
 export const ManageRoutes = () => (
-    <>
+    <Route element={<TenantContextGuard resourceName="Content Review" />}>
         <Route
             path="/manage/review"
             element={
@@ -37,5 +38,5 @@ export const ManageRoutes = () => (
             path="/manage/review-queue"
             element={<Navigate to="/manage/review" replace />}
         />
-    </>
+    </Route>
 )

@@ -74,6 +74,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
     isImpersonating,
     enterOrganization,
     exitImpersonation,
+    returnToPlatformScope,
   } = useTenant()
 
   // Audited break-glass entry state for platform operators
@@ -103,25 +104,21 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
 
   const handleSelectPlatformPlane = async () => {
     onOpenChange(false)
-    if (isImpersonating) {
-      try {
-        await exitImpersonation()
-        toast({
-          title: t('admin:return_to_platform', 'Return to Platform Control Plane'),
-          description: t('admin:global_saas_scope', 'Global SaaS Scope restored.'),
-        })
-      } catch (err: unknown) {
-        const error = err as { message?: string }
-        toast({
-          title: t('common:error', 'Error'),
-          description: error?.message || 'Failed to exit session',
-          variant: 'destructive',
-        })
-      }
+    try {
+      await returnToPlatformScope()
+      toast({
+        title: t('admin:return_to_platform', 'Return to Platform Control Plane'),
+        description: t('admin:global_saas_scope', 'Global SaaS Scope restored.'),
+      })
+      navigate('/platform')
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      toast({
+        title: t('common:error', 'Error'),
+        description: error?.message || 'Failed to exit session',
+        variant: 'destructive',
+      })
     }
-    safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
-    await refreshTenantData()
-    navigate('/platform')
   }
 
   const handleOrgSelect = async (org: Organization) => {

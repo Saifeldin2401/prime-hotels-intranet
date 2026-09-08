@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { crudToasts, showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
 import type {
@@ -28,6 +29,7 @@ export interface UseTrainingModulesPaginatedOptions {
   search?: string
   cursor?: string | null // For cursor-based pagination
   limit?: number
+  organization_id?: string
 }
 
 export interface TrainingModulesPaginatedResult {
@@ -42,10 +44,12 @@ export interface TrainingModulesPaginatedResult {
 }
 
 export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginatedOptions) {
+  const { currentOrganization } = useTenant()
   const limit = options?.limit || DEFAULT_MODULES_LIMIT
+  const orgId = options?.organization_id || currentOrganization?.id
   
   return useQuery({
-    queryKey: ['training-modules-paginated', options],
+    queryKey: ['training-modules-paginated', orgId, options],
     queryFn: async (): Promise<TrainingModulesPaginatedResult> => {
       let query = supabase
         .from('training_modules')
@@ -76,6 +80,12 @@ export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginate
         .order('created_at', { ascending: false })
         .eq('is_deleted', false)
         .limit(limit)
+
+      if (orgId) {
+        query = query.or(`organization_id.eq.${orgId},is_master_template.eq.true`)
+      } else {
+        query = query.eq('is_master_template', true)
+      }
 
       // Apply cursor-based pagination
       if (options?.cursor) {
@@ -110,6 +120,7 @@ export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginate
         hasMore
       }
     },
+    enabled: !!orgId,
   })
 }
 
@@ -118,9 +129,13 @@ export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginate
 export function useTrainingModules(filters?: {
   created_by?: string
   search?: string
+  organization_id?: string
 }) {
+  const { currentOrganization } = useTenant()
+  const orgId = filters?.organization_id || currentOrganization?.id
+
   return useQuery({
-    queryKey: ['training-modules', filters],
+    queryKey: ['training-modules', orgId, filters],
     queryFn: async () => {
       let query = supabase
         .from('training_modules')
@@ -150,6 +165,12 @@ export function useTrainingModules(filters?: {
         .order('created_at', { ascending: false })
         .eq('is_deleted', false)
 
+      if (orgId) {
+        query = query.or(`organization_id.eq.${orgId},is_master_template.eq.true`)
+      } else {
+        query = query.eq('is_master_template', true)
+      }
+
       if (filters?.created_by) {
         query = query.eq('created_by', filters.created_by)
       }
@@ -167,6 +188,7 @@ export function useTrainingModules(filters?: {
         training_quizzes?: TrainingQuiz[]
       })[]
     },
+    enabled: !!orgId,
   })
 }
 
@@ -204,6 +226,7 @@ export function useTrainingModule(moduleId: string) {
 export function useCreateTrainingModule() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { currentOrganization } = useTenant()
 
   return useMutation({
     mutationFn: async (module: Partial<TrainingModule> & { title: string }) => {
@@ -215,6 +238,7 @@ export function useCreateTrainingModule() {
           ...module,
           title: module.title,
           created_by: user.id,
+          organization_id: module.organization_id || currentOrganization?.id,
         })
         .select()
         .single()
@@ -259,6 +283,7 @@ export function useUpdateTrainingModule() {
 // The block-specific fields map as: type→block_type, order→block_order.
 export function useCreateContentBlock() {
   const queryClient = useQueryClient()
+  const { currentOrganization } = useTenant()
 
   return useMutation({
     mutationFn: async (block: Partial<TrainingContentBlock> & { training_module_id: string; title?: string }) => {
@@ -272,6 +297,7 @@ export function useCreateContentBlock() {
           content_type: 'training_block',
           block_type: typeof type === 'string' ? type : 'text',
           block_order: typeof order === 'number' ? order : 0,
+          organization_id: currentOrganization?.id,
         })
         .select()
         .single()

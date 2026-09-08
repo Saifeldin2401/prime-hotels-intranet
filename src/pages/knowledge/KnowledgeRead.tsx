@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -62,15 +63,19 @@ import {
     ArrowLeft,
     Bookmark,
     BookmarkCheck,
+    Building,
     Calendar,
     CheckCircle2,
     ChevronDown,
     ChevronRight,
     ChevronUp,
+    Crown,
     Download,
     Eye,
     FileText,
+    GitBranch,
     GraduationCap,
+    History,
     Languages,
     Lightbulb,
     List,
@@ -818,7 +823,7 @@ export default function KnowledgeRead() {
                 <h1 className="text-2xl font-bold mb-2">{t('viewer.not_found_title')}</h1>
                 <p className="text-gray-600 mb-4">{t('viewer.not_found_desc')}</p>
                 <Button onClick={() => navigate('/knowledge')}>
-                    <ArrowLeft className="h-4 w-4 me-2" />
+                    <ArrowLeft className="h-4 w-4 me-2 rtl:rotate-180" />
                     {t('viewer.back_to_home')}
                 </Button>
             </div>
@@ -1331,9 +1336,15 @@ export default function KnowledgeRead() {
                                     : ''}
                             </div>
                             {article.is_master_template && (
-                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-amber-50 text-amber-800 ring-1 ring-amber-300 flex items-center gap-1">
-                                    <Sparkles className="h-3 w-3 text-amber-600" />
-                                    {t('viewer.master_sop', 'Master SOP')}
+                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-900 dark:text-amber-300 ring-1 ring-amber-400/50 flex items-center gap-1.5 shadow-2xs">
+                                    <Crown className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                    {t('viewer.corporate_standard', 'Corporate Master Standard')}
+                                </Badge>
+                            )}
+                            {article.master_source_id && (
+                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 ring-1 ring-indigo-300/60 flex items-center gap-1.5 shadow-2xs">
+                                    <GitBranch className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                                    {t('viewer.inherited_master', 'Inherited Brand Standard')}
                                 </Badge>
                             )}
                             {article.scope_type && article.scope_type !== 'organization' && (
@@ -1517,6 +1528,33 @@ export default function KnowledgeRead() {
                             </div>
                         )}
 
+                        {/* Revision Release Notes */}
+                        {article.content_data?.release_notes && (
+                            <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-indigo-50/70 via-white to-background p-5 sm:p-6 shadow-2xs dark:border-indigo-900/50 dark:from-indigo-950/20">
+                                <div className="flex items-start gap-3.5">
+                                    <div className="h-9 w-9 rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 flex items-center justify-center border border-indigo-500/20 shrink-0 mt-0.5 shadow-2xs">
+                                        <History className="h-4 w-4" />
+                                    </div>
+                                    <div className="space-y-1.5 min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                                {t('viewer.release_notes_title', 'Revision Release Notes & Guidance')}
+                                            </h4>
+                                            <Badge variant="outline" className="text-[10px] bg-indigo-100/60 text-indigo-900 border-indigo-300 dark:bg-indigo-900/40 dark:text-indigo-200 font-semibold">
+                                                {`v${article.current_version || article.version || 1}`}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                            {t('viewer.release_notes_desc', 'Key operational updates and standard procedural directives introduced in this revision.')}
+                                        </p>
+                                        <div className="mt-3 p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/60 border border-indigo-100 dark:border-indigo-900/30 text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
+                                            {article.content_data.release_notes}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* File Attachment Quick Preview */}
                         {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) && (
                             <div className="bg-muted/40 border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -1639,6 +1677,82 @@ export default function KnowledgeRead() {
 
                                 {/* Section Link Injector - Adds copy buttons to headings */}
                                 <SectionLinkInjector containerRef={contentRef} isActive={!!article.content} />
+
+                                {/* Property Local Addendum Box */}
+                                {article.content_data?.local_addendum && (article.content_data.local_addendum.en || article.content_data.local_addendum.ar) && (
+                                    <div className="mt-10 rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50/60 via-orange-50/20 to-card p-6 sm:p-7 shadow-xs dark:border-amber-800/60 dark:from-amber-950/25">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-amber-200/80 dark:border-amber-800/40">
+                                            <div className="flex items-center gap-3">
+                                                <div className="h-10 w-10 rounded-xl bg-amber-500/15 text-amber-800 dark:text-amber-300 flex items-center justify-center border border-amber-500/25 shadow-2xs shrink-0">
+                                                    <Building className="h-5 w-5" />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                                                            {t('viewer.local_addendum_title', 'Property Local Addendum & Operational Annex')}
+                                                        </h3>
+                                                        <Badge variant="outline" className="text-[10px] font-semibold bg-amber-100/70 text-amber-900 border-amber-300 dark:bg-amber-900/50 dark:text-amber-200">
+                                                            {t('viewer.property_specific', 'Property-Specific')}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                                                        {t('viewer.local_addendum_desc', 'Local operational modifications and property-specific protocols preserved from central blueprint synchronization.')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-5">
+                                            {showBilingual && article.content_data.local_addendum.en && article.content_data.local_addendum.ar ? (
+                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                                    <div className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 space-y-2">
+                                                        <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                                                            {t('viewer.english_version', 'English Version')}
+                                                        </div>
+                                                        <div className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                                            {article.content_data.local_addendum.en}
+                                                        </div>
+                                                    </div>
+                                                    <div dir="rtl" className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 space-y-2 font-arabic text-right">
+                                                        <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+                                                            {t('viewer.arabic_version', 'النسخة العربية')}
+                                                        </div>
+                                                        <div className="text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                                            {article.content_data.local_addendum.ar}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : article.content_data.local_addendum.en && article.content_data.local_addendum.ar ? (
+                                                <Tabs defaultValue={shouldUseRtl ? "ar" : "en"} className="w-full">
+                                                    <TabsList className="bg-amber-100/60 dark:bg-amber-950/40 p-1 border border-amber-200 dark:border-amber-900/40">
+                                                        <TabsTrigger value="en" className="text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900">
+                                                            {t('viewer.english_version', 'English Version')}
+                                                        </TabsTrigger>
+                                                        <TabsTrigger value="ar" className="text-xs font-semibold data-[state=active]:bg-white dark:data-[state=active]:bg-slate-900 font-arabic">
+                                                            {t('viewer.arabic_version', 'النسخة العربية')}
+                                                        </TabsTrigger>
+                                                    </TabsList>
+                                                    <TabsContent value="en" className="mt-3 p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+                                                        {article.content_data.local_addendum.en}
+                                                    </TabsContent>
+                                                    <TabsContent value="ar" dir="rtl" className="mt-3 p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-arabic text-right">
+                                                        {article.content_data.local_addendum.ar}
+                                                    </TabsContent>
+                                                </Tabs>
+                                            ) : (
+                                                <div
+                                                    dir={article.content_data.local_addendum.ar ? 'rtl' : 'ltr'}
+                                                    className={cn(
+                                                        "p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed",
+                                                        article.content_data.local_addendum.ar && "font-arabic text-right"
+                                                    )}
+                                                >
+                                                    {article.content_data.local_addendum.en || article.content_data.local_addendum.ar}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Content Type Specific Renderers */}
                                 <div className="mt-12 space-y-12">

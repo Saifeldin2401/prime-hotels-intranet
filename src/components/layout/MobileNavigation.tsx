@@ -16,24 +16,29 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useTenant } from '@/contexts/TenantContext'
 import { cn } from '@/lib/utils'
-import { Bell, FileText, GraduationCap, Home } from 'lucide-react'
+import { Bell, Building2, Crown, FileText, GraduationCap, Home, Menu, Users } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
 
 interface MobileNavigationProps {
   className?: string
+  onOpenMenu?: () => void
 }
 
 /**
  * MobileNavigation - Bottom navigation for mobile screens mapping to the primary destinations
  */
-export function MobileNavigation({ className }: MobileNavigationProps) {
+export function MobileNavigation({ className, onOpenMenu }: MobileNavigationProps) {
   const { t } = useTranslation('nav')
   const location = useLocation()
   const { notifications } = useNotifications()
   const { profile } = useAuth()
+  const { isPlatformAdmin, isPlatformScope } = useTenant()
+
+  const isPlatformActive = Boolean(isPlatformAdmin && (isPlatformScope || location.pathname.startsWith('/platform')))
 
   // Calculate unread notifications
   const unreadCount = useMemo(() => {
@@ -85,36 +90,71 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
       
       {/* Safe Area Spacer */}
       <div className="relative flex items-end justify-around h-20 max-w-lg mx-auto pb-safe">
-        
-        {/* Home */}
-        <NavButton
-          to="/dashboard"
-          isActive={isActive('/dashboard', true) || isActive('/', true)}
-          onClick={handleHaptic}
-          icon={<Home className="w-5 h-5" />}
-          activeIcon={<Home className="w-5 h-5 fill-current" />}
-          label={t('home', 'Home')}
-        />
+        {isPlatformActive ? (
+          <>
+            {/* Platform Cockpit */}
+            <NavButton
+              to="/platform"
+              isActive={location.pathname === '/platform'}
+              onClick={handleHaptic}
+              icon={<Crown className="w-5 h-5 text-amber-500" />}
+              activeIcon={<Crown className="w-5 h-5 fill-amber-500 text-amber-500" />}
+              label={t('platform', 'Cockpit')}
+            />
 
-        {/* Learning */}
-        <NavButton
-          to="/learning/my"
-          isActive={isActive('/learning/my') || isActive('/learning') || isActive('/training')}
-          onClick={handleHaptic}
-          icon={<GraduationCap className="w-5 h-5" />}
-          activeIcon={<GraduationCap className="w-5 h-5 fill-current" />}
-          label={t('my_learning', 'Learning')}
-        />
+            {/* Tenants */}
+            <NavButton
+              to="/platform/organizations"
+              isActive={isActive('/platform/organizations') || isActive('/platform/tenants')}
+              onClick={handleHaptic}
+              icon={<Building2 className="w-5 h-5" />}
+              activeIcon={<Building2 className="w-5 h-5 fill-current" />}
+              label={t('tenants', 'Tenants')}
+            />
 
-        {/* Documents */}
-        <NavButton
-          to="/documents"
-          isActive={isActive('/documents')}
-          onClick={handleHaptic}
-          icon={<FileText className="w-5 h-5" />}
-          activeIcon={<FileText className="w-5 h-5 fill-current" />}
-          label={t('documents', 'Documents')}
-        />
+            {/* Platform Users */}
+            <NavButton
+              to="/platform/users"
+              isActive={isActive('/platform/users')}
+              onClick={handleHaptic}
+              icon={<Users className="w-5 h-5" />}
+              activeIcon={<Users className="w-5 h-5 fill-current" />}
+              label={t('users', 'Users')}
+            />
+          </>
+        ) : (
+          <>
+            {/* Home */}
+            <NavButton
+              to="/dashboard"
+              isActive={isActive('/dashboard', true) || isActive('/', true)}
+              onClick={handleHaptic}
+              icon={<Home className="w-5 h-5" />}
+              activeIcon={<Home className="w-5 h-5 fill-current" />}
+              label={t('home', 'Home')}
+            />
+
+            {/* Learning */}
+            <NavButton
+              to="/learning/my"
+              isActive={isActive('/learning/my') || isActive('/learning') || isActive('/training')}
+              onClick={handleHaptic}
+              icon={<GraduationCap className="w-5 h-5" />}
+              activeIcon={<GraduationCap className="w-5 h-5 fill-current" />}
+              label={t('my_learning', 'Learning')}
+            />
+
+            {/* Documents */}
+            <NavButton
+              to="/documents"
+              isActive={isActive('/documents')}
+              onClick={handleHaptic}
+              icon={<FileText className="w-5 h-5" />}
+              activeIcon={<FileText className="w-5 h-5 fill-current" />}
+              label={t('documents', 'Documents')}
+            />
+          </>
+        )}
 
         {/* Alerts */}
         <NavButton
@@ -127,28 +167,39 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
           badge={unreadCount > 0 ? unreadCount : undefined}
         />
 
-        {/* Profile */}
-        <NavButton
-          to="/profile"
-          isActive={isActive('/profile')}
-          onClick={handleHaptic}
-          icon={
-            <Avatar className={cn(
-              'h-5 w-5 transition-all duration-200 ring-2 ring-transparent',
-              isActive('/profile') && 'ring-altus-copper dark:ring-hotel-gold'
-            )}>
-              <AvatarImage 
-                src={profile?.avatar_url || undefined}
-                alt={profile?.full_name || 'User'}
-                className="object-cover"
-              />
-              <AvatarFallback className="bg-gradient-to-br from-hotel-gold to-altus-copper text-white text-[9px] font-semibold flex items-center justify-center">
-                {userInitials}
-              </AvatarFallback>
-            </Avatar>
-          }
-          label={t('profile', 'Profile')}
-        />
+        {/* Menu Drawer or Profile */}
+        {onOpenMenu ? (
+          <ActionButton
+            onClick={(e) => {
+              handleHaptic(e)
+              onOpenMenu()
+            }}
+            icon={<Menu className="w-5 h-5" />}
+            label={t('menu', 'Menu')}
+          />
+        ) : (
+          <NavButton
+            to="/profile"
+            isActive={isActive('/profile')}
+            onClick={handleHaptic}
+            icon={
+              <Avatar className={cn(
+                'h-5 w-5 transition-all duration-200 ring-2 ring-transparent',
+                isActive('/profile') && 'ring-altus-copper dark:ring-hotel-gold'
+              )}>
+                <AvatarImage 
+                  src={profile?.avatar_url || undefined}
+                  alt={profile?.full_name || 'User'}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-hotel-gold to-altus-copper text-white text-[9px] font-semibold flex items-center justify-center">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            }
+            label={t('profile', 'Profile')}
+          />
+        )}
       </div>
     </nav>
   )
@@ -213,5 +264,46 @@ function NavButton({ to, isActive, onClick, icon, activeIcon, label, badge }: Na
         {label}
       </span>
     </Link>
+  )
+}
+
+interface ActionButtonProps {
+  onClick: (e: React.MouseEvent) => void
+  icon: React.ReactNode
+  label: string
+  badge?: number
+}
+
+function ActionButton({ onClick, icon, label, badge }: ActionButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center justify-center gap-1',
+        'w-16 h-14 rounded-2xl transition-[transform,color] duration-150 ease-out active:scale-90',
+        'min-h-touch min-w-touch',
+        'relative select-none text-muted-foreground hover:text-foreground'
+      )}
+      aria-label={label}
+    >
+      <div className="relative p-1.5 rounded-xl transition-all duration-200">
+        {icon}
+        {badge !== undefined && badge > 0 && (
+          <Badge
+            variant="destructive"
+            className={cn(
+              'absolute -top-1 -end-1 h-4 min-w-4 px-1 text-[9px] font-mono font-bold flex items-center justify-center',
+              'animate-in zoom-in duration-150 shadow-xs'
+            )}
+          >
+            {badge > 99 ? '99+' : badge}
+          </Badge>
+        )}
+      </div>
+      <span className="text-[11px] font-medium text-muted-foreground truncate max-w-[56px]">
+        {label}
+      </span>
+    </button>
   )
 }

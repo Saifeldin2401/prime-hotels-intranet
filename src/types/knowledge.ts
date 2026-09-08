@@ -78,6 +78,14 @@ export interface KnowledgeArticle {
     master_source_id?: string | null
     department_id?: string
     category_id?: string
+    content_data?: {
+        release_notes?: string
+        local_addendum?: {
+            en?: string
+            ar?: string
+        }
+        [key: string]: any
+    } | null
 
     // Content Type Specific
     video_url?: string                    // For video content

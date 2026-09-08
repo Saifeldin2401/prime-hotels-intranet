@@ -38,6 +38,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { cn } from '@/lib/utils'
 import {
     Bell,
+    Building2,
     Check,
     ChevronDown,
     Crown,
@@ -50,30 +51,34 @@ import {
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
   sidebarCollapsed?: boolean
   setSidebarCollapsed?: (value: boolean) => void
   setCommandPaletteOpen?: (value: boolean) => void
   onOpenSearch?: () => void
+  onOpenMobileMenu?: () => void
 }
 
 export function Header({
   sidebarCollapsed = false,
   setSidebarCollapsed,
   setCommandPaletteOpen,
-  onOpenSearch
+  onOpenSearch,
+  onOpenMobileMenu
 }: HeaderProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, profile, primaryRole, signOut } = useAuth()
-  const { isPlatformAdmin, isImpersonating } = useTenant()
+  const { currentOrganization, currentHotel, isPlatformAdmin, isImpersonating, isPlatformScope, returnToPlatformScope } = useTenant()
   const { activeLens, availableLenses, switchLens } = useLens()
   const { t, i18n } = useTranslation(['common', 'nav', 'admin'])
   const isRtl = i18n.dir() === 'rtl'
   const [userStatus, setUserStatus] = useState<'online' | 'away' | 'busy'>('online')
 
-  const logoHref = isPlatformAdmin && !isImpersonating ? '/platform' : '/dashboard'
+  const isPlatformActive = Boolean(isPlatformAdmin && (isPlatformScope || location.pathname.startsWith('/platform')))
+  const logoHref = isPlatformActive ? '/platform' : '/dashboard'
 
   const statusColors = {
     online: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
@@ -99,7 +104,7 @@ export function Header({
       {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent */}
       <div className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {setSidebarCollapsed && (
               <Button
                 variant="ghost"
@@ -112,13 +117,25 @@ export function Header({
               </Button>
             )}
 
-            <Link to={logoHref} className="flex items-center gap-2.5 group lg:hidden">
+            {onOpenMobileMenu && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onOpenMobileMenu}
+                className="flex lg:hidden text-white/90 hover:text-white hover:bg-hotel-navy-light h-9 w-9 shrink-0 active:scale-95"
+                aria-label={t('accessibility.open_menu', 'Open navigation menu')}
+              >
+                <Menu className="h-5 w-5 text-hotel-gold" />
+              </Button>
+            )}
+
+            <Link to={logoHref} className="flex items-center gap-2 group lg:hidden">
               <img
                 src="/altus-emblem-icon.png"
                 alt="ALTUS Advisory"
                 className="h-8 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
               />
-              <div className="flex flex-col text-start">
+              <div className="hidden xs:flex flex-col text-start">
                 <span className="font-serif text-sm font-bold text-white tracking-wide leading-none">
                   ALTUS
                 </span>
@@ -159,6 +176,28 @@ export function Header({
             {/* Multi-Tenant Scope Faceted Capsule (Org › Brand › Hotel) */}
             <div className="hidden sm:flex items-center me-0.5 sm:me-1 shrink-0">
               <FacetedScopeCapsule />
+            </div>
+
+            {/* Mobile Tenant Scope Pill (< sm) */}
+            <div className="sm:hidden flex items-center shrink-0">
+              {isPlatformActive ? (
+                <Link
+                  to="/platform"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[10px] font-semibold"
+                >
+                  <Crown className="h-3 w-3 text-amber-400" />
+                  <span className="truncate max-w-[65px]">Platform</span>
+                </Link>
+              ) : currentOrganization ? (
+                <Link
+                  to="/select-tenant"
+                  className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/10 border border-hotel-gold/30 text-white text-[10px] font-semibold max-w-[85px] truncate"
+                  title={currentOrganization.name}
+                >
+                  <Building2 className="h-3 w-3 text-hotel-gold shrink-0" />
+                  <span className="truncate">{currentOrganization.name}</span>
+                </Link>
+              ) : null}
             </div>
 
             {/* Sync Status */}
@@ -330,7 +369,10 @@ export function Header({
                     {isPlatformAdmin && (
                       <DropdownMenuItem
                         className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-amber-300 font-semibold m-1"
-                        onSelect={() => navigate('/platform')}
+                        onSelect={async () => {
+                          await returnToPlatformScope()
+                          navigate('/platform')
+                        }}
                       >
                         <Crown className="me-3 h-4 w-4 text-amber-400 transition-transform group-hover:scale-110" />
                         <span>{t('admin:platform_control_plane', 'Platform Control Center')}</span>

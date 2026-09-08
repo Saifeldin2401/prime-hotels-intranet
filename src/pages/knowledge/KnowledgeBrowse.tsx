@@ -559,7 +559,7 @@ export default function KnowledgeBrowse() {
                                                 <p className="text-xs text-muted-foreground truncate">{a.department?.name || t('general_category', 'General')}</p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-altus-copper transition-colors shrink-0" />
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-altus-copper transition-colors shrink-0 rtl:rotate-180" />
                                     </Link>
                                 ))}
                             </div>
@@ -591,7 +591,7 @@ export default function KnowledgeBrowse() {
                                                 <p className="text-xs text-muted-foreground truncate">{new Date(a.updated_at).toLocaleDateString()}</p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-altus-copper transition-colors shrink-0" />
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-altus-copper transition-colors shrink-0 rtl:rotate-180" />
                                     </Link>
                                 ))}
                             </div>

@@ -49,6 +49,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Briefcase, Plus, Building2, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 export interface DepartmentItem {
   id: string

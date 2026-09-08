@@ -20,6 +20,12 @@ import {
     VideoPlayer,
     VisualContentBuilder
 } from '@/components/knowledge'
+import { AuthorTopBar } from './components/author/AuthorTopBar'
+import { ArticleReadinessDrawer, type ReadinessCheckItem } from './components/author/ArticleReadinessDrawer'
+import { ArticleBasicsCard } from './components/author/ArticleBasicsCard'
+import { AICoWriterRibbon } from './components/author/AICoWriterRibbon'
+import { OperationalProtocolsTab } from './components/author/OperationalProtocolsTab'
+import { AuthorInspector } from './components/author/AuthorInspector'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
@@ -39,7 +45,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useTenant } from '@/contexts/TenantContext'
@@ -80,11 +86,14 @@ import {
     AlertTriangle,
     ArrowLeft,
     BookOpen,
+    Building,
     Building2,
     Check,
+    CheckCircle2,
     CheckSquare,
     ChevronDown,
     Clock,
+    Crown,
     ExternalLink,
     Eye,
     FileText,
@@ -108,6 +117,7 @@ import {
     Sparkles,
     Star,
     Tag,
+    Trash2,
     Upload,
     Video as VideoIcon,
     Wand2,
@@ -138,6 +148,7 @@ interface ArticleFormData {
     visibility: KnowledgeVisibility
     scope_type: 'organization' | 'brand' | 'hotel' | 'department' | 'global'
     is_master_template: boolean
+    master_source_id?: string | null
     requires_acknowledgment: boolean
     featured: boolean
     department_id: string | null
@@ -191,6 +202,7 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     visibility: 'all_properties',
     scope_type: 'organization',
     is_master_template: false,
+    master_source_id: null,
     requires_acknowledgment: false,
     featured: false,
     department_id: null,
@@ -352,6 +364,36 @@ export default function KnowledgeAuthor() {
     const loadedContentDataRef = useRef<Json | null>(null)
 
     const [formData, setFormData] = useState<ArticleFormData>(() => createEmptyArticleFormData())
+    const [releaseNotes, setReleaseNotes] = useState('')
+    const [localAddendumEn, setLocalAddendumEn] = useState('')
+    const [localAddendumAr, setLocalAddendumAr] = useState('')
+    const [masterDeploymentCount, setMasterDeploymentCount] = useState<number | null>(null)
+
+    // Handle isMaster query param for direct authoring from Platform Library
+    useEffect(() => {
+        const searchParams = new URLSearchParams(location.search)
+        if (searchParams.get('isMaster') === 'true' && !id && isPlatformAdmin) {
+            setFormData(prev => ({
+                ...prev,
+                is_master_template: true,
+                scope_type: 'global',
+                visibility: 'all_properties'
+            }))
+        }
+    }, [location.search, id, isPlatformAdmin])
+
+    // Query deployment count for master SOP telemetry
+    useEffect(() => {
+        if (id && formData.is_master_template) {
+            supabase
+                .from('master_content_deployments')
+                .select('id', { count: 'exact', head: true })
+                .eq('master_content_id', id)
+                .then(({ count }) => {
+                    setMasterDeploymentCount(count || 0)
+                })
+        }
+    }, [id, formData.is_master_template])
 
     // Handle prefill from AI Article Studio or other pages
     useEffect(() => {
@@ -626,7 +668,9 @@ export default function KnowledgeAuthor() {
         },
     ]
 
-    const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+    const [mainWorkspaceTab, setMainWorkspaceTab] = useState<'content' | 'protocols' | 'preview'>('content')
+    const [inspectorTab, setInspectorTab] = useState<'publishing' | 'media' | 'governance'>('publishing')
+    const [isReadinessDrawerOpen, setIsReadinessDrawerOpen] = useState(false)
     // Which language the core content fields (title/description/summary/body) edit.
     const [editLang, setEditLang] = useState<'en' | 'ar'>('en')
     const [showComplianceNotes, setShowComplianceNotes] = useState(false)
@@ -947,9 +991,9 @@ export default function KnowledgeAuthor() {
     }, [editLang, formData.content, formData.content_ar, t])
 
     useEffect(() => {
-        if (activeTab !== 'preview') return
+        if (mainWorkspaceTab !== 'preview') return
         void renderMermaidDiagrams(previewRef.current)
-    }, [activeTab, previewHtml])
+    }, [mainWorkspaceTab, previewHtml])
 
     // Permission check
     useEffect(() => {
@@ -1005,6 +1049,7 @@ export default function KnowledgeAuthor() {
                             visibility: (data.visibility || 'all_properties') as KnowledgeVisibility,
                             scope_type: ((data as any).scope_type || 'organization') as any,
                             is_master_template: Boolean((data as any).is_master_template),
+                            master_source_id: (data as any).master_source_id || null,
                             requires_acknowledgment: data.requires_acknowledgment || false,
                             featured: false,
                             department_id: data.department_id || null,
@@ -1035,6 +1080,16 @@ export default function KnowledgeAuthor() {
                             ai_cost_tier: meta.ai_cost_tier || '',
                             ai_total_duration_ms: meta.ai_total_duration_ms,
                         })
+
+                        // Load Master SOP release notes and local property addendum
+                        const rawContentData = ((data as any).content_data || {}) as Record<string, any>
+                        if (rawContentData.release_notes && typeof rawContentData.release_notes === 'string') {
+                            setReleaseNotes(rawContentData.release_notes)
+                        }
+                        if (rawContentData.local_addendum && typeof rawContentData.local_addendum === 'object') {
+                            setLocalAddendumEn(rawContentData.local_addendum.en || '')
+                            setLocalAddendumAr(rawContentData.local_addendum.ar || '')
+                        }
                     }
                 })
         }
@@ -1075,6 +1130,12 @@ export default function KnowledgeAuthor() {
         })
     }, [])
 
+    const handleOpenVideoPicker = useCallback(() => {
+        mediaPickKindRef.current = 'video'
+        mediaPickResolveRef.current = null
+        setShowMediaPicker(true)
+    }, [])
+
     const handleMediaSelect = useCallback((assets: MediaAsset[]) => {
         if (assets.length === 0) return
         const asset = assets[0]
@@ -1084,6 +1145,16 @@ export default function KnowledgeAuthor() {
             mediaPickResolveRef.current(asset.public_url)
             mediaPickResolveRef.current = null
             setShowMediaPicker(false)
+            if (asset.media_type === 'video') {
+                if (!formData.video_url) {
+                    updateField('video_url', asset.public_url)
+                }
+                toast.success(t('editor.video_linked', 'Video linked from media library: {{title}}', {
+                    title: asset.title || asset.filename || 'Video'
+                }))
+            } else {
+                toast.success(t('editor.media_inserted', 'Image inserted from media library'))
+            }
             return
         }
 
@@ -1096,13 +1167,15 @@ export default function KnowledgeAuthor() {
             if (formData.content_type !== 'video') {
                 updateField('content_type', 'video')
             }
-            toast.success(t('editor.video_linked', 'Video linked from media library'))
+            toast.success(t('editor.video_linked', 'Video linked from media library: {{title}}', {
+                title: asset.title || asset.filename || 'Video'
+            }))
         } else {
             updateField('file_url', asset.public_url)
             toast.success(t('editor.media_attached', 'Media asset attached to document'))
         }
         setShowMediaPicker(false)
-    }, [formData.content, formData.content_type, t, updateField])
+    }, [formData.content, formData.content_type, formData.video_url, t, updateField])
 
     // Computed validation warnings
     const validationWarnings = {
@@ -1457,7 +1530,20 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 ai_cost_tier: formData.ai_cost_tier || null,
                 ai_total_duration_ms: formData.ai_total_duration_ms,
             }
-            const nextContentData = writeKnowledgeMeta(loadedContentDataRef.current, knowledgeMeta)
+            const baseContentData = writeKnowledgeMeta(loadedContentDataRef.current, knowledgeMeta)
+            const nextContentData = {
+                ...((baseContentData as any) || {}),
+                ...(releaseNotes.trim() ? { release_notes: releaseNotes.trim() } : {}),
+                ...(localAddendumEn.trim() || localAddendumAr.trim()
+                    ? {
+                        local_addendum: {
+                            en: localAddendumEn.trim() || null,
+                            ar: localAddendumAr.trim() || null,
+                            updated_at: new Date().toISOString()
+                        }
+                    }
+                    : {})
+            }
 
             const articleData: Database['public']['Tables']['documents']['Update'] = {
                 title: formData.title,
@@ -1657,6 +1743,154 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
     }
 
+    const canSubmitForReview = useMemo(() =>
+        ['author', 'department_head', 'property_hr', 'property_manager'].includes(primaryRole || ''),
+        [primaryRole]
+    )
+    const canDirectPublish = useMemo(() =>
+        ['administrator', 'knowledge_manager', 'training_manager', 'property_manager', 'regional_admin', 'corporate_admin', 'super_admin', 'admin'].includes(primaryRole || ''),
+        [primaryRole]
+    )
+
+    const handleUploadPdf = useCallback(async (file: File) => {
+        if (file.type !== 'application/pdf') {
+            toast.error(t('editor.alerts.only_pdf', 'Only PDF files are allowed'))
+            return
+        }
+        if (!user?.id) {
+            toast.error(t('editor.alerts.user_error'))
+            return
+        }
+
+        setIsUploading(true)
+        try {
+            const scanResult = await scanFile(file, {
+                bucket: 'documents',
+                context: 'knowledge_editor_upload'
+            })
+            if (!scanResult.safe) {
+                throw new Error(scanResult.message || 'File failed security scan')
+            }
+
+            const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+            const { error } = await supabase.storage.from('documents').upload(fileName, file)
+            if (error) throw error
+
+            updateField('file_url', fileName)
+            updateField('storage_path', fileName)
+            if (!formData.title) updateField('title', file.name.replace('.pdf', ''))
+            toast.success(t('editor.alerts.upload_success', 'Document uploaded successfully'))
+        } catch (err: unknown) {
+            toast.error(err instanceof Error ? err.message : 'Upload failed')
+        } finally {
+            setIsUploading(false)
+        }
+    }, [formData.title, t, updateField, user?.id])
+
+    const readinessItems: ReadinessCheckItem[] = useMemo(() => {
+        const hasEnTitle = Boolean(formData.title.trim())
+        const hasSopCode = Boolean(formData.sop_code.trim())
+        const hasDept = Boolean(formData.department_id) || formData.visibility === 'all_properties'
+        const hasSummary = Boolean(formData.summary.trim())
+        const hasArContent = Boolean(formData.title_ar.trim() && formData.content_ar.trim())
+        const plainLength = (formData.content || '').replace(/<[^>]*>/g, '').trim().length
+        const hasAdequateBody = plainLength >= 120
+        const hasProtocols = (formData.checklist_items?.length > 0) || (formData.critical_control_points?.length > 0) || (formData.service_benchmarks?.length > 0) || (formData.contingency_protocols?.length > 0)
+        const hasMedia = Boolean(formData.video_url || formData.file_url || (formData.images && formData.images.length > 0))
+
+        return [
+            {
+                id: 'title',
+                label: t('editor.readiness_title', 'English Title'),
+                description: t('editor.readiness_title_desc', 'Clear, professional English title'),
+                passed: hasEnTitle,
+                importance: 'critical',
+                tabTarget: 'content',
+            },
+            {
+                id: 'sop_code',
+                label: t('editor.readiness_code', 'Standard SOP Code'),
+                description: t('editor.readiness_code_desc', 'Formal operational identifier (e.g., FO-SOP-014)'),
+                passed: hasSopCode,
+                importance: 'critical',
+                tabTarget: 'content',
+            },
+            {
+                id: 'department',
+                label: t('editor.readiness_dept', 'Department & Audience'),
+                description: t('editor.readiness_dept_desc', 'Clear operational department ownership'),
+                passed: hasDept,
+                importance: 'critical',
+                inspectorTab: 'publishing',
+            },
+            {
+                id: 'body',
+                label: t('editor.readiness_body', 'Procedure Content'),
+                description: t('editor.readiness_body_desc', 'Substantial operational instructions (120+ characters)'),
+                passed: hasAdequateBody,
+                importance: 'critical',
+                tabTarget: 'content',
+            },
+            {
+                id: 'summary',
+                label: t('editor.readiness_summary', 'Executive TL;DR Summary'),
+                description: t('editor.readiness_summary_desc', 'Quick executive summary for busy staff'),
+                passed: hasSummary,
+                importance: 'recommended',
+                inspectorTab: 'governance',
+            },
+            {
+                id: 'arabic',
+                label: t('editor.readiness_ar', 'Arabic Localization'),
+                description: t('editor.readiness_ar_desc', 'Bilingual title and procedure body (KSA compliance)'),
+                passed: hasArContent,
+                importance: 'recommended',
+                tabTarget: 'content',
+            },
+            {
+                id: 'protocols',
+                label: t('editor.readiness_protocols', 'Execution Protocols'),
+                description: t('editor.readiness_protocols_desc', 'Interactive checklist, CCPs, or luxury benchmarks'),
+                passed: hasProtocols,
+                importance: 'recommended',
+                tabTarget: 'protocols',
+            },
+            {
+                id: 'media',
+                label: t('editor.readiness_media', 'Visual & Media Reference'),
+                description: t('editor.readiness_media_desc', 'Attached video tutorial, reference PDF, or photo guide'),
+                passed: hasMedia,
+                importance: 'optional',
+                inspectorTab: 'media',
+            },
+        ]
+    }, [formData, t])
+
+    const readinessScore = useMemo(() => {
+        let score = 0
+        readinessItems.forEach(item => {
+            if (item.passed) {
+                if (item.importance === 'critical') score += 20
+                else if (item.importance === 'recommended') score += 5
+                else if (item.importance === 'optional') score += 5
+            }
+        })
+        return Math.min(100, Math.max(0, score))
+    }, [readinessItems])
+
+    const handleNavigateToReadinessItem = useCallback((item: ReadinessCheckItem) => {
+        if (item.tabTarget) {
+            setMainWorkspaceTab(item.tabTarget)
+            if (item.id === 'arabic') {
+                setEditLang('ar')
+            }
+        }
+        if (item.inspectorTab) {
+            setInspectorTab(item.inspectorTab)
+        }
+        setIsReadinessDrawerOpen(false)
+    }, [])
+
     if (isForbidden || primaryRole === 'staff' || primaryRole === 'learner') {
         return null
     }
@@ -1699,362 +1933,215 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 </div>
             )}
 
-            {/* Sticky Modern Top Navigation & Actions Bar */}
-            <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 min-w-0">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t('accessibility.back', 'Go back')} className="rounded-full h-9 w-9">
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate">
-                                {formData.title.trim() || (isEditing ? t('editor.edit_title') : t('editor.create_title'))}
-                            </h1>
-                            <Badge variant="outline" className="text-[10px] uppercase font-semibold capitalize tracking-wider bg-slate-50 dark:bg-slate-900">
-                                {formData.content_type}
-                            </Badge>
+            {/* Zone 1: Sticky Command & Article Health Bar */}
+            <AuthorTopBar
+                onBack={() => navigate(-1)}
+                isEditing={isEditing}
+                title={formData.title}
+                sopCode={formData.sop_code}
+                status={(formData as any).status || 'draft'}
+                isMasterTemplate={Boolean(formData.is_master_template)}
+                isSaving={isSaving}
+                isAutoSaving={false}
+                lastSavedAt={null}
+                readinessScore={readinessScore}
+                onOpenReadinessDrawer={() => setIsReadinessDrawerOpen(true)}
+                editLang={editLang}
+                onToggleEditLang={setEditLang}
+                hasArContent={Boolean(formData.title_ar.trim() || formData.content_ar.trim())}
+                onOpenAiStudio={() => setIsAiStudioOpen(true)}
+                onSaveDraft={() => saveArticle('DRAFT')}
+                onSubmitPublish={() => saveArticle(canDirectPublish ? 'PUBLISHED' : 'PENDING_REVIEW')}
+                canPublish={canDirectPublish || canSubmitForReview}
+            />
+
+            {/* Interactive Article Quality & Readiness Drawer */}
+            <ArticleReadinessDrawer
+                open={isReadinessDrawerOpen}
+                onOpenChange={setIsReadinessDrawerOpen}
+                readinessScore={readinessScore}
+                items={readinessItems}
+                onNavigateToItem={handleNavigateToReadinessItem}
+            />
+
+            {/* Master SOP Blueprint Banner */}
+            {formData.is_master_template && (
+                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                            <Crown className="h-5 w-5" />
                         </div>
-                        <p className="text-xs text-muted-foreground truncate">
-                            {isEditing ? 'Editing Knowledge Document' : 'New Knowledge Base Article'}
-                        </p>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-amber-950 dark:text-amber-200">
+                                    Corporate Master SOP Blueprint
+                                </h3>
+                                <Badge className="bg-amber-500 text-white text-[10px] h-4 py-0 font-mono font-bold">
+                                    Global Standard
+                                </Badge>
+                                {isEditing && (
+                                    <Badge variant="outline" className="text-[10px] h-4 py-0 font-mono border-amber-400 text-amber-800 dark:text-amber-300 font-semibold">
+                                        v{(formData as any).current_version || 1}.0
+                                    </Badge>
+                                )}
+                            </div>
+                            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
+                                {isEditing && masterDeploymentCount !== null
+                                    ? `This Master SOP is currently distributed across ${masterDeploymentCount} hotel properties. Updating will notify property GMs to sync.`
+                                    : 'Published directly into the Platform Master Library for cross-property multi-tenant deployment.'}
+                            </p>
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsAiStudioOpen(true)}
-                        className="bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 text-xs h-9 font-bold shadow-sm"
-                    >
-                        <Sparkles className="h-3.5 w-3.5 me-1.5 text-purple-600 animate-pulse" />
-                        AI Article Studio
-                    </Button>
-
-                    <Button variant="outline" size="sm" onClick={() => saveArticle('DRAFT')} disabled={isSaving || isUploading} className="text-xs h-9">
-                        {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Save className="h-3.5 w-3.5 me-1.5" />}
-                        {t('editor.draft', 'Save Draft')}
-                    </Button>
-
-                    {/* Submit for Review (Authors, Dept Head, HR, Prop Manager) */}
-                    {['author', 'department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
-                        <Button
-                            size="sm"
-                            onClick={() => saveArticle('PENDING_REVIEW')}
-                            disabled={isSaving || isUploading}
-                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs h-9 font-semibold"
-                        >
-                            {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Clock className="h-3.5 w-3.5 me-1.5" />}
-                            {t('editor.submit_for_review', 'Submit for Review')}
-                        </Button>
-                    )}
-
-                    {/* Publish (Knowledge Manager, Training Manager, Admin) */}
-                    {['administrator', 'knowledge_manager', 'training_manager', 'property_manager', 'regional_admin', 'corporate_admin', 'super_admin', 'admin'].includes(primaryRole || '') && (
-                        <Button
-                            size="sm"
-                            onClick={() => saveArticle('PUBLISHED')}
-                            disabled={isSaving || isUploading}
-                            className="bg-hotel-gold hover:bg-hotel-gold-dark text-white text-xs h-9 font-bold shadow-sm"
-                        >
-                            {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Send className="h-3.5 w-3.5 me-1.5" />}
-                            {t('editor.publish', 'Publish Article')}
-                        </Button>
+                    {isEditing && (
+                        <div className="sm:w-80 shrink-0">
+                            <Label className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider block mb-1">
+                                Revision Release Notes
+                            </Label>
+                            <Input
+                                placeholder="Explain what changed in this edition..."
+                                value={releaseNotes}
+                                onChange={e => setReleaseNotes(e.target.value)}
+                                className="h-8 text-xs bg-white/80 dark:bg-slate-900 border-amber-300"
+                            />
+                        </div>
                     )}
                 </div>
-            </div>
+            )}
 
             {/* Main 2-Panel Authoring Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* LEFT CANVAS: Writing Studio & Core Content (8 cols) */}
+                {/* Zone 2: Main Workspace Canvas (8 cols) */}
                 <div className="lg:col-span-8 space-y-5">
                     
-                    {/* Article Hero Card: Title & Content Type Selector */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardContent className="pt-6 pb-5 space-y-4">
-                            {/* Language toggle for core content fields */}
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                    <Languages className="h-3.5 w-3.5" />
-                                    {t('editor.editing_language', 'Editing language')}
-                                </div>
-                                <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditLang('en')}
-                                        className={`px-3 py-1 rounded-md font-semibold transition-all ${editLang === 'en' ? 'bg-white dark:bg-slate-950 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
-                                    >
-                                        English
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditLang('ar')}
-                                        className={`px-3 py-1 rounded-md font-semibold transition-all ${editLang === 'ar' ? 'bg-white dark:bg-slate-950 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
-                                    >
-                                        العربية
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Large Title Input */}
-                            <div>
-                                {editLang === 'en' ? (
-                                    <Input
-                                        value={formData.title}
-                                        onChange={e => updateField('title', e.target.value)}
-                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. Five-Star VIP Arrival Protocol)...')}
-                                        className="text-2xl md:text-3xl font-serif font-display font-black text-hotel-navy dark:text-white border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                    {/* Property Local Addendum (if inherited from Master SOP) */}
+                    {formData.master_source_id && (
+                        <Card className="border-indigo-200 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-xs">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
+                                    <Building className="h-4 w-4 text-indigo-600" />
+                                    <span>Property Local Addendum / ملحق المنشأة المحلي</span>
+                                </CardTitle>
+                                <p className="text-xs text-indigo-800/80 dark:text-indigo-300/80">
+                                    This document is inherited from a Corporate Master SOP. You can document property-specific extensions, localized emergency contacts, or floor layouts below. These local notes are preserved and never overwritten by upstream master syncs.
+                                </p>
+                            </CardHeader>
+                            <CardContent className="space-y-3 pt-2">
+                                <div>
+                                    <Label className="text-xs font-semibold text-foreground">Local Property Notes (English)</Label>
+                                    <Textarea
+                                        placeholder="e.g. For this property, Night Duty Manager extension is #4402. Muster point is West Courtyard."
+                                        value={localAddendumEn}
+                                        onChange={e => setLocalAddendumEn(e.target.value)}
+                                        rows={3}
+                                        className="text-xs mt-1 bg-background"
                                     />
-                                ) : (
-                                    <Input
-                                        value={formData.title_ar}
-                                        onChange={e => updateField('title_ar', e.target.value)}
+                                </div>
+                                <div>
+                                    <Label className="text-xs font-semibold text-foreground">ملحق المنشأة المحلي (بالعربية)</Label>
+                                    <Textarea
                                         dir="rtl"
-                                        placeholder={t('editor.title_placeholder_ar', 'عنوان المستند بالعربية...')}
-                                        className="text-2xl md:text-3xl font-serif font-display font-bold text-hotel-navy dark:text-white border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight font-arabic"
+                                        placeholder="مثال: لهذه المنشأة، تحويلة مدير الفترة الليلية #4402 ونقطة التجمع في الساحة الغربية."
+                                        value={localAddendumAr}
+                                        onChange={e => setLocalAddendumAr(e.target.value)}
+                                        rows={3}
+                                        className="text-xs mt-1 bg-background font-arabic"
                                     />
-                                )}
-                                <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-2" />
-                            </div>
-
-                            {/* Content Type Selector Pills */}
-                            <div className="space-y-1.5">
-                                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                    Document Format
-                                </Label>
-                                <div className="flex flex-wrap gap-1.5">
-                                    {CONTENT_TYPE_CONFIG.map(cfg => {
-                                        const isSelected = formData.content_type === cfg.type
-                                        return (
-                                            <button
-                                                key={cfg.type}
-                                                type="button"
-                                                onClick={() => updateField('content_type', cfg.type)}
-                                                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 flex items-center gap-1.5 ${
-                                                    isSelected
-                                                        ? 'bg-hotel-navy text-white shadow-sm border border-hotel-navy'
-                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 border border-transparent'
-                                                }`}
-                                            >
-                                                <span>{cfg.icon || '📄'}</span>
-                                                <span>{t(`content_types.${cfg.type}`, cfg.label)}</span>
-                                            </button>
-                                        )
-                                    })}
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            {/* Subtitle / Tagline */}
-                            <div className="pt-1">
-                                {editLang === 'en' ? (
-                                    <Input
-                                        value={formData.description}
-                                        onChange={e => updateField('description', e.target.value)}
-                                        placeholder={t('editor.description_placeholder', 'Add a short subtitle or operational purpose (10-15 words)...')}
-                                        className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
-                                    />
-                                ) : (
-                                    <Input
-                                        value={formData.description_ar}
-                                        onChange={e => updateField('description_ar', e.target.value)}
-                                        dir="rtl"
-                                        placeholder={t('editor.description_placeholder_ar', 'أضف عنوانًا فرعيًا موجزًا بالعربية...')}
-                                        className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
-                                    />
-                                )}
-                            </div>
+                    {/* Focused 3-Tab Authoring Experience */}
+                    <Tabs value={mainWorkspaceTab} onValueChange={(v) => setMainWorkspaceTab(v as 'content' | 'protocols' | 'preview')} className="space-y-4">
+                        <div className="flex items-center justify-between border-b pb-2">
+                            <TabsList className="h-9">
+                                <TabsTrigger value="content" className="text-xs h-7 px-3 gap-1.5 font-medium">
+                                    <FileText className="w-3.5 h-3.5 text-hotel-gold" />
+                                    <span>✍️ {t('editor.tabs.procedure', 'Procedure & Content')}</span>
+                                </TabsTrigger>
+                                <TabsTrigger value="protocols" className="text-xs h-7 px-3 gap-1.5 font-medium">
+                                    <CheckSquare className="w-3.5 h-3.5 text-hotel-gold" />
+                                    <span>📋 {t('editor.tabs.protocols', 'Operational Protocols')}</span>
+                                    {((formData.checklist_items?.length || 0) + (formData.critical_control_points?.length || 0) + (formData.service_benchmarks?.length || 0)) > 0 && (
+                                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ms-1">
+                                            {(formData.checklist_items?.length || 0) + (formData.critical_control_points?.length || 0) + (formData.service_benchmarks?.length || 0)}
+                                        </Badge>
+                                    )}
+                                </TabsTrigger>
+                                <TabsTrigger value="preview" className="text-xs h-7 px-3 gap-1.5 font-medium">
+                                    <Eye className="w-3.5 h-3.5 text-hotel-gold" />
+                                    <span>👁️ {t('editor.tabs.preview', 'Live Interactive Preview')}</span>
+                                </TabsTrigger>
+                            </TabsList>
 
-                            {/* Duplicate Detection Warning */}
-                            {showDuplicateWarning && duplicateCheckResult?.hasDuplicates && (
-                                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                                    <div className="flex items-start gap-2">
-                                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                                        <div className="flex-1">
-                                            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-                                                {t('editor.duplicate_warning', 'Similar articles already exist')}
-                                            </p>
-                                            <ul className="mt-1.5 space-y-1">
-                                                {duplicateCheckResult.duplicates.slice(0, 2).map(dup => (
-                                                    <li key={dup.id} className="text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between">
-                                                        <span className="truncate flex-1">• {dup.title}</span>
-                                                        <Badge variant="outline" className="ms-2 text-[10px]">{dup.similarity}% match</Badge>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="mt-1.5 h-6 text-[11px] text-amber-700 hover:text-amber-900 px-2"
-                                                onClick={() => {
-                                                    setShowDuplicateWarning(false)
-                                                    setDismissedDuplicateTitle(formData.title)
-                                                }}
-                                            >
-                                                {t('editor.dismiss_warning', 'Dismiss')}
-                                            </Button>
-                                        </div>
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>{calculateEstimatedReadTime(formData.content) || 1} min read</span>
+                            </div>
+                        </div>
+
+                        {/* TAB 1: Procedure & Content */}
+                        <TabsContent value="content" className="space-y-5 mt-0">
+                            {/* Article Basics: Title, SOP Code, Read time, format selector, duplicate warning, AI tag suggestions */}
+                            <ArticleBasicsCard
+                                title={formData.title}
+                                titleAr={formData.title_ar}
+                                description={formData.description}
+                                descriptionAr={formData.description_ar}
+                                sopCode={formData.sop_code}
+                                estimatedReadTime={formData.estimated_read_time}
+                                contentType={formData.content_type}
+                                editLang={editLang}
+                                contentTypes={CONTENT_TYPE_CONFIG}
+                                onUpdateField={updateField}
+                                showDuplicateWarning={showDuplicateWarning}
+                                duplicateCheckResult={duplicateCheckResult}
+                                onDismissDuplicateWarning={() => {
+                                    setShowDuplicateWarning(false)
+                                    setDismissedDuplicateTitle(formData.title)
+                                }}
+                                tagSuggestions={tagSuggestions}
+                                isGeneratingTags={isGeneratingTags}
+                                onGenerateTagSuggestions={() => generateSuggestions(formData.title, formData.content, formData.description)}
+                                onClearTagSuggestions={clearSuggestions}
+                            />
+
+                            {/* AI Co-Authoring Ribbon */}
+                            <AICoWriterRibbon
+                                aiLanguage={aiLanguage}
+                                onAiLanguageChange={setAiLanguage}
+                                isGenerating={isGenerating}
+                                hasContent={Boolean(formData.content)}
+                                onGenerate={generateWithAI}
+                            />
+
+                            {/* Rich Text Editor Card */}
+                            <Card className="shadow-xs border-border bg-card">
+                                <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-sm font-bold text-foreground">
+                                            {editLang === 'ar' ? 'المحتوى التشغيلي بالعربية' : 'Operational Procedure Body'}
+                                        </h3>
+                                        <Badge variant="outline" className="text-[10px]">
+                                            {editLang === 'ar' ? 'العربية' : 'English'}
+                                        </Badge>
                                     </div>
-                                </div>
-                            )}
-
-                            {/* AI Tag Suggestions */}
-                            {!isEditing && formData.title.length > 10 && tagSuggestions.length === 0 && !isGeneratingTags && (
-                                <div className="flex items-center gap-2">
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-6 text-xs text-hotel-navy dark:text-hotel-gold hover:bg-slate-100 dark:hover:bg-slate-800"
-                                        onClick={() => generateSuggestions(formData.title, formData.content, formData.description)}
+                                        onClick={beautifyArticle}
+                                        disabled={isGenerating || !formData.content}
+                                        className="h-7 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 gap-1 font-medium"
                                     >
-                                        <Sparkles className="w-3 h-3 me-1 text-hotel-gold" />
-                                        {t('editor.suggest_tags', 'AI Suggest Tags')}
+                                        <Palette className="w-3.5 h-3.5 text-purple-600" />
+                                        <span>AI Beautify</span>
                                     </Button>
-                                </div>
-                            )}
-
-                            {tagSuggestions.length > 0 && (
-                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                                    <span className="text-[11px] text-slate-400 font-medium">{t('editor.suggested_tags', 'Tags:')}</span>
-                                    {tagSuggestions.map((suggestion) => (
-                                        <Badge
-                                            key={`${suggestion.tag}-${suggestion.confidence}`}
-                                            variant="outline"
-                                            className={`text-[10px] cursor-pointer hover:bg-hotel-gold/10 ${
-                                                suggestion.confidence === 'high' ? 'border-green-300 text-green-700' : 'border-slate-300 text-slate-600'
-                                            }`}
-                                        >
-                                            #{suggestion.tag}
-                                        </Badge>
-                                    ))}
-                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={clearSuggestions}>
-                                        <X className="w-3 h-3 text-slate-400" />
-                                    </Button>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* AI Co-Authoring Ribbon */}
-                    <div className="bg-gradient-to-r from-hotel-navy/5 via-hotel-gold/10 to-hotel-navy/5 border border-hotel-gold/25 rounded-xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-lg bg-hotel-gold/20 flex items-center justify-center text-hotel-gold shrink-0">
-                                <Sparkles className="w-4 h-4" />
-                            </div>
-                            <span className="text-xs font-bold text-slate-900 dark:text-white">
-                                AI Co-Writer:
-                            </span>
-                            <Select value={aiLanguage} onValueChange={setAiLanguage}>
-                                <SelectTrigger className="w-[120px] h-7 text-xs bg-white dark:bg-slate-950 font-medium">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="English">English</SelectItem>
-                                    <SelectItem value="Arabic">العربية</SelectItem>
-                                    <SelectItem value="English and Arabic">Bilingual</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('outline')}
-                                disabled={isGenerating}
-                                className="h-7 text-xs bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin me-1.5 text-amber-600" /> : <Wand2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 me-1.5" />}
-                                <span>{t('editor.outline', 'Outline')}</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('expand')}
-                                disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                <RefreshCw className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 me-1.5" />
-                                <span>{t('editor.expand', 'Deep Expand')}</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('improve')}
-                                disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 me-1.5" />
-                                <span>{t('editor.improve', 'Polish')}</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('checklist')}
-                                disabled={isGenerating}
-                                className="h-7 text-xs bg-orange-50/80 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-900/50 text-orange-900 dark:text-orange-200 border-orange-300 dark:border-orange-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                <CheckSquare className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400 me-1.5" />
-                                <span>AI Checklist</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('faqs')}
-                                disabled={isGenerating}
-                                className="h-7 text-xs bg-yellow-50/80 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:hover:bg-yellow-900/50 text-yellow-900 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 font-semibold transition-colors shadow-2xs"
-                            >
-                                <HelpCircle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400 me-1.5" />
-                                <span>AI FAQs</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateWithAI('summarize')}
-                                disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-sky-50/80 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 text-sky-900 dark:text-sky-200 border-sky-300 dark:border-sky-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                <FileText className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400 me-1.5" />
-                                <span>Summarize</span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => beautifyArticle()}
-                                disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-900 dark:text-purple-200 border-purple-300 dark:border-purple-800 font-semibold transition-colors shadow-2xs"
-                            >
-                                <Palette className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 me-1.5" />
-                                <span>Beautify</span>
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Editor & Live Preview Studio */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
-                            <div className="flex items-center justify-between">
-                                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}>
-                                    <TabsList className="h-8">
-                                        <TabsTrigger value="edit" className="text-xs h-7 px-3">
-                                            ✍️ {t('editor.content_tab', 'Write')}
-                                        </TabsTrigger>
-                                        <TabsTrigger value="preview" className="text-xs h-7 px-3">
-                                            👁️ {t('editor.preview_tab', 'Live Interactive Preview')}
-                                        </TabsTrigger>
-                                    </TabsList>
-                                </Tabs>
-
-                                <div className="text-xs text-muted-foreground">
-                                    {calculateEstimatedReadTime(formData.content) || 1} min read
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-4">
-                            {activeTab === 'edit' ? (
-                                <div className="space-y-6">
+                                </CardHeader>
+                                <CardContent className="pt-4">
                                     {editLang === 'ar' && (
-                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-hotel-navy dark:text-hotel-gold">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-hotel-navy dark:text-hotel-gold mb-2">
                                             <Languages className="h-3.5 w-3.5" />
                                             {t('editor.editing_arabic_body', 'Editing the Arabic body (المحتوى العربي)')}
                                         </div>
@@ -2064,159 +2151,105 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         value={editLang === 'en' ? formData.content : formData.content_ar}
                                         onChange={v => updateField(editLang === 'en' ? 'content' : 'content_ar', v)}
                                         placeholder={t('editor.write_placeholder', 'Start typing the hotel operational procedure or policy standard here...')}
-                                        minHeight={320}
+                                        minHeight={340}
                                         direction={editLang === 'ar' ? 'rtl' : 'ltr'}
                                         onPickMedia={pickMediaFromLibrary}
                                     />
+                                </CardContent>
+                            </Card>
 
-                                    {/* Interactive Execution Checklist Builder */}
-                                    <div className="pt-2">
-                                        <ChecklistBuilder
-                                            items={formData.checklist_items || []}
-                                            onChange={items => updateField('checklist_items', items)}
-                                            onAIGenerate={() => generateWithAI('checklist')}
-                                            isGenerating={isGenerating}
-                                            title={formData.title}
-                                        />
-                                    </div>
-
-                                    {/* Operational FAQs & Edge Cases Builder */}
-                                    <div className="pt-2">
-                                        <FAQBuilder
-                                            items={formData.faq_items || []}
-                                            onChange={items => updateField('faq_items', items)}
-                                            onAIGenerate={() => generateWithAI('faqs')}
-                                            isGenerating={isGenerating}
-                                            title={formData.title}
-                                        />
-                                    </div>
-
-                                    {/* Critical Control Points */}
-                                    <div className="pt-2">
-                                        <StringListBuilder
-                                            items={formData.critical_control_points}
-                                            onChange={items => updateField('critical_control_points', items)}
-                                            title={t('editor.critical_control_points', 'Critical Control Points (CCPs)')}
-                                            description={t('editor.ccp_desc', 'Non-negotiable checkpoints where a failure has a serious operational, safety or compliance impact.')}
-                                            icon={<ShieldAlert className="h-4 w-4" />}
-                                            accentClassName="text-red-500"
-                                            placeholder={t('editor.ccp_placeholder', 'e.g. Verify guest identity before issuing a room key')}
-                                            addLabel={t('editor.add_ccp', 'Add CCP')}
-                                        />
-                                    </div>
-
-                                    {/* Five-Star Service Benchmarks */}
-                                    <div className="pt-2">
-                                        <StringListBuilder
-                                            items={formData.service_benchmarks}
-                                            onChange={items => updateField('service_benchmarks', items)}
-                                            title={t('editor.service_benchmarks', 'Five-Star Service Benchmarks')}
-                                            description={t('editor.luxury_desc', 'Measurable luxury-service standards this procedure must meet.')}
-                                            icon={<Star className="h-4 w-4" />}
-                                            accentClassName="text-amber-500"
-                                            placeholder={t('editor.luxury_placeholder', 'e.g. Guest greeted by name within 15 seconds of approach')}
-                                            addLabel={t('editor.add_benchmark', 'Add benchmark')}
-                                        />
-                                    </div>
-
-                                    {/* Contingency Protocols */}
-                                    <div className="pt-2">
-                                        <StringListBuilder
-                                            items={formData.contingency_protocols}
-                                            onChange={items => updateField('contingency_protocols', items)}
-                                            title={t('editor.contingency_protocols', 'Contingency & Fallback Protocols')}
-                                            description={t('editor.contingency_desc', 'What to do when systems are offline or the standard path is blocked.')}
-                                            icon={<LifeBuoy className="h-4 w-4" />}
-                                            accentClassName="text-blue-500"
-                                            placeholder={t('editor.contingency_placeholder', 'e.g. If PMS is offline, use the manual arrival log and reconcile later')}
-                                            addLabel={t('editor.add_protocol', 'Add protocol')}
-                                        />
-                                    </div>
-
-                                    {/* Video Content Block (if video format or video url exists) */}
-                                    {(formData.content_type === 'video' || formData.video_url) && (
-                                        <div className="pt-2">
-                                            <VideoContentBuilder
-                                                value={formData.video_url}
-                                                onChange={v => updateField('video_url', v)}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Visual Image Gallery Block (if visual format or images exist) */}
-                                    {(formData.content_type === 'visual' || (formData.images && formData.images.length > 0)) && (
-                                        <div className="pt-2">
-                                            <VisualContentBuilder
-                                                images={formData.images}
-                                                onChange={v => updateField('images', v)}
-                                            />
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div ref={previewRef} className="space-y-8 min-h-[400px] p-6 border rounded-xl bg-white dark:bg-slate-950">
-                                    {/* Standard Article HTML Preview */}
-                                    {previewHtml ? (
-                                        <InlineErrorBoundary>
-                                            <div
-                                                className="prose max-w-none text-slate-800 dark:text-slate-100"
-                                                dir={editLang === 'ar' ? 'rtl' : 'ltr'}
-                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
-                                            />
-                                        </InlineErrorBoundary>
-                                    ) : (
-                                        <p className="text-sm text-muted-foreground italic py-8 text-center">
-                                            {t('editor.preview_empty', 'No article body content yet. Start writing on the Write tab.')}
-                                        </p>
-                                    )}
-
-                                    {/* Live Video Preview */}
-                                    {formData.video_url && (
-                                        <div className="pt-6 border-t">
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                                <VideoIcon className="w-4 h-4 text-red-500" />
-                                                Video Demonstration
-                                            </h4>
-                                            <VideoPlayer videoUrl={formData.video_url} title={formData.title} />
-                                        </div>
-                                    )}
-
-                                    {/* Live Interactive Checklist Preview */}
-                                    {formData.checklist_items && formData.checklist_items.length > 0 && (
-                                        <div className="pt-6 border-t">
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                                <CheckSquare className="w-4 h-4 text-orange-500" />
-                                                Interactive SOP Execution Checklist
-                                            </h4>
-                                            <ChecklistRenderer items={formData.checklist_items} />
-                                        </div>
-                                    )}
-
-                                    {/* Live Interactive FAQ Accordion Preview */}
-                                    {formData.faq_items && formData.faq_items.length > 0 && (
-                                        <div className="pt-6 border-t">
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                                <HelpCircle className="w-4 h-4 text-yellow-500" />
-                                                Operational FAQs & Edge Cases
-                                            </h4>
-                                            <FAQAccordion items={formData.faq_items} />
-                                        </div>
-                                    )}
-
-                                    {/* Live Image Gallery Preview */}
-                                    {formData.images && formData.images.length > 0 && (
-                                        <div className="pt-6 border-t">
-                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
-                                                <ImageIcon className="w-4 h-4 text-blue-500" />
-                                                Step-by-Step Visual Gallery
-                                            </h4>
-                                            <ImageGalleryRenderer images={formData.images} />
-                                        </div>
-                                    )}
-                                </div>
+                            {/* Video Content Block (if video format or video url exists) */}
+                            {(formData.content_type === 'video' || formData.video_url) && (
+                                <VideoContentBuilder
+                                    value={formData.video_url}
+                                    onChange={v => updateField('video_url', v)}
+                                />
                             )}
-                        </CardContent>
-                    </Card>
+                        </TabsContent>
+
+                        {/* TAB 2: Operational Protocols (Checklists, CCPs, Benchmarks, FAQs) */}
+                        <TabsContent value="protocols" className="space-y-5 mt-0">
+                            <OperationalProtocolsTab
+                                checklistItems={formData.checklist_items || []}
+                                onChecklistChange={items => updateField('checklist_items', items)}
+                                criticalControlPoints={formData.critical_control_points || []}
+                                onCriticalControlPointsChange={items => updateField('critical_control_points', items)}
+                                serviceBenchmarks={formData.service_benchmarks || []}
+                                onServiceBenchmarksChange={items => updateField('service_benchmarks', items)}
+                                contingencyProtocols={formData.contingency_protocols || []}
+                                onContingencyProtocolsChange={items => updateField('contingency_protocols', items)}
+                                faqItems={formData.faq_items || []}
+                                onFaqItemsChange={items => updateField('faq_items', items)}
+                                title={formData.title}
+                                isGenerating={isGenerating}
+                                onGenerateWithAI={generateWithAI}
+                            />
+                        </TabsContent>
+
+                        {/* TAB 3: Live Interactive Preview */}
+                        <TabsContent value="preview" className="space-y-5 mt-0">
+                            <div ref={previewRef} className="space-y-8 min-h-[400px] p-6 border rounded-xl bg-card">
+                                {/* Standard Article HTML Preview */}
+                                {previewHtml ? (
+                                    <InlineErrorBoundary>
+                                        <div
+                                            className="prose max-w-none text-foreground dark:text-slate-100"
+                                            dir={editLang === 'ar' ? 'rtl' : 'ltr'}
+                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
+                                        />
+                                    </InlineErrorBoundary>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic py-8 text-center">
+                                        {t('editor.preview_empty', 'No article body content yet. Start writing on the Procedure tab.')}
+                                    </p>
+                                )}
+
+                                {/* Live Video Preview */}
+                                {formData.video_url && (
+                                    <div className="pt-6 border-t">
+                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
+                                            <VideoIcon className="w-4 h-4 text-red-500" />
+                                            Video Demonstration
+                                        </h4>
+                                        <VideoPlayer videoUrl={formData.video_url} title={formData.title} />
+                                    </div>
+                                )}
+
+                                {/* Live Interactive Checklist Preview */}
+                                {formData.checklist_items && formData.checklist_items.length > 0 && (
+                                    <div className="pt-6 border-t">
+                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
+                                            <CheckSquare className="w-4 h-4 text-orange-500" />
+                                            Interactive SOP Execution Checklist
+                                        </h4>
+                                        <ChecklistRenderer items={formData.checklist_items} />
+                                    </div>
+                                )}
+
+                                {/* Live Interactive FAQ Accordion Preview */}
+                                {formData.faq_items && formData.faq_items.length > 0 && (
+                                    <div className="pt-6 border-t">
+                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
+                                            <HelpCircle className="w-4 h-4 text-yellow-500" />
+                                            Operational FAQs & Edge Cases
+                                        </h4>
+                                        <FAQAccordion items={formData.faq_items} />
+                                    </div>
+                                )}
+
+                                {/* Live Image Gallery Preview */}
+                                {formData.images && formData.images.length > 0 && (
+                                    <div className="pt-6 border-t">
+                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
+                                            <ImageIcon className="w-4 h-4 text-blue-500" />
+                                            Step-by-Step Visual Gallery
+                                        </h4>
+                                        <ImageGalleryRenderer images={formData.images} />
+                                    </div>
+                                )}
+                            </div>
+                        </TabsContent>
+                    </Tabs>
 
                     {/* Related Articles (When editing) */}
                     {isEditing && id && (
@@ -2232,477 +2265,40 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     )}
                 </div>
 
-                {/* RIGHT INSPECTOR: Settings, Organization & Attachments (4 cols) */}
+                {/* Zone 3: Streamlined Inspector (Publishing, Media, Governance) */}
                 <div className="lg:col-span-4 space-y-4">
-                    
-                    {/* 1. Department & Classification */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <List className="h-4 w-4 text-hotel-gold" />
-                                <span>{t('editor.topic_and_categorization', 'Topic & Classification')}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3.5">
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                                    {t('editor.main_team_topic', 'Department / Team')} <span className="text-red-500">*</span>
-                                </Label>
-                                <GroupedDepartmentSelector
-                                    departments={departments}
-                                    properties={properties}
-                                    value={formData.department_id || 'none'}
-                                    onValueChange={v => {
-                                        updateField('department_id', v === 'none' ? null : v)
-                                        updateField('category_id', null)
-                                    }}
-                                    placeholder={t('editor.select_department', 'Select main team...')}
-                                    generalLabel={t('editor.general_department')}
-                                    className="w-full text-xs"
-                                />
-                            </div>
-
-                            {formData.department_id && (
-                                <div className="pt-2 border-t border-dashed">
-                                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                                        {t('editor.category_optional', 'Sub-Category (Optional)')}
-                                    </Label>
-                                    <Select value={formData.category_id || 'none'} onValueChange={v => updateField('category_id', v === 'none' ? null : v)}>
-                                        <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
-                                            <SelectValue placeholder={t('editor.category_optional', 'Sub-Category (Optional)')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="none">{t('editor.general_category', 'General Topic')}</SelectItem>
-                                            {categories?.map(cat => (
-                                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* 2. Access & Visibility */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4 text-hotel-gold" />
-                                <span>{t('editor.who_can_view', 'Audience & Access')}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                                    {t('editor.viewer_group', 'Viewer Scope')}
-                                </Label>
-                                <Select value={formData.visibility} onValueChange={v => updateField('visibility', v as KnowledgeVisibility)}>
-                                    <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {VISIBILITY_OPTIONS.map(o => (
-                                            <SelectItem key={o.value} value={o.value}>
-                                                <div className="flex flex-col py-0.5">
-                                                    <span className="font-semibold text-xs">{o.label}</span>
-                                                    <span className="text-[10px] text-muted-foreground">{o.description}</span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-
-                                {formData.visibility === 'specific_departments' && (
-                                    <div className="mt-2.5">
-                                        <Label className="text-xs font-semibold mb-1 block">
-                                            {t('editor.visibility.specific_departments_label', 'Select Teams')}
-                                        </Label>
-                                        <MultiDepartmentSelector
-                                            departments={departments}
-                                            properties={properties}
-                                            value={formData.specific_department_ids}
-                                            onValueChange={v => updateField('specific_department_ids', v)}
-                                            placeholder={t('editor.visibility.select_depts', 'Select teams...')}
-                                        />
-                                    </div>
-                                )}
-
-                                {user && (formData.visibility === 'property' || formData.visibility === 'department') && (
-                                    <div className="mt-2.5">
-                                        <Label className="text-xs font-semibold mb-1 block">{t('editor.which_hotel', 'Hotel Property')}</Label>
-                                        <Select
-                                            value={formData.target_property_id || 'current'}
-                                            onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
-                                        >
-                                            <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
-                                                <Building2 className="me-1.5 h-3.5 w-3.5 opacity-50" />
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="current">
-                                                    Current Hotel ({currentProperty?.name || 'Head Office'})
-                                                </SelectItem>
-                                                {properties?.filter(p => p.id !== currentProperty?.id && p.id !== 'all').map(prop => (
-                                                    <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-
-                                <div className="mt-2 p-2 rounded bg-slate-50 dark:bg-slate-900 border text-[11px] text-slate-600 dark:text-slate-400">
-                                    {visibilitySummary}
-                                </div>
-                            </div>
-
-                            {/* Multi-Tenant Scope Type */}
-                            <div className="pt-2 border-t space-y-1.5">
-                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
-                                    Tenant Scope Level
-                                </Label>
-                                <Select
-                                    value={formData.scope_type}
-                                    onValueChange={v => updateField('scope_type', v as any)}
-                                >
-                                    <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="organization">Organization-wide (All brands & hotels)</SelectItem>
-                                        <SelectItem value="brand">Brand-specific ({currentBrand?.name || 'Selected Brand'})</SelectItem>
-                                        <SelectItem value="hotel">Hotel-specific ({currentHotel?.name || 'Selected Hotel'})</SelectItem>
-                                        <SelectItem value="department">Department-specific</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Master Template Toggle (Platform Super Admin only) */}
-                            {isPlatformAdmin && (
-                                <div className="pt-2 border-t flex items-center justify-between p-2.5 rounded-lg bg-amber-50/70 border border-amber-200">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-xs font-bold text-amber-900 cursor-pointer" htmlFor="master-switch">
-                                            Master SOP Template
-                                        </Label>
-                                        <p className="text-[10px] text-amber-700">
-                                            Publish to Platform Master Library for cross-tenant distribution
-                                        </p>
-                                    </div>
-                                    <Switch
-                                        id="master-switch"
-                                        checked={formData.is_master_template}
-                                        onCheckedChange={v => updateField('is_master_template', v)}
-                                    />
-                                </div>
-                            )}
-
-                            <div className="pt-2 border-t flex items-center justify-between">
-                                <Label className="text-xs font-medium cursor-pointer" htmlFor="ack-switch">
-                                    {t('editor.require_read_confirmation', 'Mandatory Read Confirmation')}
-                                </Label>
-                                <Switch
-                                    id="ack-switch"
-                                    checked={formData.requires_acknowledgment}
-                                    onCheckedChange={v => updateField('requires_acknowledgment', v)}
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* 3. Executive Summary (TL;DR) */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-2">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                    <FileText className="h-4 w-4 text-hotel-gold" />
-                                    <span>Executive TL;DR</span>
-                                </CardTitle>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => generateWithAI('summarize')}
-                                    disabled={isGenerating || !formData.content}
-                                    className="h-6 text-[11px] text-hotel-navy dark:text-hotel-gold hover:bg-hotel-gold/10 px-2"
-                                >
-                                    <Sparkles className="w-3 h-3 me-1 text-hotel-gold" />
-                                    AI Auto-Fill
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="space-y-1">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    {t('editor.summary_en', 'English')}
-                                </Label>
-                                <Textarea
-                                    value={formData.summary}
-                                    onChange={e => updateField('summary', e.target.value)}
-                                    placeholder={t('editor.summary_placeholder', '2-3 sentence overview of what this document covers and who must follow it...')}
-                                    rows={3}
-                                    maxLength={300}
-                                    className="text-xs bg-white dark:bg-slate-950"
-                                />
-                                <p className="text-[10px] text-muted-foreground text-right">
-                                    {formData.summary.length}/300
-                                </p>
-                            </div>
-                            <div className="space-y-1 pt-1 border-t border-dashed">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                    {t('editor.summary_ar', 'العربية')}
-                                </Label>
-                                <Textarea
-                                    value={formData.summary_ar}
-                                    onChange={e => updateField('summary_ar', e.target.value)}
-                                    dir="rtl"
-                                    placeholder={t('editor.summary_placeholder_ar', 'ملخص من 2-3 جمل لما يغطيه هذا المستند ومن يجب أن يتبعه...')}
-                                    rows={3}
-                                    maxLength={300}
-                                    className="text-xs bg-white dark:bg-slate-950"
-                                />
-                                <p className="text-[10px] text-muted-foreground text-right">
-                                    {formData.summary_ar.length}/300
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* 3b. SOP Code & Read Time */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <Tag className="h-4 w-4 text-hotel-gold" />
-                                <span>{t('editor.sop_metadata', 'SOP Code & Read Time')}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                                    {t('editor.sop_code', 'SOP / Document Code')}
-                                </Label>
-                                <Input
-                                    value={formData.sop_code}
-                                    onChange={e => updateField('sop_code', e.target.value)}
-                                    placeholder="e.g. FO-SOP-014"
-                                    className="text-xs h-8 bg-white dark:bg-slate-950 font-mono"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
-                                    {t('editor.estimated_read_time', 'Estimated Read Time (minutes)')}
-                                </Label>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="number"
-                                        min={1}
-                                        value={formData.estimated_read_time ?? ''}
-                                        onChange={e => updateField('estimated_read_time', e.target.value === '' ? null : Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                        placeholder={String(calculateEstimatedReadTime(formData.content) || 1)}
-                                        className="text-xs h-8 bg-white dark:bg-slate-950 w-24"
-                                    />
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 text-[11px] text-hotel-navy dark:text-hotel-gold px-2"
-                                        onClick={() => updateField('estimated_read_time', calculateEstimatedReadTime(formData.content))}
-                                    >
-                                        <RefreshCw className="w-3 h-3 me-1" />
-                                        {t('editor.auto_calc', 'Auto')}
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* 3c. AI Compliance Check */}
-                    {formData.ai_compliance_score != null && (
-                        <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                    <Gauge className="h-4 w-4 text-emerald-600" />
-                                    <span>{t('editor.ai_compliance_check', 'AI Compliance Check')}</span>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <Badge className="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1">
-                                        <ShieldCheck className="w-3.5 h-3.5 me-1" />
-                                        {formData.ai_compliance_score}/100
-                                    </Badge>
-                                    {formData.ai_compliance_checked_at && (
-                                        <span className="text-[10px] text-muted-foreground">
-                                            {t('editor.checked_on', 'Checked')} {new Date(formData.ai_compliance_checked_at).toLocaleDateString()}
-                                        </span>
-                                    )}
-                                </div>
-                                {formData.ai_compliance_notes.length > 0 && (
-                                    <div>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() => setShowComplianceNotes(v => !v)}
-                                            className="h-6 px-1.5 text-[11px] text-muted-foreground"
-                                        >
-                                            <ChevronDown className={`w-3.5 h-3.5 me-1 transition-transform ${showComplianceNotes ? 'rotate-180' : ''}`} />
-                                            {showComplianceNotes
-                                                ? t('editor.hide_notes', 'Hide notes')
-                                                : t('editor.show_notes', `Show ${formData.ai_compliance_notes.length} compliance notes`)}
-                                        </Button>
-                                        {showComplianceNotes && (
-                                            <ul className="mt-1.5 space-y-1 ps-1">
-                                                {formData.ai_compliance_notes.map((note, idx) => (
-                                                    <li key={idx} className="text-[11px] text-slate-600 dark:text-slate-300 flex gap-1.5">
-                                                        <span className="text-emerald-500 shrink-0">•</span>
-                                                        <span>{note}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-                                )}
-                                {(formData.ai_model_used || formData.ai_provider_used) && (
-                                    <p className="text-[10px] text-muted-foreground pt-1 border-t border-dashed">
-                                        {t('editor.ai_generated_by', 'AI-generated via')}{' '}
-                                        {[formData.ai_provider_used, formData.ai_model_used].filter(Boolean).join(' / ')}
-                                        {formData.ai_cost_tier ? ` (${formData.ai_cost_tier})` : ''}
-                                    </p>
-                                )}
-                                <p className="text-[10px] text-muted-foreground italic">
-                                    {t('editor.ai_compliance_disclaimer', 'This score reflects the AI review at generation time — it is not re-computed on manual edits.')}
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 4. PDF Attachment & Media Library */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <FolderOpen className="h-4 w-4 text-hotel-gold" />
-                                <span>Attached Document & Media</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowDocumentPicker(true)}
-                                    className="text-xs h-8 font-medium gap-1.5"
-                                >
-                                    <FolderOpen className="h-3.5 w-3.5 text-hotel-gold" />
-                                    Doc Library
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowMediaPicker(true)}
-                                    className="text-xs h-8 font-medium gap-1.5"
-                                >
-                                    <ImageIcon className="h-3.5 w-3.5 text-hotel-gold" />
-                                    Media Library
-                                </Button>
-                            </div>
-                            {formData.file_url && (
-                                <div className="flex items-center justify-between p-2 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 text-xs">
-                                    <span className="truncate text-green-800 dark:text-green-300 font-medium">
-                                        📎 {formData.file_url.split('/').pop()}
-                                    </span>
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-[10px] px-2 shrink-0">
-                                        Linked
-                                    </Badge>
-                                </div>
-                            )}
-
-                            <div className="pt-2 border-t border-dashed">
-                                <Label className="text-xs font-semibold mb-1.5 block">Upload PDF</Label>
-                                <Input
-                                    type="file"
-                                    accept=".pdf"
-                                    disabled={isUploading}
-                                    onChange={async (e) => {
-                                        const file = e.target.files?.[0]
-                                        if (!file) return
-                                        if (file.type !== 'application/pdf') {
-                                            toast.error(t('editor.alerts.only_pdf', 'Only PDF files are allowed'))
-                                            return
-                                        }
-                                        if (!user?.id) {
-                                            toast.error(t('editor.alerts.user_error'))
-                                            return
-                                        }
-
-                                        setIsUploading(true)
-                                        try {
-                                            const scanResult = await scanFile(file, {
-                                                bucket: 'documents',
-                                                context: 'knowledge_editor_upload'
-                                            })
-                                            if (!scanResult.safe) {
-                                                throw new Error(scanResult.message || 'File failed security scan')
-                                            }
-
-                                            const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                                            const { error } = await supabase.storage.from('documents').upload(fileName, file)
-                                            if (error) throw error
-
-                                            updateField('file_url', fileName)
-                                            updateField('storage_path', fileName)
-                                            if (!formData.title) updateField('title', file.name.replace('.pdf', ''))
-                                            toast.success(t('editor.alerts.upload_success', 'Document uploaded successfully'))
-                                        } catch (err: unknown) {
-                                            toast.error(err instanceof Error ? err.message : 'Upload failed')
-                                        } finally {
-                                            setIsUploading(false)
-                                        }
-                                    }}
-                                    className="text-xs cursor-pointer h-8 file:text-xs"
-                                />
-                            </div>
-
-                            {/* External Web Link */}
-                            <div className="pt-2 border-t border-dashed">
-                                <Label className="text-xs font-semibold mb-1 block">External Link</Label>
-                                <Input
-                                    value={formData.file_url}
-                                    onChange={e => updateField('file_url', e.target.value)}
-                                    placeholder="https://..."
-                                    className="text-xs h-8 bg-white dark:bg-slate-950"
-                                />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* 5. Linked Training Course */}
-                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold flex items-center gap-2">
-                                <LinkIcon className="h-4 w-4 text-hotel-gold" />
-                                <span>{t('editor.linked_training', 'Linked Training Course')}</span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Select
-                                value={formData.linked_training_id || 'none'}
-                                onValueChange={v => updateField('linked_training_id', v === 'none' ? null : v)}
-                            >
-                                <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
-                                    <SelectValue placeholder={t('editor.select_training_module', 'Select course...')} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="none">{t('editor.no_linked_training', 'None (No course linked)')}</SelectItem>
-                                    {trainingModules?.map(m => (
-                                        <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-muted-foreground mt-1.5">
-                                When associates read this SOP, they will be prompted to take the training module.
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <AuthorInspector
+                        activeTab={inspectorTab}
+                        onActiveTabChange={setInspectorTab}
+                        formData={formData}
+                        onUpdateField={updateField}
+                        departments={departments || []}
+                        properties={properties || []}
+                        categories={categories || []}
+                        trainingModules={trainingModules || []}
+                        currentProperty={currentProperty}
+                        currentBrand={currentBrand}
+                        currentHotel={currentHotel}
+                        isPlatformAdmin={isPlatformAdmin}
+                        user={user}
+                        visibilityOptions={VISIBILITY_OPTIONS}
+                        visibilitySummary={visibilitySummary}
+                        onOpenDocumentPicker={() => setShowDocumentPicker(true)}
+                        onOpenMediaPicker={() => {
+                            mediaPickKindRef.current = 'image'
+                            mediaPickResolveRef.current = null
+                            setShowMediaPicker(true)
+                        }}
+                        onOpenVideoPicker={handleOpenVideoPicker}
+                        isUploadingPdf={isUploading}
+                        onUploadPdf={handleUploadPdf}
+                        onGenerateSummary={() => generateWithAI('summarize')}
+                        isGeneratingSummary={isGenerating}
+                        isEditing={isEditing}
+                        releaseNotes={releaseNotes}
+                        onReleaseNotesChange={setReleaseNotes}
+                        masterDeploymentCount={masterDeploymentCount}
+                    />
                 </div>
             </div>
 
@@ -2733,8 +2329,11 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     }
                 }}
                 onSelect={handleMediaSelect}
-                config={mediaPickResolveRef.current ? { allowedTypes: [mediaPickKindRef.current], multiple: false } : undefined}
-                title="Select Media from Hotel Library"
+                config={{
+                    allowedTypes: mediaPickKindRef.current ? [mediaPickKindRef.current] : undefined,
+                    multiple: false
+                }}
+                title={mediaPickKindRef.current === 'video' ? t('editor.select_video_title', 'Select Video from Hotel Library') : t('editor.select_media_title', 'Select Media from Hotel Library')}
             />
 
             {/* AI Knowledge Article & SOP Studio Modal */}

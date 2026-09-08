@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { platformService } from '@/services/platformService'
+import { useNavigate } from 'react-router-dom'
 import {
   Activity,
   Cpu,
@@ -16,13 +17,15 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
-  Play
+  Play,
+  Bot
 } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function PlatformOperationsHub() {
   const { t } = useTranslation(['admin', 'common'])
   const { toast } = useToast()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [filterTab, setFilterTab] = useState<'all' | 'active' | 'failed' | 'completed'>('all')
 
@@ -70,10 +73,16 @@ export default function PlatformOperationsHub() {
           </div>
         </div>
 
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs h-9">
-          <RefreshCw className="h-3.5 w-3.5 me-1.5" />
-          Refresh Pipeline
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => navigate('/platform/ai-settings')} className="text-xs h-9 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/30">
+            <Bot className="h-3.5 w-3.5 me-1.5" />
+            Configure AI Engine
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="text-xs h-9">
+            <RefreshCw className="h-3.5 w-3.5 me-1.5" />
+            Refresh Pipeline
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">

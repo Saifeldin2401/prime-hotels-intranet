@@ -261,6 +261,7 @@ function TrainingBuilderInner() {
         onPreview={() => ctx.handleStepChange('preview')}
         onMagic={() => ctx.setShowSmartWizard(true)}
         onTitleChange={ctx.setTitle}
+        isMasterTemplate={ctx.isMasterTemplate}
         steps={ctx.steps}
         activeStep={ctx.builderStep}
         onStepChange={(step) => ctx.handleStepChange(step)}

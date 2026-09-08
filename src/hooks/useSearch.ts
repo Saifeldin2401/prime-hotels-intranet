@@ -1,4 +1,5 @@
 import { useProperty } from '@/contexts/PropertyContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { SYSTEM_PAGES } from '@/lib/searchConfig'
@@ -112,6 +113,7 @@ const ALL_REFERRALS_ROLES = new Set([
 export function useSearch(query: string, options: UseSearchOptions = {}) {
   const { user, primaryRole, roles, departments, properties } = useAuth()
   const { currentProperty, propertyIds } = useProperty()
+  const { currentOrganization, isPlatformScope } = useTenant()
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
 
@@ -185,7 +187,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
   }
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['global-search', query, options, user?.id, primaryRole, scopedPropertyIds, scopedDepartmentIds, roleValues],
+    queryKey: ['global-search', query, options, user?.id, primaryRole, scopedPropertyIds, scopedDepartmentIds, roleValues, currentOrganization?.id, isPlatformScope],
     queryFn: async () => {
       if (!query.trim()) return []
 
@@ -194,11 +196,16 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
       const queryLower = query.toLowerCase()
       const escapedQuery = escapeSearchQuery(query)
 
-      const matchingPages = SYSTEM_PAGES.filter((page) =>
-        page.title.toLowerCase().includes(queryLower) ||
-        page.description.toLowerCase().includes(queryLower) ||
-        page.keywords.some((keyword) => keyword.toLowerCase().includes(queryLower))
-      )
+      const matchingPages = SYSTEM_PAGES.filter((page) => {
+        if (isPlatformScope && (page.url.startsWith('/knowledge') || page.url.startsWith('/learning') || page.url.startsWith('/documents') || page.url.startsWith('/sops') || page.url.startsWith('/training'))) {
+          return false
+        }
+        return (
+          page.title.toLowerCase().includes(queryLower) ||
+          page.description.toLowerCase().includes(queryLower) ||
+          page.keywords.some((keyword) => keyword.toLowerCase().includes(queryLower))
+        )
+      })
 
       results.push(...matchingPages.map((page) => ({
         id: page.id,
@@ -227,6 +234,12 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
 
               if (!canSearchDraftContent) {
                 q = q.eq('status', 'PUBLISHED')
+              }
+
+              if (currentOrganization?.id && !isPlatformScope) {
+                q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
+              } else {
+                q = q.eq('is_master_template', true)
               }
 
               const result = await mutate(q)
@@ -302,11 +315,12 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeUsers && canSearchUsers) {
+        if (includeUsers && canSearchUsers && currentOrganization?.id && !isPlatformScope) {
           try {
             const { data: users } = await supabase
               .from('profiles')
               .select('id, full_name, email')
+              .eq('organization_id', currentOrganization.id)
               .or(`full_name.ilike.%${escapedQuery}%,email.ilike.%${escapedQuery}%`)
               .eq('is_active', true)
               .limit(Math.ceil(limit / 4))
@@ -348,6 +362,13 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               if (!canSearchDraftContent) {
                 q = q.in('status', ['published', 'active'])
               }
+
+              if (currentOrganization?.id && !isPlatformScope) {
+                q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
+              } else {
+                q = q.eq('is_master_template', true)
+              }
+
               return q
             }
 
@@ -380,7 +401,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeAnnouncements) {
+        if (includeAnnouncements && currentOrganization?.id && !isPlatformScope) {
           try {
             const announcementsLimit = Math.ceil(limit / 2)
             const announcementQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
@@ -389,6 +410,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               supabase
                 .from('announcements')
                 .select('id, title, content, priority, target_audience, created_by, property_id')
+                .eq('organization_id', currentOrganization.id)
                 .or(`title.ilike.%${escapedQuery}%,content.ilike.%${escapedQuery}%`)
                 .limit(announcementsLimit)
 
@@ -435,6 +457,12 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 q = q.eq('status', 'PUBLISHED')
               }
 
+              if (currentOrganization?.id && !isPlatformScope) {
+                q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
+              } else {
+                q = q.eq('is_master_template', true)
+              }
+
               return q
             }
 
@@ -464,7 +492,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeTasks) {
+        if (includeTasks && currentOrganization?.id && !isPlatformScope) {
           try {
             const taskLimit = Math.ceil(limit / 3)
             const textFilter = `title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`
@@ -480,6 +508,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 .from('tasks')
                 .select('id, title, description, status, due_date, assigned_to_id, created_by_id, department_id')
                 .eq('is_deleted', false)
+                .eq('organization_id', currentOrganization.id)
                 .or(textFilter)
                 .limit(taskLimit)
 
@@ -514,12 +543,13 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeTickets) {
+        if (includeTickets && currentOrganization?.id && !isPlatformScope) {
           try {
             let ticketsQuery = supabase
               .from('maintenance_tickets')
               .select('id, title, description, status, priority, room_number')
               .eq('is_deleted', false)
+              .eq('organization_id', currentOrganization.id)
               .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,room_number.ilike.%${escapedQuery}%`)
 
             ticketsQuery = applyIdsScope(ticketsQuery, 'property_id', scopedPropertyIds)
@@ -559,7 +589,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeReferrals) {
+        if (includeReferrals && currentOrganization?.id && !isPlatformScope) {
           try {
             if (!canViewAllReferrals && !user?.id) {
               return dedupeById(results)
@@ -570,6 +600,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             let referralsQuery = supabase
               .from('job_applications')
               .select('id, applicant_name, applicant_email, applicant_phone, status, referred_by')
+              .eq('organization_id', currentOrganization.id)
               .not('referred_by', 'is', null)
               .or(`applicant_name.ilike.%${escapedQuery}%,applicant_email.ilike.%${escapedQuery}%,applicant_phone.ilike.%${escapedQuery}%`)
               .limit(Math.ceil(limit / 4))

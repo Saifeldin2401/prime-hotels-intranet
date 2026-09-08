@@ -297,16 +297,26 @@ export async function getArticles(
         }
         // Multi-Tenant Scoping Filters
         if (filters.organization_id && filters.organization_id !== 'undefined' && filters.organization_id.length === 36) {
-            query = query.eq('organization_id', filters.organization_id)
+            if (filters.is_master_template === false) {
+                query = query.eq('organization_id', filters.organization_id).eq('is_master_template', false)
+            } else if (filters.is_master_template === true) {
+                query = query.eq('is_master_template', true)
+            } else {
+                query = query.or(`organization_id.eq.${filters.organization_id},is_master_template.eq.true`)
+            }
+        } else if (filters.is_master_template !== undefined) {
+            query = query.eq('is_master_template', filters.is_master_template)
+        } else {
+            // Guard: When no organization context is specified, do not query all customer tenant documents globally.
+            // Restrict to master templates only.
+            query = query.eq('is_master_template', true)
         }
+
         if (filters.hotel_id && filters.hotel_id !== 'undefined' && filters.hotel_id.length === 36) {
             query = query.or(`hotel_id.is.null,hotel_id.eq.${filters.hotel_id}`)
         }
         if (filters.brand_id && filters.brand_id !== 'undefined' && filters.brand_id.length === 36) {
             query = query.or(`brand_id.is.null,brand_id.eq.${filters.brand_id}`)
-        }
-        if (filters.is_master_template !== undefined) {
-            query = query.eq('is_master_template', filters.is_master_template)
         }
 
         // Validate department_id is a real UUID, not 'undefined' string
@@ -406,7 +416,7 @@ export async function incrementViewCount(id: string): Promise<void> {
     if (error) console.warn('Failed to increment view count:', error.message)
 }
 
-export async function getFeaturedArticles(limit = 5, propertyId?: string): Promise<KnowledgeArticle[]> {
+export async function getFeaturedArticles(limit = 5, propertyId?: string, organizationId?: string): Promise<KnowledgeArticle[]> {
     try {
         let query = supabase
             .from('documents')
@@ -425,6 +435,12 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string): Promi
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
+
+        if (organizationId) {
+            query = query.or(`organization_id.eq.${organizationId},is_master_template.eq.true`)
+        } else {
+            query = query.eq('is_master_template', true)
+        }
 
         if (isRealPropertyId(propertyId)) {
             query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
@@ -444,7 +460,7 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string): Promi
     }
 }
 
-export async function getRecentArticles(limit = 10, propertyId?: string): Promise<KnowledgeArticle[]> {
+export async function getRecentArticles(limit = 10, propertyId?: string, organizationId?: string): Promise<KnowledgeArticle[]> {
     try {
         let query = supabase
             .from('documents')
@@ -463,6 +479,12 @@ export async function getRecentArticles(limit = 10, propertyId?: string): Promis
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .order('updated_at', { ascending: false })
+
+        if (organizationId) {
+            query = query.or(`organization_id.eq.${organizationId},is_master_template.eq.true`)
+        } else {
+            query = query.eq('is_master_template', true)
+        }
 
         if (isRealPropertyId(propertyId)) {
             query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
@@ -486,7 +508,7 @@ export async function getRecentArticles(limit = 10, propertyId?: string): Promis
 // REQUIRED READING
 // ============================================================================
 
-export async function getRequiredReading(userId: string, propertyId?: string): Promise<RequiredReading[]> {
+export async function getRequiredReading(userId: string, propertyId?: string, organizationId?: string): Promise<RequiredReading[]> {
     try {
         // 1. Get published documents that require acknowledgment
         let requiredDocsQuery = supabase
@@ -496,6 +518,12 @@ export async function getRequiredReading(userId: string, propertyId?: string): P
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
             .limit(50)
+
+        if (organizationId) {
+            requiredDocsQuery = requiredDocsQuery.or(`organization_id.eq.${organizationId},is_master_template.eq.true`)
+        } else {
+            requiredDocsQuery = requiredDocsQuery.eq('is_master_template', true)
+        }
 
         if (isRealPropertyId(propertyId)) {
             requiredDocsQuery = requiredDocsQuery.or(`property_id.is.null,property_id.eq.${propertyId}`)
@@ -557,7 +585,7 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // CONTEXTUAL HELP - Real Implementation
 // ============================================================================
 
-export async function getContextualHelp(triggerType: string, triggerValue: string, propertyId?: string): Promise<ContextualHelp[]> {
+export async function getContextualHelp(triggerType: string, triggerValue: string, propertyId?: string, organizationId?: string): Promise<ContextualHelp[]> {
     // Map trigger types to relevant content types
     const contentTypeMap: Record<string, string[]> = {
         'task': ['sop', 'guide', 'checklist'],
@@ -570,22 +598,35 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
 
     const relevantTypes = contentTypeMap[triggerType] || ['guide', 'reference']
 
-    const baseQuery = () => supabase
-        .from('documents')
-        .select('id, title, description, content_type, status, current_version, view_count')
-        .in('content_type', relevantTypes)
-        .eq('status', 'PUBLISHED')
-        .eq('is_deleted', false)
-        .or(`title.ilike.%${triggerValue}%,description.ilike.%${triggerValue}%`)
-        .order('view_count', { ascending: false })
-        .limit(5)
+    const executeQuery = (propertyFilter?: { isNull?: boolean; value?: string }) => {
+        let q = (supabase.from('documents') as any)
+            .select('id, title, description, content_type, status, current_version, view_count')
+            .in('content_type', relevantTypes)
+            .eq('status', 'PUBLISHED')
+            .eq('is_deleted', false)
+            .or(`title.ilike.%${triggerValue}%,description.ilike.%${triggerValue}%`)
+
+        if (organizationId) {
+            q = q.or(`organization_id.eq.${organizationId},is_master_template.eq.true`)
+        } else {
+            q = q.eq('is_master_template', true)
+        }
+
+        if (propertyFilter?.value) {
+            q = q.eq('property_id', propertyFilter.value)
+        } else if (propertyFilter?.isNull) {
+            q = q.is('property_id', null)
+        }
+
+        return q.order('view_count', { ascending: false }).limit(5)
+    }
 
     const scopedQueries = isRealPropertyId(propertyId)
         ? [
-            baseQuery().eq('property_id', propertyId),
-            baseQuery().is('property_id', null)
+            executeQuery({ value: propertyId }),
+            executeQuery({ isNull: true })
         ]
-        : [baseQuery()]
+        : [executeQuery()]
 
     const scopedResults = await Promise.all(scopedQueries)
     const scopedDocs = []

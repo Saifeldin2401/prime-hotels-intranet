@@ -73,6 +73,7 @@ export function FacetedScopeCapsule({ className }: FacetedScopeCapsuleProps) {
     isImpersonating,
     enterOrganization,
     exitImpersonation,
+    returnToPlatformScope,
   } = useTenant()
 
   const { t, i18n } = useTranslation(['nav', 'admin', 'common'])
@@ -109,25 +110,21 @@ export function FacetedScopeCapsule({ className }: FacetedScopeCapsuleProps) {
   }, [availableHotels, currentBrand, hotelSearch])
 
   const handleSelectPlatformPlane = async () => {
-    if (isImpersonating) {
-      try {
-        await exitImpersonation()
-        toast({
-          title: t('admin:return_to_platform', 'Return to Platform Control Plane'),
-          description: t('admin:global_saas_scope', 'Global SaaS Scope restored.'),
-        })
-      } catch (err: unknown) {
-        const error = err as { message?: string }
-        toast({
-          title: t('common:error', 'Error'),
-          description: error?.message || 'Failed to exit session',
-          variant: 'destructive',
-        })
-      }
+    try {
+      await returnToPlatformScope()
+      toast({
+        title: t('admin:return_to_platform', 'Return to Platform Control Plane'),
+        description: t('admin:global_saas_scope', 'Global SaaS Scope restored.'),
+      })
+      navigate('/platform')
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      toast({
+        title: t('common:error', 'Error'),
+        description: error?.message || 'Failed to return to platform',
+        variant: 'destructive',
+      })
     }
-    safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
-    await refreshTenantData()
-    navigate('/platform')
   }
 
   const handleOrgClick = async (org: Organization) => {

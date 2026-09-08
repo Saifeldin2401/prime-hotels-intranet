@@ -26,6 +26,18 @@ export interface MasterContentDiff {
   targetTitleAr?: string
   masterDescription?: string
   targetDescription?: string
+  masterContent?: string
+  targetContent?: string
+  masterContentAr?: string
+  targetContentAr?: string
+  masterChecklistItems?: any[]
+  targetChecklistItems?: any[]
+  releaseNotes?: string
+  localAddendum?: {
+    en?: string
+    ar?: string
+    updated_at?: string
+  }
   masterVersion: number
   deployedVersion: number
   hasUpdateAvailable: boolean
@@ -618,6 +630,9 @@ export const platformService = {
       descriptionAr?: string
       content?: string
       contentAr?: string
+      checklistItems?: any[]
+      faqItems?: any[]
+      releaseNotes?: string
       incrementVersion?: boolean
       actorId?: string
     }
@@ -632,6 +647,13 @@ export const platformService = {
 
     const newVersion = params.incrementVersion ? (currentSop.current_version || 1) + 1 : (currentSop.current_version || 1)
 
+    const currentContentData = (currentSop.content_data as any) || {}
+    const updatedContentData = {
+      ...currentContentData,
+      ...(params.releaseNotes !== undefined ? { release_notes: params.releaseNotes } : {}),
+      last_updated_at: new Date().toISOString()
+    }
+
     const { data: updatedSop, error: updateErr } = await supabase
       .from('documents')
       .update({
@@ -641,6 +663,9 @@ export const platformService = {
         description_ar: params.descriptionAr !== undefined ? params.descriptionAr : currentSop.description_ar,
         content: params.content !== undefined ? params.content : currentSop.content,
         content_ar: params.contentAr !== undefined ? params.contentAr : currentSop.content_ar,
+        checklist_items: params.checklistItems !== undefined ? params.checklistItems : currentSop.checklist_items,
+        faq_items: params.faqItems !== undefined ? params.faqItems : currentSop.faq_items,
+        content_data: updatedContentData,
         current_version: newVersion,
         updated_at: new Date().toISOString()
       })
@@ -930,6 +955,14 @@ export const platformService = {
           targetTitleAr: targetDoc.title_ar,
           masterDescription: masterDoc.description,
           targetDescription: targetDoc.description,
+          masterContent: masterDoc.content || '',
+          targetContent: targetDoc.content || '',
+          masterContentAr: masterDoc.content_ar || '',
+          targetContentAr: targetDoc.content_ar || '',
+          masterChecklistItems: Array.isArray(masterDoc.checklist_items) ? masterDoc.checklist_items : [],
+          targetChecklistItems: Array.isArray(targetDoc.checklist_items) ? targetDoc.checklist_items : [],
+          releaseNotes: (masterDoc.content_data as any)?.release_notes || undefined,
+          localAddendum: (targetDoc.content_data as any)?.local_addendum || undefined,
           masterVersion,
           deployedVersion,
           hasUpdateAvailable,
@@ -1008,6 +1041,7 @@ export const platformService = {
     targetContentId: string
     contentType: 'sop' | 'course'
     triggerRetraining?: boolean
+    triggerReacknowledgment?: boolean
     updatedBy?: string
   }): Promise<{ success: boolean; updatedVersion: number; message?: string }> {
     try {
@@ -1040,6 +1074,15 @@ export const platformService = {
 
         const masterVersion = masterDoc.current_version || 1
 
+        const targetContentData = (targetDoc.content_data as any) || {}
+        const masterContentData = (masterDoc.content_data as any) || {}
+        const mergedContentData = {
+          ...masterContentData,
+          // Preserve local property addendum!
+          local_addendum: targetContentData.local_addendum || null,
+          last_master_synced_at: new Date().toISOString()
+        }
+
         // Update target document
         await supabase
           .from('documents')
@@ -1050,12 +1093,43 @@ export const platformService = {
             description_ar: masterDoc.description_ar,
             content: masterDoc.content,
             content_ar: masterDoc.content_ar,
+            checklist_items: masterDoc.checklist_items || [],
+            faq_items: masterDoc.faq_items || [],
+            video_url: masterDoc.video_url || null,
+            images: masterDoc.images || [],
+            content_data: mergedContentData,
             current_version: masterVersion,
             status: 'PUBLISHED',
+            requires_acknowledgment: params.triggerReacknowledgment ? true : (masterDoc.requires_acknowledgment ?? targetDoc.requires_acknowledgment),
             updated_at: new Date().toISOString(),
             updated_by: params.updatedBy || null
           })
           .eq('id', targetDoc.id)
+
+        // If mandatory re-acknowledgment requested, reset previous employee sign-offs for this document
+        if (params.triggerReacknowledgment) {
+          const { error: resetAckErr } = await supabase
+            .from('document_acknowledgments')
+            .delete()
+            .eq('document_id', targetDoc.id)
+
+          if (resetAckErr) {
+            console.warn('Warning clearing prior acknowledgments:', resetAckErr)
+          }
+
+          await this.logPlatformAction({
+            action: 'trigger_mandatory_sop_reacknowledgment',
+            resourceType: 'document_sop',
+            resourceId: targetDoc.id,
+            targetOrgId: targetDoc.organization_id || deployment?.target_organization_id,
+            actorId: params.updatedBy,
+            metadata: {
+              master_id: masterDoc.id,
+              version: masterVersion,
+              document_title: targetDoc.title
+            }
+          })
+        }
 
         // Update deployment record if exists
         if (deployment) {
@@ -1077,7 +1151,11 @@ export const platformService = {
           resourceId: targetDoc.id,
           targetOrgId: targetDoc.organization_id || deployment?.target_organization_id,
           actorId: params.updatedBy,
-          metadata: { master_id: masterDoc.id, new_version: masterVersion }
+          metadata: {
+            master_id: masterDoc.id,
+            new_version: masterVersion,
+            reacknowledgment_triggered: Boolean(params.triggerReacknowledgment)
+          }
         })
 
         return { success: true, updatedVersion: masterVersion }
@@ -1206,6 +1284,42 @@ export const platformService = {
     }
   },
 
+  async sendSyncReminder(params: {
+    deploymentId: string
+    actorId?: string
+  }): Promise<boolean> {
+    try {
+      const { data: deployment, error } = await supabase
+        .from('master_content_deployments')
+        .select(`
+          *,
+          target_organization:organizations(name)
+        `)
+        .eq('id', params.deploymentId)
+        .single()
+
+      if (error || !deployment) throw new Error('Deployment not found')
+
+      await this.logPlatformAction({
+        action: 'send_sync_reminder',
+        resourceType: deployment.content_type === 'document_sop' ? 'document_sop' : 'course',
+        resourceId: deployment.master_content_id,
+        targetOrgId: deployment.target_organization_id,
+        actorId: params.actorId,
+        metadata: {
+          deployment_id: deployment.id,
+          deployed_version: deployment.deployed_version,
+          current_master_version: deployment.current_master_version,
+          org_name: (deployment as any).target_organization?.name
+        }
+      })
+      return true
+    } catch (err) {
+      console.error('Failed to send sync reminder:', err)
+      return false
+    }
+  },
+
   // ============================================================================
   // 5. CROSS-TENANT AUDIT LOGGING & VIEWING
   // ============================================================================
@@ -1327,35 +1441,49 @@ export const platformService = {
     const sb = supabase as any
     const { data: pu, error } = await sb
       .from('platform_users')
-      .select('user_id, is_active, employment_type, created_at, profile:profiles!platform_users_user_id_fkey(email, full_name)')
+      .select('user_id, is_active, employment_type, created_at')
       .order('created_at', { ascending: true })
     if (error) { console.error('listPlatformUsers:', error); throw error }
 
     const ids = (pu || []).map((r: any) => r.user_id)
-    const { data: pra } = ids.length
-      ? await sb
-          .from('platform_role_assignments')
-          .select('platform_user_id, platform_role')
-          .is('revoked_at', null)
-          .in('platform_user_id', ids)
-      : { data: [] as any[] }
+    if (!ids.length) return []
+
+    const [profilesRes, rolesRes] = await Promise.all([
+      sb
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', ids),
+      sb
+        .from('platform_role_assignments')
+        .select('platform_user_id, platform_role')
+        .is('revoked_at', null)
+        .in('platform_user_id', ids),
+    ])
+
+    const profilesById = new Map<string, { email?: string; full_name?: string }>()
+    for (const p of (profilesRes.data || []) as any[]) {
+      profilesById.set(p.id, p)
+    }
 
     const rolesByUser = new Map<string, string[]>()
-    for (const a of (pra || []) as any[]) {
+    for (const a of (rolesRes.data || []) as any[]) {
       const list = rolesByUser.get(a.platform_user_id) || []
       list.push(a.platform_role)
       rolesByUser.set(a.platform_user_id, list)
     }
 
-    return (pu || []).map((r: any) => ({
-      user_id: r.user_id,
-      email: r.profile?.email || '',
-      full_name: r.profile?.full_name || '',
-      is_active: r.is_active,
-      employment_type: r.employment_type,
-      roles: rolesByUser.get(r.user_id) || [],
-      created_at: r.created_at,
-    }))
+    return (pu || []).map((r: any) => {
+      const prof = profilesById.get(r.user_id)
+      return {
+        user_id: r.user_id,
+        email: prof?.email || '',
+        full_name: prof?.full_name || '',
+        is_active: r.is_active,
+        employment_type: r.employment_type,
+        roles: rolesByUser.get(r.user_id) || [],
+        created_at: r.created_at,
+      }
+    })
   },
 
   /** Grant a platform role (creates the platform_users row if needed, revokes the same role first). */
@@ -1550,6 +1678,25 @@ export const platformService = {
     const { data, error } = await (supabase.rpc as any)('get_organization_profile', { p_org_id: orgId })
     if (error) throw error
     return data
+  },
+
+  async setTenantMembership(params: {
+    orgId: string
+    userId: string
+    role: string
+    hotelId?: string | null
+    departmentId?: string | null
+    active?: boolean
+  }): Promise<void> {
+    const { error } = await (supabase.rpc as any)('platform_set_membership', {
+      p_org_id: params.orgId,
+      p_user_id: params.userId,
+      p_role: params.role,
+      p_hotel_id: params.hotelId ?? null,
+      p_department_id: params.departmentId ?? null,
+      p_active: params.active ?? true,
+    })
+    if (error) throw error
   },
 
 

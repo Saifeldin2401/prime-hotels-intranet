@@ -26,6 +26,8 @@ import { Activity, ChevronLeft, ChevronRight, Clock, Download, FileText, Filter,
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useTenant } from '@/contexts/TenantContext'
+
 const actionColors = {
   create: 'bg-green-100 text-green-800',
   update: 'bg-blue-100 text-blue-800',
@@ -41,6 +43,8 @@ type AuditLogWithUser = AuditLog & { user?: AuditUser | null }
 
 export default function AuditLogs() {
   const { t } = useTranslation('admin')
+  const { currentOrganization } = useTenant()
+  const orgId = currentOrganization?.id
   const [searchTerm, setSearchTerm] = useState('')
   const [actionFilter, setActionFilter] = useState<string>('all')
   const [targetFilter, setTargetFilter] = useState<string>('all')
@@ -57,19 +61,24 @@ export default function AuditLogs() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', searchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
+    queryKey: ['audit-logs', orgId, searchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
     queryFn: async () => {
-      let query = supabase
-        .from('audit_logs_v')
-        .select('*', { count: 'exact' })
+      let query = (supabase as any)
+        .from('system_events')
+        .select('id, entity_type, entity_id, actor_id, ip_address, user_agent, metadata, created_at, organization_id', { count: 'exact' })
+        .eq('event_type', 'audit')
         .order('created_at', { ascending: false })
 
+      if (orgId) {
+        query = query.eq('organization_id', orgId)
+      }
+
       if (searchTerm) {
-        query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
+        query = query.or(`entity_type.ilike.%${searchTerm}%,metadata->>action.ilike.%${searchTerm}%`)
       }
 
       if (actionFilter !== 'all') {
-        query = query.eq('action', actionFilter)
+        query = query.filter('metadata->>action', 'eq', actionFilter)
       }
 
       if (targetFilter !== 'all') {
@@ -108,7 +117,7 @@ export default function AuditLogs() {
       if (error) throw error
 
       const rawLogs = data || []
-      const userIds = Array.from(new Set(rawLogs.map(l => l.user_id).filter((id): id is string => Boolean(id))))
+      const userIds = Array.from(new Set(rawLogs.map((l: any) => l.actor_id).filter((id: any): id is string => Boolean(id))))
 
       const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
       if (userIds.length > 0) {
@@ -121,17 +130,17 @@ export default function AuditLogs() {
         }
       }
 
-      const enrichedLogs = rawLogs.map(l => ({
+      const enrichedLogs = rawLogs.map((l: any) => ({
         id: l.id ?? '',
         entity_type: l.entity_type ?? '',
         entity_id: l.entity_id ?? '',
-        action: (l.action ?? 'other') as AuditLog['action'],
-        user_id: l.user_id,
+        action: ((l.metadata as any)?.action ?? 'other') as AuditLog['action'],
+        user_id: l.actor_id,
         created_at: l.created_at ?? '',
         ip_address: l.ip_address,
         user_agent: l.user_agent,
-        details: l.details as Record<string, unknown> | null,
-        user: l.user_id ? profileMap.get(l.user_id) : undefined,
+        details: ((l.metadata as any)?.details) as Record<string, unknown> | null,
+        user: l.actor_id ? profileMap.get(l.actor_id) : undefined,
       }))
 
       return {
@@ -150,14 +159,17 @@ export default function AuditLogs() {
 
   // Separate stats query
   const { data: stats } = useQuery({
-    queryKey: ['audit-stats', dateRange],
+    queryKey: ['audit-stats', orgId, dateRange],
     queryFn: async () => {
-      // Simple stats for the cards - simplified to just counts to avoid massive grouping queries
-      // For a real scalable solution, this should use specific RPCs or materialized views.
-      // We will just fetch counts for card display based on date range.
+      const getCount = async (filter: { action?: string; entity_type?: string; user_action?: boolean }) => {
+        let q = (supabase as any)
+          .from('system_events')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_type', 'audit')
 
-      const getCount = async (filter) => {
-        let q = supabase.from('audit_logs_v').select('id', { count: 'exact', head: true })
+        if (orgId) {
+          q = q.eq('organization_id', orgId)
+        }
 
         // Apply date range
         if (dateRange !== 'all') {
@@ -172,9 +184,9 @@ export default function AuditLogs() {
           q = q.gte('created_at', startDate.toISOString())
         }
 
-        if (filter.action) q = q.eq('action', filter.action)
+        if (filter.action) q = q.filter('metadata->>action', 'eq', filter.action)
         if (filter.entity_type) q = q.eq('entity_type', filter.entity_type)
-        if (filter.user_action) q = q.not('user_id', 'is', null) // rough proxy
+        if (filter.user_action) q = q.not('actor_id', 'is', null)
 
         const { count } = await q
         return count || 0
@@ -183,8 +195,8 @@ export default function AuditLogs() {
       const [total, userActions, docAccess, securityEvents] = await Promise.all([
         getCount({}),
         getCount({ user_action: true }),
-        getCount({ entity_type: 'document' }), // simplified
-        getCount({ action: 'login' }) // simplified
+        getCount({ entity_type: 'document' }),
+        getCount({ action: 'login' })
       ])
 
       return { total, userActions, docAccess, securityEvents }
@@ -192,25 +204,24 @@ export default function AuditLogs() {
     staleTime: 60000 // Cache stats for 1 minute
   })
 
-
   const exportLogs = async () => {
-    // Export needs to fetch ALL data for the current filter, ignoring pagination
-    // Limit to reasonable amount (e.g. 1000) to prevent crash
     try {
-      let query = supabase
-        .from('audit_logs_v')
-        .select(`
-            *,
-            user:profiles!user_id(full_name, email)
-            `)
+      let query = (supabase as any)
+        .from('system_events')
+        .select('id, entity_type, entity_id, actor_id, ip_address, user_agent, metadata, created_at, organization_id')
+        .eq('event_type', 'audit')
         .order('created_at', { ascending: false })
-        .limit(1000) // Safety limit
+        .limit(1000)
+
+      if (orgId) {
+        query = query.eq('organization_id', orgId)
+      }
 
       // Apply same filters...
-      if (searchTerm) query = query.or(`action.ilike.%${searchTerm}%,entity_type.ilike.%${searchTerm}%`)
-      if (actionFilter !== 'all') query = query.eq('action', actionFilter)
+      if (searchTerm) query = query.or(`entity_type.ilike.%${searchTerm}%,metadata->>action.ilike.%${searchTerm}%`)
+      if (actionFilter !== 'all') query = query.filter('metadata->>action', 'eq', actionFilter)
       if (targetFilter !== 'all') query = query.eq('entity_type', targetFilter)
-      // ... date logic ...
+
       if (dateRange !== 'all') {
         const now = new Date()
         const startDate = new Date()
@@ -225,8 +236,19 @@ export default function AuditLogs() {
 
       const { data: exportData, error } = await query
       if (error) throw error
-      if (!exportData) return
-      const exportRows = exportData as AuditLogWithUser[]
+      if (!exportData || exportData.length === 0) return
+
+      const userIds = Array.from(new Set(exportData.map((l: any) => l.actor_id).filter((id: any): id is string => Boolean(id))))
+      const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds)
+        if (profiles) {
+          profiles.forEach(p => profileMap.set(p.id, { full_name: p.full_name, email: p.email }))
+        }
+      }
 
       const csvContent = [
         [
@@ -238,22 +260,23 @@ export default function AuditLogs() {
           t('audit_logs.export_headers.details'),
           t('audit_logs.export_headers.ip_address')
         ],
-        ...exportRows.map(log => [
+        ...exportData.map((log: any) => [
           new Date(log.created_at).toLocaleString(),
-          (Array.isArray(log.user) ? log.user[0]?.full_name : log.user?.full_name) || 'System',
-          log.action,
+          profileMap.get(log.actor_id)?.full_name || profileMap.get(log.actor_id)?.email || 'System',
+          log.metadata?.action || 'other',
           log.entity_type,
           log.entity_id,
-          JSON.stringify(log.details).replace(/,/g, ';'), // Escape commas
+          JSON.stringify(log.metadata?.details || {}).replace(/,/g, ';'),
           log.ip_address || ''
         ])
       ].map(e => e.join(',')).join('\n')
 
-      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`
+      const orgPrefix = currentOrganization?.slug || 'tenant'
+      a.download = `${orgPrefix}-audit-logs-${new Date().toISOString().split('T')[0]}.csv`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -266,8 +289,12 @@ export default function AuditLogs() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={t('audit_logs.title')}
-        description={t('audit_logs.description')}
+        title={t('audit_logs.title', 'Security & Operational Audit Logs')}
+        description={
+          currentOrganization?.name
+            ? `${t('audit_logs.description', 'Activity and compliance audit trail for')} ${currentOrganization.name}`
+            : t('audit_logs.description', 'System-wide activity and compliance audit logs')
+        }
         actions={
           <Button onClick={exportLogs} className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
             <Download className="w-4 h-4 me-2" />

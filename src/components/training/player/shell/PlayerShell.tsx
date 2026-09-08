@@ -53,16 +53,13 @@ export function PlayerShell({
           <MotionConfig reducedMotion="user">
             <PlayerShellProvider goNext={goNext} goPrevious={goPrevious} reducedMotion={reducedMotion}>
                 <div
-                    className={cn(
-                        'flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground',
-                        isRTL ? 'flex-row-reverse' : '',
-                    )}
+                    className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground"
                     dir={isRTL ? 'rtl' : undefined}
                 >
                     {topBar}
                     {banners}
 
-                    <div className={cn('flex min-h-0 flex-1', isRTL ? 'flex-row-reverse' : 'flex-row')}>
+                    <div className="flex min-h-0 flex-1 flex-row">
                         {/* Desktop rail */}
                         {isDesktop && railOpen && (
                             <div className="w-[320px] shrink-0 border-e border-border/60">

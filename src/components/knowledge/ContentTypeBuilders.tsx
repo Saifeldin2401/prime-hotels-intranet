@@ -12,10 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
+    CheckCircle2,
     CheckSquare,
     ChevronDown,
     ChevronUp,
     Copy,
+    ExternalLink,
     Eye,
     EyeOff,
     FolderOpen,
@@ -158,6 +160,69 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                     </p>
                 </div>
 
+                {/* Active Selected Video Status Banner */}
+                {value && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-lg border border-emerald-500/30 bg-emerald-50/70 dark:bg-emerald-950/25">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/25">
+                                <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <div className="truncate">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-xs text-emerald-950 dark:text-emerald-100">
+                                        Video Selected & Linked
+                                    </span>
+                                    <Badge
+                                        variant="outline"
+                                        className="text-[10px] px-1.5 py-0 bg-white/90 dark:bg-slate-900 border-emerald-400/40 text-emerald-700 dark:text-emerald-300 font-medium"
+                                    >
+                                        {isYouTube ? 'YouTube' : isVimeo ? 'Vimeo' : isDirectVideo ? 'Direct MP4' : 'Media Library'}
+                                    </Badge>
+                                </div>
+                                <p className="text-muted-foreground truncate font-mono text-[11px] mt-0.5" title={value}>
+                                    {decodeURIComponent(value.split('/').pop()?.split('?')[0] || value)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => setShowPreview(!showPreview)}
+                            >
+                                {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                {showPreview ? 'Hide Preview' : 'Show Preview'}
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                                onClick={() => window.open(value, '_blank')}
+                                title="Open video in new tab"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs gap-1 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                onClick={() => {
+                                    onChange('')
+                                    toast.success('Video unlinked from article')
+                                }}
+                            >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Unlink
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-3 p-4 border-2 border-dashed rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between gap-4">
                         <div className="space-y-1">
@@ -192,6 +257,14 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             </Button>
                         </div>
                     </div>
+
+                    {isUploading && (
+                        <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+                            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                            <span>Compressing and uploading video to hotel media storage...</span>
+                        </div>
+                    )}
+
                     <input
                         ref={fileInputRef}
                         type="file"
@@ -207,7 +280,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                                 // the video in the Media Library (see supabaseUpload).
                                 const { url } = await uploadVideoWithCompression(file)
                                 onChange(url)
-                                toast.success('Video uploaded and added to Media Library')
+                                toast.success(`Video "${file.name}" uploaded and linked to article`)
                             } catch (error) {
                                 console.error('Upload error:', error)
                                 toast.error((error as Error).message || 'Failed to upload video')

@@ -79,6 +79,16 @@
         "updated_at": "تم التحديث في {{date}}"
     },
     "viewer": {
+        "master_sop": "معيار رئيسي (Master SOP)",
+        "corporate_standard": "معيار تشغيلي رئيسي للمجموعة",
+        "inherited_master": "مستند مشتق من المعيار الرئيسي",
+        "release_notes_title": "ملاحظات الإصدار والتوجيهات التشغيلية",
+        "release_notes_desc": "أبرز التحديثات والتوجيهات الإجرائية المعتمدة في هذا الإصدار.",
+        "local_addendum_title": "ملحق المنشأة المحلي والتعديلات التشغيلية",
+        "local_addendum_desc": "التوجيهات والاشتراطات الخاصة بالمنشأة المحفوظة أثناء المزامنة المركزية.",
+        "property_specific": "خاص بالمنشأة",
+        "english_version": "النسخة الإنجليزية",
+        "arabic_version": "النسخة العربية",
         "ask_ai_title": "اسأل الذكاء الاصطناعي",
         "ask_ai_desc": "احصل على إجابات فورية مستندة إلى هذا المقال.",
         "ask_ai_button": "اسأل الذكاء الاصطناعي حول هذا",
@@ -672,7 +682,19 @@
         "rejected": "مرفوض"
     },
     "common": {
-        "no_data": "?? Data"
+        "no_data": "لا توجد بيانات"
     },
-    "required_reading": "Required Reading"
+    "required_reading": "القراءة الإلزامية",
+    "editor": {
+        "video_linked": "تم ربط الفيديو من مكتبة الوسائط: {{title}}",
+        "video_inserted_and_linked": "تم تحديد الفيديو من مكتبة الوسائط وإدراجه بنجاح",
+        "media_inserted": "تم إدراج الصورة من مكتبة الوسائط",
+        "media_attached": "تم إرفاق ملف الوسائط بالمستند",
+        "select_video_title": "تحديد فيديو من مكتبة الفندق",
+        "select_media_title": "تحديد وسائط من مكتبة الفندق",
+        "linked_video": "الفيديو المرتبط",
+        "unlink_video": "إزالة الفيديو",
+        "replace_video": "استبدال الفيديو",
+        "video_preview": "معاينة الفيديو"
+    }
 }

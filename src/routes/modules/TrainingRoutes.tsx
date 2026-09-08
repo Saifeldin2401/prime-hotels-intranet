@@ -1,4 +1,5 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RouteErrorBoundary } from '@/components/common'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
@@ -45,7 +46,7 @@ const TrainingBuilderRedirect = () => {
 }
 
 export const TrainingRoutes = () => (
-    <>
+    <Route element={<TenantContextGuard resourceName="Training & Learning" />}>
         <Route
             path="/training"
             element={<PreserveQueryNavigate to="/training/hub" />}
@@ -293,5 +294,5 @@ export const TrainingRoutes = () => (
             }
             errorElement={<RouteErrorBoundary section="Learning Analytics" />}
         />
-    </>
+    </Route>
 )

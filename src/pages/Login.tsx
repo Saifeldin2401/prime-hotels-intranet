@@ -283,7 +283,7 @@ export default function Login() {
           initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="bg-[#12161F]/95 backdrop-blur-2xl rounded-3xl p-8 sm:p-10 shadow-[0_20px_70px_rgba(0,0,0,0.8),0_0_40px_rgba(196,91,47,0.2)] border border-[#C45B2F]/40 w-full max-w-[440px] relative overflow-hidden mt-6 lg:mt-0"
+          className="bg-[#12161F]/95 backdrop-blur-2xl rounded-3xl p-5 sm:p-8 lg:p-10 shadow-[0_20px_70px_rgba(0,0,0,0.8),0_0_40px_rgba(196,91,47,0.2)] border border-[#C45B2F]/40 w-full max-w-[440px] relative overflow-hidden mt-6 lg:mt-0"
         >
           {/* Multi-tone Metallic Top Ribbon */}
           <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-[#C45B2F] via-[#E07A5F] to-[#D9C6A3]" />

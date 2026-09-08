@@ -1,9 +1,11 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PlatformRoute } from '@/components/auth/PlatformRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
-import { Route } from 'react-router-dom'
+import { Route, Navigate, useParams } from 'react-router-dom'
 
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioning'))
@@ -41,10 +43,16 @@ const PlatformAnalytics = lazy(() => import('@/pages/platform/PlatformAnalytics'
 const PlatformAuditLogs = lazy(() => import('@/pages/platform/PlatformAuditLogs'))
 
 
+function PlatformTenantParamRedirect() {
+    const { id } = useParams<{ id: string }>()
+    return <Navigate to={id ? `/platform/organizations/${id}` : '/platform/organizations'} replace />
+}
+
 export const AdminRoutes = () => (
     <>
-        <Route
-            path="/admin/users"
+        <Route element={<TenantContextGuard resourceName="Administration" />}>
+            <Route
+                path="/admin/users"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
                     <AppLayout>
@@ -125,13 +133,7 @@ export const AdminRoutes = () => (
         />
         <Route
             path="/admin/ai-course-generator"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin']}>
-                    <AppLayout>
-                        <AICourseGeneratorSettings />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/platform/ai-settings" />}
         />
         <Route
             path="/admin/notifications"
@@ -145,33 +147,15 @@ export const AdminRoutes = () => (
         />
         <Route
             path="/admin/email-analytics"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <EmailAnalytics />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/platform/email-analytics" />}
         />
         <Route
             path="/admin/email-templates"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <EmailTemplateEditor />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/platform/email-templates" />}
         />
         <Route
             path="/admin/inbound-emails"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
-                    <AppLayout>
-                        <InboundEmails />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/platform/email-inbound" />}
         />
         <Route
             path="/admin/organization"
@@ -239,15 +223,7 @@ export const AdminRoutes = () => (
         />
         <Route
             path="/admin/retention-policies"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AuditRetentionPolicies />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/platform/retention-policies" />}
         />
         <Route
             path="/admin/report-builder"
@@ -271,6 +247,7 @@ export const AdminRoutes = () => (
                 </ProtectedRoute>
             }
         />
+        </Route>
 
         {/* ------------------------------------------------------------------ */}
         {/* PLATFORM CONTROL CENTER — internal platform operators only.        */}
@@ -306,6 +283,14 @@ export const AdminRoutes = () => (
                     </AppLayout>
                 </PlatformRoute>
             }
+        />
+        <Route
+            path="/platform/tenants"
+            element={<Navigate to="/platform/organizations" replace />}
+        />
+        <Route
+            path="/platform/tenants/:id"
+            element={<PlatformTenantParamRedirect />}
         />
         <Route
             path="/platform/users"
@@ -363,6 +348,58 @@ export const AdminRoutes = () => (
                 <PlatformRoute requiredPermission="tenant.read">
                     <AppLayout>
                         <PlatformAuditLogs />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/ai-settings"
+            element={
+                <PlatformRoute requiredPermission="config.manage">
+                    <AppLayout>
+                        <AICourseGeneratorSettings />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/email-templates"
+            element={
+                <PlatformRoute requiredPermission="config.manage">
+                    <AppLayout>
+                        <EmailTemplateEditor />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/email-analytics"
+            element={
+                <PlatformRoute requiredPermission="ops.manage">
+                    <AppLayout>
+                        <EmailAnalytics />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/email-inbound"
+            element={
+                <PlatformRoute requiredPermission="ops.manage">
+                    <AppLayout>
+                        <InboundEmails />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/retention-policies"
+            element={
+                <PlatformRoute requiredPermission="config.manage">
+                    <AppLayout>
+                        <MotionWrapper>
+                            <AuditRetentionPolicies />
+                        </MotionWrapper>
                     </AppLayout>
                 </PlatformRoute>
             }

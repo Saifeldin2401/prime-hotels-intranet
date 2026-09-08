@@ -1,4 +1,5 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RouteErrorBoundary } from '@/components/common'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
@@ -12,7 +13,7 @@ const ExecutiveGMDashboard = lazy(() => import('@/pages/dashboard/ExecutiveGMDas
 export function DashboardRoutes() {
   return (
     <>
-      {/* Main Dashboard - All roles use same integrated dashboard */}
+      {/* Main Dashboard - All roles use same integrated dashboard (adaptively handles Platform Scope) */}
       <Route
         path="/dashboard"
         element={
@@ -27,20 +28,22 @@ export function DashboardRoutes() {
         errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
 
-      {/* General Manager / Operations executive scorecard */}
-      <Route
-        path="/dashboard/executive"
-        element={
-          <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'property_manager', 'training_manager', 'administrator']}>
-            <AppLayout>
-              <MotionWrapper>
-                <ExecutiveGMDashboard />
-              </MotionWrapper>
-            </AppLayout>
-          </ProtectedRoute>
-        }
-        errorElement={<RouteErrorBoundary section="Executive Dashboard" />}
-      />
+      <Route element={<TenantContextGuard resourceName="Executive Dashboard" />}>
+        {/* General Manager / Operations executive scorecard */}
+        <Route
+          path="/dashboard/executive"
+          element={
+            <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'property_manager', 'training_manager', 'administrator']}>
+              <AppLayout>
+                <MotionWrapper>
+                  <ExecutiveGMDashboard />
+                </MotionWrapper>
+              </AppLayout>
+            </ProtectedRoute>
+          }
+          errorElement={<RouteErrorBoundary section="Executive Dashboard" />}
+        />
+      </Route>
       
       {/* Legacy redirects - preserve query params (e.g., ?redirect=...) */}
       <Route

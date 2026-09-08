@@ -22,14 +22,22 @@ import {
   Clock,
   Crown,
   FileText,
+  Globe,
   GraduationCap,
   Layers,
+  ListChecks,
   RefreshCw,
   RotateCcw,
+  ShieldCheck,
   Sparkles,
   Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+function stripHtml(html?: string): string {
+  if (!html) return ''
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 interface MasterVersionSyncModalProps {
   open: boolean
@@ -58,8 +66,10 @@ export function MasterVersionSyncModal({
   const [isLoadingDiff, setIsLoadingDiff] = useState(false)
   const [diffData, setDiffData] = useState<MasterContentDiff | null>(null)
   const [triggerRetraining, setTriggerRetraining] = useState(true)
+  const [triggerReacknowledgment, setTriggerReacknowledgment] = useState(true)
+  const [diffLang, setDiffLang] = useState<'en' | 'ar'>('en')
   const [isSyncing, setIsSyncing] = useState(false)
-  const [diffViewTab, setDiffViewTab] = useState<'overview' | 'comparison'>('overview')
+  const [diffViewTab, setDiffViewTab] = useState<'overview' | 'comparison' | 'checklists'>('overview')
 
   useEffect(() => {
     if (open && targetContentId) {
@@ -89,6 +99,7 @@ export function MasterVersionSyncModal({
         targetContentId,
         contentType,
         triggerRetraining: contentType === 'course' ? triggerRetraining : false,
+        triggerReacknowledgment: contentType === 'sop' ? triggerReacknowledgment : false,
         updatedBy: user.id
       })
 
@@ -97,6 +108,8 @@ export function MasterVersionSyncModal({
           title: t('common:success', 'Synchronized Successfully'),
           description: contentType === 'course' && triggerRetraining
             ? t('training:sync_success_retraining', 'Course synchronized to v{{version}} and mandatory retraining assigned to enrolled learners.', { version: res.updatedVersion })
+            : triggerReacknowledgment
+            ? t('knowledge:sync_success_sop_reack', 'SOP synchronized to v{{version}} and mandatory staff re-acknowledgment activated.', { version: res.updatedVersion })
             : t('knowledge:sync_success_sop', 'Content successfully updated to master version v{{version}}.', { version: res.updatedVersion })
         })
         onSyncComplete?.(res.updatedVersion)
@@ -213,16 +226,19 @@ export function MasterVersionSyncModal({
 
               {/* Diff Tabs */}
               <Tabs value={diffViewTab} onValueChange={(val: any) => setDiffViewTab(val)}>
-                <TabsList className="grid grid-cols-2 w-full">
+                <TabsList className="grid grid-cols-3 w-full">
                   <TabsTrigger value="overview" className="text-xs">
                     {t('admin:sync_overview', 'Sync Summary')}
                   </TabsTrigger>
                   <TabsTrigger value="comparison" className="text-xs">
-                    {t('admin:content_comparison', 'Item Comparison')}
+                    {t('admin:content_comparison', 'Procedure & Content')}
+                  </TabsTrigger>
+                  <TabsTrigger value="checklists" className="text-xs">
+                    {t('admin:checklists_diff', 'Checklists & Notes')}
                   </TabsTrigger>
                 </TabsList>
 
-                {/* Tab: Overview */}
+                {/* Tab 1: Overview */}
                 <TabsContent value="overview" className="space-y-3 pt-2">
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div className="p-3 bg-muted/40 rounded-lg border">
@@ -247,28 +263,54 @@ export function MasterVersionSyncModal({
                     </div>
                   </div>
 
+                  {/* Corporate Release Notes */}
+                  {diffData?.releaseNotes && (
+                    <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-1.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900 dark:text-amber-300">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-600" />
+                        <span>Corporate Revision Release Notes (v{masterVer}.0)</span>
+                      </div>
+                      <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed ps-5">
+                        {diffData.releaseNotes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Local Property Addendum Reassurance */}
+                  {diffData?.localAddendum && (
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-900 dark:text-blue-200 flex items-start gap-2.5">
+                      <ShieldCheck className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold block">Local Property Addendum Preserved</span>
+                        <p className="text-[11px] opacity-85 mt-0.5">
+                          Your hotel property has custom local addendum notes. They will remain intact and will not be overwritten by this upstream synchronization.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {diffData?.blueprintDifferences && (
-                    <div className="p-3.5 bg-slate-50 border rounded-lg space-y-2">
-                      <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 border rounded-lg space-y-2">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                         <Layers className="h-3.5 w-3.5 text-indigo-600" />
                         {t('admin:curriculum_structure', 'Curriculum Structure & Specs')}
                       </span>
                       <div className="grid grid-cols-3 gap-2 text-[11px] pt-1">
                         <div>
                           <span className="text-muted-foreground block">{t('admin:sections', 'Sections')}</span>
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
                             {diffData.blueprintDifferences.masterSectionsCount || 0} {t('admin:sections_label', 'modules')}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block">{t('admin:duration', 'Duration')}</span>
-                          <span className="font-bold text-slate-900">
+                          <span className="font-bold text-slate-900 dark:text-slate-100">
                             {diffData.blueprintDifferences.estimatedDurationMinutes || 45} {t('admin:minutes', 'min')}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block">{t('admin:level', 'Difficulty')}</span>
-                          <span className="font-bold capitalize text-slate-900">
+                          <span className="font-bold capitalize text-slate-900 dark:text-slate-100">
                             {diffData.blueprintDifferences.difficultyLevel || 'Standard'}
                           </span>
                         </div>
@@ -277,47 +319,142 @@ export function MasterVersionSyncModal({
                   )}
                 </TabsContent>
 
-                {/* Tab: Side by Side Comparison */}
+                {/* Tab 2: Side by Side Comparison with Bilingual Switch */}
                 <TabsContent value="comparison" className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between pb-1">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-primary" />
+                      <span>Language Comparison View:</span>
+                    </span>
+                    <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border text-xs">
+                      <button
+                        type="button"
+                        onClick={() => setDiffLang('en')}
+                        className={cn(
+                          "px-2.5 py-1 rounded font-medium transition-all text-xs",
+                          diffLang === 'en' ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        English (EN)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDiffLang('ar')}
+                        className={cn(
+                          "px-2.5 py-1 rounded font-medium transition-all text-xs font-arabic",
+                          diffLang === 'ar' ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        العربية (AR)
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="border rounded-lg overflow-hidden text-xs">
                     <div className="grid grid-cols-2 bg-muted/60 p-2 font-semibold border-b">
-                      <div>{t('admin:local_copy', 'Your Tenant Copy')}</div>
-                      <div className="text-primary">{t('admin:upstream_master', 'Platform Master')}</div>
+                      <div>{t('admin:local_copy', 'Your Tenant Copy')} (v{deployedVer}.0)</div>
+                      <div className="text-primary">{t('admin:upstream_master', 'Platform Master')} (v{masterVer}.0)</div>
                     </div>
 
+                    {/* Title comparison */}
                     <div className="grid grid-cols-2 p-3 border-b gap-3">
                       <div>
                         <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">
                           {t('admin:title', 'Title')}
                         </span>
-                        <p className="font-medium text-foreground">{diffData?.targetTitle || targetTitle}</p>
+                        <p className="font-medium text-foreground">
+                          {diffLang === 'ar'
+                            ? (diffData?.targetTitleAr || 'لا يوجد عنوان بالعربية')
+                            : (diffData?.targetTitle || targetTitle)}
+                        </p>
                       </div>
                       <div className="bg-primary/5 p-2 rounded">
                         <span className="text-[10px] text-primary uppercase font-bold block mb-0.5">
                           {t('admin:master_title', 'Master Title')}
                         </span>
-                        <p className="font-medium text-primary">{diffData?.masterTitle || targetTitle}</p>
+                        <p className="font-medium text-primary">
+                          {diffLang === 'ar'
+                            ? (diffData?.masterTitleAr || 'لا يوجد عنوان بالعربية')
+                            : (diffData?.masterTitle || targetTitle)}
+                        </p>
                       </div>
                     </div>
 
-                    {(diffData?.masterDescription || diffData?.targetDescription) && (
+                    {/* Description comparison */}
+                    <div className="grid grid-cols-2 p-3 border-b gap-3">
+                      <div>
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">
+                          {t('admin:description', 'Description')}
+                        </span>
+                        <p className="text-muted-foreground line-clamp-3">
+                          {diffLang === 'ar'
+                            ? (diffData?.targetDescriptionAr || 'لا يوجد وصف بالعربية')
+                            : (diffData?.targetDescription || 'No local description')}
+                        </p>
+                      </div>
+                      <div className="bg-primary/5 p-2 rounded">
+                        <span className="text-[10px] text-primary uppercase font-bold block mb-0.5">
+                          {t('admin:master_description', 'Master Description')}
+                        </span>
+                        <p className="text-foreground line-clamp-3">
+                          {diffLang === 'ar'
+                            ? (diffData?.masterDescriptionAr || 'لا يوجد وصف بالعربية')
+                            : (diffData?.masterDescription || 'No master description')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Procedure Content Body Excerpt */}
+                    {contentType === 'sop' && (
                       <div className="grid grid-cols-2 p-3 gap-3">
                         <div>
                           <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-0.5">
-                            {t('admin:description', 'Description')}
+                            Procedure Body (Local)
                           </span>
-                          <p className="text-muted-foreground line-clamp-3">
-                            {diffData?.targetDescription || 'No local description'}
+                          <p className="text-muted-foreground text-[11px] line-clamp-5 whitespace-pre-line leading-relaxed">
+                            {stripHtml(diffLang === 'ar' ? diffData?.targetContentAr : diffData?.targetContent) || 'No content body recorded'}
                           </p>
                         </div>
                         <div className="bg-primary/5 p-2 rounded">
                           <span className="text-[10px] text-primary uppercase font-bold block mb-0.5">
-                            {t('admin:master_description', 'Master Description')}
+                            Procedure Body (Master Edition)
                           </span>
-                          <p className="text-foreground line-clamp-3">
-                            {diffData?.masterDescription || 'No master description'}
+                          <p className="text-foreground text-[11px] line-clamp-5 whitespace-pre-line leading-relaxed">
+                            {stripHtml(diffLang === 'ar' ? diffData?.masterContentAr : diffData?.masterContent) || 'No master content body'}
                           </p>
                         </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                {/* Tab 3: Checklists & Notes */}
+                <TabsContent value="checklists" className="space-y-3 pt-2">
+                  <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold flex items-center gap-1.5">
+                        <ListChecks className="h-4 w-4 text-emerald-600" />
+                        <span>Interactive Operational Checklists ({diffData?.masterChecklistItems?.length || 0} Steps in Master)</span>
+                      </span>
+                    </div>
+
+                    {(!diffData?.masterChecklistItems || diffData.masterChecklistItems.length === 0) ? (
+                      <p className="text-xs text-muted-foreground py-4 text-center">
+                        This procedure relies on narrative SOP guidelines without step-by-step checklists.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {diffData.masterChecklistItems.map((item: any, idx: number) => {
+                          const itemText = typeof item === 'string' ? item : item.text || item.title || `Verification Step ${idx + 1}`
+                          return (
+                            <div key={idx} className="p-2 rounded-md bg-background border flex items-start gap-2 text-xs">
+                              <span className="h-5 w-5 rounded-full bg-emerald-500/10 text-emerald-700 font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <span className="text-foreground font-medium">{itemText}</span>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -346,6 +483,36 @@ export function MasterVersionSyncModal({
                         {t(
                           'training:retraining_explanation',
                           'Resets course completion status for all enrolled employees and sends notifications prompting them to complete the updated master syllabus.'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mandatory Re-Acknowledgment Option for SOPs */}
+              {contentType === 'sop' && (
+                <div className="mt-4 p-3.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-xl space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="reack-checkbox"
+                      checked={triggerReacknowledgment}
+                      onCheckedChange={(checked) => setTriggerReacknowledgment(Boolean(checked))}
+                      className="mt-0.5 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="grid gap-1 leading-none">
+                      <label
+                        htmlFor="reack-checkbox"
+                        className="text-xs font-bold text-amber-950 dark:text-amber-200 cursor-pointer flex items-center gap-1.5"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
+                        {t('knowledge:require_mandatory_reack', 'Require Mandatory Re-Acknowledgment from Hotel Staff')}
+                      </label>
+                      <p className="text-[11px] text-amber-900/80 dark:text-amber-300/80">
+                        {t(
+                          'knowledge:reack_explanation',
+                          'Resets previous staff sign-offs for v{{deployedVer}} and flags this v{{masterVer}} revision as mandatory reading for assigned department employees.',
+                          { deployedVer, masterVer }
                         )}
                       </p>
                     </div>

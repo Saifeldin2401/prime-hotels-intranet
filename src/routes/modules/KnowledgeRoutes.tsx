@@ -1,4 +1,5 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
@@ -24,7 +25,7 @@ const SOPViewerRedirect = () => {
 }
 
 export const KnowledgeRoutes = () => (
-    <>
+    <Route element={<TenantContextGuard resourceName="Knowledge Base" />}>
         <Route
             path="/sops"
             element={<PreserveQueryNavigate to="/knowledge" />}
@@ -221,5 +222,5 @@ export const KnowledgeRoutes = () => (
                 </ProtectedRoute>
             }
         />
-    </>
+    </Route>
 )

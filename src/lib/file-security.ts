@@ -295,26 +295,6 @@ export const ALLOWED_FILE_TYPES: Record<string, FileTypeDefinition> = {
     maxSizeBytes: 100 * 1024 * 1024, // 100MB
   },
   // Video
-  'video/mp4': {
-    mimeType: 'video/mp4',
-    extensions: ['mp4', 'm4v'],
-    magicNumbers: [], // MP4 ftyp box at offset 4
-    maxSizeBytes: 500 * 1024 * 1024, // 500MB
-  },
-  'video/webm': {
-    mimeType: 'video/webm',
-    extensions: ['webm'],
-    magicNumbers: [
-      [0x1A, 0x45, 0xDF, 0xA3], // EBML
-    ],
-    maxSizeBytes: 500 * 1024 * 1024, // 500MB
-  },
-  'video/quicktime': {
-    mimeType: 'video/quicktime',
-    extensions: ['mov', 'qt'],
-    magicNumbers: [], // QuickTime ftyp/moov at offset 4
-    maxSizeBytes: 500 * 1024 * 1024, // 500MB
-  },
   'video/x-matroska': {
     mimeType: 'video/x-matroska',
     extensions: ['mkv'],

@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { consumePostLoginRedirect, getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
 import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { safeLocalStorage } from '@/lib/storage'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
@@ -31,9 +32,26 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     // route the user into the environment their account authorises, resolved
     // server-side by resolve_account_context().
     const deepLink = [pendingAuthFlowPath, redirectPath, storedRedirect].find(isDeepLink) ?? null
-    const destination = user
-        ? deepLink ?? account.recommendedDestination ?? '/dashboard'
-        : null
+    let destination: string | null = null
+    if (user) {
+        if (deepLink) {
+            destination = deepLink
+        } else if (account.isPlatformOperator && !account.activePlatformSession) {
+            safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+            if (user) safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+            destination = '/platform'
+        } else if (account.isMultiOrg) {
+            const userKey = `active_tenant_id_${user.id}`
+            const stored = safeLocalStorage.getItem(userKey) || safeLocalStorage.getItem('altus_active_tenant_id')
+            if (!stored || stored === '__platform__') {
+                destination = '/select-tenant'
+            } else {
+                destination = account.recommendedDestination ?? '/dashboard'
+            }
+        } else {
+            destination = account.recommendedDestination ?? '/dashboard'
+        }
+    }
 
     useEffect(() => {
         if (user && pendingAuthFlowPath) {

@@ -1,4 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core'
+import { ReactNodeViewRenderer } from '@tiptap/react'
+import { VideoNodeView } from './VideoNodeView'
 
 export interface VideoOptions {
   allowFullscreen: boolean
@@ -70,6 +72,10 @@ export const VideoExtension = Node.create<VideoOptions>({
         style: `width: ${HTMLAttributes.width}; height: ${HTMLAttributes.height}; border-radius: 8px;`,
       }),
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(VideoNodeView)
   },
 
   addCommands() {

@@ -11,7 +11,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { platformService } from '@/services/platformService'
-import { Settings, ShieldCheck, Flag, Clock, RefreshCw, Save, Bell } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Settings, ShieldCheck, Flag, Clock, RefreshCw, Save, Bell, Bot, Mail, ExternalLink } from 'lucide-react'
 
 function SettingRow({
   s,
@@ -69,6 +70,7 @@ export default function PlatformSettings() {
   const { toast } = useToast()
   const { user } = useAuth()
   const account = useAccountContext()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const canConfig = account.can('config.manage')
   const canSessionCfg = account.hasPlatformRole('system_owner')
@@ -162,6 +164,55 @@ export default function PlatformSettings() {
           Your platform role is read-only for configuration. Editing requires the <strong>config.manage</strong> permission.
         </div>
       )}
+
+      {/* Quick Jump to Platform Infrastructure Systems */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Card
+          onClick={() => navigate('/platform/ai-settings')}
+          className="p-4 rounded-xl border border-purple-500/30 hover:border-purple-500/60 bg-purple-500/5 hover:bg-purple-500/10 cursor-pointer transition-all flex items-center justify-between shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+              <Bot className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs flex items-center gap-1.5">
+                <span>AI Course Engine & Multi-Provider Gateways</span>
+                <Badge variant="outline" className="text-[9px] border-purple-400/40 text-purple-600 dark:text-purple-300">
+                  Global
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Gemini, Groq, OpenRouter routing modes, spend caps, and edge diagnostics.
+              </p>
+            </div>
+          </div>
+          <ExternalLink className="h-4 w-4 text-purple-500 shrink-0 ms-2" />
+        </Card>
+
+        <Card
+          onClick={() => navigate('/platform/email-templates')}
+          className="p-4 rounded-xl border border-cyan-500/30 hover:border-cyan-500/60 bg-cyan-500/5 hover:bg-cyan-500/10 cursor-pointer transition-all flex items-center justify-between shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+              <Mail className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="font-bold text-xs flex items-center gap-1.5">
+                <span>System Notification & Email Templates</span>
+                <Badge variant="outline" className="text-[9px] border-cyan-400/40 text-cyan-600 dark:text-cyan-300">
+                  Resend
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Transactional layouts, notifications, delivery analytics, and inbound mail.
+              </p>
+            </div>
+          </div>
+          <ExternalLink className="h-4 w-4 text-cyan-500 shrink-0 ms-2" />
+        </Card>
+      </div>
 
       {/* Feature flags */}
       <Card className="border shadow-sm">

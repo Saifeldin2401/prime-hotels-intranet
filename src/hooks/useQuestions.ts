@@ -80,10 +80,16 @@ export function usePendingReviewQuestions() {
 export function useCreateQuestion() {
     const queryClient = useQueryClient()
     const { user } = useAuth()
+    const { currentOrganization } = useTenant()
 
     return useMutation({
-        mutationFn: ({ formData, aiGenerated }: { formData: QuestionFormData; aiGenerated?: boolean }) =>
-            QuestionService.createQuestion(formData, user!.id, aiGenerated),
+        mutationFn: ({ formData, aiGenerated }: { formData: QuestionFormData; aiGenerated?: boolean }) => {
+            const enrichedData: QuestionFormData = {
+                ...formData,
+                organization_id: formData.organization_id || currentOrganization?.id
+            }
+            return QuestionService.createQuestion(enrichedData, user!.id, aiGenerated)
+        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['questions'] })
             crudToasts.create.success('Question')

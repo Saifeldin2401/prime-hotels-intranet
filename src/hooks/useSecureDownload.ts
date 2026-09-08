@@ -51,7 +51,32 @@ export function useSecureDownload() {
           return null;
         }
 
-        return data;
+        // If the result is already a direct URL (e.g. public CDN asset), return it as-is
+        if (typeof data === 'string' && data.startsWith('http')) {
+          return data;
+        }
+
+        // Otherwise it's a JSON string with { bucket, path } — generate a signed URL
+        let parsed: { bucket: string; path: string };
+        try {
+          parsed = typeof data === 'string' ? JSON.parse(data) : data;
+        } catch {
+          console.error('Unexpected secure URL response format:', data);
+          toast.error('Failed to generate download link');
+          return null;
+        }
+
+        const { data: signedUrlData, error: signError } = await supabase.storage
+          .from(parsed.bucket)
+          .createSignedUrl(parsed.path, expirySeconds);
+
+        if (signError || !signedUrlData?.signedUrl) {
+          console.error('Error creating signed URL:', signError);
+          toast.error('Failed to generate secure download link');
+          return null;
+        }
+
+        return signedUrlData.signedUrl;
       } catch (error) {
         console.error('Error in generateSecureUrl:', error);
         toast.error('Failed to generate download link');
@@ -60,6 +85,7 @@ export function useSecureDownload() {
     },
     []
   );
+
 
   /**
    * Download media asset securely

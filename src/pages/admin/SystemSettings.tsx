@@ -7,18 +7,20 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSystemSettings, type SystemSetting } from '@/hooks/useSystemSettings'
 import { SubscriptionEntitlementsCard } from '@/pages/admin/components/SubscriptionEntitlementsCard'
+import { useTenant } from '@/contexts/TenantContext'
 import {
     Bell,
     Building,
     Loader2,
     Palette,
+    RotateCcw,
     Save,
     Settings,
     Shield,
     Users,
-    CreditCard
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     general: { label: 'General', icon: <Settings className="w-4 h-4" />, description: 'Core application settings' },
@@ -29,11 +31,21 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; desc
     operations: { label: 'Operations', icon: <Building className="w-4 h-4" />, description: 'Day-to-day operations settings' },
 }
 
+const PLATFORM_EXCLUSIVE_KEYS = new Set(['maintenance_mode', 'legacy_role_fallback_enabled'])
+
 function formatKey(key: string): string {
     return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 }
 
-function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (key: string, value: unknown) => void }) {
+function SettingRow({
+    setting,
+    onUpdate,
+    onReset
+}: {
+    setting: SystemSetting
+    onUpdate: (key: string, value: unknown) => void
+    onReset?: (key: string) => void
+}) {
     const isBool = typeof setting.value === 'boolean'
     const isNumber = typeof setting.value === 'number'
     const isObject = typeof setting.value === 'object' && setting.value !== null
@@ -74,10 +86,32 @@ function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (
     return (
         <div className="flex flex-col sm:flex-row sm:items-start justify-between py-4 px-4 border-b last:border-0 gap-3">
             <div className="flex-1 min-w-0 pe-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                         {formatKey(setting.key)}
                     </span>
+                    {setting.is_override ? (
+                        <div className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700">
+                                Tenant Override
+                            </Badge>
+                            {onReset && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 text-[10px] text-muted-foreground hover:text-foreground gap-1 px-1.5"
+                                    onClick={() => onReset(setting.key)}
+                                    title="Revert to system default"
+                                >
+                                    <RotateCcw className="w-3 h-3" /> Revert
+                                </Button>
+                            )}
+                        </div>
+                    ) : (
+                        <Badge variant="outline" className="text-[10px] text-slate-500 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                            Default
+                        </Badge>
+                    )}
                 </div>
                 {setting.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">{setting.description}</p>
@@ -136,10 +170,16 @@ function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (
 }
 
 export default function SystemSettings() {
-    const { groupedSettings, isLoading, updateSetting } = useSystemSettings()
+    const { currentOrganization } = useTenant()
+    const { t } = useTranslation(['admin', 'common'])
+    const { groupedSettings, isLoading, updateSetting, resetSetting } = useSystemSettings()
 
     const handleUpdate = (key: string, value: unknown) => {
         updateSetting.mutate({ key, value })
+    }
+
+    const handleReset = (key: string) => {
+        resetSetting.mutate(key)
     }
 
     const categories = Object.keys(CATEGORY_META)
@@ -147,8 +187,12 @@ export default function SystemSettings() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="System Settings"
-                description="Configure global application settings and inspect tenant subscription limits"
+                title={t('admin:system_settings', 'Tenant Settings & Preferences')}
+                description={
+                    currentOrganization?.name
+                        ? `Operational configuration, policies, and overrides for ${currentOrganization.name}`
+                        : 'Configure organization operational policies and settings'
+                }
             />
 
             {/* Tenant Subscription & Entitlements Overview */}
@@ -163,13 +207,14 @@ export default function SystemSettings() {
                     <TabsList className="flex flex-wrap h-auto gap-1">
                         {categories.map((cat) => {
                             const meta = CATEGORY_META[cat]
-                            const count = groupedSettings[cat]?.length || 0
-                            if (count === 0) return null
+                            const rawList = groupedSettings[cat] || []
+                            const filteredList = rawList.filter(s => !PLATFORM_EXCLUSIVE_KEYS.has(s.key))
+                            if (filteredList.length === 0) return null
                             return (
                                 <TabsTrigger key={cat} value={cat} className="gap-1.5">
                                     {meta.icon}
                                     {meta.label}
-                                    <Badge variant="secondary" className="text-[10px] ms-1 px-1.5">{count}</Badge>
+                                    <Badge variant="secondary" className="text-[10px] ms-1 px-1.5">{filteredList.length}</Badge>
                                 </TabsTrigger>
                             )
                         })}
@@ -177,7 +222,8 @@ export default function SystemSettings() {
 
                     {categories.map((cat) => {
                         const meta = CATEGORY_META[cat]
-                        const settingsList = groupedSettings[cat] || []
+                        const rawList = groupedSettings[cat] || []
+                        const settingsList = rawList.filter(s => !PLATFORM_EXCLUSIVE_KEYS.has(s.key))
                         if (settingsList.length === 0) return null
                         return (
                             <TabsContent key={cat} value={cat}>
@@ -193,7 +239,12 @@ export default function SystemSettings() {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {settingsList.map((s) => (
-                                            <SettingRow key={s.id} setting={s} onUpdate={handleUpdate} />
+                                            <SettingRow
+                                                key={s.id || s.key}
+                                                setting={s}
+                                                onUpdate={handleUpdate}
+                                                onReset={handleReset}
+                                            />
                                         ))}
                                     </CardContent>
                                 </Card>

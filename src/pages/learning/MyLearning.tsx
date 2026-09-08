@@ -487,10 +487,10 @@ export default function MyLearning() {
 
                 <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as typeof selectedTab)} className="w-full sm:w-auto">
                     <TabsList className="grid grid-cols-4 sm:flex h-10 p-1 bg-muted/60 rounded-xl">
-                        <TabsTrigger value="all" className="text-xs rounded-lg">{t('common:all', 'All')}</TabsTrigger>
-                        <TabsTrigger value="in_progress" className="text-xs rounded-lg">{t('inProgress', 'In Progress')}</TabsTrigger>
-                        <TabsTrigger value="mandatory" className="text-xs rounded-lg">{t('mandatory', 'Mandatory')}</TabsTrigger>
-                        <TabsTrigger value="quizzes" className="text-xs rounded-lg">{t('quizzes.title', { defaultValue: isRTL ? 'التقييمات' : 'Quizzes' })}</TabsTrigger>
+                        <TabsTrigger value="all" className="text-[11px] sm:text-xs px-1 sm:px-3 rounded-lg truncate">{t('common:all', 'All')}</TabsTrigger>
+                        <TabsTrigger value="in_progress" className="text-[11px] sm:text-xs px-1 sm:px-3 rounded-lg truncate">{t('inProgress', 'In Progress')}</TabsTrigger>
+                        <TabsTrigger value="mandatory" className="text-[11px] sm:text-xs px-1 sm:px-3 rounded-lg truncate">{t('mandatory', 'Mandatory')}</TabsTrigger>
+                        <TabsTrigger value="quizzes" className="text-[11px] sm:text-xs px-1 sm:px-3 rounded-lg truncate">{t('quizzes.title', { defaultValue: isRTL ? 'التقييمات' : 'Quizzes' })}</TabsTrigger>
                     </TabsList>
                 </Tabs>
             </div>

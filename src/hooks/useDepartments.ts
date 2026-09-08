@@ -1,3 +1,4 @@
+import { useTenant } from '@/contexts/TenantContext';
 import { isRealPropertyId } from '@/lib/propertyScope';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ export interface Department {
 export function useDepartments(propertyId?: string) { // Optional filter
   const queryClient = useQueryClient();
   const { user, primaryRole, properties } = useAuth();
+  const { currentOrganization, isPlatformScope } = useTenant();
 
   // Auth helpers
   const isCorporateAdmin = ['administrator', 'super_admin', 'corporate_admin'].includes(primaryRole || '');
@@ -32,13 +34,15 @@ export function useDepartments(propertyId?: string) { // Optional filter
 
   // Fetch departments
   const { data: departments = [], isLoading, error } = useQuery({
-    queryKey: ['departments', normalizedPropertyId],
+    queryKey: ['departments', normalizedPropertyId, currentOrganization?.id],
     queryFn: async () => {
       // departments table uses is_active, not is_deleted
       let query = supabase.from('departments').select('*').eq('is_active', true).order('name');
       if (normalizedPropertyId) {
         query = query.eq('property_id', normalizedPropertyId);
-      } else if (!isCorporateAdmin) {
+      } else if (currentOrganization?.id) {
+        query = query.eq('organization_id', currentOrganization.id);
+      } else if (!isPlatformScope && !isCorporateAdmin) {
         // Enforce visibility for non-corporate users
         if (allowedPropertyIds.length > 0) {
           query = query.in('property_id', allowedPropertyIds);
@@ -50,7 +54,8 @@ export function useDepartments(propertyId?: string) { // Optional filter
       const { data, error } = await query;
       if (error) throw error;
       return data as Department[];
-    }
+    },
+    enabled: isPlatformScope || !!currentOrganization?.id || !!normalizedPropertyId
   });
 
   // Create
@@ -62,7 +67,7 @@ export function useDepartments(propertyId?: string) { // Optional filter
         throw new Error('Unauthorized: Property access denied');
       }
 
-      let orgId: string | null = null;
+      let orgId: string | null = currentOrganization?.id || null;
       if (dept.property_id) {
         const { data: hotelRow } = await supabase.from('hotels').select('organization_id').eq('id', dept.property_id).maybeSingle();
         if (hotelRow?.organization_id) orgId = hotelRow.organization_id;

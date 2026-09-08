@@ -184,7 +184,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.platform_operations',
         icon: Crown,
         order: 7,
-        visibleTo: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        visibleTo: ['super_admin'],
         collapsible: true
     }
 ]
@@ -266,9 +266,9 @@ export const ROUTES: RouteConfig[] = [
         path: '/admin/users',
         title: 'user_management',
         icon: Users,
-        description: 'Manage organization user accounts, roles, and property assignments',
+        description: 'Manage organization team members, roles, and property assignments',
         allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin', 'regional_admin', 'regional_hr'],
-        keywords: ['users', 'roles', 'permissions', 'accounts', 'people', 'team'],
+        keywords: ['users', 'roles', 'permissions', 'accounts', 'people', 'team', 'organization users'],
         group: 'organization_hub',
         order: 3,
     },
@@ -450,16 +450,6 @@ export const ROUTES: RouteConfig[] = [
         order: 1,
     },
     {
-        path: '/admin/ai-course-generator',
-        title: 'ai_course_generator',
-        icon: Bot,
-        description: 'AI Course Generator routing mode, providers, models, spend caps and QA thresholds',
-        allowedRoles: ['administrator', 'super_admin', 'training_manager', 'corporate_admin'],
-        keywords: ['ai', 'course generator', 'model routing', 'ai settings', 'providers', 'spend cap'],
-        group: 'tenant_admin',
-        order: 2,
-    },
-    {
         path: '/admin/export',
         title: 'tenant_data_export',
         icon: Upload,
@@ -467,7 +457,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['administrator', 'super_admin', 'corporate_admin'],
         keywords: ['export', 'data archive', 'offboarding', 'portability', 'gdpr', 'backup'],
         group: 'tenant_admin',
-        order: 3,
+        order: 2,
     },
     {
         path: '/admin/settings',
@@ -477,7 +467,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
         keywords: ['settings', 'config', 'branding', 'preferences'],
         group: 'tenant_admin',
-        order: 4,
+        order: 3,
     },
     {
         path: '/settings',
@@ -487,7 +477,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: 'all',
         keywords: ['settings', 'preferences', 'dark mode', 'theme'],
         group: 'tenant_admin',
-        order: 5,
+        order: 4,
     },
     {
         path: '/admin/pii-access',
@@ -518,7 +508,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'platform_control_center',
         icon: Crown,
         description: 'Executive SaaS control plane, cross-tenant telemetry, and background jobs',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['platform', 'control center', 'super admin', 'telemetry', 'operations'],
         group: 'platform_operations',
         order: 1,
@@ -528,7 +518,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'organizations_hub',
         icon: Building2,
         description: 'Manage customer organizations, subscriptions, and authorized cross-tenant access',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['platform', 'tenants', 'organizations', 'enter tenant', 'impersonation'],
         group: 'platform_operations',
         order: 2,
@@ -537,9 +527,9 @@ export const ROUTES: RouteConfig[] = [
         path: '/platform/users',
         title: 'platform_user_directory',
         icon: Users,
-        description: 'Global multi-tenant user directory, platform operator roles, and status control',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
-        keywords: ['platform', 'users', 'directory', 'operator roles', 'super admin'],
+        description: 'Global SaaS multi-tenant user directory, platform operator roles, and status control',
+        allowedRoles: ['super_admin'],
+        keywords: ['platform', 'users', 'directory', 'operator roles', 'super admin', 'global users'],
         group: 'platform_operations',
         order: 3,
     },
@@ -548,7 +538,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'global_master_library',
         icon: BookOpen,
         description: 'Platform master SOPs and hospitality courses deployable to customer tenants',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['master', 'library', 'deploy', 'templates', 'master sops', 'master courses'],
         group: 'platform_operations',
         order: 4,
@@ -558,7 +548,7 @@ export const ROUTES: RouteConfig[] = [
         title: 'platform_operations_hub',
         icon: Activity,
         description: 'Real-time task queue, AI generation pipeline, and document vector ingestion',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['operations', 'queue', 'ai generation', 'background tasks', 'retry'],
         group: 'platform_operations',
         order: 5,
@@ -568,30 +558,61 @@ export const ROUTES: RouteConfig[] = [
         title: 'platform_settings',
         icon: Settings,
         description: 'Platform feature flags, AI provider routing defaults, and runtime governance',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['platform settings', 'feature flags', 'ai routing', 'config'],
         group: 'platform_operations',
         order: 6,
+    },
+    {
+        path: '/platform/ai-settings',
+        title: 'ai_course_generator',
+        icon: Bot,
+        description: 'AI multi-provider gateways (Gemini, Groq, OpenRouter), spend caps, routing strategies, and edge telemetry',
+        allowedRoles: ['super_admin'],
+        keywords: ['ai', 'course generator', 'model routing', 'ai settings', 'providers', 'spend cap', 'gemini', 'groq'],
+        group: 'platform_operations',
+        order: 7,
+    },
+    {
+        path: '/platform/email-templates',
+        title: 'email_templates',
+        icon: Mail,
+        description: 'Global notification email templates, transactional layouts, and HTML copy',
+        allowedRoles: ['super_admin'],
+        keywords: ['email', 'templates', 'notifications', 'transactional'],
+        group: 'platform_operations',
+        order: 8,
     },
     {
         path: '/platform/analytics',
         title: 'platform_analytics',
         icon: BarChart3,
         description: 'Cross-tenant business intelligence, global learner counts, and usage metrics',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['analytics', 'platform', 'metrics', 'learners', 'ai usage'],
         group: 'platform_operations',
-        order: 7,
+        order: 9,
     },
     {
         path: '/platform/audit',
         title: 'cross_tenant_audit',
         icon: Shield,
         description: 'Immutable audit trail of cross-tenant operator actions and impersonation sessions',
-        allowedRoles: ['administrator', 'super_admin', 'corporate_admin', 'regional_admin'],
+        allowedRoles: ['super_admin'],
         keywords: ['audit', 'security', 'logs', 'cross-tenant', 'compliance'],
         group: 'platform_operations',
-        order: 8,
+        order: 10,
+    },
+    {
+        path: '/platform/retention-policies',
+        title: 'retention_policies',
+        icon: Shield,
+        description: 'Compliance data lifecycle, export retention windows, and automatic purge schedules',
+        allowedRoles: ['super_admin'],
+        keywords: ['retention', 'compliance', 'purge', 'gdpr', 'data lifecycle'],
+        group: 'platform_operations',
+        order: 11,
+        hideFromNav: true,
     },
     {
         path: '/search',
@@ -621,6 +642,9 @@ export function resolvePathForRole(route: RouteConfig, role: AppRole | null): st
  * Check if a role can access a route
  */
 export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolean {
+    if (route.group === 'platform_operations' && role !== 'super_admin') {
+        return false
+    }
     return canRoleAccess(role, route.allowedRoles)
 }
 
@@ -628,6 +652,9 @@ export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolea
  * Check if a role can see a navigation group
  */
 export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null): boolean {
+    if (group.id === 'platform_operations' && role !== 'super_admin') {
+        return false
+    }
     return canRoleAccess(role, group.visibleTo)
 }
 

@@ -56,7 +56,7 @@ export function PlayerTopBar({
 
     return (
         <header className="z-30 shrink-0 border-b border-border/60 bg-card/95 backdrop-blur-xl">
-            <div className={cn('flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-5', isRTL && 'flex-row-reverse')}>
+            <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-5">
                 <Button
                     variant="ghost"
                     size="icon-sm"
@@ -65,10 +65,10 @@ export function PlayerTopBar({
                     aria-pressed={railOpen}
                     className="shrink-0"
                 >
-                    <PanelLeft className="h-4 w-4" />
+                    <PanelLeft className={cn('h-4 w-4', isRTL && 'rotate-180')} />
                 </Button>
 
-                <div className={cn('flex min-w-0 flex-1 flex-col', isRTL && 'items-end')}>
+                <div className="flex min-w-0 flex-1 flex-col">
                     <h1 className="w-full truncate text-sm font-bold text-foreground">{title}</h1>
                     {contextLabel && (
                         <p className="w-full truncate text-[11px] text-muted-foreground">{contextLabel}</p>

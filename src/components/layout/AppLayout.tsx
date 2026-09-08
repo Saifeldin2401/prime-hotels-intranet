@@ -8,6 +8,8 @@ import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
 import { TenantBreadcrumbs } from '@/components/layout/TenantBreadcrumbs'
 import { AltusCopilotTrigger } from '@/components/ai/AltusCopilotTrigger'
 import { PlatformImpersonationBanner } from '@/components/platform/PlatformImpersonationBanner'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { useTranslation } from 'react-i18next'
 import { getRouteByPath } from '@/config/navigation'
 import { useNavigationStore } from '@/stores/navigationStore'
 
@@ -25,11 +27,21 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
+export const InsideAppLayoutContext = React.createContext<boolean>(false)
+
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation()
+  const { i18n } = useTranslation()
+  const isRtl = i18n.language === 'ar' || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Auto-close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
 
   // Track page transitions for recently visited shortcuts
   useEffect(() => {
@@ -90,57 +102,78 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   if (isFullBleedPage) {
     return (
-      <div className="min-h-[100dvh] bg-background text-foreground antialiased">
-        <PlatformImpersonationBanner />
-        {children}
-        <Suspense fallback={null}>
-          {(deferredChromeReady || commandPaletteOpen) && (
-            <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
-          )}
-        </Suspense>
-      </div>
+      <InsideAppLayoutContext.Provider value={true}>
+        <div className="min-h-[100dvh] bg-background text-foreground antialiased">
+          <PlatformImpersonationBanner />
+          {children}
+          <Suspense fallback={null}>
+            {(deferredChromeReady || commandPaletteOpen) && (
+              <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+            )}
+          </Suspense>
+        </div>
+      </InsideAppLayoutContext.Provider>
     )
   }
 
   return (
-    <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
-      {/* Desktop Sidebar */}
-      {!isImmersiveOrFocusedPage && (
-        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-border/60 bg-card/80 backdrop-blur-2xl shadow-sm">
-          <Sidebar />
-        </aside>
-      )}
-
-      {/* Main Content Area */}
-      <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
-        <PlatformImpersonationBanner />
-        {/* Top Header */}
-        <Header onOpenSearch={() => setCommandPaletteOpen(true)} />
-
-        {/* Main Content Stage */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
-          {!isImmersiveOrFocusedPage && <HolidayCelebration />}
-          {!isImmersiveOrFocusedPage && <TenantBreadcrumbs />}
-          <PageTransition className="w-full min-w-0">{children}</PageTransition>
-        </main>
-
-        {/* Mobile Bottom Navigation */}
-        {!isImmersiveOrFocusedPage && <MobileNavigation />}
-      </div>
-
-      {/* Floating Altus Copilot Trigger */}
-      {!copilotOpen && !isImmersiveOrFocusedPage && (
-        <AltusCopilotTrigger onClick={() => setCopilotOpen(true)} />
-      )}
-
-      {/* Deferred Modals and Drawers */}
-      <Suspense fallback={null}>
-        {(deferredChromeReady || commandPaletteOpen) && (
-          <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+    <InsideAppLayoutContext.Provider value={true}>
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
+        {/* Desktop Sidebar */}
+        {!isImmersiveOrFocusedPage && (
+          <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-border/60 bg-card/80 backdrop-blur-2xl shadow-sm">
+            <Sidebar />
+          </aside>
         )}
-        {deferredChromeReady && <KeyboardShortcutsModal />}
-        <AltusCopilotDrawer isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
-      </Suspense>
-    </div>
+
+        {/* Main Content Area */}
+        <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
+          <PlatformImpersonationBanner />
+          {/* Top Header */}
+          <Header
+            onOpenSearch={() => setCommandPaletteOpen(true)}
+            onOpenMobileMenu={() => setMobileMenuOpen(true)}
+          />
+
+          {/* Main Content Stage */}
+          <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
+            {!isImmersiveOrFocusedPage && <HolidayCelebration />}
+            {!isImmersiveOrFocusedPage && <TenantBreadcrumbs />}
+            <PageTransition className="w-full min-w-0">{children}</PageTransition>
+          </main>
+
+          {/* Mobile Bottom Navigation */}
+          {!isImmersiveOrFocusedPage && (
+            <MobileNavigation onOpenMenu={() => setMobileMenuOpen(true)} />
+          )}
+        </div>
+
+        {/* Mobile Navigation Drawer Sheet */}
+        {!isImmersiveOrFocusedPage && (
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetContent
+              side={isRtl ? 'right' : 'left'}
+              className="p-0 w-[85vw] max-w-xs border-e border-border/60 bg-card overflow-hidden"
+            >
+              <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        )}
+
+        {/* Floating Altus Copilot Trigger */}
+        {!copilotOpen && !isImmersiveOrFocusedPage && (
+          <AltusCopilotTrigger onClick={() => setCopilotOpen(true)} />
+        )}
+
+        {/* Deferred Modals and Drawers */}
+        <Suspense fallback={null}>
+          {(deferredChromeReady || commandPaletteOpen) && (
+            <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+          )}
+          {deferredChromeReady && <KeyboardShortcutsModal />}
+          <AltusCopilotDrawer isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
+        </Suspense>
+      </div>
+    </InsideAppLayoutContext.Provider>
   )
 }

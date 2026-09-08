@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { platformService } from '@/services/platformService'
+import { supabase } from '@/lib/supabase'
 import { OrgStructureTree } from '@/components/org/OrgStructureTree'
 import {
   ArrowLeft,
@@ -39,7 +41,13 @@ import {
   Crown,
   Building,
   Globe,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UserPlus,
+  RotateCcw,
+  ShieldCheck,
+  Search,
+  Trash2,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
 import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
@@ -58,6 +66,109 @@ export default function OrganizationProfile() {
   // Status mutation state
   const [status, setStatus] = useState('')
   const [reason, setReason] = useState('')
+
+  // Admin Designation Modal State
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false)
+  const [adminSearchQuery, setAdminSearchQuery] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [selectedAdminRole, setSelectedAdminRole] = useState<'organization_admin' | 'organization_owner'>('organization_admin')
+
+  // User candidate search query for admin designation
+  const { data: candidateUsers = [], isLoading: isSearchingCandidates } = useQuery({
+    queryKey: ['platform-admin-candidates', adminSearchQuery],
+    queryFn: async () => {
+      if (!adminSearchQuery.trim() || adminSearchQuery.trim().length < 2) return []
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .or(`full_name.ilike.%${adminSearchQuery}%,email.ilike.%${adminSearchQuery}%`)
+        .limit(8)
+      if (error) throw error
+      return (data || []) as Array<{ id: string; full_name: string; email: string }>
+    },
+    enabled: isAdminModalOpen && adminSearchQuery.trim().length >= 2,
+  })
+
+  // Membership mutation (designate / change role / revoke)
+  const membershipMutation = useMutation({
+    mutationFn: (params: {
+      userId: string
+      role: string
+      active?: boolean
+    }) => platformService.setTenantMembership({
+      orgId: id,
+      userId: params.userId,
+      role: params.role,
+      active: params.active ?? true,
+    }),
+    onSuccess: (_, vars) => {
+      toast({
+        title: vars.active === false ? 'Administrator access revoked' : 'Tenant administrator updated',
+        description: vars.active === false ? 'The user has been removed from organization administration.' : `Assigned role ${vars.role}.`
+      })
+      setIsAdminModalOpen(false)
+      setSelectedUserId('')
+      setAdminSearchQuery('')
+      qc.invalidateQueries({ queryKey: ['org-profile', id] })
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Membership operation failed',
+        description: err.message,
+        variant: 'destructive',
+      })
+    }
+  })
+
+  // Feature Matrix Query
+  const { data: featureMatrix, isLoading: isFeaturesLoading } = useQuery({
+    queryKey: ['platform-feature-matrix'],
+    queryFn: () => platformService.getFeatureMatrix(),
+  })
+
+  // Find this tenant's feature map
+  const orgFeatureData = useMemo(() => {
+    return featureMatrix?.organizations?.find(o => o.id === id)
+  }, [featureMatrix, id])
+
+  // Feature override mutation
+  const setOverrideMutation = useMutation({
+    mutationFn: (params: { key: string; enabled: boolean }) =>
+      platformService.setOrgFeatureOverride(id, params.key, params.enabled, 'Configured via platform org profile'),
+    onSuccess: (_, vars) => {
+      toast({
+        title: 'Tenant feature override saved',
+        description: `Feature ${vars.key} is now ${vars.enabled ? 'explicitly enabled' : 'explicitly disabled'} for this tenant.`,
+      })
+      qc.invalidateQueries({ queryKey: ['platform-feature-matrix'] })
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Failed to set feature override',
+        description: err.message,
+        variant: 'destructive',
+      })
+    }
+  })
+
+  // Clear override mutation
+  const clearOverrideMutation = useMutation({
+    mutationFn: (key: string) => platformService.clearOrgFeatureOverride(id, key),
+    onSuccess: (_, key) => {
+      toast({
+        title: 'Feature override cleared',
+        description: `Feature ${key} reverted to default subscription plan entitlement.`,
+      })
+      qc.invalidateQueries({ queryKey: ['platform-feature-matrix'] })
+    },
+    onError: (err: any) => {
+      toast({
+        title: 'Failed to reset feature override',
+        description: err.message,
+        variant: 'destructive',
+      })
+    }
+  })
 
   // Edit Entitlements Modal State
   const [isEntOpen, setIsEntOpen] = useState(false)
@@ -489,30 +600,234 @@ export default function OrganizationProfile() {
         <div className="lg:col-span-2 space-y-6">
           <OrgStructureTree orgId={id} />
 
-          {(profile?.primary_contacts || []).length > 0 && (
-            <Card className="border shadow-sm">
-              <CardHeader className="p-4 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Primary Contacts & Executives
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 space-y-2">
-                {profile.primary_contacts.map((c: any) => (
-                  <div key={c.user_id} className="text-xs flex items-center justify-between p-2.5 rounded-lg bg-muted/40 border">
-                    <div>
-                      <span className="font-semibold text-foreground">{c.name}</span>
-                      <span className="text-muted-foreground ms-2">· {c.email}</span>
+          {/* Tenant Administrators & Executives */}
+          <Card className="border shadow-sm">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-primary" />
+                    Tenant Administrators & Key Personnel
+                  </CardTitle>
+                  <CardDescription className="text-xs mt-0.5">
+                    Designated personnel with owner or administrative authority over this organization.
+                  </CardDescription>
+                </div>
+                {canManage && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedUserId('')
+                      setAdminSearchQuery('')
+                      setIsAdminModalOpen(true)
+                    }}
+                    className="text-xs h-8 gap-1.5"
+                  >
+                    <UserPlus className="h-3.5 w-3.5 text-primary" />
+                    Designate Administrator
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-2.5">
+              {(profile?.primary_contacts || []).length === 0 ? (
+                <div className="p-4 text-center border rounded-xl bg-muted/20 text-xs text-muted-foreground">
+                  No tenant administrators designated yet. Use "Designate Administrator" to assign an organization owner or administrator.
+                </div>
+              ) : (
+                profile.primary_contacts.map((c: any) => {
+                  const isOwner = c.role === 'organization_owner'
+                  return (
+                    <div key={c.user_id} className="text-xs flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-muted/30 border gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`p-2 rounded-lg ${isOwner ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'}`}>
+                          {isOwner ? <Crown className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-foreground flex items-center gap-2">
+                            {c.name || 'Unnamed User'}
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-semibold capitalize ${
+                                isOwner
+                                  ? 'border-amber-400/40 text-amber-700 dark:text-amber-300 bg-amber-500/10'
+                                  : 'border-blue-400/40 text-blue-700 dark:text-blue-300 bg-blue-500/10'
+                              }`}
+                            >
+                              {isOwner ? 'Tenant Owner' : 'Tenant Administrator'}
+                            </Badge>
+                          </div>
+                          <div className="text-muted-foreground text-[11px] font-mono mt-0.5">{c.email}</div>
+                        </div>
+                      </div>
+
+                      {canManage && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Select
+                            value={c.role}
+                            onValueChange={(newRole) => {
+                              membershipMutation.mutate({
+                                userId: c.user_id,
+                                role: newRole,
+                                active: true,
+                              })
+                            }}
+                            disabled={membershipMutation.isPending}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="organization_admin">Tenant Admin</SelectItem>
+                              <SelectItem value="organization_owner">Tenant Owner</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs"
+                            title="Revoke Administrator Access"
+                            disabled={membershipMutation.isPending}
+                            onClick={() => {
+                              if (confirm(`Revoke administrative access for ${c.name || c.email}?`)) {
+                                membershipMutation.mutate({
+                                  userId: c.user_id,
+                                  role: 'learner',
+                                  active: false,
+                                })
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="outline" className="text-[10px] capitalize font-mono">
-                      {c.role}
-                    </Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
+                  )
+                })
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Feature Flags & Module Entitlements Card */}
+      <Card className="border shadow-sm">
+        <CardHeader className="p-5 pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-primary" />
+                Feature Flags & Module Entitlements
+              </CardTitle>
+              <CardDescription className="text-xs mt-0.5">
+                Manage feature availability for <strong>{org.name}</strong>. Toggle per-tenant overrides to enable or disable modules beyond standard subscription plans.
+              </CardDescription>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => qc.invalidateQueries({ queryKey: ['platform-feature-matrix'] })}
+              className="text-xs h-8 gap-1.5"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isFeaturesLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-5 pt-0">
+          {isFeaturesLoading ? (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2 text-primary" />
+              Loading feature configuration…
+            </div>
+          ) : !featureMatrix?.flags?.length ? (
+            <div className="py-6 text-center text-xs text-muted-foreground">
+              No feature flags catalogued in the platform.
+            </div>
+          ) : (
+            <div className="divide-y rounded-xl border overflow-hidden">
+              {featureMatrix.flags.map((flag) => {
+                const orgFeature = orgFeatureData?.features?.[flag.key]
+                const isEffective = orgFeature?.effective ?? flag.default_enabled
+                const overrideVal = orgFeature?.override ?? null
+                const hasOverride = overrideVal !== null
+                const isMutating = setOverrideMutation.isPending || clearOverrideMutation.isPending
+
+                return (
+                  <div key={flag.key} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/10 transition-colors">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-foreground">{flag.label}</span>
+                        <Badge variant="outline" className="text-[10px] uppercase font-mono tracking-wider py-0 px-1.5 bg-muted/30">
+                          {flag.category}
+                        </Badge>
+                        {hasOverride ? (
+                          <Badge
+                            className={`text-[10px] font-semibold py-0 px-1.5 ${
+                              overrideVal
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
+                            }`}
+                            variant="outline"
+                          >
+                            Override: {overrideVal ? 'Forced On' : 'Forced Off'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-[10px] py-0 px-1.5 text-muted-foreground">
+                            Plan Default: {flag.default_enabled ? 'Active' : 'Disabled'}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {flag.description || `Key: ${flag.key}`}
+                        {flag.min_plan_code && (
+                          <span className="ms-1.5 font-mono text-[10px]">· Requires plan: {flag.min_plan_code}</span>
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={isEffective}
+                          disabled={!canManage || isMutating}
+                          onCheckedChange={(checked) => {
+                            setOverrideMutation.mutate({ key: flag.key, enabled: checked })
+                          }}
+                        />
+                        <span className="text-xs font-medium w-14 text-end">
+                          {isEffective ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Enabled</span>
+                          ) : (
+                            <span className="text-muted-foreground">Disabled</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {hasOverride && canManage && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground gap-1"
+                          title="Clear tenant override and revert to plan default"
+                          disabled={isMutating}
+                          onClick={() => clearOverrideMutation.mutate(flag.key)}
+                        >
+                          <RotateCcw className="h-3 w-3" />
+                          <span className="hidden sm:inline">Reset</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* EDIT ENTITLEMENTS DIALOG */}
       <Dialog open={isEntOpen} onOpenChange={setIsEntOpen}>
@@ -880,6 +1195,125 @@ export default function OrganizationProfile() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* DESIGNATE TENANT ADMINISTRATOR DIALOG */}
+      <Dialog open={isAdminModalOpen} onOpenChange={setIsAdminModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-primary">
+              <UserPlus className="h-5 w-5" />
+              <DialogTitle className="text-base font-bold">Designate Tenant Administrator</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs">
+              Assign an executive or administrator to manage <strong>{org.name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Find User Profile</Label>
+              <div className="relative">
+                <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={adminSearchQuery}
+                  onChange={(e) => setAdminSearchQuery(e.target.value)}
+                  placeholder="Search by name or email (min 2 chars)..."
+                  className="ps-8 h-9 text-xs"
+                />
+              </div>
+            </div>
+
+            {isSearchingCandidates && (
+              <div className="py-3 text-center text-xs text-muted-foreground">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin mx-auto mb-1" />
+                Searching users…
+              </div>
+            )}
+
+            {!isSearchingCandidates && candidateUsers.length > 0 && (
+              <div className="space-y-1 max-h-[180px] overflow-y-auto border rounded-lg p-1.5">
+                <div className="text-[10px] font-semibold text-muted-foreground px-2 py-0.5 uppercase tracking-wider">
+                  Select User
+                </div>
+                {candidateUsers.map((u) => {
+                  const isSelected = selectedUserId === u.id
+                  return (
+                    <div
+                      key={u.id}
+                      onClick={() => setSelectedUserId(u.id)}
+                      className={`p-2 rounded-md text-xs cursor-pointer flex items-center justify-between transition-colors ${
+                        isSelected
+                          ? 'bg-primary text-primary-foreground font-semibold'
+                          : 'hover:bg-muted/60 text-foreground'
+                      }`}
+                    >
+                      <div>
+                        <div>{u.full_name || 'Unnamed Profile'}</div>
+                        <div className={`text-[10px] ${isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                          {u.email}
+                        </div>
+                      </div>
+                      {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {!isSearchingCandidates && adminSearchQuery.trim().length >= 2 && candidateUsers.length === 0 && (
+              <div className="p-3 text-center text-xs text-muted-foreground border rounded-lg bg-muted/20">
+                No user profiles found matching "{adminSearchQuery}".
+              </div>
+            )}
+
+            <div className="space-y-1.5 pt-2 border-t">
+              <Label className="text-xs font-semibold">Administrative Role</Label>
+              <Select
+                value={selectedAdminRole}
+                onValueChange={(val: any) => setSelectedAdminRole(val)}
+              >
+                <SelectTrigger className="h-9 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="organization_admin">
+                    Tenant Administrator (Operational management)
+                  </SelectItem>
+                  <SelectItem value="organization_owner">
+                    Tenant Owner (Full corporate executive control)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" size="sm" onClick={() => setIsAdminModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!selectedUserId || membershipMutation.isPending}
+              onClick={() => {
+                membershipMutation.mutate({
+                  userId: selectedUserId,
+                  role: selectedAdminRole,
+                  active: true,
+                })
+              }}
+              className="text-xs font-semibold"
+            >
+              {membershipMutation.isPending ? (
+                <RefreshCw className="h-4 w-4 animate-spin me-1.5" />
+              ) : (
+                <ShieldCheck className="h-4 w-4 me-1.5" />
+              )}
+              Assign Administrator
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

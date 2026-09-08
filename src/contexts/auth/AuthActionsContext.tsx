@@ -208,6 +208,10 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem('altus_current_property_id')
       localStorage.removeItem('altus_last_activity')
+      localStorage.removeItem('altus_active_tenant_id')
+      if (identityContext?.user?.id) {
+        localStorage.removeItem(`active_tenant_id_${identityContext.user.id}`)
+      }
       sessionStorage.removeItem('altus_session_active')
     } catch {
       // Ignore storage errors

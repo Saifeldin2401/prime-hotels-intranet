@@ -83,12 +83,7 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
                 </div>
             )}
 
-            <div
-                className={cn(
-                    'flex min-h-[4.5rem] items-center gap-3 px-4 py-3 sm:px-6',
-                    isRTL ? 'flex-row-reverse' : 'flex-row',
-                )}
-            >
+            <div className="flex min-h-[4.5rem] items-center gap-2 sm:gap-3 px-3 py-3 sm:px-6">
                 {!hidePrevious && (
                     <Button
                         variant="outline"
@@ -135,7 +130,7 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
                             aria-disabled={primary.disabled || primary.loading || undefined}
                             aria-describedby={primary.disabled && primary.disabledReason ? describedById : undefined}
                             className={cn(
-                                'h-11 min-w-[9rem] justify-center gap-2 font-bold sm:min-w-[11rem]',
+                                'h-11 min-w-[6.5rem] sm:min-w-[10rem] justify-center gap-2 font-bold px-3 sm:px-4',
                                 intentClass,
                             )}
                         >

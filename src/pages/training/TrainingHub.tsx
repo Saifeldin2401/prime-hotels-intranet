@@ -114,7 +114,7 @@ interface TrainingModule {
 
 export default function TrainingHub() {
   const { primaryRole } = useAuth()
-  const { currentOrganization, currentHotel, currentBrand } = useTenant()
+  const { currentOrganization, currentHotel, currentBrand, isPlatformAdmin, isPlatformScope } = useTenant()
   const navigate = useNavigate()
   const { id: moduleId } = useParams()
   const [searchParams] = useSearchParams()
@@ -123,9 +123,10 @@ export default function TrainingHub() {
   const isRTL = i18n.dir() === 'rtl'
   const { toast } = useToast()
 
-  const canManageModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'author', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
+  const isMasterMode = searchParams.get('master') === 'true' || searchParams.get('isMaster') === 'true'
+  const canManageModules = isPlatformAdmin || isPlatformScope || isMasterMode || ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'author', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
   const canAssignTraining = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].includes(primaryRole || '')
-  const canReviewModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
+  const canReviewModules = isPlatformAdmin || isPlatformScope || ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
 
   const rawViewParam = searchParams.get('view')
   const viewParam = (rawViewParam === 'analytics' ? 'insights' : rawViewParam) as ViewMode | null
@@ -205,41 +206,40 @@ export default function TrainingHub() {
   const { data: rawModules, isLoading } = useQuery({
     queryKey: ['training-modules', currentOrganization?.id, currentHotel?.id, currentBrand?.id],
     queryFn: async () => {
+      if (!currentOrganization?.id) return []
+
       let query = supabase
         .from('training_modules')
         .select('*')
         .not('is_deleted', 'is', true)
         .order('created_at', { ascending: false })
 
-      if (currentOrganization?.id) {
-        query = query.or(`organization_id.eq.${currentOrganization.id},organization_id.is.null,is_master_template.eq.true`)
-      }
+      query = query.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
 
       const { data, error } = await query
       if (error) throw error
       return data as TrainingModule[]
     },
-    enabled: canManageModules
+    enabled: !!currentOrganization?.id && canManageModules
   })
 
   const { data: assignmentLinks } = useQuery({
     queryKey: ['learning-assignments-module-links', currentOrganization?.id],
     queryFn: async () => {
+      if (!currentOrganization?.id) return []
+
       let query = supabase
         .from('training_assignment_rules')
         .select('content_id')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')
-
-      if (currentOrganization?.id) {
-        query = query.or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
-      }
+        .eq('organization_id', currentOrganization.id)
 
       const { data, error } = await query
       if (error) throw error
       return data || []
     },
-    enabled: canManageModules
+    enabled: !!currentOrganization?.id && canManageModules
   })
 
   // Master Content Deployments & Version Sync query

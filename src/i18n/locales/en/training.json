@@ -40,6 +40,8 @@
         "keepDraft": "Keep Draft",
         "clearDraftBtn": "Clear Draft",
         "back": "Back",
+        "backToMasterLibrary": "Back to Master Library",
+        "globalMasterTemplate": "Global Master",
         "next": "Next",
         "nextStep": "Next Step",
         "publish": "Publish Course",

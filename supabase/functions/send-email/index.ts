@@ -192,20 +192,27 @@ serve(async (req) => {
 
     // Security Gate: Validate caller authorization for the target tenant
     if (!isServiceRoleCall && user && targetOrgId) {
-      const { data: canSend, error: canSendErr } = await serviceClient.rpc(
-        "can_send_tenant_email",
-        {
-          p_user_id: user.id,
-          p_org_id: targetOrgId,
-        },
+      const { data: isPlatformOp } = await serviceClient.rpc(
+        "is_platform_operator",
+        { _user_id: user.id },
       );
 
-      if (canSendErr || canSend === false) {
-        return jsonResponse(
-          { error: "Forbidden: Not authorized to send email for this tenant organization" },
-          403,
-          corsHeaders,
+      if (!isPlatformOp) {
+        const { data: canSend, error: canSendErr } = await serviceClient.rpc(
+          "can_send_tenant_email",
+          {
+            p_user_id: user.id,
+            p_org_id: targetOrgId,
+          },
         );
+
+        if (canSendErr || canSend === false) {
+          return jsonResponse(
+            { error: "Forbidden: Not authorized to send email for this tenant organization" },
+            403,
+            corsHeaders,
+          );
+        }
       }
     }
 
@@ -237,30 +244,40 @@ serve(async (req) => {
 
     // Role checks for non-service-role callers
     if (!isServiceRoleCall && user) {
-      const adminRoles = [
-        "corporate_admin",
-        "regional_admin",
-        "regional_hr",
-        "property_manager",
-        "property_hr",
-        "administrator",
-        "super_admin",
-      ];
-      const { data: roleRows, error: roleError } = await serviceClient
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .in("role", adminRoles);
+      const { data: isPlatformOp } = await serviceClient.rpc(
+        "is_platform_operator",
+        { _user_id: user.id },
+      );
 
-      if (roleError) {
-        return jsonResponse(
-          { error: "Failed to validate permissions" },
-          500,
-          corsHeaders,
-        );
+      let isAdmin = Boolean(isPlatformOp);
+
+      if (!isAdmin) {
+        const adminRoles = [
+          "corporate_admin",
+          "regional_admin",
+          "regional_hr",
+          "property_manager",
+          "property_hr",
+          "administrator",
+          "super_admin",
+        ];
+        const { data: roleRows, error: roleError } = await serviceClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .in("role", adminRoles);
+
+        if (roleError) {
+          return jsonResponse(
+            { error: "Failed to validate permissions" },
+            500,
+            corsHeaders,
+          );
+        }
+
+        isAdmin = Boolean(roleRows && roleRows.length > 0);
       }
 
-      const isAdmin = Boolean(roleRows && roleRows.length > 0);
       const normalizedUserEmail = (user.email || "").trim().toLowerCase();
       isSelfCertificateEmail =
         body.templateKey === "certificate_earned" &&
@@ -749,8 +766,10 @@ async function loadRuntimeConfig(
     if (config) {
       if (config.resend_api_key) resendApiKey = config.resend_api_key;
       if (config.app_base_url) appBaseUrl = config.app_base_url;
-      if (config.from_name) fromName = config.from_name;
-      if (config.from_email) fromEmail = config.from_email;
+      if (config.from_name || config.email_from_name)
+        fromName = config.from_name || config.email_from_name;
+      if (config.from_email || config.email_from_address)
+        fromEmail = config.from_email || config.email_from_address;
     }
   } catch (_err) {
     // fallback to env vars

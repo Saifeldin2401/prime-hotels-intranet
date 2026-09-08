@@ -55,6 +55,8 @@ export interface TrainingBuilderContextValue {
   moduleId: string | null
   isNewRoute: boolean
   isRTL: boolean
+  isMasterTemplate: boolean
+  setIsMasterTemplate: (v: boolean) => void
 
   // Module metadata
   moduleStatus: string
@@ -358,6 +360,9 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const [randomizeQuestions, setRandomizeQuestions] = useState(false)
   const [showAnswers, setShowAnswers] = useState(false)
 
+  const masterFromQuery = searchParams.get('master') === 'true'
+  const [isMasterTemplate, setIsMasterTemplate] = useState<boolean>(masterFromQuery)
+
   const templateFromQuery = searchParams.get('template')
   const templateAppliedRef = useRef(false)
   const hydratedModuleRef = useRef<string | null>(null)
@@ -376,6 +381,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     setModuleStatus(loadedModule.status || 'draft')
     setTitle(loadedModule.title)
     setDescription(loadedModule.description || '')
+    setIsMasterTemplate(Boolean((loadedModule as any)?.is_master_template || masterFromQuery))
     const normalizedEstimate = normalizeEstimatedDuration(loadedModule.estimated_duration_minutes)
     setEstimatedDuration(normalizedEstimate ? normalizedEstimate.toString() : '')
     setUseEstimatedDuration(!!normalizedEstimate)
@@ -394,7 +400,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     setAudience(loadedModule.audience || 'all')
     setContentLanguage(loadedModule.content_language || 'bilingual')
     setTemplatePreset(loadedModule.template_id || 'none')
-  }, [])
+  }, [masterFromQuery])
 
   useEffect(() => {
     if (isNewRoute) {
@@ -1783,6 +1789,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       is_mandatory: b.is_mandatory ?? true,
       duration_seconds: b.duration_seconds ?? null,
       points: b.points ?? null,
+      is_master_template: isMasterTemplate,
+      scope_type: isMasterTemplate ? 'global' : 'organization',
       }
     })
 
@@ -1932,6 +1940,11 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         content_language: contentLanguage || null,
         template_id: templatePreset && templatePreset !== 'none' ? templatePreset : null,
         created_by: profile?.id ?? null,
+      }
+
+      if (isMasterTemplate) {
+        payload.is_master_template = true
+        payload.scope_type = 'global'
       }
 
       if (moduleId) {
@@ -2278,6 +2291,10 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
     // Hasmounted (loading guard)
     hasMounted,
+
+    // Master template mode
+    isMasterTemplate,
+    setIsMasterTemplate,
   }
 
   return (

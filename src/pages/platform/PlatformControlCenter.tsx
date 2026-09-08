@@ -23,7 +23,9 @@ import {
   RefreshCw,
   CheckCircle2,
   Settings,
-  ShieldAlert
+  ShieldAlert,
+  Bot,
+  Mail
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -487,7 +489,7 @@ export default function PlatformControlCenter() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Card
               onClick={() => navigate('/platform/organizations')}
               className="p-4 rounded-xl border hover:border-amber-500/50 hover:bg-amber-500/5 cursor-pointer transition-all flex flex-col justify-between"
@@ -533,6 +535,54 @@ export default function PlatformControlCenter() {
               </div>
               <div className="mt-3 font-semibold text-[11px] text-emerald-600 flex items-center gap-1">
                 <span>Deploy Content</span> &rarr;
+              </div>
+            </Card>
+
+            <Card
+              onClick={() => navigate('/platform/ai-settings')}
+              className="p-4 rounded-xl border hover:border-purple-500/50 hover:bg-purple-500/5 cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div>
+                <Bot className="h-5 w-5 text-purple-600 mb-2" />
+                <h4 className="font-bold text-xs">AI Course Engine & Gateways</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Gemini, Groq, OpenRouter routing modes, spend caps, and edge diagnostics.
+                </p>
+              </div>
+              <div className="mt-3 font-semibold text-[11px] text-purple-600 flex items-center gap-1">
+                <span>Configure AI Engine</span> &rarr;
+              </div>
+            </Card>
+
+            <Card
+              onClick={() => navigate('/platform/email-templates')}
+              className="p-4 rounded-xl border hover:border-cyan-500/50 hover:bg-cyan-500/5 cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div>
+                <Mail className="h-5 w-5 text-cyan-600 mb-2" />
+                <h4 className="font-bold text-xs">System Email & Inbound Pipeline</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Transactional notification templates, delivery events, and inbound webhooks.
+                </p>
+              </div>
+              <div className="mt-3 font-semibold text-[11px] text-cyan-600 flex items-center gap-1">
+                <span>Manage Templates</span> &rarr;
+              </div>
+            </Card>
+
+            <Card
+              onClick={() => navigate('/platform/operations')}
+              className="p-4 rounded-xl border hover:border-indigo-500/50 hover:bg-indigo-500/5 cursor-pointer transition-all flex flex-col justify-between"
+            >
+              <div>
+                <Cpu className="h-5 w-5 text-indigo-600 mb-2" />
+                <h4 className="font-bold text-xs">Operations & Task Queue</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Background job execution, vector sync, and AI generation pipeline status.
+                </p>
+              </div>
+              <div className="mt-3 font-semibold text-[11px] text-indigo-600 flex items-center gap-1">
+                <span>Inspect Pipeline</span> &rarr;
               </div>
             </Card>
           </div>
