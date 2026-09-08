@@ -80,14 +80,14 @@ export const RootIndex = () => {
         if (deepLink) return deepLink
 
         if (account.isPlatformOperator && !account.activePlatformSession) {
-            safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+            safeLocalStorage.removeItem('altus_active_tenant_id')
             if (user) safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
             return '/platform'
         }
 
         if (account.isMultiOrg) {
             const userKey = `active_tenant_id_${user.id}`
-            const stored = safeLocalStorage.getItem(userKey) || safeLocalStorage.getItem('altus_active_tenant_id')
+            const stored = safeLocalStorage.getItem(userKey)
             if (!stored || stored === '__platform__') {
                 return '/select-tenant'
             }

@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useAccountContext } from '@/hooks/useAccountContext'
 import { AppLayout, InsideAppLayoutContext } from '@/components/layout/AppLayout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +33,7 @@ interface TenantContextGuardProps {
  */
 export function TenantContextGuard({ children, resourceName }: TenantContextGuardProps) {
   const { user, loading: authLoading } = useAuth()
+  const account = useAccountContext()
   const { 
     currentOrganization, 
     organizations, 
@@ -47,17 +49,24 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
   const location = useLocation()
   const ArrowIcon = isRtl ? ArrowLeft : ArrowRight
 
+  // Honour an explicit `?org=<id>` deep link: a shared tenant URL should restore
+  // the right tenant for a user who is a member of it. This is the URL carrying
+  // context — never a hardcoded default. Operators are excluded (they enter a
+  // tenant only through an audited break-glass session).
+  const orgParam = new URLSearchParams(location.search).get('org')
+  React.useEffect(() => {
+    if (!orgParam || account.isPlatformOperator) return
+    if (currentOrganization?.id === orgParam) return
+    const isMember = (account.tenantMemberships || []).some((m) => m.organization_id === orgParam)
+    if (isMember) void switchOrganization(orgParam)
+  }, [orgParam, account.isPlatformOperator, account.tenantMemberships, currentOrganization?.id, switchOrganization])
+
   if (authLoading || isLoading) {
     return <PageSkeleton />
   }
 
   // Unauthenticated users pass through to let ProtectedRoute handle login redirection
   if (!user) {
-    return <>{children ?? <Outlet />}</>
-  }
-
-  // Active tenant context exists -> allow access
-  if (currentOrganization) {
     return <>{children ?? <Outlet />}</>
   }
 
@@ -76,6 +85,35 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
       return <>{content}</>
     }
     return <AppLayout>{content}</AppLayout>
+  }
+
+  // Account resolution is the authority for both platform-operator status and
+  // tenant membership. Do not offer a tenant selector while it is unavailable:
+  // its options cannot be safely authorized until the server response succeeds.
+  if (account.resolveFailed) {
+    return renderContainer(
+      <div className="max-w-md mx-auto py-16 px-4 text-center">
+        <div className="mx-auto w-12 h-12 rounded-xl bg-destructive/15 border border-destructive/30 flex items-center justify-center mb-3">
+          <ShieldAlert className="h-6 w-6 text-destructive" />
+        </div>
+        <h2 className="text-lg font-bold text-foreground">
+          {t('admin:account_context_unavailable', 'Unable to Verify Account Access')}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          {t('admin:account_context_unavailable_message', 'We could not verify your platform and organization access. Please try again before continuing.')}
+        </p>
+        <Button className="mt-5" onClick={() => void account.refresh()}>
+          {t('common:retry', 'Try Again')}
+        </Button>
+      </div>
+    )
+  }
+
+  // Active tenant context exists -> allow access. This must remain below the
+  // resolver-failure gate so a stale context cannot render while access is
+  // being re-verified.
+  if (currentOrganization) {
+    return <>{children ?? <Outlet />}</>
   }
 
   // Case 1: Platform Operator in Platform Scope

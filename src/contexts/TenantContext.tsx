@@ -76,10 +76,9 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    // Critical: Do NOT proceed if account is still resolving.
-    // Platform-operator status (resolve_account_context) takes a moment on initial boot.
-    // Proceeding before account resolves causes isPlatformAdmin to be false, mistakenly
-    // falling into tenant-user handling and polluting localStorage with a customer tenant.
+    // Do NOT proceed while resolve_account_context() is still in flight — the
+    // server payload (is_platform_operator, tenant_memberships, primary org) is
+    // the single source of truth for which environment the user belongs in.
     if (account.loading) {
       return
     }
@@ -87,36 +86,38 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true)
 
-      // 1. Fetch user memberships
-      const { data: memberRows, error: memberErr } = await (supabase
+      const clearTenantScopes = () => {
+        setAvailableBrands([])
+        setAvailableHotels([])
+        setCurrentBrand(null)
+        setCurrentHotel(null)
+      }
+
+      // Full membership rows (for currentMembership metadata); the authoritative
+      // *list* of memberships still comes from the server payload below.
+      const { data: memberRows } = await (supabase
         .from('organization_memberships')
         .select('*')
         .eq('user_id', user.id)
         .eq('is_active', true) as unknown as Promise<{ data: OrganizationMembership[] | null; error: unknown }>)
+      setMemberships(memberRows || [])
 
-      if (memberErr) {
-        console.warn('Error fetching organization memberships:', memberErr)
-      }
-
-      const activeMemberships = memberRows || []
-      setMemberships(activeMemberships)
-
-      // 2. Fetch accessible organizations
-      const { data: orgRows, error: orgErr } = await (supabase
+      // RLS-scoped org list. Operators see every org; tenant users see only
+      // the orgs their memberships/ RLS expose.
+      const { data: orgRows } = await (supabase
         .from('organizations')
         .select('*')
         .eq('is_active', true)
         .eq('is_deleted', false) as unknown as Promise<{ data: Organization[] | null; error: unknown }>)
-
-      if (orgErr) {
-        console.warn('Error fetching organizations:', orgErr)
-      }
-
       const fetchedOrgs = orgRows || []
       setOrganizations(fetchedOrgs)
 
-      // 3. Platform Admin / Operator handling
-      if (isPlatformAdmin) {
+      // ── PLATFORM OPERATOR ───────────────────────────────────────────────
+      // An operator lives on the platform plane. The ONLY way they acquire a
+      // tenant context is an active, audited break-glass session
+      // (start_platform_session). localStorage / the current path never grant
+      // tenant context to an operator.
+      if (account.isPlatformOperator) {
         const { data: activeSession } = await (supabase
           .from('platform_access_sessions')
           .select('*, target_organization:organizations(*)')
@@ -126,97 +127,57 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
         if (activeSession && activeSession.target_organization) {
           setImpersonationSession(activeSession)
-          setCurrentOrganization(activeSession.target_organization)
+          setCurrentOrganization(activeSession.target_organization as Organization)
           await loadScopesForOrg(activeSession.target_organization_id)
           setIsLoading(false)
           return
         }
 
-        // Check whether the operator is navigating on a platform route
-        const isPlatformRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/platform')
-        const storedOrgId =
-          safeLocalStorage.getItem(`active_tenant_id_${user.id}`) ||
-          safeLocalStorage.getItem('altus_active_tenant_id')
-
-        // If the operator is browsing /platform, or stored preference is '__platform__' or empty:
-        // Always default to Platform Scope (currentOrganization = null).
-        if (isPlatformRoute || !storedOrgId || storedOrgId === '__platform__') {
-          setImpersonationSession(null)
-          setCurrentOrganization(null)
-          setAvailableBrands([])
-          setAvailableHotels([])
-          setCurrentBrand(null)
-          setCurrentHotel(null)
-          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
-          safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
-          setIsLoading(false)
-          return
-        }
-
-        // Only restore stored tenant if navigating a tenant route AND tenant exists in accessible orgs
-        const selectedOrg = fetchedOrgs.find(o => o.id === storedOrgId)
-        if (selectedOrg) {
-          setImpersonationSession(null)
-          setCurrentOrganization(selectedOrg)
-          await loadScopesForOrg(selectedOrg.id)
-          setIsLoading(false)
-          return
-        }
-
-        // Default to Platform Scope if no specific valid tenant selected
         setImpersonationSession(null)
         setCurrentOrganization(null)
-        setAvailableBrands([])
-        setAvailableHotels([])
-        setCurrentBrand(null)
-        setCurrentHotel(null)
+        clearTenantScopes()
         safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
-        safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+        safeLocalStorage.removeItem('altus_active_tenant_id')
         setIsLoading(false)
         return
       }
 
-      // 4. Tenant Users Handling
-      // Case A: User belongs to exactly 1 organization -> Auto-establish tenant context
-      // Case B: User belongs to multiple organizations -> Require explicit tenant selection or restore valid saved preference
-      const storedOrgId =
-        safeLocalStorage.getItem(`active_tenant_id_${user.id}`) ||
-        safeLocalStorage.getItem('altus_active_tenant_id')
+      // ── TENANT USER ─────────────────────────────────────────────────────
+      setImpersonationSession(null)
 
-      const isMultiTenant = account.isMultiOrg || activeMemberships.length > 1
-
-      let initialOrg: Organization | null = null
-
-      if (!isMultiTenant) {
-        // Single-tenant user: establish context automatically
-        const singleOrgId =
-          activeMemberships[0]?.organization_id ||
-          account.primaryOrganizationId ||
-          fetchedOrgs[0]?.id
-
-        initialOrg = (singleOrgId ? fetchedOrgs.find(o => o.id === singleOrgId) : null) || fetchedOrgs[0] || null
-      } else {
-        // Multi-tenant user: verify stored preference against accessible memberships
-        if (storedOrgId && storedOrgId !== '__platform__') {
-          const isPermittedOrg = activeMemberships.some(m => m.organization_id === storedOrgId)
-          if (isPermittedOrg) {
-            initialOrg = fetchedOrgs.find(o => o.id === storedOrgId) || null
-          }
-        }
-        // If no valid stored preference, initialOrg stays null so the user selects their tenant context
+      // resolve_account_context() failed — we cannot tell which tenant (if any)
+      // this user belongs to. Do NOT guess a tenant; leave context empty and let
+      // the route guards surface a retryable error.
+      if (account.resolveFailed) {
+        setCurrentOrganization(null)
+        clearTenantScopes()
+        setIsLoading(false)
+        return
       }
 
-      setCurrentOrganization(initialOrg)
+      const serverMemberships = account.tenantMemberships || []
+      const membershipOrgIds = new Set(serverMemberships.map((m) => m.organization_id))
+      const eligibleOrgs = fetchedOrgs.filter((o) => membershipOrgIds.has(o.id))
 
+      let initialOrg: Organization | null = null
+      if (eligibleOrgs.length === 1) {
+        initialOrg = eligibleOrgs[0]
+      } else if (eligibleOrgs.length > 1) {
+        const stored = safeLocalStorage.getItem(`active_tenant_id_${user.id}`)
+        if (stored && stored !== '__platform__' && membershipOrgIds.has(stored)) {
+          initialOrg = eligibleOrgs.find((o) => o.id === stored) || null
+        }
+        // otherwise leave null → TenantContextGuard / SelectTenant asks the user
+      }
+      // eligibleOrgs.length === 0 → initialOrg stays null → "no active org" state
+
+      setCurrentOrganization(initialOrg)
       if (initialOrg) {
         safeLocalStorage.setItem(`active_tenant_id_${user.id}`, initialOrg.id)
-        safeLocalStorage.setItem('altus_active_tenant_id', initialOrg.id)
+        safeLocalStorage.removeItem('altus_active_tenant_id')
         await loadScopesForOrg(initialOrg.id)
       } else {
-        setAvailableBrands([])
-        setAvailableHotels([])
-        setCurrentBrand(null)
-        setCurrentHotel(null)
+        clearTenantScopes()
       }
     } catch (err) {
       console.error('Failed to load tenant data:', err)
@@ -224,7 +185,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, isPlatformAdmin, account.primaryOrganizationId, account.isMultiOrg, account.loading])
+  }, [
+    user,
+    account.isPlatformOperator,
+    account.loading,
+    account.resolveFailed,
+    account.tenantMemberships,
+  ])
 
   const loadScopesForOrg = async (orgId: string) => {
     // Fetch brands
@@ -279,13 +246,25 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const targetOrg = organizations.find(o => o.id === orgId)
     if (!targetOrg) return
 
+    // Platform operators may only enter a tenant through enterOrganization(),
+    // which creates an audited, time-bound access session server-side.
+    if (account.isPlatformOperator) {
+      throw new Error('Platform operators must enter organizations through an audited access session')
+    }
+
+    const isMember = (account.tenantMemberships || []).some(m => m.organization_id === orgId)
+    if (!isMember) {
+      console.warn('switchOrganization: refused — not a member of', orgId)
+      return
+    }
+
     // Immediately clear query cache so no data from the previous tenant lingers
     queryClient.clear()
 
     if (user) {
       safeLocalStorage.setItem(`active_tenant_id_${user.id}`, orgId)
     }
-    safeLocalStorage.setItem('altus_active_tenant_id', orgId)
+    safeLocalStorage.removeItem('altus_active_tenant_id')
     setCurrentOrganization(targetOrg)
     setCurrentBrand(null)
     setCurrentHotel(null)
@@ -340,7 +319,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
       }
-      safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+      safeLocalStorage.removeItem('altus_active_tenant_id')
       setCurrentOrganization(null)
       setAvailableBrands([])
       setAvailableHotels([])
@@ -372,7 +351,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     setAvailableHotels([])
     setCurrentBrand(null)
     setCurrentHotel(null)
-    safeLocalStorage.setItem('altus_active_tenant_id', '__platform__')
+    safeLocalStorage.removeItem('altus_active_tenant_id')
     if (user) {
       safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
     }

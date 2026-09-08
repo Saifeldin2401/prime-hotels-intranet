@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { useTenant } from '@/contexts/TenantContext'
 import { platformService } from '@/services/platformService'
 import { supabase } from '@/lib/supabase'
 import {
@@ -23,7 +21,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   RefreshCw,
-  ExternalLink,
   Shield,
   Crown,
   UserPlus,
@@ -39,16 +36,20 @@ export default function PlatformUserDirectory() {
   const { t, i18n } = useTranslation(['admin', 'common'])
   const { toast } = useToast()
   const { user: currentActor } = useAuth()
-  const { switchOrganization } = useTenant()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<'platform_team' | 'customer_directory'>('platform_team')
   const [search, setSearch] = useState('')
   const [selectedOrgId, setSelectedOrgId] = useState('all')
   const [selectedRole, setSelectedRole] = useState('all')
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'suspended'>('all')
+  const [sortBy, setSortBy] = useState<'name' | 'newest' | 'tenants'>('name')
   const [editingUser, setEditingUser] = useState<any | null>(null)
   const [newPlatformRole, setNewPlatformRole] = useState<string>('platform_support')
+  // Tenant-membership management modal
+  const [managingTenantsUser, setManagingTenantsUser] = useState<any | null>(null)
+  const [addTenantOrgId, setAddTenantOrgId] = useState('')
+  const [addTenantRole, setAddTenantRole] = useState('learner')
 
   // Add operator modal state
   const [addOperatorOpen, setAddOperatorOpen] = useState(false)
@@ -190,6 +191,53 @@ export default function PlatformUserDirectory() {
     },
   })
 
+  // Add / change role / remove a user's tenant membership (audited via platform_set_membership)
+  const setMembershipMutation = useMutation({
+    mutationFn: (params: { orgId: string; userId: string; role: string; active: boolean }) =>
+      platformService.setTenantMembership({
+        orgId: params.orgId,
+        userId: params.userId,
+        role: params.role,
+        active: params.active,
+      }),
+    onSuccess: (_, vars) => {
+      toast({
+        title: vars.active
+          ? t('admin:membership_updated_toast', 'Tenant membership updated')
+          : t('admin:membership_removed_toast', 'Removed from tenant'),
+        description: t('admin:membership_updated_desc', 'The change is recorded in the platform audit log.'),
+      })
+      queryClient.invalidateQueries({ queryKey: ['platform-global-user-directory'] })
+      setManagingTenantsUser((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              memberships: (prev.memberships || [])
+                .filter((m: any) => !(m.organization_id === vars.orgId && !vars.active))
+                .map((m: any) =>
+                  m.organization_id === vars.orgId ? { ...m, role: vars.role, is_active: vars.active } : m,
+                )
+                .concat(
+                  vars.active && !(prev.memberships || []).some((m: any) => m.organization_id === vars.orgId)
+                    ? [{
+                        organization_id: vars.orgId,
+                        organization_name: orgs.find((o) => o.id === vars.orgId)?.name || 'Organization',
+                        role: vars.role,
+                        is_active: true,
+                      }]
+                    : [],
+                ),
+            }
+          : prev,
+      )
+      setAddTenantOrgId('')
+      setAddTenantRole('learner')
+    },
+    onError: (err: any) => {
+      toast({ title: t('admin:membership_update_failed', 'Membership update failed'), description: err.message, variant: 'destructive' })
+    },
+  })
+
   const setOperatorActiveMutation = useMutation({
     mutationFn: (params: { userId: string; active: boolean }) =>
       platformService.setPlatformUserActive(params),
@@ -292,6 +340,38 @@ export default function PlatformUserDirectory() {
     { value: 'platform_support', label: 'Platform Support', description: 'Assisted tenant access, troubleshooting, ticket resolution' },
     { value: 'platform_instructor', label: 'Platform Instructor', description: 'Master course authoring and global instructional delivery' },
   ]
+
+  const TENANT_ROLE_OPTIONS: Array<{ value: string; label: string }> = [
+    { value: 'organization_owner', label: 'Organization Owner' },
+    { value: 'organization_admin', label: 'Organization Admin' },
+    { value: 'brand_admin', label: 'Brand Admin' },
+    { value: 'hotel_admin', label: 'Hotel / Branch Admin' },
+    { value: 'department_manager', label: 'Department Manager' },
+    { value: 'training_manager', label: 'Training Manager' },
+    { value: 'instructor', label: 'Instructor' },
+    { value: 'knowledge_manager', label: 'Knowledge Manager' },
+    { value: 'author', label: 'Author' },
+    { value: 'learner', label: 'Learner' },
+  ]
+
+  // Status filter + sort are applied client-side on top of the RPC's
+  // search / org / role filters.
+  const displayedUsers = useMemo(() => {
+    let list = users
+    if (selectedStatus !== 'all') {
+      const wantActive = selectedStatus === 'active'
+      list = list.filter((u) => !!u.is_active === wantActive)
+    }
+    const sorted = [...list]
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => (a.full_name || a.email || '').localeCompare(b.full_name || b.email || ''))
+    } else if (sortBy === 'newest') {
+      sorted.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())
+    } else if (sortBy === 'tenants') {
+      sorted.sort((a, b) => (b.membership_count || 0) - (a.membership_count || 0))
+    }
+    return sorted
+  }, [users, selectedStatus, sortBy])
 
   const filteredOperators = useMemo(() => {
     if (!search) return platformOperators
@@ -780,6 +860,38 @@ export default function PlatformUserDirectory() {
               </Select>
             </div>
 
+            <div>
+              <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
+                {t('admin:filter_by_status', 'Filter by Status')}
+              </Label>
+              <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as any)}>
+                <SelectTrigger className="h-9 text-xs rounded-xl bg-background/70">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('admin:all_statuses', 'All Statuses')}</SelectItem>
+                  <SelectItem value="active">{t('admin:status_active', 'Active')}</SelectItem>
+                  <SelectItem value="suspended">{t('admin:status_suspended', 'Suspended')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
+                {t('admin:sort_by', 'Sort by')}
+              </Label>
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="h-9 text-xs rounded-xl bg-background/70">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">{t('admin:sort_name', 'Name (A–Z)')}</SelectItem>
+                  <SelectItem value="newest">{t('admin:sort_newest', 'Newest first')}</SelectItem>
+                  <SelectItem value="tenants">{t('admin:sort_tenants', 'Most tenants')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-end">
               <Button
                 variant="outline"
@@ -787,11 +899,13 @@ export default function PlatformUserDirectory() {
                 onClick={() => {
                   setSelectedOrgId('all')
                   setSelectedRole('all')
+                  setSelectedStatus('all')
+                  setSortBy('name')
                   setSearch('')
                 }}
                 className="w-full h-9 text-xs rounded-xl border-border/60 hover:bg-muted/60 text-muted-foreground"
               >
-                Clear Filters
+                {t('admin:clear_filters', 'Clear Filters')}
               </Button>
             </div>
           </div>
@@ -816,14 +930,14 @@ export default function PlatformUserDirectory() {
                       <span>{t('admin:loading_user_directory', 'Loading global customer directory...')}</span>
                     </TableCell>
                   </TableRow>
-                ) : users.length === 0 ? (
+                ) : displayedUsers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-xs text-muted-foreground">
                       {t('admin:no_users_found', 'No users found matching query filters.')}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((u) => (
+                  displayedUsers.map((u) => (
                     <TableRow key={u.id} className="hover:bg-muted/30">
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -890,24 +1004,23 @@ export default function PlatformUserDirectory() {
 
                       <TableCell className="text-end">
                         <div className="flex items-center justify-end gap-1.5">
-                          {u.primary_organization_id && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title={t('admin:open_tenant_users', 'Manage in Organization Context')}
-                              onClick={async () => {
-                                if (u.primary_organization_id) {
-                                  await switchOrganization(u.primary_organization_id)
-                                  navigate('/admin/users')
-                                }
-                              }}
-                              className="h-7 text-[11px] px-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
-                            >
-                              <Building2 className="h-3.5 w-3.5 me-1" />
-                              <span>{t('admin:tenant_context_btn', 'Tenant Scope')}</span>
-                              <ExternalLink className="ms-1 h-3 w-3 opacity-70" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={t('admin:manage_tenant_memberships', 'Manage tenant memberships')}
+                            onClick={() => {
+                              setManagingTenantsUser(u)
+                              setAddTenantOrgId('')
+                              setAddTenantRole('learner')
+                            }}
+                            className="h-7 text-[11px] px-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                          >
+                            <Building2 className="h-3.5 w-3.5 me-1" />
+                            <span>{t('admin:tenants', 'Tenants')}</span>
+                            {u.membership_count > 0 && (
+                              <span className="ms-1 rounded bg-blue-500/15 px-1 text-[10px] font-mono">{u.membership_count}</span>
+                            )}
+                          </Button>
 
                           <Button
                             variant="ghost"
@@ -952,12 +1065,12 @@ export default function PlatformUserDirectory() {
                   <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-blue-500" />
                   <span>{t('admin:loading_user_directory', 'Loading global customer directory...')}</span>
                 </div>
-              ) : users.length === 0 ? (
+              ) : displayedUsers.length === 0 ? (
                 <div className="text-center py-10 px-4 text-xs text-muted-foreground">
                   {t('admin:no_users_found', 'No users found matching query filters.')}
                 </div>
               ) : (
-                users.map((u) => (
+                displayedUsers.map((u) => (
                   <div key={u.id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
@@ -1007,22 +1120,22 @@ export default function PlatformUserDirectory() {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t border-border/40">
-                      {u.primary_organization_id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={async () => {
-                            if (u.primary_organization_id) {
-                              await switchOrganization(u.primary_organization_id)
-                              navigate('/admin/users')
-                            }
-                          }}
-                          className="h-8 text-xs px-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 min-h-touch"
-                        >
-                          <Building2 className="h-3.5 w-3.5 me-1" />
-                          <span>{t('admin:tenant_context_btn', 'Tenant Scope')}</span>
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setManagingTenantsUser(u)
+                          setAddTenantOrgId('')
+                          setAddTenantRole('learner')
+                        }}
+                        className="h-8 text-xs px-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 min-h-touch"
+                      >
+                        <Building2 className="h-3.5 w-3.5 me-1" />
+                        <span>{t('admin:tenants', 'Tenants')}</span>
+                        {u.membership_count > 0 && (
+                          <span className="ms-1 rounded bg-blue-500/15 px-1 text-[10px] font-mono">{u.membership_count}</span>
+                        )}
+                      </Button>
 
                       <Button
                         variant="ghost"
@@ -1418,6 +1531,161 @@ export default function PlatformUserDirectory() {
                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs"
               >
                 {assignRoleMutation.isPending ? 'Granting…' : t('admin:grant_role', 'Grant Role')}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ------------------------------------------------------------------------- */}
+      {/* MODAL 3: MANAGE TENANT MEMBERSHIPS                                       */}
+      {/* ------------------------------------------------------------------------- */}
+      {managingTenantsUser && (
+        <Dialog open={!!managingTenantsUser} onOpenChange={(open) => !open && setManagingTenantsUser(null)}>
+          <DialogContent className="max-w-lg rounded-3xl p-6">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-bold">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                <span>{t('admin:manage_tenant_memberships', 'Manage Tenant Memberships')}</span>
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                {t('admin:manage_tenant_memberships_desc', {
+                  name: managingTenantsUser.full_name || managingTenantsUser.email,
+                  defaultValue: `Add, re-role, or remove ${managingTenantsUser.full_name || managingTenantsUser.email} across customer organizations. Every change is written to the platform audit log.`,
+                })}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-3 py-2 text-xs">
+              {/* Current memberships */}
+              <div className="space-y-2">
+                <Label className="text-[11px] font-bold text-muted-foreground">
+                  {t('admin:current_memberships', 'Current memberships')}
+                </Label>
+                {(managingTenantsUser.memberships || []).filter((m: any) => m.is_active !== false).length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground italic">
+                    {t('admin:no_tenant_memberships', 'Not a member of any tenant.')}
+                  </p>
+                ) : (
+                  (managingTenantsUser.memberships || [])
+                    .filter((m: any) => m.is_active !== false)
+                    .map((m: any) => (
+                      <div key={m.organization_id} className="flex items-center gap-2 p-2 rounded-xl border border-border/60 bg-muted/20">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-foreground truncate">{m.organization_name}</div>
+                          {m.hotel_name && <div className="text-[10px] text-muted-foreground truncate">{m.hotel_name}</div>}
+                        </div>
+                        <Select
+                          value={m.role}
+                          onValueChange={(role) =>
+                            setMembershipMutation.mutate({
+                              orgId: m.organization_id,
+                              userId: managingTenantsUser.id,
+                              role,
+                              active: true,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-[150px] text-[11px] rounded-lg">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TENANT_ROLE_OPTIONS.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title={t('admin:remove_from_tenant', 'Remove from tenant')}
+                          disabled={setMembershipMutation.isPending}
+                          onClick={() =>
+                            setMembershipMutation.mutate({
+                              orgId: m.organization_id,
+                              userId: managingTenantsUser.id,
+                              role: m.role,
+                              active: false,
+                            })
+                          }
+                          className="h-8 w-8 p-0 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 shrink-0"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))
+                )}
+              </div>
+
+              {/* Add to a tenant */}
+              <div className="pt-2 border-t border-border/50 space-y-2">
+                <Label className="text-[11px] font-bold text-muted-foreground">
+                  {t('admin:add_to_tenant', 'Add to a tenant')}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Select value={addTenantOrgId} onValueChange={setAddTenantOrgId}>
+                    <SelectTrigger className="h-9 flex-1 text-xs rounded-xl">
+                      <SelectValue placeholder={t('admin:select_organization', 'Select organization')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orgs
+                        .filter(
+                          (o) =>
+                            !(managingTenantsUser.memberships || []).some(
+                              (m: any) => m.organization_id === o.id && m.is_active !== false,
+                            ),
+                        )
+                        .map((o) => (
+                          <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={addTenantRole} onValueChange={setAddTenantRole}>
+                    <SelectTrigger className="h-9 w-[150px] text-xs rounded-xl">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TENANT_ROLE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!addTenantOrgId || setMembershipMutation.isPending}
+                  onClick={() =>
+                    setMembershipMutation.mutate({
+                      orgId: addTenantOrgId,
+                      userId: managingTenantsUser.id,
+                      role: addTenantRole,
+                      active: true,
+                    })
+                  }
+                  className="w-full h-9 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {setMembershipMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    t('admin:add_membership', 'Add membership')
+                  )}
+                </Button>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 text-[11px] leading-relaxed flex gap-2">
+                <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <span>
+                  {t(
+                    'admin:membership_move_note',
+                    'To move someone between tenants, add them to the new tenant and remove the old membership. Only platform operators may assign the Organization Owner role.',
+                  )}
+                </span>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="ghost" size="sm" onClick={() => setManagingTenantsUser(null)} className="rounded-xl text-xs">
+                {t('common:done', 'Done')}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -22,6 +22,7 @@ vi.mock('@/hooks/useAuth', () => ({
 
 let mockAccountState = {
   loading: false,
+  resolveFailed: false,
   isPlatformOperator: false,
   platformRoles: [] as string[],
   platformPermissions: [] as string[],
@@ -165,8 +166,12 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
       expect(capturedTenantContext.isPlatformScope).toBe(true)
       // Operator MUST NOT default to tenant 1
       expect(capturedTenantContext.currentOrganization).toBeNull()
-      // Storage must be set to __platform__
-      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBe('__platform__')
+      // Legacy global tenant storage must not survive an operator bootstrap.
+      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBeNull()
+      expect(safeLocalStorage.getItem('active_tenant_id_operator-1')).toBe('__platform__')
+
+      await expect(capturedTenantContext.switchOrganization('org-tenant-1'))
+        .rejects.toThrow(/audited access session/i)
     })
 
     it('purges cache with queryClient.clear() when operator enters and exits impersonation', async () => {
@@ -257,7 +262,8 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
       expect(vi.mocked(queryClient.clear).mock.calls.length).toBeGreaterThan(clearCallsBeforeExit)
       expect(capturedContext.currentOrganization).toBeNull()
       expect(capturedContext.isPlatformScope).toBe(true)
-      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBe('__platform__')
+      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBeNull()
+      expect(safeLocalStorage.getItem('active_tenant_id_operator-1')).toBe('__platform__')
     })
   })
 
@@ -303,12 +309,51 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
       expect(screen.getByText(/Go to Organizations Hub/i)).toBeDefined()
     })
 
+    it('shows a retryable access-verification error instead of an unusable tenant selector', async () => {
+      const refresh = vi.fn().mockResolvedValue(undefined)
+      mockAuthUser = { id: 'unresolved-user', email: 'unresolved@acme.com' }
+      mockAccountState = {
+        ...mockAccountState,
+        isPlatformOperator: false,
+        resolveFailed: true,
+        tenantMemberships: [],
+        refresh,
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(createChainableQuery([
+        { id: 'org-tenant-1', name: 'Acme Hotels', slug: 'acme' },
+      ]))
+
+      await act(async () => {
+        render(
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/training/hub']}>
+              <TenantProvider>
+                <TenantContextGuard resourceName="Training Hub">
+                  <div data-testid="authorized-training-content">Acme Training Dashboard</div>
+                </TenantContextGuard>
+              </TenantProvider>
+            </MemoryRouter>
+          </QueryClientProvider>
+        )
+      })
+
+      expect(screen.queryByTestId('authorized-training-content')).toBeNull()
+      expect(screen.getByText(/Unable to Verify Account Access/i)).toBeDefined()
+      await act(async () => {
+        screen.getByRole('button', { name: /Try Again/i }).click()
+      })
+      expect(refresh).toHaveBeenCalledOnce()
+    })
+
     it('passes through and renders children when valid tenant context is established', async () => {
       mockAuthUser = { id: 'manager-1', email: 'manager@acme.com' }
       mockPrimaryRole = 'hotel_admin'
       mockAccountState = {
         ...mockAccountState,
         isPlatformOperator: false,
+        resolveFailed: false,
+        tenantMemberships: [{ organization_id: 'org-tenant-1' }],
         primaryOrganizationId: 'org-tenant-1',
         isMultiOrg: false,
       }
@@ -353,6 +398,8 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
       mockAccountState = {
         ...mockAccountState,
         isPlatformOperator: false,
+        resolveFailed: false,
+        tenantMemberships: [{ organization_id: 'org-a' }, { organization_id: 'org-b' }],
         primaryOrganizationId: 'org-a',
         isMultiOrg: true,
       }
@@ -406,7 +453,8 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
 
       expect(queryClient.clear).toHaveBeenCalled()
       expect(capturedContext.currentOrganization?.id).toBe('org-a')
-      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBe('org-a')
+      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBeNull()
+      expect(safeLocalStorage.getItem('active_tenant_id_multi-manager')).toBe('org-a')
 
       // User switches to Tenant B
       const clearCallsBeforeSwitch = vi.mocked(queryClient.clear).mock.calls.length
@@ -416,7 +464,8 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
 
       expect(vi.mocked(queryClient.clear).mock.calls.length).toBeGreaterThan(clearCallsBeforeSwitch)
       expect(capturedContext.currentOrganization?.id).toBe('org-b')
-      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBe('org-b')
+      expect(safeLocalStorage.getItem('altus_active_tenant_id')).toBeNull()
+      expect(safeLocalStorage.getItem('active_tenant_id_multi-manager')).toBe('org-b')
     })
   })
 })

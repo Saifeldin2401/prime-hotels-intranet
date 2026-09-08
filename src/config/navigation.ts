@@ -639,11 +639,26 @@ export function resolvePathForRole(route: RouteConfig, role: AppRole | null): st
 }
 
 /**
+ * Platform-console visibility. The Platform Control Center belongs to the
+ * platform-operator identity model (platform_users / platform_role_assignments),
+ * NOT the tenant `app_role` list. Platform routes are hidden unless the
+ * server-resolved operator identity is explicitly provided by the caller.
+ */
+export interface NavAccessOptions {
+    isPlatformOperator?: boolean
+}
+
+function canSeePlatformGroup(role: AppRole | null, opts?: NavAccessOptions): boolean {
+    void role
+    return opts?.isPlatformOperator === true
+}
+
+/**
  * Check if a role can access a route
  */
-export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolean {
-    if (route.group === 'platform_operations' && role !== 'super_admin') {
-        return false
+export function canAccessRoute(route: RouteConfig, role: AppRole | null, opts?: NavAccessOptions): boolean {
+    if (route.group === 'platform_operations') {
+        return canSeePlatformGroup(role, opts)
     }
     return canRoleAccess(role, route.allowedRoles)
 }
@@ -651,9 +666,9 @@ export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolea
 /**
  * Check if a role can see a navigation group
  */
-export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null): boolean {
-    if (group.id === 'platform_operations' && role !== 'super_admin') {
-        return false
+export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null, opts?: NavAccessOptions): boolean {
+    if (group.id === 'platform_operations') {
+        return canSeePlatformGroup(role, opts)
     }
     return canRoleAccess(role, group.visibleTo)
 }
@@ -661,14 +676,14 @@ export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null):
 /**
  * Get all routes for a specific role, organized by group
  */
-export function getRoutesForRole(role: AppRole | null): Map<NavigationGroup, RouteConfig[]> {
+export function getRoutesForRole(role: AppRole | null, opts?: NavAccessOptions): Map<NavigationGroup, RouteConfig[]> {
     const routesByGroup = new Map<NavigationGroup, RouteConfig[]>()
 
-    if (!role) return routesByGroup
+    if (!role && !opts?.isPlatformOperator) return routesByGroup
 
     // Initialize groups in defined order
     NAVIGATION_GROUPS
-        .filter(group => canSeeGroup(group, role))
+        .filter(group => canSeeGroup(group, role, opts))
         .sort((a, b) => a.order - b.order)
         .forEach(group => {
             routesByGroup.set(group.id, [])
@@ -676,7 +691,7 @@ export function getRoutesForRole(role: AppRole | null): Map<NavigationGroup, Rou
 
     // Populate routes
     ROUTES
-        .filter(route => !route.hideFromNav && canAccessRoute(route, role))
+        .filter(route => !route.hideFromNav && canAccessRoute(route, role, opts))
         .sort((a, b) => a.order - b.order)
         .forEach(route => {
             const groupRoutes = routesByGroup.get(route.group)
@@ -698,11 +713,11 @@ export function getRoutesForRole(role: AppRole | null): Map<NavigationGroup, Rou
 /**
  * Get flat list of routes for a role (for mobile nav)
  */
-export function getFlatRoutesForRole(role: AppRole | null): RouteConfig[] {
-    if (!role) return []
+export function getFlatRoutesForRole(role: AppRole | null, opts?: NavAccessOptions): RouteConfig[] {
+    if (!role && !opts?.isPlatformOperator) return []
 
     return ROUTES
-        .filter(route => !route.hideFromNav && canAccessRoute(route, role))
+        .filter(route => !route.hideFromNav && canAccessRoute(route, role, opts))
         .sort((a, b) => {
             const groupA = NAVIGATION_GROUPS.find(g => g.id === a.group)?.order ?? 99
             const groupB = NAVIGATION_GROUPS.find(g => g.id === b.group)?.order ?? 99

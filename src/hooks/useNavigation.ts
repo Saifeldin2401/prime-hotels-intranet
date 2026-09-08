@@ -94,6 +94,13 @@ export function useNavigation(): UseNavigationReturn {
     const favorites = useNavigationStore((state) => state.favorites)
     const recentlyVisited = useNavigationStore((state) => state.recentlyVisited)
 
+    // Platform-console visibility comes from the platform-operator identity model,
+    // never from a tenant app_role. Thread this into the navigation config helpers.
+    const navOpts = useMemo(
+        () => ({ isPlatformOperator: account.isPlatformOperator }),
+        [account.isPlatformOperator],
+    )
+
     // Check if actively navigating or scoped to the Platform Control Center plane
     const isPlatformActive = Boolean(
         account.isPlatformOperator && (isPlatformScope || location.pathname.startsWith('/platform'))
@@ -163,7 +170,7 @@ export function useNavigation(): UseNavigationReturn {
     // Grouped navigation for sidebar - Strictly Context-Aware
     const groupedNavigation = useMemo((): NavigationGroupWithItems[] => {
         const effectiveRole = primaryRole || (account.isPlatformOperator ? 'super_admin' : 'staff')
-        const routesByGroup = getRoutesForRole(effectiveRole)
+        const routesByGroup = getRoutesForRole(effectiveRole, navOpts)
         const groups: NavigationGroupWithItems[] = []
 
         for (const [groupId, routes] of routesByGroup.entries()) {
@@ -224,13 +231,13 @@ export function useNavigation(): UseNavigationReturn {
         }
 
         return groups.sort((a, b) => a.config.order - b.config.order)
-    }, [primaryRole, enrichRoute, account, isPlatformActive])
+    }, [primaryRole, enrichRoute, account, isPlatformActive, navOpts])
 
     // Flat navigation for mobile
     const flatNavigation = useMemo((): NavigationItem[] => {
         const effectiveRole = primaryRole || (account.isPlatformOperator ? 'super_admin' : 'staff')
-        return getFlatRoutesForRole(effectiveRole).filter(allowPlatformRoute).map(enrichRoute)
-    }, [primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator])
+        return getFlatRoutesForRole(effectiveRole, navOpts).filter(allowPlatformRoute).map(enrichRoute)
+    }, [primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator, navOpts])
 
     // Quick actions for mobile bottom bar
     const quickActions = useMemo((): NavigationItem[] => {
@@ -251,10 +258,10 @@ export function useNavigation(): UseNavigationReturn {
             .filter((r): r is RouteConfig => {
                 if (!r) return false
                 if (r.group === PLATFORM_GROUP && !account.isPlatformOperator) return false
-                return canAccessRoute(r, primaryRole) && allowPlatformRoute(r)
+                return canAccessRoute(r, primaryRole, navOpts) && allowPlatformRoute(r)
             })
             .map(enrichRoute)
-    }, [favorites, primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator])
+    }, [favorites, primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator, navOpts])
 
     // Recently visited routes
     const recentItems = useMemo((): NavigationItem[] => {
@@ -263,10 +270,10 @@ export function useNavigation(): UseNavigationReturn {
             .filter((r): r is RouteConfig => {
                 if (!r) return false
                 if (r.group === PLATFORM_GROUP && !account.isPlatformOperator) return false
-                return canAccessRoute(r, primaryRole) && allowPlatformRoute(r)
+                return canAccessRoute(r, primaryRole, navOpts) && allowPlatformRoute(r)
             })
             .map(enrichRoute)
-    }, [recentlyVisited, primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator])
+    }, [recentlyVisited, primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator, navOpts])
 
     // Filter permitted routes by search term
     const searchRoutes = useCallback((query: string): NavigationItem[] => {
@@ -276,7 +283,7 @@ export function useNavigation(): UseNavigationReturn {
         return ROUTES
             .filter(r => {
                 if (r.group === PLATFORM_GROUP && !account.isPlatformOperator) return false
-                return canAccessRoute(r, primaryRole || (account.isPlatformOperator ? 'super_admin' : 'staff'))
+                return canAccessRoute(r, primaryRole || (account.isPlatformOperator ? 'super_admin' : 'staff'), navOpts)
             })
             .filter(allowPlatformRoute)
             .filter(r =>
@@ -287,14 +294,14 @@ export function useNavigation(): UseNavigationReturn {
             )
             .map(enrichRoute)
             .slice(0, 10)
-    }, [primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator])
+    }, [primaryRole, enrichRoute, allowPlatformRoute, account.isPlatformOperator, navOpts])
 
     // Check if user can access a path
     const canAccess = (path: string): boolean => {
         const route = ROUTES.find(r => r.path === path)
         if (!route) return false
         if (route.group === PLATFORM_GROUP && !account.isPlatformOperator) return false
-        return canAccessRoute(route, primaryRole) && allowPlatformRoute(route)
+        return canAccessRoute(route, primaryRole, navOpts) && allowPlatformRoute(route)
     }
 
     // Get route config by path

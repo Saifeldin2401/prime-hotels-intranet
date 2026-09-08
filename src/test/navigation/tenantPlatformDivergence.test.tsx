@@ -93,11 +93,28 @@ describe('Tenant vs Platform Navigation Divergence & Security', () => {
       expect(canSeeGroup(platformGroup!, 'staff')).toBe(false)
       expect(canSeeGroup(platformGroup!, 'learner')).toBe(false)
 
-      // Only super_admin can see it
-      expect(canSeeGroup(platformGroup!, 'super_admin')).toBe(true)
+      // A tenant app role never grants platform-console visibility.
+      expect(canSeeGroup(platformGroup!, 'super_admin')).toBe(false)
     })
 
-    it('blocks tenant roles from accessing all /platform/* routes', () => {
+    it('grants platform-console visibility from the platform-operator identity, not the app_role (R1)', () => {
+      const platformGroup = NAVIGATION_GROUPS.find(g => g.id === 'platform_operations')
+      const platformRoutes = ROUTES.filter(r => r.group === 'platform_operations')
+
+      // An operator whose tenant app_role is only "learner" (or null) still sees
+      // the platform console when the operator flag is threaded through.
+      expect(canSeeGroup(platformGroup!, 'learner', { isPlatformOperator: true })).toBe(true)
+      expect(canSeeGroup(platformGroup!, null, { isPlatformOperator: true })).toBe(true)
+      for (const route of platformRoutes) {
+        expect(canAccessRoute(route, 'learner', { isPlatformOperator: true })).toBe(true)
+      }
+
+      // ...and a non-operator is still blocked regardless of app_role.
+      expect(canSeeGroup(platformGroup!, 'learner', { isPlatformOperator: false })).toBe(false)
+      expect(canSeeGroup(platformGroup!, 'corporate_admin', { isPlatformOperator: false })).toBe(false)
+    })
+
+    it('blocks every tenant app_role (super_admin included) from /platform/* routes without the operator flag', () => {
       const platformRoutes = ROUTES.filter(r => r.group === 'platform_operations')
       expect(platformRoutes.length).toBeGreaterThan(0)
 
@@ -106,7 +123,10 @@ describe('Tenant vs Platform Navigation Divergence & Security', () => {
         expect(canAccessRoute(route, 'regional_admin')).toBe(false)
         expect(canAccessRoute(route, 'administrator')).toBe(false)
         expect(canAccessRoute(route, 'staff')).toBe(false)
-        expect(canAccessRoute(route, 'super_admin')).toBe(true)
+        // Platform visibility comes only from the resolved platform-operator
+        // identity — never from a tenant app_role, not even super_admin.
+        expect(canAccessRoute(route, 'super_admin')).toBe(false)
+        expect(canAccessRoute(route, 'super_admin', { isPlatformOperator: true })).toBe(true)
       }
     })
   })

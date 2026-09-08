@@ -771,6 +771,11 @@ export function useSearchSuggestions(query: string) {
               .limit(docSuggestionLimit)
 
             if (!canSearchDraftContent) q = q.eq('status', 'PUBLISHED')
+            if (currentOrganization?.id && !isPlatformScope) {
+              q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
+            } else {
+              q = q.eq('is_master_template', true)
+            }
             const result = await mutate(q)
             docQueryResults.push({ data: result.data || [] })
           }
@@ -808,6 +813,11 @@ export function useSearchSuggestions(query: string) {
                 .limit(3)
 
               if (!canSearchDraftContent) q = q.eq('status', 'PUBLISHED')
+              if (currentOrganization?.id && !isPlatformScope) {
+                q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
+              } else {
+                q = q.eq('is_master_template', true)
+              }
               return q
             }
 

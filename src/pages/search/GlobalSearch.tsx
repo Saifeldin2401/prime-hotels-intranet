@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { supabase } from '@/lib/supabase'
+import { escapeSearchQuery } from '@/lib/utils'
 import { AnalyticsEvents } from '@/types/analytics'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
@@ -62,17 +63,20 @@ export default function GlobalSearch() {
     const { t } = useTranslation(['common', 'admin'])
     const { currentOrganization } = useTenant()
     const { track } = useAnalytics()
+    const organizationId = currentOrganization?.id ?? null
+    const escapedQuery = escapeSearchQuery(query)
+    const canSearchTenantContent = Boolean(organizationId && query.trim())
 
     // 1. Search Knowledge & Documents
     const { data: documents = [], isLoading: docsLoading } = useQuery({
         queryKey: ['search', 'documents', query, currentOrganization?.id],
         queryFn: async () => {
-            if (!query.trim()) return []
+            if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('documents')
                 .select('id, title, description, status, created_at, document_type')
                 .eq('is_deleted', false)
-                .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+                .or(`and(or(organization_id.eq.${organizationId},is_master_template.eq.true),or(title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%))`)
                 .limit(20)
             if (error) {
                 console.warn('Search docs error:', error)
@@ -80,19 +84,19 @@ export default function GlobalSearch() {
             }
             return (data || []) as SearchDocResult[]
         },
-        enabled: !!query.trim()
+        enabled: canSearchTenantContent
     })
 
     // 2. Search Courses & Training Modules
     const { data: courses = [], isLoading: coursesLoading } = useQuery({
         queryKey: ['search', 'courses', query, currentOrganization?.id],
         queryFn: async () => {
-            if (!query.trim()) return []
+            if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('training_modules')
                 .select('id, title, description, status, difficulty_level, created_at, estimated_duration_minutes')
                 .eq('is_deleted', false)
-                .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+                .or(`and(or(organization_id.eq.${organizationId},is_master_template.eq.true),or(title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%))`)
                 .limit(20)
             if (error) {
                 console.warn('Search courses error:', error)
@@ -100,18 +104,19 @@ export default function GlobalSearch() {
             }
             return (data || []) as SearchCourseResult[]
         },
-        enabled: !!query.trim()
+        enabled: canSearchTenantContent
     })
 
     // 3. Search Quizzes & Assessments
     const { data: quizzes = [], isLoading: quizzesLoading } = useQuery({
         queryKey: ['search', 'quizzes', query, currentOrganization?.id],
         queryFn: async () => {
-            if (!query.trim()) return []
+            if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('learning_quizzes')
                 .select('id, title, description, passing_score_percentage, created_at')
-                .or(`title.ilike.%${query}%,description.ilike.%${query}%`)
+                .eq('organization_id', organizationId)
+                .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
                 .limit(20)
             if (error) {
                 console.warn('Search quizzes error:', error)
@@ -119,18 +124,19 @@ export default function GlobalSearch() {
             }
             return (data || []) as SearchQuizResult[]
         },
-        enabled: !!query.trim()
+        enabled: canSearchTenantContent
     })
 
     // 4. Search Certificates
     const { data: certificates = [], isLoading: certsLoading } = useQuery({
         queryKey: ['search', 'certificates', query, currentOrganization?.id],
         queryFn: async () => {
-            if (!query.trim()) return []
+            if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('certificates')
                 .select('id, certificate_number, title, recipient_name, issue_date')
-                .or(`title.ilike.%${query}%,recipient_name.ilike.%${query}%,certificate_number.ilike.%${query}%`)
+                .eq('organization_id', organizationId)
+                .or(`title.ilike.%${escapedQuery}%,recipient_name.ilike.%${escapedQuery}%,certificate_number.ilike.%${escapedQuery}%`)
                 .limit(20)
             if (error) {
                 console.warn('Search certs error:', error)
@@ -138,18 +144,19 @@ export default function GlobalSearch() {
             }
             return (data || []) as SearchCertResult[]
         },
-        enabled: !!query.trim()
+        enabled: canSearchTenantContent
     })
 
     // 5. Search People
     const { data: profiles = [], isLoading: profilesLoading } = useQuery({
         queryKey: ['search', 'profiles', query, currentOrganization?.id],
         queryFn: async () => {
-            if (!query.trim()) return []
+            if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, full_name, email, job_title, role')
-                .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+                .eq('organization_id', organizationId)
+                .or(`full_name.ilike.%${escapedQuery}%,email.ilike.%${escapedQuery}%`)
                 .limit(20)
             if (error) {
                 console.warn('Search profiles error:', error)
@@ -157,7 +164,7 @@ export default function GlobalSearch() {
             }
             return (data || []) as SearchProfileResult[]
         },
-        enabled: !!query.trim()
+        enabled: canSearchTenantContent
     })
 
     const isLoading = docsLoading || coursesLoading || quizzesLoading || certsLoading || profilesLoading
@@ -165,7 +172,7 @@ export default function GlobalSearch() {
     const hasResults = totalResults > 0
 
     useEffect(() => {
-        if (query && !isLoading) {
+        if (query && canSearchTenantContent && !isLoading) {
             track(AnalyticsEvents.SEARCH, {
                 query,
                 results_count: totalResults
@@ -188,6 +195,22 @@ export default function GlobalSearch() {
                 </h2>
                 <p className="text-muted-foreground max-w-md mt-2">
                     {t('common:search.hint', { defaultValue: 'Search across SOPs, official documents, courses, quizzes, certifications, and people.' })}
+                </p>
+            </div>
+        )
+    }
+
+    if (!organizationId) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
+                <div className="w-16 h-16 rounded-full bg-hotel-gold/10 text-hotel-gold flex items-center justify-center mb-4">
+                    <Search className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                    {t('common:search.select_tenant_title', { defaultValue: 'Select an organization to search' })}
+                </h2>
+                <p className="text-muted-foreground max-w-md mt-2">
+                    {t('common:search.select_tenant_desc', { defaultValue: 'Search is scoped to an organization so results stay relevant and tenant data remains isolated.' })}
                 </p>
             </div>
         )

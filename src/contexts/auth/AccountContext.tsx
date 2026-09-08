@@ -38,6 +38,13 @@ const EMPTY: AccountContextShape = {
 export interface AccountContextValue {
   /** true until the first resolve completes for the current user */
   loading: boolean
+  /**
+   * true when `resolve_account_context()` could not be resolved after retries.
+   * Consumers (e.g. TenantContext) MUST NOT fall back to legacy "treat as a
+   * single-tenant user" behaviour in this state — that is how a platform
+   * operator ends up mis-routed into a tenant.
+   */
+  resolveFailed: boolean
   isPlatformOperator: boolean
   platformRoles: PlatformRole[]
   platformPermissions: PlatformPermission[]
@@ -71,6 +78,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
 
   const [ctx, setCtx] = useState<AccountContextShape>(EMPTY)
   const [loading, setLoading] = useState(true)
+  const [resolveFailed, setResolveFailed] = useState(false)
   const reqIdRef = useRef(0)
   const hasResolvedRef = useRef(false)
 
@@ -78,6 +86,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const myReq = ++reqIdRef.current
     if (!user) {
       setCtx(EMPTY)
+      setResolveFailed(false)
       setLoading(false)
       hasResolvedRef.current = false
       return
@@ -97,6 +106,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         if (error) { lastErr = error }
         else {
           setCtx({ ...EMPTY, ...(data as AccountContextShape) })
+          setResolveFailed(false)
           hasResolvedRef.current = true
           setLoading(false)
           return
@@ -110,6 +120,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     }
     if (import.meta.env.DEV) console.warn('[AccountContext] resolve failed after retries:', lastErr)
     setCtx(EMPTY)
+    setResolveFailed(true)
     hasResolvedRef.current = true
     setLoading(false)
   }, [user])
@@ -124,6 +135,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const perms = ctx.platform_permissions ?? []
     return {
       loading: authLoading || loading,
+      resolveFailed,
       isPlatformOperator: !!ctx.is_platform_operator,
       platformRoles: roles,
       platformPermissions: perms,
@@ -138,13 +150,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       recommendedDestination: ctx.recommended_destination || '/home/learner',
       refresh: resolve,
     }
-  }, [ctx, loading, authLoading, resolve])
+  }, [ctx, loading, authLoading, resolveFailed, resolve])
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>
 }
 
 const FALLBACK_ACCOUNT_VALUE: AccountContextValue = {
   loading: true,
+  resolveFailed: false,
   isPlatformOperator: false,
   platformRoles: [],
   platformPermissions: [],

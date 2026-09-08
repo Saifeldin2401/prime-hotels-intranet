@@ -103,7 +103,7 @@ export function EliteSpotlightWidget() {
     queryFn: async (): Promise<SpotlightItem[]> => {
       const propertyId = currentProperty?.id
       const isScoped = isRealPropertyId(propertyId)
-      const defaultPropertyName = currentProperty?.name || t('spotlight.company', 'Altus Advisory')
+      const defaultPropertyName = currentProperty?.name || t('spotlight.company', 'Prime Connect')
       const now = new Date()
       const today = startOfToday(now)
 

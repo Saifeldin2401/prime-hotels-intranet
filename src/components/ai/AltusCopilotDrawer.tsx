@@ -111,7 +111,7 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
     sendMessage,
     clearChat,
   } = useAIChat({
-    property: profile?.property?.name || 'Altus Luxury Hotel',
+    property: profile?.property?.name || 'Prime Connect',
     department: profile?.departments?.[0]?.name || profile?.department_id || 'Operations',
     role: profile?.role || 'Staff',
     isArabic,

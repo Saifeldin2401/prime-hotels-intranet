@@ -33,6 +33,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import {
     useAcknowledgeArticle,
@@ -114,6 +115,7 @@ export default function KnowledgeRead() {
     const navigate = useNavigate()
     const { t } = useTranslation('knowledge')
     const { user, profile } = useAuth()
+    const { currentOrganization } = useTenant()
     const { hasPermission } = usePermissions()
     const contentRef = useRef<HTMLDivElement>(null)
     const mermaidRef = useRef<HTMLDivElement>(null)
@@ -582,7 +584,7 @@ export default function KnowledgeRead() {
             {
                 reportType: 'knowledge_article',
                 title: article.title,
-                hotelName: 'Altus Advisory',
+                hotelName: currentOrganization?.name || 'Prime Connect',
                 period: {
                     start: article.created_at || new Date().toISOString(),
                     end: article.updated_at || new Date().toISOString()

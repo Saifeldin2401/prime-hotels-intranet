@@ -1830,6 +1830,76 @@ export const platformService = {
     return data as string
   },
 
+  /**
+   * Assign a master course to one or more tenants. Deploys the content into each
+   * tenant first if needed, then creates a tenant assignment (rule + progress +
+   * enrolments + notifications) via the existing tenant engine. Audited.
+   */
+  async assignMasterContent(params: {
+    masterId: string
+    orgIds: string[]
+    contentType?: 'course'
+    scopeType?: 'organization' | 'role' | 'individual'
+    targetRole?: string | null
+    targetUserIds?: string[] | null
+    dueDate?: string | null
+    priority?: string
+    instructions?: string | null
+    autoDeploy?: boolean
+  }): Promise<{
+    master_id: string
+    results: Array<{
+      org_id: string
+      org_name: string
+      deployed_content_id?: string
+      assigned: boolean
+      rule_id?: string
+      recipient_count?: number
+      error?: string
+    }>
+  }> {
+    const { data, error } = await (supabase.rpc as any)('platform_assign_master_content', {
+      p_master_id: params.masterId,
+      p_org_ids: params.orgIds,
+      p_content_type: params.contentType ?? 'course',
+      p_scope_type: params.scopeType ?? 'organization',
+      p_target_role: params.targetRole ?? null,
+      p_target_user_ids: params.targetUserIds ?? null,
+      p_due_date: params.dueDate ?? null,
+      p_priority: params.priority ?? 'normal',
+      p_instructions: params.instructions ?? null,
+      p_auto_deploy: params.autoDeploy ?? true,
+    })
+    if (error) throw error
+    return data
+  },
+
+  /** Per-tenant adoption + progress rollup for a master course. */
+  async getMasterContentAdoption(masterId: string, contentType: 'course' = 'course'): Promise<{
+    master_id: string
+    tenants: Array<{
+      organization_id: string
+      organization_name: string
+      lifecycle_status: string | null
+      deployed_content_id: string
+      deployed_at: string
+      has_update_available: boolean
+      assignment_rules: number
+      learners: number
+      in_progress: number
+      completed: number
+      avg_score: number | null
+      certificates_issued: number
+    }>
+  }> {
+    const { data, error } = await (supabase.rpc as any)('get_master_content_adoption', {
+      p_master_id: masterId,
+      p_content_type: contentType,
+    })
+    if (error) throw error
+    return data
+  },
+
   async getNotificationPolicies(): Promise<Array<{
     key: string
     name: string

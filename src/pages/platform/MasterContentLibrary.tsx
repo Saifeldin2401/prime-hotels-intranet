@@ -93,6 +93,18 @@ export default function MasterContentLibrary() {
   const [deploymentLogs, setDeploymentLogs] = useState<Array<{ orgId: string; status: 'in_progress' | 'success' | 'error'; message: string; timestamp: string }>>([])
   const [deploymentFinished, setDeploymentFinished] = useState(false)
 
+  // Assign-to-tenants Dialog State (Master LMS → assign master course to tenant(s))
+  const [assignItem, setAssignItem] = useState<any | null>(null)
+  const [assignOrgIds, setAssignOrgIds] = useState<string[]>([])
+  const [assignScope, setAssignScope] = useState<'organization' | 'role'>('organization')
+  const [assignRole, setAssignRole] = useState<string>('learner')
+  const [assignDueDate, setAssignDueDate] = useState<string>('')
+  const [assignInstructions, setAssignInstructions] = useState<string>('')
+  const [isAssigning, setIsAssigning] = useState(false)
+  const [assignResults, setAssignResults] = useState<Array<{ org_id: string; org_name: string; assigned: boolean; recipient_count?: number; error?: string }> | null>(null)
+  const [adoption, setAdoption] = useState<any[] | null>(null)
+  const [isLoadingAdoption, setIsLoadingAdoption] = useState(false)
+
   // Create SOP Modal State
   const [isCreateSopOpen, setIsCreateSopOpen] = useState(false)
   const [newSop, setNewSop] = useState({
@@ -161,6 +173,65 @@ export default function MasterContentLibrary() {
     setCurrentDeployStep(null)
     setDeploymentLogs([])
     setDeploymentFinished(false)
+  }
+
+  const openAssign = async (course: any) => {
+    setAssignItem(course)
+    setAssignOrgIds([])
+    setAssignScope('organization')
+    setAssignRole('learner')
+    setAssignDueDate('')
+    setAssignInstructions('')
+    setAssignResults(null)
+    setAdoption(null)
+    setIsLoadingAdoption(true)
+    try {
+      const res = await platformService.getMasterContentAdoption(course.id, 'course')
+      setAdoption(res.tenants || [])
+    } catch (err) {
+      console.error('adoption load failed', err)
+      setAdoption([])
+    } finally {
+      setIsLoadingAdoption(false)
+    }
+  }
+
+  const handleConfirmAssign = async () => {
+    if (!assignItem || assignOrgIds.length === 0) return
+    setIsAssigning(true)
+    setAssignResults(null)
+    try {
+      const res = await platformService.assignMasterContent({
+        masterId: assignItem.id,
+        orgIds: assignOrgIds,
+        contentType: 'course',
+        scopeType: assignScope === 'role' ? 'organization' : 'organization',
+        targetRole: assignScope === 'role' ? assignRole : null,
+        dueDate: assignDueDate ? new Date(assignDueDate).toISOString() : null,
+        instructions: assignInstructions.trim() || null,
+      })
+      setAssignResults(res.results)
+      const ok = res.results.filter((r) => r.assigned).length
+      const failed = res.results.length - ok
+      toast({
+        title: ok > 0 ? t('admin:assignment_created', 'Assignment created') : t('common:error', 'Assignment failed'),
+        description: `${ok} tenant(s) assigned${failed ? `, ${failed} skipped` : ''}.`,
+        variant: ok > 0 ? undefined : 'destructive',
+      })
+      // refresh adoption
+      const fresh = await platformService.getMasterContentAdoption(assignItem.id, 'course')
+      setAdoption(fresh.tenants || [])
+      loadData()
+    } catch (err: any) {
+      toast({ title: t('common:error', 'Error'), description: err.message, variant: 'destructive' })
+    } finally {
+      setIsAssigning(false)
+    }
+  }
+
+  const toggleAssignOrg = (orgId: string) => {
+    if (isAssigning) return
+    setAssignOrgIds((prev) => (prev.includes(orgId) ? prev.filter((id) => id !== orgId) : [...prev, orgId]))
   }
 
   const toggleOrgSelection = (orgId: string) => {
@@ -809,11 +880,23 @@ export default function MasterContentLibrary() {
 
                               <Button
                                 size="sm"
+                                variant="outline"
                                 onClick={() => handleOpenDeploy('course', course)}
-                                className="h-8 px-3 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+                                className="h-8 px-3 text-xs gap-1.5 text-indigo-700 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50 font-semibold"
+                                title={t('admin:deploy_content_only', 'Copy master content into tenant(s)')}
                               >
                                 <Send className="h-3.5 w-3.5" />
                                 {t('admin:deploy_to_tenants', 'Deploy')}
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                onClick={() => openAssign(course)}
+                                className="h-8 px-3 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+                                title={t('admin:assign_to_tenants_title', 'Assign to tenant users & track progress')}
+                              >
+                                <GraduationCap className="h-3.5 w-3.5" />
+                                {t('admin:assign_and_track', 'Assign & Track')}
                               </Button>
                             </div>
                           </TableCell>
@@ -1208,6 +1291,153 @@ export default function MasterContentLibrary() {
                   {isDeploying ? 'Deploying...' : 'Done'}
                 </Button>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 1b. ASSIGN MASTER COURSE TO TENANT(S) + ADOPTION TRACKING                  */}
+      {/* ========================================================================= */}
+      {assignItem && (
+        <Dialog open={!!assignItem} onOpenChange={(open) => !isAssigning && !open && setAssignItem(null)}>
+          <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 p-4">
+              <DialogHeader>
+                <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4" />
+                  {t('admin:assign_master_course', 'Assign Master Course to Tenants')}
+                </DialogTitle>
+                <DialogDescription className="text-indigo-200 text-xs mt-0.5">
+                  {assignItem.title} — {t('admin:assign_master_course_desc', 'deploys the course into each tenant if needed, then assigns it to their learners. Audited.')}
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-sm">
+              {/* Target tenants */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">{t('admin:target_tenants', 'Target tenants')}</Label>
+                <div className="max-h-40 overflow-y-auto rounded-xl border border-border/60 divide-y divide-border/50">
+                  {organizations.map((org) => (
+                    <label key={org.id} className="flex items-center gap-2.5 p-2.5 hover:bg-muted/40 cursor-pointer">
+                      <Checkbox
+                        checked={assignOrgIds.includes(org.id)}
+                        onCheckedChange={() => toggleAssignOrg(org.id)}
+                        disabled={isAssigning}
+                      />
+                      <span className="text-xs font-medium">{org.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Scope + due date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">{t('admin:assign_to', 'Assign to')}</Label>
+                  <Select value={assignScope} onValueChange={(v) => setAssignScope(v as any)}>
+                    <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="organization">{t('admin:all_learners_in_tenant', 'Everyone in the tenant')}</SelectItem>
+                      <SelectItem value="role">{t('admin:learners_with_role', 'Only a specific role')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {assignScope === 'role' && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold">{t('admin:role', 'Role')}</Label>
+                    <Select value={assignRole} onValueChange={setAssignRole}>
+                      <SelectTrigger className="h-9 text-xs rounded-xl"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="learner">Learner</SelectItem>
+                        <SelectItem value="instructor">Instructor</SelectItem>
+                        <SelectItem value="department_manager">Department Manager</SelectItem>
+                        <SelectItem value="training_manager">Training Manager</SelectItem>
+                        <SelectItem value="hotel_admin">Hotel Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold">{t('admin:due_date', 'Due date (optional)')}</Label>
+                  <Input type="date" value={assignDueDate} onChange={(e) => setAssignDueDate(e.target.value)} className="h-9 text-xs rounded-xl" />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">{t('admin:instructions_optional', 'Instructions (optional)')}</Label>
+                <Textarea value={assignInstructions} onChange={(e) => setAssignInstructions(e.target.value)} rows={2} className="text-xs rounded-xl" />
+              </div>
+
+              {assignResults && (
+                <div className="rounded-xl border border-border/60 divide-y divide-border/50 text-xs">
+                  {assignResults.map((r) => (
+                    <div key={r.org_id} className="flex items-center justify-between p-2.5">
+                      <span className="font-medium">{r.org_name}</span>
+                      {r.assigned ? (
+                        <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> {r.recipient_count} assigned</span>
+                      ) : (
+                        <span className="text-rose-600 flex items-center gap-1" title={r.error}><AlertCircle className="h-3.5 w-3.5" /> {r.error || 'skipped'}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Adoption / tracking */}
+              <div className="space-y-1.5 pt-2 border-t border-border/50">
+                <Label className="text-xs font-bold flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5" /> {t('admin:cross_tenant_adoption', 'Cross-tenant adoption & progress')}
+                </Label>
+                {isLoadingAdoption ? (
+                  <p className="text-[11px] text-muted-foreground">{t('common:loading', 'Loading…')}</p>
+                ) : !adoption || adoption.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground italic">{t('admin:not_deployed_anywhere', 'Not deployed to any tenant yet.')}</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-border/60">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-muted/40 text-muted-foreground">
+                        <tr>
+                          <th className="text-start p-2 font-semibold">Tenant</th>
+                          <th className="text-center p-2 font-semibold">Assigned</th>
+                          <th className="text-center p-2 font-semibold">In progress</th>
+                          <th className="text-center p-2 font-semibold">Completed</th>
+                          <th className="text-center p-2 font-semibold">Avg score</th>
+                          <th className="text-center p-2 font-semibold">Certs</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {adoption.map((row) => (
+                          <tr key={row.organization_id} className="border-t border-border/50">
+                            <td className="p-2 font-medium">{row.organization_name}</td>
+                            <td className="p-2 text-center">{row.learners}</td>
+                            <td className="p-2 text-center">{row.in_progress}</td>
+                            <td className="p-2 text-center">{row.completed}</td>
+                            <td className="p-2 text-center">{row.avg_score ?? '—'}</td>
+                            <td className="p-2 text-center">{row.certificates_issued}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 bg-muted/20 border-t">
+              <Button variant="ghost" size="sm" onClick={() => setAssignItem(null)} disabled={isAssigning} className="text-xs rounded-xl">
+                {t('common:close', 'Close')}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmAssign}
+                disabled={isAssigning || assignOrgIds.length === 0}
+                className="text-xs rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5"
+              >
+                {isAssigning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                {t('admin:assign_now', 'Assign to')} {assignOrgIds.length || ''} {t('admin:tenants_lc', 'tenant(s)')}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
