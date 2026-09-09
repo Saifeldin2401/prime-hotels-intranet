@@ -1608,7 +1608,10 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       setUploading(true)
       const fileExt = (file.name.split('.').pop() || '').toLowerCase()
       const fileName = `${crypto.randomUUID()}.${fileExt}`
-      const filePath = `training/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
+      // Use org-scoped path when org context is available, otherwise fall back to
+      // legacy 'training/' prefix. The storage RLS policy accepts both patterns.
+      const orgPrefix = profile?.organization_id ?? 'training'
+      const filePath = `${orgPrefix}/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
 
       // Infer appropriate content type if missing or octet-stream
       let inferredContentType = file.type

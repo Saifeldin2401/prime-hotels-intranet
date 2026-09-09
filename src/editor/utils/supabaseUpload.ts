@@ -19,6 +19,7 @@ const ALLOWED_VIDEO_TYPES = new Set([
   'video/avi',
   'video/x-msvideo',
   'video/3gpp',
+  'video/x-m4v', // .m4v alternate
 ])
 
 const EXTENSION_MIME_MAP: Record<string, string> = {
@@ -142,7 +143,8 @@ export async function uploadFileToSupabase(
   }
 
   // 'content-media' is a public bucket: embedded content URLs are persisted inside saved
-  // HTML and must stay valid.
+  // HTML and must stay valid. If the bucket is accidentally set private, fall back to a
+  // long-lived signed URL so the upload doesn't silently break.
   // eslint-disable-next-line no-restricted-properties
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
 
@@ -150,6 +152,21 @@ export async function uploadFileToSupabase(
     await registerInMediaLibrary(file, path, bucket, urlData.publicUrl, isVideo, user.id, contentType)
   }
 
-  return urlData.publicUrl
+  // Primary: use public URL for public buckets
+  if (urlData?.publicUrl) {
+    return urlData.publicUrl
+  }
+
+  // Fallback: if bucket was set private, generate a long-lived signed URL
+  console.warn(`[supabaseUpload] getPublicUrl returned empty for bucket '${bucket}'; falling back to signed URL`)
+  const { data: signedData, error: signedError } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, 86400 * 365) // 1 year expiry
+
+  if (signedError || !signedData?.signedUrl) {
+    throw new Error(`Upload succeeded but failed to generate URL: ${signedError?.message || 'unknown'}`)
+  }
+
+  return signedData.signedUrl
 }
 

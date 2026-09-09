@@ -621,7 +621,20 @@ export function useMedia(options: UseMediaOptions = {}) {
         };
       } catch (error) {
         console.error('Upload error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Failed to upload file';
+        let errorMessage = 'Failed to upload file';
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          // Detect common RLS policy violations and provide better guidance
+          const msg = error.message.toLowerCase();
+          if (msg.includes('row-level security') || msg.includes('policy') || msg.includes('new row violates') || msg.includes('violates row')) {
+            errorMessage = 'Upload blocked by security policy. Please contact your administrator if this persists.';
+            console.error('[useMedia] RLS policy violation during upload. Check storage.objects and media_assets policies.', { bucket: 'media', error: error.message });
+          } else if (msg.includes('payload too large') || msg.includes('file size')) {
+            errorMessage = 'File is too large. Maximum size is 500MB.';
+          } else if (msg.includes('mime') || msg.includes('content type') || msg.includes('not allowed')) {
+            errorMessage = 'This file type is not supported for upload.';
+          }
+        }
         toast.error(errorMessage);
         return { asset: null, error: errorMessage };
       } finally {
