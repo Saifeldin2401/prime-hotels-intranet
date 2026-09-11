@@ -102,10 +102,45 @@ class AnalyticsService {
 
             this.userId = user.id
 
+            // Resolve organization_id to satisfy non-null constraint on user_sessions
+            let orgId: string | null = null
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('organization_id')
+                .eq('id', this.userId)
+                .maybeSingle()
+            orgId = profile?.organization_id || null
+
+            if (!orgId) {
+                const { data: membership } = await supabase
+                    .from('organization_memberships')
+                    .select('organization_id')
+                    .eq('user_id', this.userId)
+                    .eq('is_active', true)
+                    .limit(1)
+                    .maybeSingle()
+                orgId = membership?.organization_id || null
+            }
+
+            if (!orgId) {
+                const { data: defaultOrg } = await supabase
+                    .from('organizations')
+                    .select('id')
+                    .limit(1)
+                    .maybeSingle()
+                orgId = defaultOrg?.id || null
+            }
+
+            if (!orgId) {
+                this.sessionId = null
+                return
+            }
+
             const { data: insertedRows, error } = await supabase
                 .from('user_sessions')
                 .insert({
                     user_id: this.userId,
+                    organization_id: orgId,
                     user_agent: navigator.userAgent,
                     session_token_hash: crypto.randomUUID(), // Fix for not-null constraint
                     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

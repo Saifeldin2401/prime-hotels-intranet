@@ -1398,6 +1398,16 @@ export const platformService = {
     primary_organization_id?: string
     primary_organization_name?: string
     membership_count: number
+    account_status?: string
+    suspend_reason?: string | null
+    suspended_at?: string | null
+    suspended_until?: string | null
+    failed_login_attempts?: number
+    locked_until?: string | null
+    force_password_reset?: boolean
+    job_title?: string | null
+    phone?: string | null
+    last_login_at?: string | null
     memberships: Array<{
       organization_id: string
       organization_name: string
@@ -1414,7 +1424,7 @@ export const platformService = {
       p_search: params?.search || null,
       p_org_id: params?.organizationId || null,
       p_role: params?.role || null,
-      p_limit: params?.limit || 50,
+      p_limit: params?.limit || 100,
       p_offset: params?.offset || 0
     })
 
@@ -1423,7 +1433,33 @@ export const platformService = {
       throw error
     }
 
-    return data || []
+    const rows = data || []
+    if (rows.length === 0) return []
+
+    const userIds = rows.map((u: any) => u.id)
+    const { data: profileExtras } = await supabase
+      .from('profiles')
+      .select('id, account_status, suspend_reason, suspended_at, suspended_until, failed_login_attempts, locked_until, force_password_reset, job_title, phone, last_login_at')
+      .in('id', userIds)
+
+    const extrasMap = new Map((profileExtras || []).map((p: any) => [p.id, p]))
+
+    return rows.map((u: any) => {
+      const extra = extrasMap.get(u.id) || {}
+      return {
+        ...u,
+        account_status: extra.account_status || (u.is_active ? 'active' : 'suspended'),
+        suspend_reason: extra.suspend_reason || null,
+        suspended_at: extra.suspended_at || null,
+        suspended_until: extra.suspended_until || null,
+        failed_login_attempts: extra.failed_login_attempts || 0,
+        locked_until: extra.locked_until || null,
+        force_password_reset: !!extra.force_password_reset,
+        job_title: extra.job_title || null,
+        phone: extra.phone || null,
+        last_login_at: extra.last_login_at || null,
+      }
+    })
   },
 
   // ---- Platform operator identity management (platform_users / platform_role_assignments) ----
@@ -1518,6 +1554,42 @@ export const platformService = {
     if (error) throw error
   },
 
+  /** Detach a user from customer organization memberships upon migrating them to platform staff. */
+  async detachUserFromTenant(params: {
+    userId: string
+    actorId?: string | null
+    role?: string
+  }): Promise<void> {
+    const now = new Date().toISOString()
+    await supabase
+      .from('organization_memberships')
+      .update({ is_active: false, updated_at: now })
+      .eq('user_id', params.userId)
+
+    await supabase
+      .from('profiles')
+      .update({ organization_id: null, updated_at: now })
+      .eq('id', params.userId)
+
+    await supabase
+      .from('account_action_notes')
+      .insert({
+        user_id: params.userId,
+        action: 'migrate_to_platform',
+        note: `Detached customer organization memberships upon migration to platform staff (${params.role || 'platform'}).`,
+        created_by: params.actorId || null,
+        metadata: { platform_action: true, role: params.role },
+      })
+
+    await this.logPlatformAction({
+      action: 'detach_user_tenants',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: { role: params.role },
+    })
+  },
+
   async toggleUserActiveStatus(params: {
     userId: string
     isActive: boolean
@@ -1536,6 +1608,308 @@ export const platformService = {
       resourceId: params.userId,
       actorId: params.actorId,
       metadata: { is_active: params.isActive }
+    })
+  },
+
+  async suspendPlatformUser(params: {
+    userId: string
+    reason: string
+    suspendUntil?: string | null
+    note?: string | null
+    actorId?: string | null
+  }): Promise<void> {
+    const now = new Date().toISOString()
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        account_status: 'suspended',
+        is_active: false,
+        suspended_at: now,
+        suspended_until: params.suspendUntil || null,
+        suspend_reason: params.reason || 'Suspended by platform administrator',
+        suspended_by: params.actorId || null,
+        updated_at: now,
+      })
+      .eq('id', params.userId)
+
+    if (profileError) throw profileError
+
+    if (params.note && params.note.trim()) {
+      await supabase
+        .from('account_action_notes')
+        .insert({
+          user_id: params.userId,
+          action: 'suspend',
+          note: params.note.trim(),
+          created_by: params.actorId || null,
+          metadata: {
+            reason: params.reason,
+            suspend_until: params.suspendUntil || null,
+            platform_action: true,
+          },
+        })
+    }
+
+    await this.logPlatformAction({
+      action: 'suspend_user',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: {
+        reason: params.reason,
+        suspend_until: params.suspendUntil || null,
+        note: params.note || null,
+      },
+    })
+  },
+
+  async reactivatePlatformUser(params: {
+    userId: string
+    note?: string | null
+    actorId?: string | null
+  }): Promise<void> {
+    const now = new Date().toISOString()
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        account_status: 'active',
+        is_active: true,
+        suspended_at: null,
+        suspended_until: null,
+        suspend_reason: null,
+        suspended_by: null,
+        locked_until: null,
+        failed_login_attempts: 0,
+        updated_at: now,
+      })
+      .eq('id', params.userId)
+
+    if (profileError) throw profileError
+
+    if (params.note && params.note.trim()) {
+      await supabase
+        .from('account_action_notes')
+        .insert({
+          user_id: params.userId,
+          action: 'reactivate',
+          note: params.note.trim(),
+          created_by: params.actorId || null,
+          metadata: { platform_action: true },
+        })
+    }
+
+    await this.logPlatformAction({
+      action: 'activate_user',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: { note: params.note || null },
+    })
+  },
+
+  async forceUserPasswordReset(params: {
+    userId: string
+    actorId?: string | null
+    note?: string | null
+  }): Promise<void> {
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        force_password_reset: true,
+        updated_at: now,
+      })
+      .eq('id', params.userId)
+
+    if (error) throw error
+
+    if (params.note && params.note.trim()) {
+      await supabase
+        .from('account_action_notes')
+        .insert({
+          user_id: params.userId,
+          action: 'force_password_reset',
+          note: params.note.trim(),
+          created_by: params.actorId || null,
+          metadata: { platform_action: true },
+        })
+    }
+
+    await this.logPlatformAction({
+      action: 'force_password_reset',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+    })
+  },
+
+  async unlockUserAccount(params: {
+    userId: string
+    actorId?: string | null
+  }): Promise<void> {
+    const now = new Date().toISOString()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        locked_until: null,
+        failed_login_attempts: 0,
+        account_status: 'active',
+        updated_at: now,
+      })
+      .eq('id', params.userId)
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: 'unlock_user',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+    })
+  },
+
+  async getUserSecurityProfile(userId: string): Promise<{
+    profile: any
+    actionNotes: any[]
+    memberships: any[]
+    auditLogs: any[]
+  }> {
+    let profile: any = null
+    let actionNotes: any[] = []
+    let memberships: any[] = []
+    let auditLogs: any[] = []
+
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle()
+      profile = data
+    } catch (err) {
+      console.warn('Failed to load profile in getUserSecurityProfile:', err)
+    }
+
+    try {
+      const { data } = await supabase
+        .from('account_action_notes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      actionNotes = data || []
+    } catch (err) {
+      console.warn('Failed to load action notes in getUserSecurityProfile:', err)
+    }
+
+    try {
+      const { data } = await supabase
+        .from('organization_memberships')
+        .select('*, organizations(id, name, name_ar), hotels(id, name), departments(id, name)')
+        .eq('user_id', userId)
+      memberships = data || []
+    } catch (err) {
+      console.warn('Failed to load organization memberships in getUserSecurityProfile:', err)
+    }
+
+    try {
+      const { data } = await supabase
+        .from('platform_audit_logs')
+        .select('*')
+        .or(`resource_id.eq.${userId},metadata->>target_user.eq.${userId}`)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      auditLogs = data || []
+    } catch (err) {
+      console.warn('Failed to load audit logs in getUserSecurityProfile:', err)
+    }
+
+    return {
+      profile,
+      actionNotes,
+      memberships,
+      auditLogs,
+    }
+  },
+
+  async bulkExecuteUserAction(params: {
+    userIds: string[]
+    action: 'suspend' | 'reactivate' | 'force_password_reset' | 'unlock'
+    reason?: string
+    suspendUntil?: string | null
+    note?: string | null
+    actorId?: string | null
+  }): Promise<{ successCount: number; failCount: number }> {
+    let successCount = 0
+    let failCount = 0
+
+    for (const userId of params.userIds) {
+      try {
+        if (params.action === 'suspend') {
+          await this.suspendPlatformUser({
+            userId,
+            reason: params.reason || 'Bulk platform suspension',
+            suspendUntil: params.suspendUntil,
+            note: params.note,
+            actorId: params.actorId,
+          })
+        } else if (params.action === 'reactivate') {
+          await this.reactivatePlatformUser({
+            userId,
+            note: params.note,
+            actorId: params.actorId,
+          })
+        } else if (params.action === 'force_password_reset') {
+          await this.forceUserPasswordReset({
+            userId,
+            note: params.note,
+            actorId: params.actorId,
+          })
+        } else if (params.action === 'unlock') {
+          await this.unlockUserAccount({
+            userId,
+            actorId: params.actorId,
+          })
+        }
+        successCount++
+      } catch (err) {
+        console.error(`Failed to execute bulk action ${params.action} on user ${userId}:`, err)
+        failCount++
+      }
+    }
+
+    return { successCount, failCount }
+  },
+
+  async updateUserProfileDetails(params: {
+    userId: string
+    updates: {
+      full_name?: string
+      job_title?: string | null
+      phone?: string | null
+      phone_extension?: string | null
+      nationality?: string | null
+      emergency_contact_name?: string | null
+      emergency_contact_phone?: string | null
+    }
+    actorId?: string | null
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        ...params.updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.userId)
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: 'update_user_profile',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: params.updates,
     })
   },
 
