@@ -1,5 +1,6 @@
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { safeLocalStorage } from '@/lib/storage'
 import { useFormPersistence } from '@/hooks/useFormPersistence'
@@ -264,6 +265,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { profile } = useAuth()
+  const { currentOrganization } = useTenant()
   const { t, i18n } = useTranslation('training')
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -1610,7 +1612,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       const fileName = `${crypto.randomUUID()}.${fileExt}`
       // Use org-scoped path when org context is available, otherwise fall back to
       // legacy 'training/' prefix. The storage RLS policy accepts both patterns.
-      const orgPrefix = profile?.organization_id ?? 'training'
+      const orgId = currentOrganization?.id ?? profile?.organization_id ?? null
+      const orgPrefix = orgId ?? 'training'
       const filePath = `${orgPrefix}/${type === 'audio' ? 'audios' : `${type}s`}/${fileName}`
 
       // Infer appropriate content type if missing or octet-stream
@@ -1662,7 +1665,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
           mime_type: inferredContentType,
           tags: ['training-builder'],
           uploaded_by: profile?.id ?? null,
-          organization_id: profile?.organization_id ?? null,
+          organization_id: orgId,
           is_public: true,
           metadata: { source: 'training-builder', uploaded_at: new Date().toISOString() },
         })

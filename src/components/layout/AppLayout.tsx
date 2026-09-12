@@ -22,6 +22,13 @@ const KeyboardShortcutsModal = lazy(() =>
 const AltusCopilotDrawer = lazy(() =>
   import('@/components/ai/AltusCopilotDrawer').then((module) => ({ default: module.AltusCopilotDrawer }))
 )
+import { 
+  GuidedWizardModal, 
+  WhatCanIDoSheet, 
+  SearchableHelpDialog, 
+  RoleChangeAlertBanner,
+  InteractiveSpotlightTour
+} from '@/components/wizard'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -129,6 +136,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Main Content Area */}
         <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
           <PlatformImpersonationBanner />
+          <RoleChangeAlertBanner />
           {/* Top Header */}
           <Header
             onOpenSearch={() => setCommandPaletteOpen(true)}
@@ -164,6 +172,12 @@ export function AppLayout({ children }: AppLayoutProps) {
         {!copilotOpen && !isImmersiveOrFocusedPage && (
           <AltusCopilotTrigger onClick={() => setCopilotOpen(true)} />
         )}
+
+        {/* Role-Based Guided Wizard, Sheet & Searchable Help */}
+        <InteractiveSpotlightTour />
+        <GuidedWizardModal />
+        <WhatCanIDoSheet />
+        <SearchableHelpDialog />
 
         {/* Deferred Modals and Drawers */}
         <Suspense fallback={null}>

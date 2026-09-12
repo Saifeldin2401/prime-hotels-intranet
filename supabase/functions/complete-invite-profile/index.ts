@@ -175,33 +175,14 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const [
-        { data: jobTitleRows, error: jobTitleError },
-        { data: propertyRows, error: propertyError },
-      ] = await Promise.all([
-        adminClient
-          .from("job_titles")
-          .select("title")
-          .order("title", { ascending: true }),
-        adminClient
-          .from("hotels")
-          .select("id, name, organization_id")
-          .eq("is_active", true)
-          .eq("is_deleted", false)
-          .order("name", { ascending: true }),
-      ]);
-
-      if (jobTitleError) {
-        return new Response(
-          JSON.stringify({
-            error: `Failed to load job titles: ${jobTitleError.message}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
+      // job_titles no longer exists as a lookup table (profiles.job_title is
+      // free text), so there's nothing to enumerate for a dropdown anymore.
+      const { data: propertyRows, error: propertyError } = await adminClient
+        .from("hotels")
+        .select("id, name, organization_id")
+        .eq("is_active", true)
+        .eq("is_deleted", false)
+        .order("name", { ascending: true });
 
       if (propertyError) {
         return new Response(
@@ -215,13 +196,6 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const normalizedJobTitles = (jobTitleRows || [])
-        .map((row) => row.title)
-        .filter(
-          (title): title is string =>
-            typeof title === "string" && title.trim().length > 0,
-        );
-
       const allPropertyOptions = (propertyRows || [])
         .map((row) => ({ id: row.id, name: row.name }))
         .filter(
@@ -232,16 +206,21 @@ Deno.serve(async (req: Request) => {
             property.name.length > 0,
         );
 
-      const { data: assignedProperties, error: assignedPropertiesError } =
+      // Property assignment now lives on organization_memberships.hotel_id
+      // (a single primary hotel per membership) rather than a many-to-many
+      // user_properties junction table, which no longer exists.
+      const { data: existingMembership, error: membershipLookupError } =
         await adminClient
-          .from("user_properties")
-          .select("property_id, properties(id, name)")
-          .eq("user_id", user.id);
+          .from("organization_memberships")
+          .select("hotel_id")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .maybeSingle();
 
-      if (assignedPropertiesError) {
+      if (membershipLookupError) {
         return new Response(
           JSON.stringify({
-            error: `Failed to load assigned properties: ${assignedPropertiesError.message}`,
+            error: `Failed to load assigned property: ${membershipLookupError.message}`,
           }),
           {
             status: 500,
@@ -250,40 +229,25 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const assignedPropertyOptions = (assignedProperties || [])
-        .map((row) => {
-          const relatedProperty = row.properties as
-            | { id?: string; name?: string }
-            | { id?: string; name?: string }[]
-            | null;
-          const normalizedProperty = Array.isArray(relatedProperty)
-            ? relatedProperty[0]
-            : relatedProperty;
-          if (!normalizedProperty?.id || !normalizedProperty?.name) return null;
-          return { id: normalizedProperty.id, name: normalizedProperty.name };
-        })
-        .filter(
-          (property): property is { id: string; name: string } => !!property,
-        );
+      const assignedHotelId = existingMembership?.hotel_id || null;
+      const assignedPropertyOptions = assignedHotelId
+        ? allPropertyOptions.filter((p) => p.id === assignedHotelId)
+        : [];
 
       const availableProperties =
         assignedPropertyOptions.length > 0
           ? assignedPropertyOptions
           : allPropertyOptions;
 
-      const assignedPropertyIds = (assignedProperties || [])
-        .map((row) => row.property_id)
-        .filter((value): value is string => typeof value === "string");
-
       return new Response(
         JSON.stringify({
-          jobTitles: Array.from(new Set(normalizedJobTitles)),
+          jobTitles: [],
           properties: Array.from(
             new Map(
               availableProperties.map((property) => [property.id, property]),
             ).values(),
           ),
-          assignedPropertyIds: Array.from(new Set(assignedPropertyIds)),
+          assignedPropertyIds: assignedHotelId ? [assignedHotelId] : [],
         }),
         {
           status: 200,
@@ -413,38 +377,21 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    let normalizedJobTitle: string | null = null;
-    if (jobTitleInput) {
-      const { data: jobTitleRow, error: jobTitleError } = await adminClient
-        .from("job_titles")
-        .select("title")
-        .ilike("title", jobTitleInput)
-        .limit(1)
+    // job_titles is free text on profiles now; no lookup table to validate against.
+    const normalizedJobTitle: string | null = jobTitleInput || null;
+
+    const { data: existingMembershipForAssign, error: existingMembershipError } =
+      await adminClient
+        .from("organization_memberships")
+        .select("hotel_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
         .maybeSingle();
 
-      if (jobTitleError || !jobTitleRow?.title) {
-        return new Response(
-          JSON.stringify({ error: "Selected job title is not valid." }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      normalizedJobTitle = jobTitleRow.title;
-    }
-
-    const { data: existingProperties, error: existingPropertiesError } =
-      await adminClient
-        .from("user_properties")
-        .select("property_id")
-        .eq("user_id", user.id);
-
-    if (existingPropertiesError) {
+    if (existingMembershipError) {
       return new Response(
         JSON.stringify({
-          error: `Failed to check property assignment: ${existingPropertiesError.message}`,
+          error: `Failed to check property assignment: ${existingMembershipError.message}`,
         }),
         {
           status: 500,
@@ -453,13 +400,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const existingPropertyIds = (existingProperties || []).map(
-      (row) => row.property_id,
-    );
-    if (
-      existingPropertyIds.length > 0 &&
-      !existingPropertyIds.includes(propertyId)
-    ) {
+    const existingHotelId = existingMembershipForAssign?.hotel_id || null;
+    if (existingHotelId && existingHotelId !== propertyId) {
       return new Response(
         JSON.stringify({
           error:
@@ -495,24 +437,8 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { error: propertyAssignError } = await adminClient
-      .from("user_properties")
-      .upsert(
-        { user_id: user.id, property_id: propertyId },
-        { onConflict: "user_id,property_id", ignoreDuplicates: true },
-      );
-
-    if (propertyAssignError) {
-      return new Response(
-        JSON.stringify({
-          error: `Failed to assign property: ${propertyAssignError.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    // Property assignment now happens via organization_memberships.hotel_id
+    // below (user_properties junction table no longer exists).
 
     // Upsert organization membership context
     if (hotelRow?.organization_id) {

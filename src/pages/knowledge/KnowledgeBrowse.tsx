@@ -340,7 +340,11 @@ export default function KnowledgeBrowse() {
                                     <span className="hidden sm:inline">AI Article Studio</span>
                                 </Button>
                                 <Link to="/knowledge/create">
-                                    <Button size="sm" className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy font-bold gap-1.5 shadow-sm border border-hotel-gold/40 active:scale-[0.98] transition-transform">
+                                    <Button 
+                                        data-tour="knowledge-create-sop-btn"
+                                        size="sm" 
+                                        className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy font-bold gap-1.5 shadow-sm border border-hotel-gold/40 active:scale-[0.98] transition-transform"
+                                    >
                                         <Plus className="h-3.5 w-3.5" />
                                         <span>{t('library.create_new', 'New Article')}</span>
                                     </Button>
@@ -371,7 +375,7 @@ export default function KnowledgeBrowse() {
                     </div>
 
                     {/* Elevated Search Bar */}
-                    <div className="relative w-full max-w-3xl">
+                    <div data-tour="knowledge-search-bar" className="relative w-full max-w-3xl">
                         <Search className={cn("absolute top-1/2 -translate-y-1/2 h-5 w-5 text-hotel-gold/80", isRTL ? "end-4" : "start-4")} />
                         <Input
                             placeholder={t('search_placeholder', 'Search SOPs, luxury benchmarks, checklists, policies...')}
@@ -400,7 +404,7 @@ export default function KnowledgeBrowse() {
                     </div>
 
                     {/* Instant Category Filter Badges */}
-                    <div className="w-full overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
+                    <div data-tour="knowledge-categories" className="w-full overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
                         <div className="flex items-center gap-2 min-w-max">
                             {CATEGORY_CHIPS.map(chip => {
                                 const Icon = chip.icon

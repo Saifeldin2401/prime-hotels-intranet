@@ -345,7 +345,10 @@ export default function OrganizationsHub() {
             </Button>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm text-xs h-9 font-semibold">
+                <Button 
+                  data-tour="orgs-create-btn"
+                  className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-sm text-xs h-9 font-semibold"
+                >
                   <Plus className="h-4 w-4" />
                   {t('admin:new_organization', 'New Organization')}
                 </Button>
@@ -793,7 +796,7 @@ export default function OrganizationsHub() {
       </Card>
 
       {/* Organizations Table */}
-      <Card className="border shadow-sm">
+      <Card data-tour="orgs-grid" className="border shadow-sm">
         <CardContent className="p-0">
           <Table>
             <TableHeader>

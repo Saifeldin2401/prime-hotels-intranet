@@ -5,6 +5,7 @@
 
 export interface AnalyticsEvent {
     id?: string;
+    organization_id?: string | null;
     event_name: string;
     category: string;
     properties;

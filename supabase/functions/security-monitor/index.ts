@@ -34,15 +34,17 @@ serve(async (req: Request) => {
     // Fetch the last 5 minutes of high severity security logs
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     
-    // Fallback if security_audit_log does not exist yet
+    // security_audit_logs is a read-only view over system_events
+    // (event_type='security'); the underlying table it once pointed to
+    // doesn't exist under that name anymore.
     let { data: logs, error } = await supabase
-      .from("security_audit_logs")
+      .from("security_audit_logs_v")
       .select("*")
       .gte("created_at", fiveMinutesAgo)
       .in("severity", ["high", "critical"]);
-      
+
     if (error && error.code === "42P01") {
-      // Table doesn't exist, ignore
+      // View doesn't exist, ignore
       return new Response(JSON.stringify({ status: "skipped", reason: "no table" }), { headers: corsHeaders });
     } else if (error) {
       console.error("Failed to query audit logs:", error);
@@ -50,7 +52,7 @@ serve(async (req: Request) => {
 
     if (logs && logs.length > 0) {
       const formattedAlerts = logs.slice(0, 10).map((log) => {
-        return `• *[${log.severity.toUpperCase()}]* ${log.event_type} - User: ${log.user_id || 'Unknown'} - IP: ${log.ip_address || 'Unknown'}\n\`\`\`${JSON.stringify(log.details || {})}\`\`\``;
+        return `• *[${log.severity.toUpperCase()}]* ${log.event_type} - User: ${log.user_id || 'Unknown'} - IP: ${log.ip_address || 'Unknown'}\n\`\`\`${JSON.stringify(log.metadata || {})}\`\`\``;
       }).join("\n\n");
 
       await sendSlackWebhook(webhookUrl, {

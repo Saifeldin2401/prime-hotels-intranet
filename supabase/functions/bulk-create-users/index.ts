@@ -249,7 +249,7 @@ async function resolveProperties(
 
   if (trimmed.toUpperCase() === "ALL") {
     const { data, error } = await adminClient
-      .from("properties")
+      .from("hotels")
       .select("id,name")
       .eq("organization_id", organizationId)
       .eq("is_deleted", false);
@@ -283,7 +283,7 @@ async function resolveProperties(
   ) {
     const city = normalizedAlias === "__CITY_JEDDAH__" ? "Jeddah" : "Riyadh";
     const { data, error } = await adminClient
-      .from("properties")
+      .from("hotels")
       .select("id,name")
       .eq("organization_id", organizationId)
       .eq("is_deleted", false)
@@ -336,7 +336,7 @@ async function resolveProperties(
   const errors: string[] = [];
 
   for (const part of parts) {
-    const m = await fuzzyResolveByName("properties", part, organizationId);
+    const m = await fuzzyResolveByName("hotels", part, organizationId);
     matches.push(m);
     if (!m.matched) {
       errors.push(`Property not found: ${part}`);
@@ -443,79 +443,21 @@ async function fuzzyResolveDepartment(
     }
   }
 
-  // Fuzzy via pg_trgm similarity.
-  try {
-    const { data, error } = await adminClient.rpc(
-      "search_departments_by_similarity",
-      {
-        search_text: name,
-        property_ids: propertyIds,
-        result_limit: 10,
-      },
-    );
-
-    if (error) {
-      return {
-        input: name,
-        matched: null,
-        score: null,
-        candidates: [],
-        kind: "none",
-      };
-    }
-
-    const rows = (data ?? []) as { id: string; name: string; score: number }[];
-    if (rows.length === 0) {
-      return {
-        input: name,
-        matched: null,
-        score: null,
-        candidates: [],
-        kind: "none",
-      };
-    }
-
-    // Filter similarity results to target organization_id
-    const { data: orgDepts } = await adminClient
-      .from("departments")
-      .select("id")
-      .eq("organization_id", organizationId)
-      .in("id", rows.map((r) => r.id));
-
-    const validDeptIds = new Set((orgDepts ?? []).map((d: any) => d.id));
-    const candidates = rows.filter((r) => validDeptIds.has(r.id)).slice(0, 5);
-    const best = candidates[0];
-
-    if (!best || best.score < 0.25) {
-      return {
-        input: name,
-        matched: null,
-        score: best?.score ?? null,
-        candidates,
-        kind: "none",
-      };
-    }
-
-    return {
-      input: name,
-      matched: { id: best.id, name: best.name },
-      score: best.score,
-      candidates,
-      kind: "fuzzy",
-    };
-  } catch {
-    return {
-      input: name,
-      matched: null,
-      score: null,
-      candidates: [],
-      kind: "none",
-    };
-  }
+  // No exact match. The fuzzy-matching RPC (search_departments_by_similarity)
+  // this used to fall back to no longer exists in the schema, so unmatched
+  // department names are reported as not found rather than approximately
+  // guessed at.
+  return {
+    input: name,
+    matched: null,
+    score: null,
+    candidates: [],
+    kind: "none",
+  };
 }
 
 async function fuzzyResolveByName(
-  table: "properties",
+  table: "hotels",
   input: string,
   organizationId: string,
 ): Promise<NameMatch> {
@@ -545,113 +487,20 @@ async function fuzzyResolveByName(
     };
   }
 
-  // Fuzzy: compute similarity in SQL and take top 5.
-  const { data, error } = await adminClient.rpc(
-    "search_properties_by_similarity",
-    {
-      search_text: input,
-      result_limit: 10,
-    },
-  );
-
-  if (error) {
-    return { input, matched: null, score: null, candidates: [], kind: "none" };
-  }
-
-  const rows = (data ?? []) as { id: string; name: string; score: number }[];
-  if (rows.length === 0) {
-    return { input, matched: null, score: null, candidates: [], kind: "none" };
-  }
-
-  // Filter similarity results to target organization_id
-  const { data: orgProps } = await adminClient
-    .from("properties")
-    .select("id")
-    .eq("organization_id", organizationId)
-    .in("id", rows.map((r) => r.id));
-
-  const validPropIds = new Set((orgProps ?? []).map((p: any) => p.id));
-  const candidates = rows.filter((r) => validPropIds.has(r.id)).slice(0, 5);
-  const best = candidates[0];
-
-  if (!best || best.score < 0.25) {
-    return {
-      input,
-      matched: null,
-      score: best?.score ?? null,
-      candidates,
-      kind: "none",
-    };
-  }
-
-  return {
-    input,
-    matched: { id: best.id, name: best.name },
-    score: best.score,
-    candidates,
-    kind: "fuzzy",
-  };
+  // The fuzzy-matching RPC (search_properties_by_similarity) this used to
+  // fall back to no longer exists in the schema, so an unmatched property
+  // name is reported as not found rather than approximately guessed at.
+  return { input, matched: null, score: null, candidates: [], kind: "none" };
 }
 
 async function resolveJobTitle(input: string): Promise<JobTitleMatch> {
+  // job_titles no longer exists as a lookup table — profiles.job_title is
+  // free text now, so any non-empty input is accepted as-is.
   const trimmed = input.trim();
   if (!trimmed) {
     return { input, matched: null, score: null, candidates: [], kind: "none" };
   }
-
-  // Exact-ish first.
-  {
-    const { data } = await adminClient
-      .from("job_titles")
-      .select("title")
-      .ilike("title", trimmed)
-      .limit(1)
-      .maybeSingle();
-    if (data?.title) {
-      return {
-        input,
-        matched: data.title,
-        score: 1,
-        candidates: [],
-        kind: "exact",
-      };
-    }
-  }
-
-  // Fuzzy via similarity.
-  const { data, error } = await adminClient.rpc(
-    "search_job_titles_by_similarity",
-    {
-      search_text: trimmed,
-      result_limit: 5,
-    },
-  );
-
-  if (error) {
-    return { input, matched: null, score: null, candidates: [], kind: "none" };
-  }
-
-  const rows = (data ?? []) as { title: string; score: number }[];
-  const candidates = rows.map((r) => ({ title: r.title, score: r.score }));
-  const best = candidates[0];
-
-  if (!best || best.score < 0.25) {
-    return {
-      input,
-      matched: null,
-      score: best?.score ?? null,
-      candidates,
-      kind: "none",
-    };
-  }
-
-  return {
-    input,
-    matched: best.title,
-    score: best.score,
-    candidates,
-    kind: "fuzzy",
-  };
+  return { input, matched: trimmed, score: 1, candidates: [], kind: "exact" };
 }
 
 Deno.serve(async (req: Request) => {

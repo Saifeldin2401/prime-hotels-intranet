@@ -41,14 +41,17 @@ import {
     Building2,
     Check,
     ChevronDown,
+    Compass,
     Crown,
     LogOut,
     Menu,
+    Play,
     Search,
     Settings,
     Sparkles,
     User
 } from 'lucide-react'
+import { useWizard } from '@/hooks/useWizard'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -73,7 +76,8 @@ export function Header({
   const { user, profile, primaryRole, signOut } = useAuth()
   const { currentOrganization, currentHotel, isPlatformAdmin, isImpersonating, isPlatformScope, returnToPlatformScope } = useTenant()
   const { activeLens, availableLenses, switchLens } = useLens()
-  const { t, i18n } = useTranslation(['common', 'nav', 'admin'])
+  const { openWhatCanIDo, openWizard, startTour } = useWizard()
+  const { t, i18n } = useTranslation(['common', 'nav', 'admin', 'wizard'])
   const isRtl = i18n.dir() === 'rtl'
   const [userStatus, setUserStatus] = useState<'online' | 'away' | 'busy'>('online')
 
@@ -147,7 +151,7 @@ export function Header({
           </div>
 
           {/* Center Search - Premium Sleek Style */}
-          <div className="flex-1 min-w-0 max-w-xs xl:max-w-md mx-2 lg:mx-4 hidden xl:flex items-center gap-2">
+          <div data-tour="header-search" className="flex-1 min-w-0 max-w-xs xl:max-w-md mx-2 lg:mx-4 hidden xl:flex items-center gap-2">
             <Button
               variant="outline"
               className="w-full justify-start text-sm text-slate-300 bg-hotel-navy-dark/80 border-hotel-navy-light/60 hover:bg-hotel-navy-light hover:text-white hover:border-hotel-gold/40 active:scale-[0.99] transition-all duration-150 shadow-inner"
@@ -204,7 +208,7 @@ export function Header({
             <SyncStatus className="hidden 2xl:flex shrink-0" />
 
             {/* Language Switcher */}
-            <div id="language-switcher" className="text-white shrink-0">
+            <div id="language-switcher" data-tour="language-switcher" className="text-white shrink-0">
               <LanguageSwitcher
                 variant="ghost"
                 className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2 rounded-lg border-transparent active:scale-[0.98] transition-transform duration-150"
@@ -212,15 +216,78 @@ export function Header({
             </div>
 
             {/* Notification Bell - Light Variant for Navy Header */}
-            <div id="notifications-button" className="text-white shrink-0">
+            <div id="notifications-button" data-tour="notifications-button" className="text-white shrink-0">
               <NotificationBell />
+            </div>
+
+            {/* Role Guide / What Can I Do Launcher */}
+            <div id="role-guide-button" data-tour="role-guide-button" className="text-white shrink-0 flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2.5 rounded-lg border border-white/10 hover:border-hotel-gold/30 gap-1.5 active:scale-[0.98] transition-all"
+                    title={t('actions.my_guide', 'My Role Guide')}
+                  >
+                    <Compass className="h-4 w-4 text-hotel-gold" />
+                    <span className="hidden xl:inline text-xs font-medium">{t('actions.my_guide', 'My Guide')}</span>
+                    <ChevronDown className="h-3 w-3 text-white/60 hidden sm:inline" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64 bg-hotel-navy border border-hotel-gold/30 text-white shadow-2xl p-1.5">
+                  <DropdownMenuLabel className="text-xs text-hotel-gold font-semibold px-2 py-1.5">
+                    {t('wizard:sheet.badge', 'Role Guide & Tours')}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-white/10 my-1" />
+                  <DropdownMenuItem
+                    className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-xs gap-2.5 py-2 px-2 rounded-md"
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      setTimeout(() => openWhatCanIDo(), 50)
+                    }}
+                  >
+                    <Compass className="h-4 w-4 text-hotel-gold shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{t('actions.my_guide', 'Role Guide & Capabilities')}</span>
+                      <span className="text-[10px] text-white/60">Permissions, tasks & restrictions</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-xs gap-2.5 py-2 px-2 rounded-md"
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      setTimeout(() => startTour(), 50)
+                    }}
+                  >
+                    <Sparkles className="h-4 w-4 text-hotel-gold shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{t('wizard:actions.start_tour', 'On-Page Spotlight Tour')}</span>
+                      <span className="text-[10px] text-white/60">Live interactive tour of current page</span>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-xs gap-2.5 py-2 px-2 rounded-md"
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      setTimeout(() => openWizard(), 50)
+                    }}
+                  >
+                    <Play className="h-4 w-4 text-hotel-gold shrink-0" />
+                    <div className="flex flex-col">
+                      <span className="font-semibold">{t('wizard:sheet.restart_wizard', 'Full Onboarding Wizard')}</span>
+                      <span className="text-[10px] text-white/60">Replay step-by-step role journey</span>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Divider */}
             <div className="h-8 w-px bg-hotel-navy-dark mx-0.5 shrink-0" />
 
             {/* User Menu - Enhanced Premium Dropdown */}
-            <div id="user-menu" className="ms-0.5 shrink-0">
+            <div id="user-menu" data-tour="user-menu" className="ms-0.5 shrink-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -379,6 +446,26 @@ export function Header({
                       </DropdownMenuItem>
                     )}
 
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        setTimeout(() => openWhatCanIDo(), 50)
+                      }}
+                    >
+                      <Compass className="me-3 h-4 w-4 text-hotel-gold transition-transform group-hover:rotate-45" />
+                      <span>{t('actions.my_guide', 'Role & Operating Guide')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        setTimeout(() => startTour(), 50)
+                      }}
+                    >
+                      <Sparkles className="me-3 h-4 w-4 text-hotel-gold transition-transform group-hover:scale-110" />
+                      <span>{t('wizard:actions.start_tour', 'Interactive On-Page Tour')}</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
                       onSelect={() => navigate('/profile')}

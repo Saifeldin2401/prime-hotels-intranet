@@ -465,11 +465,13 @@ Deno.serve(async (req) => {
           targetUserIds = (orgProfiles || []).map((p) => p.id);
         }
       } else if (body.propertyId) {
-        // Fetch profiles assigned to this property
+        // Property (hotel) membership now lives on organization_memberships.hotel_id
+        // rather than a separate user_properties junction table.
         const { data: propertyUsers, error: propertyError } = await supabase
-          .from("user_properties")
+          .from("organization_memberships")
           .select("user_id")
-          .eq("property_id", body.propertyId);
+          .eq("hotel_id", body.propertyId)
+          .eq("is_active", true);
 
         if (propertyError) {
           return jsonResponse(
@@ -483,11 +485,13 @@ Deno.serve(async (req) => {
         }
         targetUserIds = (propertyUsers || []).map((p) => p.user_id);
       } else if (body.departmentId) {
-        // Fetch profiles assigned to this department
+        // Department membership now lives on organization_memberships.department_id
+        // rather than a separate user_departments junction table.
         const { data: deptUsers, error: deptError } = await supabase
-          .from("user_departments")
+          .from("organization_memberships")
           .select("user_id")
-          .eq("department_id", body.departmentId);
+          .eq("department_id", body.departmentId)
+          .eq("is_active", true);
 
         if (deptError) {
           return jsonResponse(

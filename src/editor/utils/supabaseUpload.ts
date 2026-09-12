@@ -143,8 +143,7 @@ export async function uploadFileToSupabase(
   }
 
   // 'content-media' is a public bucket: embedded content URLs are persisted inside saved
-  // HTML and must stay valid. If the bucket is accidentally set private, fall back to a
-  // long-lived signed URL so the upload doesn't silently break.
+  // HTML and must stay valid, so this always resolves a public URL (not a signed one).
   // eslint-disable-next-line no-restricted-properties
   const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
 
@@ -152,21 +151,6 @@ export async function uploadFileToSupabase(
     await registerInMediaLibrary(file, path, bucket, urlData.publicUrl, isVideo, user.id, contentType)
   }
 
-  // Primary: use public URL for public buckets
-  if (urlData?.publicUrl) {
-    return urlData.publicUrl
-  }
-
-  // Fallback: if bucket was set private, generate a long-lived signed URL
-  console.warn(`[supabaseUpload] getPublicUrl returned empty for bucket '${bucket}'; falling back to signed URL`)
-  const { data: signedData, error: signedError } = await supabase.storage
-    .from(bucket)
-    .createSignedUrl(path, 86400 * 365) // 1 year expiry
-
-  if (signedError || !signedData?.signedUrl) {
-    throw new Error(`Upload succeeded but failed to generate URL: ${signedError?.message || 'unknown'}`)
-  }
-
-  return signedData.signedUrl
+  return urlData.publicUrl
 }
 

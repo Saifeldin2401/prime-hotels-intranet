@@ -8,6 +8,7 @@ import { PropertyProvider } from '@/contexts/PropertyContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
+import { WizardProvider } from '@/contexts/WizardContext'
 import { queryClient } from '@/lib/queryClient'
 import { QueryRuntimeBridge } from './QueryRuntimeBridge'
 
@@ -28,9 +29,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <PropertyProvider>
               <LensProvider>
                 <UserSettingsProvider>
-                  <PresenceProvider>
-                    {children}
-                  </PresenceProvider>
+                  <WizardProvider>
+                    <PresenceProvider>
+                      {children}
+                    </PresenceProvider>
+                  </WizardProvider>
                 </UserSettingsProvider>
               </LensProvider>
             </PropertyProvider>

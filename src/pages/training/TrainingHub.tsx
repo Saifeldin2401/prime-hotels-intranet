@@ -717,6 +717,7 @@ export default function TrainingHub() {
       return (
         <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
+            data-tour="training-create-course-btn"
             onClick={() => setShowSmartAIModal(true)}
             className={cn("w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black shadow-md border-none", isRTL ? "flex-row-reverse" : "")}
           >
@@ -740,6 +741,7 @@ export default function TrainingHub() {
             {t('startFromScratch', 'Start Blank')}
           </Button>
           <Button
+            data-tour="training-assign-wizard-btn"
             variant="outline"
             onClick={() => setAssignWizardOpen(true)}
             className={cn("w-full sm:w-auto border-amber-300 text-amber-900 dark:text-amber-300 hover:bg-amber-50/50", isRTL ? "flex-row-reverse" : "")}
@@ -921,7 +923,7 @@ export default function TrainingHub() {
         actions={headerActions}
       />
 
-      <div className="mb-6">
+      <div className="mb-6" data-tour="training-workflow-steps">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
           {workflowSteps.map((step) => {
             const Icon = step.icon
@@ -1062,11 +1064,12 @@ export default function TrainingHub() {
               </div>
 
               {/* Multi-Filters & Search Toolbar */}
-              <div className="p-3 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
+              <div data-tour="training-search-toolbar" className="p-3 sm:p-4 bg-white rounded-xl border border-slate-200 shadow-sm space-y-3">
                 <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                   <div className="relative flex-1 min-w-[240px]">
                     <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 font-bold", isRTL ? "end-3" : "start-3")} />
                     <Input
+                      data-tour="training-search-input"
                       type="text"
                       placeholder={t('searchEmployeeOrModule', { defaultValue: 'Search modules by title, category, description...' })}
                       value={search}

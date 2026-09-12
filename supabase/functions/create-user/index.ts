@@ -597,29 +597,12 @@ Deno.serve(async (req: Request) => {
       `Creating user: ${normalizedEmail}, mode: ${provisioningMethod}, jobTitle: ${jobTitle}, role: ${normalizedRole}, reportingTo: ${reportingTo}, by: ${user.email}`,
     );
 
-    // Validate job title against FK target to avoid opaque profile FK errors.
-    // If the provided title can't be matched, fall back to NULL instead of failing user creation.
-    let normalizedJobTitle: string | null = null;
-    if (typeof jobTitle === "string" && jobTitle.trim().length > 0) {
-      const trimmedJobTitle = jobTitle.trim();
-      const { data: titleRow, error: titleLookupError } = await adminClient
-        .from("job_titles")
-        .select("title")
-        .ilike("title", trimmedJobTitle)
-        .limit(1)
-        .maybeSingle();
-
-      if (titleLookupError) {
-        console.error("Job title lookup failed:", titleLookupError);
-        // Continue without job title rather than failing user creation.
-      } else if (!titleRow?.title) {
-        console.warn(
-          `Job title not found for "${trimmedJobTitle}", continuing with null job_title`,
-        );
-      } else {
-        normalizedJobTitle = titleRow.title;
-      }
-    }
+    // job_titles is a free-text column on profiles now (no lookup table exists
+    // anymore), so the input is used as-is rather than validated against a list.
+    const normalizedJobTitle: string | null =
+      typeof jobTitle === "string" && jobTitle.trim().length > 0
+        ? jobTitle.trim()
+        : null;
 
     // 1. Create Auth User
     let authData: { user?: { id?: string } } | null = null;
@@ -774,37 +757,13 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 4. Assign Properties
-    if (propertyIds.length > 0) {
-      const { error: propError } = await adminClient
-        .from("user_properties")
-        .insert(
-          propertyIds.map((pid: string) => ({
-            user_id: userId,
-            property_id: pid,
-          })),
-        );
-
-      if (propError) {
-        console.error("Property assignment failed:", propError);
-      }
-    }
-
-    // 5. Assign Departments
-    if (departmentIds.length > 0) {
-      const { error: deptError } = await adminClient
-        .from("user_departments")
-        .insert(
-          departmentIds.map((did: string) => ({
-            user_id: userId,
-            department_id: did,
-          })),
-        );
-
-      if (deptError) {
-        console.error("Department assignment failed:", deptError);
-      }
-    }
+    // 4/5. Property and department assignment now live directly on
+    // organization_memberships (hotel_id/department_id columns) rather than
+    // separate user_properties/user_departments junction tables, which no
+    // longer exist. Only a single primary hotel/department can be recorded
+    // per membership row (set below), so multi-property/-department
+    // assignment from this endpoint is no longer supported — the caller only
+    // gets propertyIds[0]/departmentIds[0] applied.
 
     // 6. Assign Organization Membership (multi-tenant authoritative context)
     if (targetOrgId) {

@@ -65,6 +65,8 @@ import {
   Ban,
   History,
   Mail,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -79,8 +81,10 @@ export default function PlatformUserDirectory() {
   const [selectedOrgId, setSelectedOrgId] = useState('all')
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'suspended' | 'locked'>('all')
-  const [selectedSecurityFilter, setSelectedSecurityFilter] = useState<'all' | 'locked' | 'reset_pending' | 'suspended'>('all')
+  const [selectedSecurityFilter, setSelectedSecurityFilter] = useState<'all' | 'locked' | 'reset_pending'>('all')
   const [selectedOperatorFilter, setSelectedOperatorFilter] = useState<'all' | 'operators_only' | 'learners_only'>('all')
+  const DIRECTORY_PAGE_SIZE = 100
+  const [directoryPage, setDirectoryPage] = useState(0)
 
   // Bulk Selection & Operations
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
@@ -134,6 +138,17 @@ export default function PlatformUserDirectory() {
   const [inviteFullName, setInviteFullName] = useState('')
   const [addOperatorRole, setAddOperatorRole] = useState('platform_admin')
 
+  // Single source of truth for "is this account suspended / locked", used by the
+  // KPI cards, both filter dropdowns, the desktop table, the mobile cards, and the
+  // inspection drawer. Previously each of those had its own slightly different
+  // inline definition, so the same account could read as "Locked" in one place
+  // and "Active" in another.
+  const isUserSuspended = (u: any) => u.account_status === 'suspended' || !u.is_active
+  const isUserLocked = (u: any) =>
+    u.account_status === 'locked' ||
+    (u.locked_until && new Date(u.locked_until) > new Date()) ||
+    (u.failed_login_attempts && u.failed_login_attempts > 0)
+
   // 1. Fetch Internal Platform Operators (Our Team)
   const { data: platformOperators = [], isLoading: isLoadingOperators, refetch: refetchOperators } = useQuery({
     queryKey: ['platform-internal-operators'],
@@ -149,17 +164,29 @@ export default function PlatformUserDirectory() {
   })
 
   // 3. Fetch Cross-Tenant Customer & Learner Directory
-  const { data: users = [], isLoading, refetch } = useQuery({
-    queryKey: ['platform-global-user-directory', search, selectedOrgId, selectedRole],
+  // Only runs while the Customer Directory tab is active — the Platform Team tab
+  // filters `platformOperators` entirely client-side and never reads this data, so
+  // there's no reason for every keystroke in the shared search box to also fire
+  // this (paginated, RPC-backed) query while looking at the other tab.
+  const {
+    data: directoryResult,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['platform-global-user-directory', search, selectedOrgId, selectedRole, directoryPage],
+    enabled: activeTab === 'customer_directory',
     queryFn: () =>
       platformService.getPlatformUserDirectory({
         search: search || undefined,
         organizationId: selectedOrgId !== 'all' ? selectedOrgId : undefined,
         role: selectedRole !== 'all' ? selectedRole : undefined,
-        limit: 100,
+        limit: DIRECTORY_PAGE_SIZE,
+        offset: directoryPage * DIRECTORY_PAGE_SIZE,
       }),
     staleTime: 1000 * 15,
   })
+  const users = directoryResult?.users ?? []
+  const directoryTotalCount = directoryResult?.totalCount ?? 0
 
   // 4. Fetch Platform Live Statistics
   const { data: platformStats } = useQuery({
@@ -576,25 +603,26 @@ export default function PlatformUserDirectory() {
     { value: 'learner', label: 'Learner' },
   ]
 
-  // Status filter + security filter + operator filter + sort are applied client-side
+  // Status filter + security filter + operator filter + sort are applied client-side.
+  // Both "locked" checks below now go through the same isUserLocked() helper used
+  // everywhere else, so "Account Status: Locked" and "Security Filter: Locked" can
+  // no longer disagree about the same account.
   const displayedUsers = useMemo(() => {
     let list = users
     if (selectedStatus !== 'all') {
       if (selectedStatus === 'active') {
-        list = list.filter((u) => u.is_active && (u.account_status === 'active' || !u.account_status))
+        list = list.filter((u) => !isUserSuspended(u) && !isUserLocked(u))
       } else if (selectedStatus === 'suspended') {
-        list = list.filter((u) => u.account_status === 'suspended' || !u.is_active)
+        list = list.filter((u) => isUserSuspended(u))
       } else if (selectedStatus === 'locked') {
-        list = list.filter((u) => u.account_status === 'locked' || (u.locked_until && new Date(u.locked_until) > new Date()))
+        list = list.filter((u) => isUserLocked(u))
       }
     }
     if (selectedSecurityFilter !== 'all') {
       if (selectedSecurityFilter === 'locked') {
-        list = list.filter((u) => u.account_status === 'locked' || (u.failed_login_attempts && u.failed_login_attempts > 0) || (u.locked_until && new Date(u.locked_until) > new Date()))
+        list = list.filter((u) => isUserLocked(u))
       } else if (selectedSecurityFilter === 'reset_pending') {
         list = list.filter((u) => !!u.force_password_reset)
-      } else if (selectedSecurityFilter === 'suspended') {
-        list = list.filter((u) => u.account_status === 'suspended' || !u.is_active)
       }
     }
     if (selectedOperatorFilter !== 'all') {
@@ -626,13 +654,19 @@ export default function PlatformUserDirectory() {
     )
   }, [platformOperators, search])
 
-  const totalUsersCount = users.length
+  // These KPI cards must reflect the whole platform, not just the current 100-row
+  // page of the directory query — they read from getPlatformStats() (uncapped
+  // counts against `profiles`), falling back to the current page only if that
+  // query hasn't resolved yet. Previously all but totalLearnersCount silently used
+  // `users.length`/`users.filter(...)`, so they under-reported the moment a
+  // deployment passed 100 platform users.
+  const totalUsersCount = platformStats?.totalPlatformUsers ?? users.length
   const totalOperatorsCount = platformOperators.length
   const totalLearnersCount = platformStats?.totalLearners ?? users.filter((u) => !u.is_platform_user).length
-  const suspendedCount = users.filter((u) => u.account_status === 'suspended' || !u.is_active).length
-  const lockedOrRiskCount = users.filter((u) => u.account_status === 'locked' || !!u.force_password_reset || (u.failed_login_attempts && u.failed_login_attempts > 0)).length
-  const activeUsersCount = users.filter((u) => u.is_active && u.account_status !== 'suspended').length
-  const healthRatio = users.length > 0 ? Math.round((activeUsersCount / users.length) * 100) : 100
+  const suspendedCount = platformStats?.suspendedPlatformUsers ?? users.filter((u) => isUserSuspended(u)).length
+  const lockedOrRiskCount = platformStats?.lockedPlatformUsers ?? users.filter((u) => isUserLocked(u)).length
+  const activeUsersCount = Math.max(totalUsersCount - suspendedCount, 0)
+  const healthRatio = totalUsersCount > 0 ? Math.round((activeUsersCount / totalUsersCount) * 100) : 100
 
   // Bulk Selection Handlers
   const handleToggleSelectAll = () => {
@@ -824,7 +858,10 @@ export default function PlatformUserDirectory() {
             <Input
               placeholder={t('admin:search_users_placeholder', 'Search by name or email...')}
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setDirectoryPage(0)
+              }}
               className="ps-9 h-10 text-xs rounded-xl border-border/60 bg-background/80"
             />
           </div>
@@ -1231,7 +1268,13 @@ export default function PlatformUserDirectory() {
                 <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
                   {t('admin:all_orgs_filter', 'Filter by Organization')}
                 </Label>
-                <Select value={selectedOrgId} onValueChange={setSelectedOrgId}>
+                <Select
+                  value={selectedOrgId}
+                  onValueChange={(v) => {
+                    setSelectedOrgId(v)
+                    setDirectoryPage(0)
+                  }}
+                >
                   <SelectTrigger className="h-9 text-xs rounded-xl bg-background/70">
                     <SelectValue placeholder={t('admin:all_orgs_filter', 'All Organizations')} />
                   </SelectTrigger>
@@ -1250,18 +1293,26 @@ export default function PlatformUserDirectory() {
                 <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
                   {t('admin:all_roles_filter', 'Filter by Role')}
                 </Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <Select
+                  value={selectedRole}
+                  onValueChange={(v) => {
+                    setSelectedRole(v)
+                    setDirectoryPage(0)
+                  }}
+                >
                   <SelectTrigger className="h-9 text-xs rounded-xl bg-background/70">
                     <SelectValue placeholder={t('admin:all_roles_filter', 'All Roles')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{t('admin:all_roles_filter', 'All Roles')}</SelectItem>
-                    <SelectItem value="organization_owner">Tenant · Organization Owner</SelectItem>
-                    <SelectItem value="organization_admin">Tenant · Organization Admin</SelectItem>
-                    <SelectItem value="training_manager">Tenant · Training Manager</SelectItem>
-                    <SelectItem value="hotel_admin">Tenant · Hotel / Branch Admin</SelectItem>
-                    <SelectItem value="department_manager">Tenant · Department Manager</SelectItem>
-                    <SelectItem value="learner">Tenant · Learner</SelectItem>
+                    {/* Sourced from TENANT_ROLE_OPTIONS so this list can never drift from the
+                        roles actually assignable via Tenant Memberships (it previously omitted
+                        brand_admin, instructor, knowledge_manager and author). */}
+                    {TENANT_ROLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        Tenant · {o.label}
+                      </SelectItem>
+                    ))}
                     <SelectItem value="staff">Tenant · Staff</SelectItem>
                   </SelectContent>
                 </Select>
@@ -1296,7 +1347,6 @@ export default function PlatformUserDirectory() {
                     <SelectItem value="all">{t('admin:platform_user_mgmt.filter_security_all', 'All Security States')}</SelectItem>
                     <SelectItem value="locked">{t('admin:platform_user_mgmt.filter_security_locked', 'Locked Accounts Only')}</SelectItem>
                     <SelectItem value="reset_pending">{t('admin:platform_user_mgmt.filter_security_reset_pending', 'Password Reset Pending')}</SelectItem>
-                    <SelectItem value="suspended">{t('admin:platform_user_mgmt.filter_security_suspended', 'Suspended Only')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1336,7 +1386,14 @@ export default function PlatformUserDirectory() {
 
             <div className="flex items-center justify-between pt-2 border-t border-border/40 gap-2">
               <div className="text-xs text-muted-foreground font-mono">
-                <span>{displayedUsers.length} accounts found</span>
+                {activeTab === 'customer_directory' && directoryTotalCount > DIRECTORY_PAGE_SIZE ? (
+                  <span>
+                    {displayedUsers.length} of {DIRECTORY_PAGE_SIZE} shown on this page (
+                    {directoryTotalCount} accounts total — use the filters or Next below to see more)
+                  </span>
+                ) : (
+                  <span>{displayedUsers.length} accounts found</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -1359,6 +1416,7 @@ export default function PlatformUserDirectory() {
                     setSelectedOperatorFilter('all')
                     setSortBy('name')
                     setSearch('')
+                    setDirectoryPage(0)
                   }}
                   className="h-8 text-xs rounded-xl border-border/60 hover:bg-muted/60 text-muted-foreground"
                 >
@@ -1366,6 +1424,39 @@ export default function PlatformUserDirectory() {
                 </Button>
               </div>
             </div>
+
+            {/* Directory pagination — the directory RPC always caps at DIRECTORY_PAGE_SIZE
+                rows per call, so once an organization crosses 100 platform users, later
+                pages were previously unreachable and invisible from this screen. */}
+            {activeTab === 'customer_directory' && (directoryTotalCount > DIRECTORY_PAGE_SIZE || directoryPage > 0) && (
+              <div className="flex items-center justify-between pt-2 border-t border-border/40 gap-2">
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  Page {directoryPage + 1} of {Math.max(Math.ceil(directoryTotalCount / DIRECTORY_PAGE_SIZE), 1)}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={directoryPage === 0 || isLoading}
+                    onClick={() => setDirectoryPage((p) => Math.max(p - 1, 0))}
+                    className="h-8 text-xs rounded-xl border-border/60 hover:bg-muted/60 gap-1"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                    <span>{t('common:previous', 'Previous')}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoading || (directoryPage + 1) * DIRECTORY_PAGE_SIZE >= directoryTotalCount}
+                    onClick={() => setDirectoryPage((p) => p + 1)}
+                    className="h-8 text-xs rounded-xl border-border/60 hover:bg-muted/60 gap-1"
+                  >
+                    <span>{t('common:next', 'Next')}</span>
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Floating Bulk Operations Toolbar */}
@@ -1482,8 +1573,8 @@ export default function PlatformUserDirectory() {
                   </TableRow>
                 ) : (
                   displayedUsers.map((u) => {
-                    const isSuspended = u.account_status === 'suspended' || !u.is_active
-                    const isLocked = u.account_status === 'locked' || (u.locked_until && new Date(u.locked_until) > new Date())
+                    const isSuspended = isUserSuspended(u)
+                    const isLocked = isUserLocked(u)
                     const isSelected = selectedUserIds.has(u.id)
 
                     return (
@@ -1764,8 +1855,8 @@ export default function PlatformUserDirectory() {
                 </div>
               ) : (
                 displayedUsers.map((u) => {
-                  const isSuspended = u.account_status === 'suspended' || !u.is_active
-                  const isLocked = u.account_status === 'locked' || (u.locked_until && new Date(u.locked_until) > new Date())
+                  const isSuspended = isUserSuspended(u)
+                  const isLocked = isUserLocked(u)
                   const isSelected = selectedUserIds.has(u.id)
 
                   return (
@@ -1891,6 +1982,85 @@ export default function PlatformUserDirectory() {
                             <span>{t('admin:platform_user_mgmt.suspend_account', 'Suspend')}</span>
                           </Button>
                         )}
+
+                        {/* Previously mobile only exposed Inspect / Tenants / Suspend-Reactivate —
+                            Change Platform Role, Edit Profile, Force Password Reset and Unlock Account
+                            existed only in the desktop dropdown, so an admin on a phone had no way to
+                            reach them. Mirrored here via the same menu items as the desktop table. */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-2xl border-border/60 text-xs w-52 shadow-xl bg-card/95 backdrop-blur-xl">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingUser(u)
+                                setNewPlatformRole(u.platform_role || 'platform_support')
+                                setDetachTenantOnPromote(false)
+                              }}
+                              className="gap-2 font-medium"
+                            >
+                              {!u.is_platform_user ? (
+                                <Crown className="h-3.5 w-3.5 text-amber-500" />
+                              ) : (
+                                <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                              )}
+                              <span>
+                                {!u.is_platform_user
+                                  ? t('admin:platform_user_mgmt.promote_to_operator_btn', 'Promote to Platform Operator')
+                                  : t('admin:platform_user_mgmt.change_platform_role_btn', 'Change Platform Role')}
+                              </span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setEditingProfileUser(u)
+                                setEditProfileName(u.full_name || '')
+                                setEditProfileJobTitle(u.job_title || '')
+                                setEditProfilePhone(u.phone || '')
+                              }}
+                              className="gap-2 font-medium"
+                            >
+                              <Edit className="h-3.5 w-3.5 text-emerald-500" />
+                              <span>{t('admin:platform_user_mgmt.edit_profile', 'Edit Profile')}</span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            {(isLocked || (u.failed_login_attempts && u.failed_login_attempts > 0)) && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setActionUser(u)
+                                  setActionType('unlock')
+                                  setActionDialogOpen(true)
+                                }}
+                                className="gap-2 font-bold text-blue-600 focus:text-blue-600"
+                              >
+                                <Unlock className="h-3.5 w-3.5" />
+                                <span>{t('admin:platform_user_mgmt.unlock_account', 'Unlock Account')}</span>
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setActionUser(u)
+                                setActionType('force_password_reset')
+                                setActionNote('')
+                                setActionDialogOpen(true)
+                              }}
+                              className="gap-2 font-medium text-amber-600 focus:text-amber-600"
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                              <span>{t('admin:platform_user_mgmt.force_password_reset', 'Force Password Reset')}</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   )
@@ -2918,6 +3088,12 @@ export default function PlatformUserDirectory() {
               )
             }
 
+            // Computed once via the same isUserSuspended/isUserLocked helpers the table,
+            // mobile cards and KPI cards use, instead of re-deriving this inline (and
+            // slightly differently) at each of the ~6 places below that display it.
+            const profileIsSuspended = isUserSuspended(activeProfile)
+            const profileIsLocked = isUserLocked(activeProfile)
+
             return (
               <>
                 <SheetHeader className="text-start space-y-3 pb-4 border-b border-border/60">
@@ -2945,18 +3121,16 @@ export default function PlatformUserDirectory() {
                       <Badge
                         variant="outline"
                         className={`text-[10px] font-bold ${
-                          activeProfile.account_status === 'suspended' || !activeProfile.is_active
+                          profileIsSuspended
                             ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                            : activeProfile.account_status === 'locked' ||
-                              (activeProfile.locked_until && new Date(activeProfile.locked_until) > new Date())
+                            : profileIsLocked
                             ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
                             : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                         }`}
                       >
-                        {activeProfile.account_status === 'suspended' || !activeProfile.is_active
+                        {profileIsSuspended
                           ? t('admin:platform_user_mgmt.suspended', 'Suspended')
-                          : activeProfile.account_status === 'locked' ||
-                            (activeProfile.locked_until && new Date(activeProfile.locked_until) > new Date())
+                          : profileIsLocked
                           ? t('admin:platform_user_mgmt.locked', 'Locked')
                           : t('admin:platform_user_mgmt.active', 'Active')}
                       </Badge>
@@ -3144,25 +3318,23 @@ export default function PlatformUserDirectory() {
                           <Badge
                             variant="outline"
                             className={`text-[10px] font-bold ${
-                              activeProfile.account_status === 'suspended' || !activeProfile.is_active
+                              profileIsSuspended
                                 ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                                : activeProfile.account_status === 'locked' ||
-                                  (activeProfile.locked_until && new Date(activeProfile.locked_until) > new Date())
+                                : profileIsLocked
                                 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
                                 : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
                             }`}
                           >
-                            {activeProfile.account_status === 'suspended' || !activeProfile.is_active
+                            {profileIsSuspended
                               ? t('admin:platform_user_mgmt.suspended', 'Suspended')
-                              : activeProfile.account_status === 'locked' ||
-                                (activeProfile.locked_until && new Date(activeProfile.locked_until) > new Date())
+                              : profileIsLocked
                               ? t('admin:platform_user_mgmt.locked', 'Locked')
                               : t('admin:platform_user_mgmt.active', 'Active')}
                           </Badge>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-2 space-y-2 text-xs">
-                        {(activeProfile.account_status === 'suspended' || !activeProfile.is_active) && (
+                        {profileIsSuspended && (
                           <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 space-y-1.5">
                             <div className="flex items-center gap-1.5 font-bold">
                               <Ban className="h-3.5 w-3.5 text-rose-600" />
@@ -3260,7 +3432,7 @@ export default function PlatformUserDirectory() {
                         {t('admin:quick_security_actions', 'Quick Security Controls')}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {activeProfile.account_status === 'suspended' || !activeProfile.is_active ? (
+                        {profileIsSuspended ? (
                           <Button
                             size="sm"
                             onClick={() => {
@@ -3292,9 +3464,7 @@ export default function PlatformUserDirectory() {
                           </Button>
                         )}
 
-                        {(activeProfile.account_status === 'locked' ||
-                          (activeProfile.failed_login_attempts && activeProfile.failed_login_attempts > 0) ||
-                          activeProfile.locked_until) && (
+                        {profileIsLocked && (
                           <Button
                             variant="outline"
                             size="sm"

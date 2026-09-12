@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
       if (targetIds.length > 0) {
         const { data: completedProgress, error: progressError } = await supabase
-          .from("learning_progress")
+          .from("learning_progress_v")
           .select("user_id")
           .eq("content_type", "module")
           .eq("content_id", assignment.content_id)
@@ -451,10 +451,13 @@ async function resolveAssignmentTargets(
     }
     case "department": {
       if (!targetId) return [];
+      // Department membership now lives on organization_memberships.department_id
+      // rather than a separate user_departments junction table.
       const { data } = await supabase
-        .from("user_departments")
+        .from("organization_memberships")
         .select("profiles(id, email, full_name)")
-        .eq("department_id", targetId);
+        .eq("department_id", targetId)
+        .eq("is_active", true);
       return dedupe(
         (data || [])
           .map((u: any) => u.profiles)
@@ -463,10 +466,13 @@ async function resolveAssignmentTargets(
     }
     case "property": {
       if (!targetId) return [];
+      // Property (hotel) membership now lives on organization_memberships.hotel_id
+      // rather than a separate user_properties junction table.
       const { data } = await supabase
-        .from("user_properties")
+        .from("organization_memberships")
         .select("profiles(id, email, full_name)")
-        .eq("property_id", targetId);
+        .eq("hotel_id", targetId)
+        .eq("is_active", true);
       return dedupe(
         (data || [])
           .map((u: any) => u.profiles)

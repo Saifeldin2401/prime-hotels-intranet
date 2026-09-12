@@ -127,4 +127,7 @@ export interface PlatformStats {
   totalMasterCourses: number
   totalDeployments: number
   averageCompletionRate: number
+  totalPlatformUsers: number
+  suspendedPlatformUsers: number
+  lockedPlatformUsers: number
 }

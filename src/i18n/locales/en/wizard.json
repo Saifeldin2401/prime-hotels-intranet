@@ -1,0 +1,1416 @@
+{
+  "categories": {
+    "orientation": "Orientation & Workspace",
+    "role": "Role & Responsibilities",
+    "tasks": "Practical Tasks",
+    "workspace": "Daily Workflows",
+    "governance": "Governance & Security",
+    "help": "Guidance & Support"
+  },
+  "wizard": {
+    "step_indicator": "Step {{current}} of {{total}}"
+  },
+  "actions": {
+    "begin_setup": "Begin Guided Setup",
+    "next": "Next Step",
+    "previous": "Previous",
+    "skip_all": "Skip for Now",
+    "skip_onboarding": "Skip Onboarding",
+    "complete_onboarding": "Complete Setup",
+    "saving": "Saving...",
+    "save_profile": "Save Profile Details",
+    "completed": "Completed",
+    "my_guide": "My Role Guide",
+    "open_workflow": "Open Workflow",
+    "open_requests_hub": "Open Requests Hub",
+    "manage_alert_settings": "Customize Notification Channels",
+    "start_tour": "Start Tour",
+    "got_it": "Got It",
+    "dismiss": "Dismiss",
+    "reset_progress": "Reset Progress",
+    "resetting": "Resetting...",
+    "inspect_tenants": "Inspect Tenants",
+    "view_operations": "View Operations",
+    "catalog": "Open Catalog",
+    "audit_logs": "Audit Logs",
+    "manage_ai": "AI Operations",
+    "setup_branding": "Setup Branding",
+    "view_properties": "Manage Properties",
+    "invite_users": "Invite Users",
+    "compliance_dashboard": "Compliance Dashboard",
+    "org_settings": "Organization Settings",
+    "user_directory": "User Directory",
+    "manage_departments": "Manage Departments",
+    "training_hub": "Training Hub",
+    "view_requests": "Review Requests",
+    "notifications_setup": "Notification Preferences",
+    "course_catalog": "Course Catalog",
+    "module_builder": "Module Builder",
+    "learning_paths": "Learning Paths",
+    "compliance_reports": "Compliance Reports",
+    "certificates": "Certificates Center",
+    "knowledge_studio": "Knowledge Studio",
+    "create_sop": "Create SOP",
+    "review_queue": "Review Queue",
+    "categories": "Manage Categories",
+    "link_sop_course": "Link SOPs to Training",
+    "team_overview": "Team Overview",
+    "approval_queue": "Approval Queue",
+    "team_training": "Team Training Progress",
+    "dept_tasks": "Department Tasks",
+    "dept_sops": "Department SOPs",
+    "update_profile": "Update Profile",
+    "start_learning": "Start Learning",
+    "read_sops": "Read Department SOPs",
+    "submit_request": "Submit Request",
+    "notification_prefs": "Notification Settings",
+    "view_dashboard": "View Dashboard",
+    "browse_knowledge": "Browse Knowledge",
+    "training_reports": "Training Reports",
+    "my_profile": "My Profile",
+    "my_courses": "My Courses",
+    "new_request": "New Request",
+    "pending_approvals": "Pending Approvals",
+    "profile_settings": "Profile Settings",
+    "my_certificates": "My Certificates",
+    "go_to_builder": "Go to Course Builder"
+  },
+  "caps": {
+    "manage": "Manage",
+    "view": "View",
+    "no_access": "No Access",
+    "platform": {
+      "orgs": "Provision, configure, and isolate multi-tenant hotel organizations.",
+      "training": "Manage master course templates and global LMS catalogs.",
+      "telemetry": "Real-time telemetry, error rates, and background queues.",
+      "ai": "Configure LLM model routing, prompt templates, and credit quotas.",
+      "audit": "Platform-wide cryptographically verifiable audit logs."
+    },
+    "owner": {
+      "settings": "Organization branding, legal details, and domain customization.",
+      "properties": "Create, edit, and organize hotel properties and brands.",
+      "users": "Appoint hotel administrators and manage executive leadership.",
+      "compliance": "Cross-property regulatory and internal compliance auditing.",
+      "approvals": "Final authority on executive, financial, and policy requests."
+    },
+    "admin": {
+      "users": "Invite, assign roles, and manage employee accounts.",
+      "depts": "Configure department hierarchy and reporting lines.",
+      "reports": "Generate HR, training, and operational activity reports.",
+      "training": "Inspect scheduled training courses and property completion.",
+      "approvals": "Manage administrative requests and department escalations."
+    },
+    "training": {
+      "builder": "Build interactive modules, lessons, and multimedia quizzes.",
+      "assignments": "Automated role-based and department training assignment rules.",
+      "analytics": "Learner completion tracking, passing rates, and overdue metrics.",
+      "certificates": "Issue and verify digital course completion credentials.",
+      "directory": "View employee rosters and department assignments."
+    },
+    "knowledge": {
+      "author": "Author, edit, and publish rich Standard Operating Procedures (SOPs).",
+      "versions": "Track revision history, compare diffs, and manage rollback.",
+      "search": "Manage search indexing, tags, and category taxonomies.",
+      "training": "Review training materials linked to operational SOPs.",
+      "approvals": "Review and approve SOP document updates."
+    },
+    "dept": {
+      "team_training": "Monitor shift and department training completion rates.",
+      "approvals": "Review and decide on employee leave, shifts, and equipment.",
+      "tasks": "Create and assign daily operational tasks to department staff.",
+      "knowledge": "Review departmental SOPs and ensure team compliance.",
+      "directory": "View contact and role details for departmental employees."
+    },
+    "learner": {
+      "training": "Access enrolled courses, interactive modules, and quizzes.",
+      "knowledge": "Search and read hotel SOPs, policies, and brand standards.",
+      "requests": "Submit operational requests and track approval statuses.",
+      "profile": "Manage personal details, language preference, and alerts.",
+      "admin": "No administrative or platform management access."
+    },
+    "viewer": {
+      "dashboards": "View high-level KPIs, property summaries, and metrics.",
+      "knowledge": "Read published SOPs, policies, and brand guidelines.",
+      "reports": "View completion analytics and compliance reports.",
+      "authoring": "Cannot create, edit, or publish any operational content.",
+      "approvals": "Cannot submit or approve operational workflow requests."
+    }
+  },
+  "modules": {
+    "organizations": "Organizations Hub",
+    "platform_training": "Master Training Catalog",
+    "telemetry": "Platform Telemetry",
+    "ai_operations": "AI & Copilot Operations",
+    "audit_logs": "Platform Audit Logs",
+    "org_settings": "Organization Settings",
+    "properties": "Hotel Properties",
+    "user_management": "User Directory & Roles",
+    "compliance": "Compliance Center",
+    "approvals": "Requests & Approvals",
+    "departments": "Departments Hierarchy",
+    "reports": "Operational Reports",
+    "training": "Training & LMS",
+    "training_builder": "Course & Module Builder",
+    "training_assignments": "Training Assignments Engine",
+    "analytics": "Learner Analytics",
+    "certificates": "Certificates & Credentials",
+    "user_directory": "User Directory",
+    "sop_authoring": "SOP & Policy Authoring",
+    "version_history": "Version Control & Diffs",
+    "knowledge_search": "Knowledge Library",
+    "training_content": "Linked Training Content",
+    "team_training": "Team Training Velocity",
+    "tasks": "Department Tasks",
+    "knowledge_base": "Knowledge Base",
+    "assigned_training": "Assigned Learning Courses",
+    "profile": "Personal Profile",
+    "admin_panel": "Administration Console",
+    "dashboards": "Executive Dashboards",
+    "training_reports": "Training Reports",
+    "authoring": "Content Authoring"
+  },
+  "steps": {
+    "welcome": {
+      "title": "Welcome to PRIME Connect",
+      "desc": "Getting started with your personalized hotel operating platform."
+    },
+    "role_mental_model": {
+      "title": "Your Role & Operational Boundaries",
+      "desc": "Clear guidance on what you are authorized to do and what lies outside your role."
+    },
+    "navigation_tour": {
+      "title": "Your Navigation & Destinations",
+      "desc": "An overview of the core tools and workspaces available in your menu."
+    },
+    "daily_workspace": {
+      "title": "Your Daily Command Center",
+      "desc": "How to use your dashboard every day to prioritize urgent actions."
+    },
+    "guided_tasks": {
+      "title": "Your First 5 Practical Tasks",
+      "desc": "Recommended initial steps to get fully ramped up in your role."
+    },
+    "profile_completion": {
+      "title": "Complete Your Employee Profile",
+      "desc": "Verify your name, contact phone, job title, and preferred language."
+    },
+    "tenant_identity": {
+      "title": "Hotel Organization & Security",
+      "desc": "Your property environment, security standards, and support contacts."
+    },
+    "capabilities_explainer": {
+      "title": "Your System Capabilities",
+      "desc": "Detailed view of your Manage, View, and Restricted permissions across features."
+    },
+    "requests_lifecycle": {
+      "title": "Requests & Approvals Lifecycle",
+      "desc": "How operational requests are submitted, reviewed, and completed."
+    },
+    "approval_responsibilities": {
+      "title": "Approver Guidelines & Authority",
+      "desc": "Decision criteria and verification checklists for supervisory reviews."
+    },
+    "content_hierarchy": {
+      "title": "Content & LMS Structure",
+      "desc": "How training modules, lessons, assessments, and certifications connect."
+    },
+    "notification_preferences": {
+      "title": "Notifications & Alerts",
+      "desc": "Configure actionable alerts versus informational announcements."
+    },
+    "help_and_support": {
+      "title": "Help, FAQs & Support Channels",
+      "desc": "Where to find answers, search operating procedures, and contact support."
+    },
+    "account_security": {
+      "title": "Security & Account Governance",
+      "desc": "Session security, audit trails, and account credentials."
+    }
+  },
+  "welcome_step": {
+    "greeting": "Welcome, {{name}}!",
+    "organization_intro": "You are signed into {{org}}. This guided walkthrough is customized to your exact role, permissions, and daily responsibilities.",
+    "core_focus": "Your Operational Responsibilities"
+  },
+  "role_step": {
+    "intro": "In an enterprise hotel platform, clarity of responsibilities is critical for brand standard compliance and operational safety. Here is your operational boundary:",
+    "you_can_title": "What You Can Do",
+    "you_cannot_title": "What Lies Outside Your Role"
+  },
+  "nav_step": {
+    "intro": "The sidebar navigation automatically reflects only the domains you have permissions to access. Here are your primary operational destinations:",
+    "dashboard_title": "Workspace Dashboard",
+    "dashboard_desc": "Your daily command center for assigned courses, upcoming deadlines, and pending approvals.",
+    "training_title": "Training & LMS",
+    "training_desc": "Interactive learning modules, SOP assessments, pass certifications, and progress tracking.",
+    "requests_title": "Requests & Approvals",
+    "requests_desc": "Submit shift exchanges, equipment requisitions, leave requests, and track supervisor decisions.",
+    "knowledge_title": "Knowledge & SOPs",
+    "knowledge_desc": "Searchable standard operating procedures, brand guidelines, and hotel department policies."
+  },
+  "workspace_step": {
+    "dashboard_heading": "How to Use Your Dashboard Every Day",
+    "dashboard_desc": "When you sign in, your dashboard prioritizes urgent actions requiring your attention before general updates:",
+    "urgent_action": "Action Items",
+    "urgent_desc": "Overdue modules, pending request decisions, and shift alerts.",
+    "velocity": "Progress Velocity",
+    "velocity_desc": "Completion percentage across your active hotel training paths.",
+    "announcements": "Announcements",
+    "announcements_desc": "Property-wide broadcasts and department notices."
+  },
+  "tasks_step": {
+    "intro": "We have prepared your personalized First 5 Practical Tasks to get fully ramped up in your role:"
+  },
+  "profile_step": {
+    "intro": "Complete your profile details below to ensure shift communications, notifications, and certificates display correctly:",
+    "full_name": "Full Name",
+    "phone": "Phone Number",
+    "job_title": "Job Title / Position",
+    "language": "Preferred Language (اللغة)",
+    "updates_database": "Updates your personal employee record.",
+    "saved_indicator": "Saved",
+    "saved_success": "Profile details updated successfully",
+    "saved_error": "Failed to update profile details"
+  },
+  "tenant_step": {
+    "isolated_tenant": "Multi-tenant isolated hotel organization environment",
+    "security_zone": "Data Security Zone",
+    "active_role": "Your Assigned Role",
+    "support_channel": "Internal Support",
+    "support_desk": "Internal HR & Operations Desk"
+  },
+  "caps_step": {
+    "intro": "Based on your assigned role and security policies, here is an explicit overview of your access level across platform features:"
+  },
+  "requests_step": {
+    "intro": "All operational requests (leave, shift swaps, equipment, training appeals) follow an auditable 4-stage lifecycle:",
+    "submit": "Submit",
+    "submit_desc": "Fill request details with dates and justifications.",
+    "review": "Supervisor Review",
+    "review_desc": "Coverage, budget, and SOP compliance checked.",
+    "decision": "Approval / Return",
+    "decision_desc": "Approved, returned for correction, or rejected.",
+    "notify": "Notification",
+    "notify_desc": "Instant notification and permanent audit record."
+  },
+  "approver_step": {
+    "heading": "Approver Authority Guidelines",
+    "evaluation_criteria": "Decision Criteria"
+  },
+  "content_step": {
+    "creator_intro": "LMS training modules follow a structured instructional design hierarchy for maximum retention and compliance:",
+    "creator_hierarchy": "Course → Module → Lesson → Assessment → Certificate",
+    "creator_item1": "Modules bundle related operational SOPs.",
+    "creator_item2": "Interactive quizzes verify knowledge retention with passing score thresholds.",
+    "creator_item3": "Automated assignment rules deliver modules to selected departments or hotels.",
+    "learner_intro": "How your learning journey works to achieve certified completion:",
+    "learner_journey": "Enrolled Course → Interactive Lessons → Quiz (>80%) → Certificate",
+    "learner_item1": "Complete lessons at your own pace from mobile or desktop.",
+    "learner_item2": "Quizzes can be retaken if you do not reach the passing threshold on your first attempt.",
+    "learner_item3": "Certificates are permanently stored and verifiable on your profile."
+  },
+  "notifications_step": {
+    "intro": "PRIME Connect differentiates between Actionable alerts (deadlines, approvals) and Informational broadcasts:",
+    "actionable": "Actionable Notifications",
+    "actionable_desc": "Pending requests waiting for your review, training deadlines in <48 hours, shift changes.",
+    "informational": "Informational Notifications",
+    "informational_desc": "Company announcements, new SOP publications, weekly digest summaries."
+  },
+  "help_step": {
+    "intro": "Whenever you have questions or need operational guidance, you have 3 distinct support options:",
+    "sheet_title": "Persistent Role Guide",
+    "sheet_desc": "Click \"My Guide\" anytime in the header to view your capabilities and replay tours.",
+    "always_on": "Always Available",
+    "search_title": "Role-Aware Help Search",
+    "search_desc": "Search frequently asked questions and operational workflows.",
+    "searchable": "Instant",
+    "hr_title": "Department Manager & HR",
+    "hr_desc": "Direct escalation for scheduling, policy, or technical inquiries.",
+    "human_support": "Assisted"
+  },
+  "security_step": {
+    "ready_title": "You are ready to use PRIME Connect!",
+    "ready_desc": "Always protect your credentials. All platform activity is securely logged for compliance and operational integrity.",
+    "session": "Session Timeout",
+    "session_desc": "Automatic lockout after inactivity.",
+    "audit": "Audit Logging",
+    "audit_desc": "Cryptographically verifiable actions.",
+    "mfa": "2FA Options",
+    "mfa_desc": "Multi-factor authentication support."
+  },
+  "sheet": {
+    "badge": "Role Guide",
+    "tabs": {
+      "access": "My Access",
+      "tasks": "Quick Tasks",
+      "tours": "Tours"
+    },
+    "you_can_do": "What You Can Do",
+    "you_cannot_do": "Boundaries & Restrictions",
+    "capabilities_breakdown": "Module Capabilities",
+    "tasks_intro": "Recommended practical actions to get up to speed in your role:",
+    "tours_intro": "Take interactive tours of core platform features anytime:",
+    "restart_wizard": "Restart Full Onboarding",
+    "search_help": "Search FAQs"
+  },
+  "help_dialog": {
+    "title": "Role-Aware Help & Operations Guide",
+    "description": "Tailored answers and workflows for your role:",
+    "search_placeholder": "Search how to do things (e.g. training, requests, profile)...",
+    "no_results": "No matching guides found",
+    "try_different": "Try searching for training, approvals, SOPs, or requests."
+  },
+  "faqs": {
+    "categories": {
+      "training": "Training & LMS",
+      "requests": "Requests & Approvals",
+      "sops": "Knowledge & SOPs",
+      "users": "User Management",
+      "profile": "Personal Profile"
+    },
+    "assign_training": {
+      "q": "How do I assign a training course to employees?",
+      "a": "Navigate to Training Hub > Course Builder or Assignments. Select the module, pick the target property or department, set the completion deadline, and submit the assignment rule."
+    },
+    "access_my_training": {
+      "q": "Where do I find my assigned training courses?",
+      "a": "Go to the Training section from your sidebar. Under \"My Courses\", you will see your active modules, upcoming deadlines, and progress percentage."
+    },
+    "submit_request": {
+      "q": "How do I submit a time-off or shift exchange request?",
+      "a": "Open the Requests Hub from your navigation menu. Click \"New Request\", choose the category (Shift Exchange, Leave, Equipment), fill the required dates and justification, and click Submit."
+    },
+    "approve_requests": {
+      "q": "Where do I review and approve pending team requests?",
+      "a": "Managers can view the approval queue under Requests > Approvals. Review the employee request, check shift coverage, and choose to Approve, Reject, or Return with comments."
+    },
+    "sop_publishing": {
+      "q": "How do I draft and publish a new Standard Operating Procedure?",
+      "a": "Navigate to Knowledge Studio > Create SOP. Fill in the title, department category, bilingual text (English & Arabic), and submit for editorial review and publication."
+    },
+    "user_invitation": {
+      "q": "How do I invite new hotel staff members to the intranet?",
+      "a": "Go to Admin > User Directory. Click \"Invite User\", specify their email address, property, department, and assigned organizational role."
+    },
+    "profile_language": {
+      "q": "How do I switch the platform language between Arabic and English?",
+      "a": "Click the Language Switcher in the top header or navigate to Profile Settings. Choose between English and Arabic (العربية). The layout will automatically adapt to RTL format."
+    },
+    "download_certificates": {
+      "q": "Where do I view and download my completed course certificates?",
+      "a": "After achieving a passing score (>80%) on a course assessment, digital certificates are available under Training > Certificates or from your profile page."
+    }
+  },
+  "role_change": {
+    "banner_title": "Your organizational role has been updated:",
+    "previous": "previously",
+    "view_guide": "View Role Guide"
+  },
+  "module_tour": {
+    "new_feature": "New Feature Available",
+    "whats_included": "What's Included",
+    "start_tour": "Take 2-Min Tour"
+  },
+  "empty_state": {
+    "learn_about": "Learn about"
+  },
+  "callout": {
+    "dont_show_again": "Don't show this again"
+  },
+  "simulation": {
+    "banner": "Admin Preview Mode: Simulating role",
+    "exit": "Exit Preview",
+    "title": "Interactive \"View As\" Role Simulation",
+    "description": "Preview the exact 14-step onboarding journey, operational mental models, and practical tasks that a user in any role experiences. No live data is overwritten.",
+    "start_simulation": "Simulate Onboarding Journey",
+    "started_toast": "Previewing wizard as {{role}}"
+  },
+  "manager": {
+    "title": "Guided Onboarding & Role Wizards",
+    "description": "Manage, simulate, and monitor role-based onboarding journeys across properties and departments.",
+    "simulate_button": "Preview Active Wizard",
+    "stats": {
+      "total_users": "Total Enrolled",
+      "tracked_users": "Users with tracked progress",
+      "completion_rate": "Completion Rate",
+      "completed_users": "fully completed",
+      "in_progress": "In Progress",
+      "active_steps": "Currently progressing",
+      "skipped": "Skipped",
+      "can_resume": "Can resume anytime"
+    },
+    "blueprints_heading": "Active Role Journey Blueprints",
+    "blueprints_count": "Blueprints",
+    "tasks_count": "Practical Tasks",
+    "tours_count": "interactive tours",
+    "preview": "Preview",
+    "reset_heading": "Reset User Onboarding",
+    "reset_desc": "Reset onboarding progress for an individual user so they see the full guided wizard on their next login.",
+    "user_id_placeholder": "Enter User UUID (e.g. 550e8400-e29b-41d4-a716-446655440000)",
+    "enter_user_id": "Please enter a valid User ID",
+    "reset_success": "Onboarding progress reset successfully",
+    "reset_failed": "Failed to reset progress. Verify user ID and permissions.",
+    "reset_error": "An error occurred during reset",
+    "event_simulator_title": "Operational Event Guidance Simulator",
+    "event_simulator_desc": "Trigger and preview real-time, event-driven guidance walkthroughs for critical hospitality events.",
+    "simulate_event_btn": "Simulate Event Guidance"
+  },
+  "roles": {
+    "learner": "Employee & Learner",
+    "department_manager": "Department Manager & Supervisor",
+    "training_manager": "Training & LMS Manager",
+    "knowledge_manager": "Knowledge & SOP Author",
+    "organization_admin": "Hotel Administrator",
+    "organization_owner": "Organization & Property Owner",
+    "platform_admin": "Platform Super Administrator",
+    "viewer": "Platform Viewer & Auditor"
+  },
+  "blueprints": {
+    "platform_operator": {
+      "headline": "Platform Super Administrator & System Operations",
+      "summary": "Full control over multi-tenant infrastructure, tenant onboarding, subscription plans, AI operations, and global audit logs.",
+      "can": {
+        "tenants": "Provision, configure, and isolate multi-tenant hotel organizations",
+        "roles": "Assign platform roles and govern system operators",
+        "telemetry": "Inspect real-time telemetry, error rates, and background jobs",
+        "courses": "Manage global course catalog and template repositories",
+        "ai": "Monitor AI credit quotas and model usage analytics"
+      },
+      "cannot": {
+        "pii": "Access individual tenant employee PII without explicit audit logging",
+        "unmigrated": "Alter database schemas outside of versioned migration workflows"
+      }
+    },
+    "tenant_owner": {
+      "headline": "Property & Organization Owner",
+      "summary": "Complete governance of the hotel chain organization, property portfolio, department structure, and subscription entitlements.",
+      "can": {
+        "branding": "Configure organization branding, domain, and localization",
+        "properties": "Create and manage hotel properties and brands",
+        "leadership": "Appoint organization administrators and department leaders",
+        "compliance": "View corporate compliance analytics across all properties",
+        "billing": "Manage billing, subscription tier, and feature entitlements"
+      },
+      "cannot": {
+        "sister_tenants": "Access sister hotel chains or cross-tenant platform configurations",
+        "bypass_compliance": "Bypass required compliance checks mandated by regulatory bodies"
+      }
+    },
+    "tenant_admin": {
+      "headline": "Hotel Administrator & People Operations",
+      "summary": "Manages users, permissions, department structures, operational settings, and system integrity for the hotel chain.",
+      "can": {
+        "users": "Invite, edit, and deactivate employee user accounts",
+        "departments": "Assign roles, hotels, and departments to staff members",
+        "notifications": "Manage notification templates and broadcast announcements",
+        "reports": "Generate compliance, HR, and completion reports",
+        "settings": "Configure integration parameters and property options"
+      },
+      "cannot": {
+        "delete_org": "Delete top-level organization records or modify billing payment methods (Owner only)",
+        "platform_tools": "Access platform-level operator tooling"
+      }
+    },
+    "training_manager": {
+      "headline": "Training & LMS Curriculum Manager",
+      "summary": "Leads training programs, course creation, assessment design, and regulatory compliance learning across the hotel chain.",
+      "can": {
+        "courses": "Build courses, modules, lessons, and interactive quizzes",
+        "assignments": "Assign mandatory and optional training to properties or departments",
+        "tracking": "Track learner completion rates, scores, and overdue assignments",
+        "certificates": "Issue digital certifications and verify renewal dates",
+        "templates": "Import master templates and author customized hotel SOP curricula"
+      },
+      "cannot": {
+        "security_roles": "Modify user account passwords or system-level security roles",
+        "billing": "Change property billing plans or organization structure"
+      }
+    },
+    "knowledge_manager": {
+      "headline": "Knowledge & SOP Documentation Manager",
+      "summary": "Authors and governs hotel Standard Operating Procedures (SOPs), brand standards, policies, and operational manuals.",
+      "can": {
+        "sops": "Create and publish rich bilingual SOP articles and policies",
+        "categories": "Organize knowledge categories by department (Front Desk, F&B, Housekeeping)",
+        "versions": "Maintain version history and diff tracking",
+        "link_training": "Link SOPs to training modules for unified onboarding",
+        "visibility": "Manage document visibility by property or department"
+      },
+      "cannot": {
+        "security_roles": "Change system user roles or administrative security settings",
+        "financial_approvals": "Approve financial purchase requests outside department scope"
+      }
+    },
+    "department_manager": {
+      "headline": "Department Manager & Supervisor",
+      "summary": "Oversees departmental operations, shift staff, team training completion, and employee operational requests.",
+      "can": {
+        "team_progress": "Monitor your department team's training progress and deadlines",
+        "approvals": "Review, approve, reject, or return employee operational requests",
+        "tasks": "Assign department-specific tasks and check completion status",
+        "sops": "View departmental SOPs and ensure team operational compliance",
+        "escalate": "Submit escalation requests to HR or Property Management"
+      },
+      "cannot": {
+        "other_depts": "Modify employees in other departments or properties",
+        "org_policies": "Change global company policies or salary data without HR authorization"
+      }
+    },
+    "learner": {
+      "headline": "Employee & Team Member",
+      "summary": "Your personal workspace for completing assigned training, viewing hotel SOPs, submitting requests, and tracking achievements.",
+      "can": {
+        "courses": "Access and complete assigned learning courses and interactive lessons",
+        "quizzes": "Take quizzes, track passing scores, and earn verifiable certificates",
+        "sops": "Browse hotel SOPs, policies, and brand standards in your language",
+        "requests": "Submit time-off, equipment, and general operational requests",
+        "profile": "Update your profile details, language preference, and notification settings"
+      },
+      "cannot": {
+        "approvals": "Approve other users' requests or view private employee records",
+        "admin": "Access administrative or configuration sections of the platform"
+      }
+    },
+    "viewer": {
+      "headline": "Platform Viewer & Auditor",
+      "summary": "Read-only access for auditors, external inspectors, and corporate observers to inspect compliance and progress.",
+      "can": {
+        "dashboards": "View dashboards, reports, and completion analytics",
+        "sops": "Read published SOPs, policies, and training materials",
+        "reports": "Inspect compliance records and audit history",
+        "audits": "Review operational activity without modification rights"
+      },
+      "cannot": {
+        "edit_content": "Edit, create, or delete any content or user accounts",
+        "approvals": "Approve, reject, or submit operational requests"
+      }
+    }
+  },
+  "tasks": {
+    "platform_operator": {
+      "review_tenants": {
+        "title": "Review Active Tenants & Health",
+        "desc": "Inspect multi-tenant organization status, active subscriptions, and resource consumption."
+      },
+      "check_telemetry": {
+        "title": "Inspect Platform Operations & Telemetry",
+        "desc": "Review error rates, background worker queues, and operational logs."
+      },
+      "master_courses": {
+        "title": "Inspect Master LMS Catalog",
+        "desc": "Review global hotel training templates and curriculum repository."
+      },
+      "audit_security": {
+        "title": "Audit Security & Access Logs",
+        "desc": "Verify cross-tenant security isolation and operator access logs."
+      },
+      "ai_quotas": {
+        "title": "Configure AI Models & Quotas",
+        "desc": "Set per-tenant LLM token quotas and intelligent agent policies."
+      }
+    },
+    "tenant_owner": {
+      "branding": {
+        "title": "Configure Hotel Branding",
+        "desc": "Upload hotel chain logo, set color schemes, and domain settings."
+      },
+      "properties": {
+        "title": "Verify Properties & Brands",
+        "desc": "Confirm all hotel properties and branches are registered."
+      },
+      "invite_admins": {
+        "title": "Invite Property Admins & Managers",
+        "desc": "Appoint hotel general managers and department heads."
+      },
+      "compliance": {
+        "title": "Review Chain Compliance Dashboard",
+        "desc": "Verify that required safety, hospitality, and regulatory training is mapped."
+      },
+      "budget_policy": {
+        "title": "Review Approval Policies & Budget Limits",
+        "desc": "Configure spending approval limits and supervisor thresholds."
+      }
+    },
+    "tenant_admin": {
+      "review_users": {
+        "title": "Review User Directory",
+        "desc": "Verify employee accounts, assigned departments, and roles."
+      },
+      "departments": {
+        "title": "Check Department Structure",
+        "desc": "Ensure Front Office, Housekeeping, F&B, and Maintenance are configured."
+      },
+      "training_overview": {
+        "title": "Review Training Schedules",
+        "desc": "Check current employee onboarding tracks and course enrollments."
+      },
+      "pending_requests": {
+        "title": "Inspect Operational Requests",
+        "desc": "Review pending administrative requests across properties."
+      },
+      "notifications": {
+        "title": "Verify Notification Templates",
+        "desc": "Test email and push notification channels."
+      }
+    },
+    "training_manager": {
+      "catalog": {
+        "title": "Explore Training Catalog",
+        "desc": "Review existing hotel courses, onboarding tracks, and SOP modules."
+      },
+      "create_module": {
+        "title": "Create Your First Training Module",
+        "desc": "Build an interactive lesson using the visual Course Builder."
+      },
+      "paths": {
+        "title": "Set Up an Onboarding Learning Path",
+        "desc": "Create an automated training sequence for new hotel hires."
+      },
+      "compliance": {
+        "title": "Inspect Compliance & Completion Rates",
+        "desc": "Identify overdue certifications and learner passing velocity."
+      },
+      "certificates": {
+        "title": "Configure Digital Certificate Templates",
+        "desc": "Customize completion certificates with property branding and signatures."
+      }
+    },
+    "knowledge_manager": {
+      "studio": {
+        "title": "Explore Knowledge Studio",
+        "desc": "Browse existing Standard Operating Procedures and brand manuals."
+      },
+      "create": {
+        "title": "Draft a Department SOP",
+        "desc": "Author a new operational checklist or policy document."
+      },
+      "reviews": {
+        "title": "Review Pending SOP Submissions",
+        "desc": "Check proposed revisions and version diffs from department heads."
+      },
+      "categories": {
+        "title": "Organize Knowledge Categories",
+        "desc": "Structure folders by department (Front Desk, Concierge, Kitchen)."
+      },
+      "link_training": {
+        "title": "Link Critical SOPs to Training",
+        "desc": "Connect SOP documents to corresponding employee training modules."
+      }
+    },
+    "department_manager": {
+      "team": {
+        "title": "Inspect Department Roster",
+        "desc": "Review team members, active shifts, and contact details."
+      },
+      "approvals": {
+        "title": "Review Pending Employee Requests",
+        "desc": "Evaluate shift swaps, time-off requests, and supply orders."
+      },
+      "training": {
+        "title": "Monitor Team Training Velocity",
+        "desc": "Check which team members have upcoming or overdue compliance modules."
+      },
+      "tasks": {
+        "title": "Assign Department Daily Tasks",
+        "desc": "Create shift checklists and assign tasks to staff."
+      },
+      "sops": {
+        "title": "Review Department SOPs",
+        "desc": "Ensure your team follows updated hotel service standards."
+      }
+    },
+    "learner": {
+      "profile": {
+        "title": "Complete Your Profile & Language",
+        "desc": "Verify your contact information and select English or Arabic."
+      },
+      "first_course": {
+        "title": "Start Your First Training Course",
+        "desc": "Open your assigned onboarding module and begin learning."
+      },
+      "sops": {
+        "title": "Read Department SOPs",
+        "desc": "Browse standard operating procedures for your hotel role."
+      },
+      "requests": {
+        "title": "Learn How to Submit Requests",
+        "desc": "Find out how to request shift changes, time off, or supplies."
+      },
+      "notifications": {
+        "title": "Set Notification Preferences",
+        "desc": "Choose how you receive deadline reminders and announcements."
+      }
+    },
+    "viewer": {
+      "dashboard": {
+        "title": "Review Executive Dashboard",
+        "desc": "Inspect key operational performance indicators and hotel statistics."
+      },
+      "compliance": {
+        "title": "Inspect Regulatory Compliance",
+        "desc": "Check safety and standards audit records across properties."
+      },
+      "knowledge": {
+        "title": "Search Knowledge Library",
+        "desc": "Read published SOPs and brand standard guidelines."
+      },
+      "reports": {
+        "title": "View Training Analytics",
+        "desc": "Audit employee completion rates and certification histories."
+      },
+      "profile": {
+        "title": "Verify Account Settings",
+        "desc": "Set preferred language and notification subscriptions."
+      }
+    }
+  },
+  "approver": {
+    "training": {
+      "summary": "As a Training Manager, you verify assessment submissions, evaluate practical skill checklists, and approve certificate re-issuance appeals.",
+      "criteria": {
+        "passing_score": "Score threshold: Employee must achieve at least 80% on assessment questions.",
+        "practical_checklist": "Practical verification: Confirm supervisor completed practical observation checklist.",
+        "timestamps": "Integrity check: Ensure assessment completion timestamps meet minimum study duration."
+      },
+      "checklist": {
+        "check_lessons": "Verify all required lessons in the module are marked completed.",
+        "verify_quiz": "Inspect score report and identify areas requiring remediation if failed.",
+        "sign_certificate": "Approve digital certificate issuance upon passing validation."
+      }
+    },
+    "dept": {
+      "summary": "As a Department Manager, you evaluate shift trades, time-off requests, and operational requisitions with respect to service coverage and guest satisfaction.",
+      "criteria": {
+        "coverage": "Shift coverage: Ensure adequate staffing ratio is maintained during peak occupancy.",
+        "budget": "Department budget: Verify requisitions fall within monthly department allocations.",
+        "sop_compliance": "SOP compliance: Ensure shift exchanges adhere to labor regulations and rest intervals."
+      },
+      "checklist": {
+        "check_coverage": "Confirm replacement staff member has confirmed shift acceptance.",
+        "confirm_rationale": "Review employee justification and attachments.",
+        "log_decision": "Provide constructive feedback notes if returning for correction."
+      }
+    }
+  },
+  "tours": {
+    "platform_orgs": {
+      "title": "Organizations Hub Tour",
+      "desc": "Learn how to provision, configure, and isolate tenant properties."
+    },
+    "platform_ops": {
+      "title": "Operations & Telemetry Tour",
+      "desc": "Explore real-time server health, error queues, and worker logs."
+    },
+    "platform_ai": {
+      "title": "AI Operations Tour",
+      "desc": "Understand AI model routing, prompts, and credit balances."
+    },
+    "owner_setup": {
+      "title": "Organization Setup Tour",
+      "desc": "Step-by-step tour of branding, domain, and localization settings."
+    },
+    "owner_compliance": {
+      "title": "Compliance Dashboard Tour",
+      "desc": "Navigate multi-property compliance metrics and audit archives."
+    },
+    "admin_users": {
+      "title": "User Management Tour",
+      "desc": "Learn how to invite employees, assign roles, and manage departments."
+    },
+    "admin_departments": {
+      "title": "Department Hierarchy Tour",
+      "desc": "Understand how reporting structures and head managers are assigned."
+    },
+    "course_builder": {
+      "title": "Course Builder Tour",
+      "desc": "Interactive guide to creating modules, lessons, and interactive quizzes."
+    },
+    "training_reports": {
+      "title": "Training Analytics Tour",
+      "desc": "Discover how to generate learner compliance reports and track overdue tasks."
+    },
+    "knowledge_studio": {
+      "title": "Knowledge Studio Tour",
+      "desc": "Learn how to write, format, and publish bilingual SOPs."
+    },
+    "dept_approvals": {
+      "title": "Approvals Workflow Tour",
+      "desc": "Master the process of reviewing, approving, and returning staff requests."
+    },
+    "dept_tasks": {
+      "title": "Department Task Management",
+      "desc": "Create, assign, and track shift checklists for your team."
+    },
+    "learner_dashboard": {
+      "title": "Learner Workspace Tour",
+      "desc": "Learn how to find courses, complete lessons, and track your achievements."
+    },
+    "learner_requests": {
+      "title": "Requests Hub Tour",
+      "desc": "How to submit time-off, shift exchange, and equipment requests."
+    },
+    "viewer_reports": {
+      "title": "Auditor Reports Tour",
+      "desc": "Navigate compliance reporting and audit trails in read-only mode."
+    }
+  },
+  "simulation": {
+    "banner": "Preview Mode: Simulating role",
+    "event_started": "Starting operational event tour: {{eventId}}",
+    "started_toast": "Previewing wizard as {{role}}"
+  },
+  "sheet": {
+    "badge": "Role Guide",
+    "tabs": {
+      "access": "My Access",
+      "tasks": "Quick Tasks",
+      "tours": "Tours",
+      "events": "Operational Events"
+    },
+    "you_can_do": "What You Can Do",
+    "you_cannot_do": "Boundaries & Restrictions",
+    "capabilities_breakdown": "Module Capabilities",
+    "tasks_intro": "Recommended practical actions to get up to speed in your role:",
+    "tours_intro": "Explore specific feature areas:",
+    "events_intro": "Key hotel operational events that affect your role and require prompt action:",
+    "event_impact": "Impact",
+    "event_action": "Recommended Action",
+    "simulate_event": "Simulate & Guide Me",
+    "event_triggered": "Starting operational event walkthrough...",
+    "role_walkthrough_title": "Interactive Role Walkthrough",
+    "role_walkthrough_desc": "Experience an on-page guided spotlight tour showing your primary features, tools, and actions.",
+    "start_role_walkthrough": "Start Interactive Walkthrough",
+    "restart_wizard": "Restart Full Onboarding",
+    "search_help": "Search FAQs"
+  },
+  "tour": {
+    "locating_feature": "Locating feature on screen...",
+    "platform": {
+      "brand": {
+        "title": "PRIME Platform Console",
+        "desc": "Central command infrastructure for managing all hotel organizations, tenants, and platform services."
+      },
+      "hero": {
+        "title": "Platform Executive Deck",
+        "desc": "High-level command center showing aggregate system throughput, active hotel tenants, and global service health."
+      },
+      "orgs": {
+        "title": "Hotel Organizations",
+        "desc": "Manage multi-tenant properties, brand configurations, and organization memberships."
+      },
+      "create_org": {
+        "title": "Provision New Organization",
+        "desc": "Launch a dedicated tenant environment with isolated schema, custom branding, and administrator credentials."
+      },
+      "grid": {
+        "title": "Active Tenants Portfolio",
+        "desc": "Browse, filter, and inspect operational metrics across all hotel chains and individual franchise properties."
+      },
+      "telemetry": {
+        "title": "Operations & Telemetry",
+        "desc": "Monitor active sessions, API error rates, worker queues, and performance metrics in real time."
+      },
+      "health_deck": {
+        "title": "Platform Infrastructure Health",
+        "desc": "Real-time vitals covering Edge Functions, database connection pool, storage usage, and latency metrics."
+      },
+      "training": {
+        "title": "Platform Training Hub",
+        "desc": "Oversee global course catalogs, certifications, and compliance benchmarks across all properties."
+      },
+      "audit": {
+        "title": "Audit & Governance",
+        "desc": "Inspect full-audit event logs, security changes, and administrative actions."
+      }
+    },
+    "owner": {
+      "hero": {
+        "title": "Property Ownership Cockpit",
+        "desc": "Welcome to your executive overview. Track hotel operational metrics, staffing readiness, and urgent items across properties."
+      },
+      "lens": {
+        "title": "Property Lens Switcher",
+        "desc": "Switch views between individual hotel properties or view aggregated portfolio performance across the entire chain."
+      },
+      "cockpit": {
+        "title": "Executive KPI Deck",
+        "desc": "Monitor real-time indicators including staff training compliance, pending approvals, and operational task completion."
+      },
+      "review_queue": {
+        "title": "Executive Review Queue",
+        "desc": "Review high-priority authorizations, capital budget requests, and executive-level property escalations."
+      },
+      "properties": {
+        "title": "Hotel Properties & Assets",
+        "desc": "Configure hotel locations, facilities, operating departments, and brand standards for each property."
+      },
+      "users": {
+        "title": "Workforce Directory",
+        "desc": "Review hotel staff roster, department heads, and role access across your entire organization."
+      },
+      "users_table": {
+        "title": "Employee Roster & Roles",
+        "desc": "Inspect individual staff profiles, active employment status, assigned property, and supervisory hierarchy."
+      },
+      "departments": {
+        "title": "Department Hierarchies",
+        "desc": "Configure hotel divisions (Rooms Division, F&B, Engineering, Sales) and allocate leadership roles."
+      },
+      "compliance": {
+        "title": "Compliance & Training Standards",
+        "desc": "Track organizational mandatory certifications, hotel standards, and training completions across all properties."
+      },
+      "approvals": {
+        "title": "Executive Approvals Hub",
+        "desc": "Final authorization terminal for department budgets, policy modifications, and operational exemptions."
+      }
+    },
+    "admin": {
+      "hero": {
+        "title": "Administrator Command Center",
+        "desc": "Your daily hub for managing user onboarding, department requests, and operational health."
+      },
+      "users": {
+        "title": "Workforce Management",
+        "desc": "Comprehensive directory to invite new employees, assign roles, and maintain operational staff rosters."
+      },
+      "invite": {
+        "title": "Invite Single Colleague",
+        "desc": "Send secure onboarding invitations with predefined hotel property, department, and role permissions."
+      },
+      "bulk": {
+        "title": "Bulk Workforce Provisioning",
+        "desc": "Import entire shift teams or seasonal staff rosters simultaneously using standardized CSV templates."
+      },
+      "users_table": {
+        "title": "User Management Grid",
+        "desc": "Filter, inspect, and update employee status, reset passwords, and manage access credentials."
+      },
+      "depts": {
+        "title": "Department Structures",
+        "desc": "Organize hotel departments (Front Office, Housekeeping, F&B, Engineering) and manager assignments."
+      },
+      "training": {
+        "title": "Training & LMS Administration",
+        "desc": "Assign mandatory courses, track compliance rates, and verify department certificates."
+      },
+      "create_course": {
+        "title": "Course Authoring Studio",
+        "desc": "Create new hotel training modules, author bilingual lessons, and configure mandatory quiz thresholds."
+      },
+      "assign_team": {
+        "title": "Training Assignment Wizard",
+        "desc": "Bulk-assign compliance courses to specific departments, job roles, or newly onboarded staff cohorts."
+      },
+      "requests": {
+        "title": "Requests Administration",
+        "desc": "Monitor and manage department workflows, shift swaps, and maintenance tickets."
+      }
+    },
+    "training_mgr": {
+      "hero": {
+        "title": "Training Command Center",
+        "desc": "Overview of team learning progress, upcoming mandatory deadlines, and completion rates across properties."
+      },
+      "active_learnings": {
+        "title": "Current Active Courses",
+        "desc": "Track live employee enrollments, completion velocity, and courses requiring immediate supervisory attention."
+      },
+      "hub_nav": {
+        "title": "LMS & Training Hub",
+        "desc": "Central curriculum management for course catalogs, training tracks, and certification requirements."
+      },
+      "workflow": {
+        "title": "Curriculum Lifecycle Steps",
+        "desc": "Standardized 4-step workflow: Course Planning, Content Creation, Department Assignment, and Verification."
+      },
+      "search": {
+        "title": "Course Search & Filter",
+        "desc": "Find training programs by skill category, mandatory compliance tag, or hotel department code."
+      },
+      "create_btn": {
+        "title": "Create New Training Course",
+        "desc": "Author rich multimedia training modules with embedded video, interactive slides, and knowledge quizzes."
+      },
+      "assign_btn": {
+        "title": "Training Assignment Wizard",
+        "desc": "Enroll hotel staff cohorts in mandatory training with automated due date tracking and reminder schedules."
+      },
+      "requests": {
+        "title": "Training Requests & Submissions",
+        "desc": "Review external workshop requests, recertification applications, and supervisor enrollment proposals."
+      },
+      "knowledge": {
+        "title": "SOP Knowledge Integration",
+        "desc": "Browse verified hotel procedures and connect standard operating guidelines directly into training curricula."
+      },
+      "link_sops": {
+        "title": "Link SOPs to LMS Modules",
+        "desc": "Anchor official hotel operating standards directly into corresponding training lessons for practical learning."
+      }
+    },
+    "knowledge_mgr": {
+      "hero": {
+        "title": "Knowledge Command Center",
+        "desc": "Monitor SOP review cycles, version updates, search analytics, and department contributions."
+      },
+      "review_queue": {
+        "title": "SOP Review & Approval Queue",
+        "desc": "Track draft procedures and change requests requiring editorial validation before publication."
+      },
+      "nav": {
+        "title": "Knowledge Base & SOP Studio",
+        "desc": "Author, organize, and publish the official operational manual and standards for all hotel departments."
+      },
+      "search": {
+        "title": "Procedure Search Engine",
+        "desc": "Fast full-text search across all hotel manuals, safety guidelines, and service protocols in English and Arabic."
+      },
+      "categories": {
+        "title": "Department SOP Taxonomies",
+        "desc": "Organize procedures by operational area: Front Desk, Concierge, Culinary, Housekeeping, and Security."
+      },
+      "create_btn": {
+        "title": "Author Standard Operating Procedure",
+        "desc": "Draft new bilingual SOPs with rich formatting, checklists, policy rules, and required equipment lists."
+      },
+      "requests": {
+        "title": "Knowledge Requests & Feedback",
+        "desc": "Process staff suggestions, procedure clarification questions, and operational improvement requests."
+      },
+      "training": {
+        "title": "Curriculum Cross-Referencing",
+        "desc": "Ensure all active hotel operating standards have corresponding training modules for new staff."
+      }
+    },
+    "dept_mgr": {
+      "hero": {
+        "title": "Department Operations",
+        "desc": "Daily shift view of team staffing, assigned tasks, and department KPIs."
+      },
+      "review_queue": {
+        "title": "Supervisor Approvals Hub",
+        "desc": "Review and approve shift swaps, time-off requests, and supply requisitions from your team."
+      },
+      "tasks": {
+        "title": "Department Task Assignments",
+        "desc": "Assign, track, and verify daily operational checklists, guest special requests, and room inspections."
+      },
+      "training_nav": {
+        "title": "Team Training Progress",
+        "desc": "Monitor your department team's progress on mandatory hotel certifications and safety courses."
+      },
+      "training_monitor": {
+        "title": "Compliance Tracking Workflow",
+        "desc": "Verify that all department team members maintain current credentials for food hygiene, first aid, and brand standards."
+      },
+      "requests": {
+        "title": "Department Request Tracking",
+        "desc": "Submit maintenance work orders, linen requisitions, or guest equipment needs to support departments."
+      },
+      "knowledge": {
+        "title": "Department SOPs & Manuals",
+        "desc": "Quickly access operational guidelines and standards relevant to your department."
+      },
+      "sop_search": {
+        "title": "Operational Procedure Lookup",
+        "desc": "Instantly check standard operating procedures to resolve operational guest questions and maintain service consistency."
+      }
+    },
+    "learner": {
+      "hero": {
+        "title": "My Daily Command Center",
+        "desc": "Check assigned training modules, active requests, and urgent notifications for your shift."
+      },
+      "active_learnings": {
+        "title": "My Active Courses",
+        "desc": "Access your required onboarding modules, complete interactive lessons, and view due dates."
+      },
+      "tasks": {
+        "title": "My Daily Shift Tasks",
+        "desc": "View your personal operational checklist, assigned guest requests, and shift handover notes."
+      },
+      "training_nav": {
+        "title": "Learning Center",
+        "desc": "Explore the full hotel learning catalog, view completed courses, and access your verified certificates."
+      },
+      "course_search": {
+        "title": "Search Training Catalog",
+        "desc": "Find professional development courses, language skills, and hospitality certifications."
+      },
+      "requests": {
+        "title": "Submit & Track Requests",
+        "desc": "Submit shift swaps, leave applications, or equipment requests and track supervisor approval."
+      },
+      "knowledge": {
+        "title": "Standard Operating Procedures",
+        "desc": "Search hotel operating manuals, safety protocols, and guest service guidelines anytime."
+      },
+      "sop_search": {
+        "title": "Quick SOP Reference",
+        "desc": "Look up official service standards, room cleaning checklists, or guest greeting protocols on shift."
+      }
+    },
+    "viewer": {
+      "hero": {
+        "title": "Auditor & Observer Portal",
+        "desc": "Read-only access to hotel operational metrics, governance reports, and compliance records."
+      },
+      "cockpit": {
+        "title": "Operational Performance Overview",
+        "desc": "High-level summary of property activity, workforce readiness, and operational status."
+      },
+      "compliance": {
+        "title": "Compliance & Training Records",
+        "desc": "Audit staff certifications, regulatory adherence, and department completion rates."
+      },
+      "knowledge": {
+        "title": "Operating Standards Archive",
+        "desc": "Review published Standard Operating Procedures, version histories, and quality benchmarks."
+      },
+      "sop_search": {
+        "title": "SOP Audit Search",
+        "desc": "Inspect specific departmental protocols to verify alignment with national hospitality standards."
+      },
+      "audit": {
+        "title": "System Audit Logs",
+        "desc": "Inspect tamper-evident system logs, administrative actions, and data access events."
+      }
+    },
+    "common": {
+      "guide_button": {
+        "title": "My Role Guide & Help",
+        "desc": "Open this drawer anytime to review your role permissions, recommended tasks, and replay tours."
+      },
+      "language": {
+        "title": "Bilingual Switcher",
+        "desc": "Toggle seamlessly between English and Arabic with full RTL layout support."
+      },
+      "user_menu": {
+        "title": "Account & Preferences",
+        "desc": "Access your profile, switch language preferences, or sign out securely."
+      },
+      "notifications": {
+        "title": "Action Alerts & Updates",
+        "desc": "Stay informed with real-time notifications on approvals, course assignments, and system notices."
+      }
+    }
+  },
+  "events": {
+    "platform": {
+      "new_tenant": {
+        "title": "New Hotel Property Provisioned",
+        "desc": "A new hotel property or multi-tenant franchise has been created in the platform.",
+        "impact": "Tenant database schemas initialized, storage buckets partitioned, default SOP templates applied.",
+        "action": "Review brand theme settings, initialize initial property administrator, and configure tenant feature flags."
+      },
+      "incident": {
+        "title": "System Health & Error Alert",
+        "desc": "An automated alert triggered by anomalous response times, API degradation, or edge worker errors.",
+        "impact": "Affects property operations, reservation sync, and guest check-in terminal latency.",
+        "action": "Inspect Platform Operations telemetry deck, verify database health, and consult incident response SOP."
+      },
+      "impersonation": {
+        "title": "Cross-Tenant Support Request",
+        "desc": "Property management has requested tier-3 technical assistance requiring platform operator session delegation.",
+        "impact": "Grants bounded read-write access to tenant workspace under full cryptographic audit logging.",
+        "action": "Open Organizations Hub, select requesting property, and initiate auditable support session."
+      }
+    },
+    "owner": {
+      "budget_request": {
+        "title": "Capital Expenditure & Asset Requisition",
+        "desc": "A department manager has submitted a high-value equipment or refurbishment budget request.",
+        "impact": "Affects annual property operating budgets and procurement schedules.",
+        "action": "Open Requests Hub, review budget justification documents, and approve or reject with executive notes."
+      },
+      "compliance_alert": {
+        "title": "Saudi Tourism Regulatory Audit Notice",
+        "desc": "Mandatory licensing and safety compliance documentation required for municipal hotel inspection.",
+        "impact": "Risk of municipal citation or property rating deduction if deadlines are missed.",
+        "action": "Review Compliance Dashboard, verify department training completion rates, and sign off audit packet."
+      },
+      "property_update": {
+        "title": "Hotel Facility Reconfiguration",
+        "desc": "New guest room wings, banquet halls, or dining outlets added to property asset registry.",
+        "impact": "Updates department room allocations, cleaning schedules, and maintenance zones.",
+        "action": "Navigate to Hotel Properties, verify zone hierarchy, and allocate supervisory staff."
+      }
+    },
+    "admin": {
+      "new_user": {
+        "title": "New Hotel Colleague Onboarded",
+        "desc": "A new employee profile has been created via HR sync or self-registration.",
+        "impact": "Employee awaits department assignment, hotel email provisioning, and role permission grants.",
+        "action": "Open User Management, assign correct department and supervisor, and trigger onboarding wizard."
+      },
+      "bulk_complete": {
+        "title": "Workforce Roster Import Completed",
+        "desc": "CSV batch import of hotel staff profiles, badge IDs, and department assignments finished processing.",
+        "impact": "Dozens of employee accounts generated and invited across Front Office, Housekeeping, and F&B.",
+        "action": "Inspect User Directory, review import audit log, and dispatch welcome credentials."
+      },
+      "security_alert": {
+        "title": "Access Policy & Password Expiry Alert",
+        "desc": "Multiple failed authentication attempts or overdue security credential rotations detected.",
+        "impact": "Potential account suspension and security compliance exposure.",
+        "action": "Review user security credentials in User Management and enforce multi-factor re-authentication."
+      }
+    },
+    "training_mgr": {
+      "course_submitted": {
+        "title": "Department Training Module Submitted",
+        "desc": "A department supervisor has drafted a specialized hospitality course for LMS review.",
+        "impact": "Course pending curriculum alignment and quiz validation before property-wide release.",
+        "action": "Open Training Hub, review module lesson structure and assessment pass criteria, then publish."
+      },
+      "cert_expiring": {
+        "title": "Food Safety & First Aid Certifications Expiring",
+        "desc": "Kitchen and banquet staff mandatory hygiene certifications expiring within 30 days.",
+        "impact": "Regulatory non-compliance with Saudi Food & Drug Authority (SFDA) hotel kitchen standards.",
+        "action": "Launch Training Assignment Wizard and bulk-enroll affected kitchen team in recertification modules."
+      },
+      "auto_assign": {
+        "title": "Automated Onboarding Curriculum Triggered",
+        "desc": "New employee hires automatically enrolled in Prime Hotel Brand Orientation and Guest Courtesy 101.",
+        "impact": "Learner dashboards populated with mandatory deadline tracks.",
+        "action": "Verify automated assignment queues and monitor first-week completion velocity in Training Hub."
+      }
+    },
+    "knowledge_mgr": {
+      "sop_review": {
+        "title": "Annual SOP Audit & Compliance Review",
+        "desc": "Housekeeping and Front Desk Standard Operating Procedures scheduled for mandatory annual review.",
+        "impact": "Ensures operating guidelines reflect current 5-star brand standards and KSA hospitality codes.",
+        "action": "Open Knowledge Studio, compare revisions against previous version, update steps, and republish."
+      },
+      "annual_audit": {
+        "title": "Brand Standard Quality Audit Scheduled",
+        "desc": "Corporate hotel mystery auditor inspection scheduled across guest services and culinary operations.",
+        "impact": "All team members must have reviewed and acknowledged current brand procedures.",
+        "action": "Audit SOP read confirmations and flag out-of-date departmental checklists."
+      },
+      "linked_training": {
+        "title": "SOP Attached to Training Course",
+        "desc": "New Guest Luggage Handling SOP connected directly to Bell Desk Onboarding Course.",
+        "impact": "Employees taking the course receive direct interactive links to the authoritative procedural document.",
+        "action": "Verify reciprocal links between Knowledge Base article and LMS course modules."
+      }
+    },
+    "dept_mgr": {
+      "shift_swap": {
+        "title": "Shift Exchange Approval Request",
+        "desc": "Two Front Desk receptionists submitted a reciprocal shift swap for upcoming weekend rotations.",
+        "impact": "Staffing balance on afternoon shift contingent on supervisory approval.",
+        "action": "Open Requests Hub, verify operational shift coverage, and approve or reject exchange."
+      },
+      "leave_request": {
+        "title": "Annual Leave & Time-Off Application",
+        "desc": "Team member requested 5 days of annual leave during upcoming peak holiday occupancy.",
+        "impact": "Requires shift schedule rebalancing and relief staff assignment.",
+        "action": "Review department roster in Requests Hub, ensure minimum coverage, and record management decision."
+      },
+      "overdue_training": {
+        "title": "Staff Mandatory Training Overdue",
+        "desc": "One or more team members missed the completion deadline for Emergency Evacuation & Fire Safety.",
+        "impact": "Department compliance rating penalized on hotel executive dashboard.",
+        "action": "Check Active Learnings widget, message team member, and schedule dedicated study shift."
+      }
+    },
+    "learner": {
+      "assigned_course": {
+        "title": "New Mandatory Training Enrolled",
+        "desc": "Your supervisor assigned you to complete Prime Hotel Guest Hospitality & Saudi Culture Etiquette.",
+        "impact": "Module appears on your dashboard with an upcoming completion deadline.",
+        "action": "Open Active Learnings on your dashboard and complete interactive lessons and knowledge check."
+      },
+      "swap_approved": {
+        "title": "Shift Swap Request Approved",
+        "desc": "Your department manager approved your requested shift trade with your colleague.",
+        "impact": "Your personal schedule and weekly attendance roster updated automatically.",
+        "action": "Check your revised shift calendar and confirm handover notes with your colleague."
+      },
+      "cert_earned": {
+        "title": "Course Certificate of Completion Earned",
+        "desc": "You achieved a passing score on the Hotel Hygiene & Safety Assessment.",
+        "impact": "Official certificate logged in your employee profile and visible to hotel management.",
+        "action": "Download your verified certificate from the Certificates Center and showcase in your record."
+      }
+    },
+    "role_change": {
+      "title": "Employee Role Orientation & Elevation"
+    }
+  },
+  "event_tours": {
+    "approval": {
+      "queue": {
+        "title": "Operational Review Queue",
+        "desc": "All shift exchanges, time-off requests, and departmental supply requisitions appear here for timely review."
+      },
+      "criteria": {
+        "title": "Review Criteria & Operational Guidelines",
+        "desc": "Assess staffing requirements, property peak hours, and labor policies before approving subordinate requests."
+      },
+      "action": {
+        "title": "Approvals & Requests Hub",
+        "desc": "Access detailed request histories, supporting attachments, and batch approval actions from the dedicated hub."
+      }
+    },
+    "training": {
+      "widget": {
+        "title": "Active Enrolled Courses",
+        "desc": "Track your mandatory hotel training modules, approaching deadlines, and overall progress percentage here."
+      },
+      "player": {
+        "title": "Training Search & Module Access",
+        "desc": "Locate required learning materials quickly by searching module names, skills, or hotel department codes."
+      },
+      "pass_score": {
+        "title": "Syllabus, Steps & Assessment Criteria",
+        "desc": "Review lesson milestones, required reading SOPs, and the minimum quiz score (typically 80%) needed to pass."
+      }
+    },
+    "role_change": {
+      "intro": {
+        "title": "Your New Role Guide",
+        "desc": "Congratulations on your role transition. Open this guide anytime to inspect your new responsibilities and access rights."
+      },
+      "nav": {
+        "title": "Updated Navigation Menu",
+        "desc": "Your sidebar navigation has been updated with the operational tools, dashboards, and registries for your new role."
+      },
+      "profile": {
+        "title": "Role Details & Profile",
+        "desc": "Review your updated job title, assigned property, reporting department, and security credentials here."
+      }
+    },
+    "sop": {
+      "browse": {
+        "title": "Knowledge Base & SOP Search",
+        "desc": "Search the complete repository of bilingual hotel Standard Operating Procedures, guest policies, and manuals."
+      },
+      "categories": {
+        "title": "Departmental SOP Categories",
+        "desc": "Browse operating procedures organized by department: Front Desk, Concierge, Culinary, Housekeeping, and Security."
+      },
+      "editor": {
+        "title": "Author & Review SOPs",
+        "desc": "Create new procedural guides or submit updates to keep operational instructions aligned with 5-star standards."
+      }
+    },
+    "tenant": {
+      "create": {
+        "title": "Provision Hotel Organization",
+        "desc": "Initialize a new hotel brand or independent property organization with isolated data partition and branding."
+      },
+      "grid": {
+        "title": "Organizations & Properties Directory",
+        "desc": "Inspect active tenants, active employee counts, licensed modules, and subscription tiers across all properties."
+      },
+      "telemetry": {
+        "title": "Cross-Tenant Health & Telemetry",
+        "desc": "Oversee platform performance, database connection pooling, and multi-tenant isolation status."
+      }
+    }
+  }
+}

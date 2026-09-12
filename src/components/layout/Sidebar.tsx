@@ -15,12 +15,14 @@ import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ChevronRight,
+    Compass,
     LogOut
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTenant } from '@/contexts/TenantContext'
+import { useWizard } from '@/hooks/useWizard'
 import { Badge } from '@/components/ui/badge'
 import { Building2, Globe, Crown, Building } from 'lucide-react'
 import { CONSOLIDATED_PROPERTY_ID } from '@/lib/propertyScope'
@@ -37,6 +39,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const location = useLocation()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { currentOrganization, currentHotel, isPlatformAdmin, isImpersonating, isPlatformScope, returnToPlatformScope } = useTenant()
+  const { openWhatCanIDo } = useWizard()
   const { groupedNavigation } = useNavigation()
 
   // Track open states for collapsible groups
@@ -59,10 +62,25 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
   const isPlatformActive = Boolean(isPlatformAdmin && (isPlatformScope || location.pathname.startsWith('/platform')))
   const logoHref = isPlatformActive ? '/platform' : '/dashboard'
 
+  const getTourAttr = (path: string) => {
+    if (path === '/dashboard') return 'nav-dashboard'
+    if (path === '/platform/training') return 'nav-platform-training'
+    if (path.includes('training') || path.includes('learning')) return 'nav-training'
+    if (path.includes('requests') || path.includes('approvals')) return 'nav-requests'
+    if (path.includes('knowledge')) return 'nav-knowledge'
+    if (path.includes('users')) return 'nav-users'
+    if (path.includes('departments')) return 'nav-departments'
+    if (path.includes('properties')) return 'nav-properties'
+    if (path.includes('organizations')) return 'nav-organizations'
+    if (path.includes('operations')) return 'nav-operations'
+    if (path.includes('audit-logs') || path.includes('logs')) return 'nav-audit-logs'
+    return undefined
+  }
+
   return (
     <div className="flex flex-col w-full lg:w-64 bg-card border-e border-border/60 h-full lg:h-screen select-none">
       <div className="flex flex-col gap-2.5 p-4 border-b border-border/60 bg-white/50 dark:bg-hotel-navy/50 backdrop-blur-md overflow-hidden">
-        <Link to={logoHref} onClick={onNavigate} className="flex items-center justify-center gap-3 py-1 group">
+        <Link to={logoHref} onClick={onNavigate} data-tour="sidebar-logo" className="flex items-center justify-center gap-3 py-1 group">
           <img
             src="/altus-emblem-icon.png"
             alt="ALTUS Advisory"
@@ -195,7 +213,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         )}
       </div>
 
-      <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
+      <nav data-tour="sidebar-nav" className="flex-1 p-3 space-y-3 overflow-y-auto">
         {groupedNavigation.map((group) => {
           // If items are empty, don't show group
           if (group.items.length === 0) return null
@@ -217,6 +235,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                       key={item.path}
                       to={item.resolvedPath}
                       onClick={onNavigate}
+                      data-tour={getTourAttr(item.path)}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-[transform,background-color,color] duration-150 ease-out relative active:scale-[0.98]',
                         item.isActive
@@ -286,6 +305,7 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
                             key={item.path}
                             to={item.resolvedPath}
                             onClick={onNavigate}
+                            data-tour={getTourAttr(item.path)}
                             className={cn(
                               'flex items-center gap-3 px-3 py-1.5 rounded-lg text-sm font-medium transition-[transform,background-color,color] duration-150 ease-out relative active:scale-[0.98]',
                               item.isActive
@@ -314,7 +334,19 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
         })}
       </nav>
 
-      <div className="p-3 border-t border-border/60">
+      <div className="p-3 border-t border-border/60 space-y-1">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground hover:text-primary hover:bg-primary/10 active:scale-[0.98] transition-all duration-150"
+          onClick={() => {
+            onNavigate?.()
+            setTimeout(() => openWhatCanIDo(), 100)
+          }}
+        >
+          <Compass className="w-4 h-4 me-3 text-primary" />
+          <span className="text-xs font-medium">{t('actions.my_guide', 'My Role Guide')}</span>
+        </Button>
+
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-[0.98] transition-all duration-150"

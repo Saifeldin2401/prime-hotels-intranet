@@ -10,6 +10,7 @@ class AnalyticsService {
     private flushTimer: NodeJS.Timeout | null = null
     private sessionId: string | null = null
     private userId: string | null = null
+    private organizationId: string | null = null
     private sessionPromise: Promise<void> | null = null
     private flushInProgress = false
 
@@ -55,6 +56,7 @@ class AnalyticsService {
                 const now = new Date().getTime()
                 if (now - lastActive < 30 * 60 * 1000) {
                     this.sessionId = session.id
+                    this.organizationId = session.organizationId || null
                     // Extend session
                     this.updateSessionActivity()
                     // Verify it exists in DB (async, don't block)
@@ -174,6 +176,7 @@ class AnalyticsService {
             }
 
             this.sessionId = insertedSession.id
+            this.organizationId = orgId
             this.persistSession()
         } catch (e) {
             console.error('Failed to start analytics session', e)
@@ -185,6 +188,7 @@ class AnalyticsService {
         if (!this.sessionId) return
         localStorage.setItem('altus_analytics_session', JSON.stringify({
             id: this.sessionId,
+            organizationId: this.organizationId,
             lastActive: new Date().toISOString()
         }))
     }
@@ -232,6 +236,18 @@ class AnalyticsService {
                 .from('user_sessions')
                 .update({ user_id: userId })
                 .eq('id', this.sessionId)
+
+            if (!this.organizationId) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('organization_id')
+                    .eq('id', userId)
+                    .maybeSingle()
+                if (profile?.organization_id) {
+                    this.organizationId = profile.organization_id
+                    this.persistSession()
+                }
+            }
         } else {
             await this.startNewSession()
         }
@@ -250,6 +266,7 @@ class AnalyticsService {
             properties,
             user_id: this.userId,
             session_id: null as any, // Late binding in flush
+            organization_id: this.organizationId,
             timestamp: new Date().toISOString(),
             metadata: {
                 url: window.location.pathname
@@ -290,9 +307,22 @@ class AnalyticsService {
                 }
             }
 
+            // Ensure organizationId is resolved before flushing
+            if (!this.organizationId && this.userId) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('organization_id')
+                    .eq('id', this.userId)
+                    .maybeSingle()
+                if (profile?.organization_id) {
+                    this.organizationId = profile.organization_id
+                }
+            }
+
             const batchToSend = this.buffer.slice(0, this.batchSize)
             const eventsToSend = batchToSend.map(e => ({
                 ...e,
+                organization_id: e.organization_id || this.organizationId || undefined,
                 session_id: this.sessionId,
                 user_id: this.userId || e.user_id
             }))

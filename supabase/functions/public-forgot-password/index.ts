@@ -239,6 +239,18 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const profileUserId = profile?.id || null;
+
+    let profileOrgId: string | null = null;
+    if (profileUserId) {
+      const { data: membership } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", profileUserId)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      profileOrgId = membership?.organization_id || null;
+    }
     const recipientName = (profile?.full_name || "").trim() || email;
 
     const { data: linkData, error: linkError } =
@@ -329,25 +341,32 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    if (profileUserId) {
+    // audit_logs is a read-only view over system_events (event_type='audit');
+    // writes must target system_events directly. organization_id is required
+    // there, so this is skipped if the user has no resolvable membership.
+    if (profileUserId && profileOrgId) {
       await adminClient
-        .from("audit_logs")
+        .from("system_events")
         .insert({
-          user_id: profileUserId,
-          action: "user.password_reset_requested",
+          event_type: "audit",
+          actor_id: profileUserId,
           entity_type: "user",
           entity_id: profileUserId,
-          details: {
-            source: "public-forgot-password",
-            request_id: requestId,
-            email_send: {
-              success: emailSendSuccess,
-              status: emailSendStatus,
-              response: emailSendResponse,
-              error: emailSendError,
+          organization_id: profileOrgId,
+          ip_address: ip,
+          metadata: {
+            action: "user.password_reset_requested",
+            details: {
+              source: "public-forgot-password",
+              request_id: requestId,
+              email_send: {
+                success: emailSendSuccess,
+                status: emailSendStatus,
+                response: emailSendResponse,
+                error: emailSendError,
+              },
             },
           },
-          ip_address: ip,
         })
         .then(() => undefined)
         .catch(() => undefined);

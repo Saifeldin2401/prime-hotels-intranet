@@ -30,6 +30,7 @@ const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPo
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
 const TenantDataExport = lazy(() => import('@/pages/admin/TenantDataExport'))
+const WizardManager = lazy(() => import('@/pages/admin/WizardManager'))
 
 // Platform Owner Super Admin Pages
 const PlatformControlCenter = lazy(() => import('@/pages/platform/PlatformControlCenter'))
@@ -418,6 +419,34 @@ export const AdminRoutes = () => (
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
+            }
+        />
+
+        {/* ------------------------------------------------------------------ */}
+        {/* ROLE-BASED GUIDED WIZARD & ONBOARDING MANAGEMENT                   */}
+        {/* ------------------------------------------------------------------ */}
+        <Route
+            path="/admin/wizards"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'administrator', 'general_manager']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <WizardManager />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/wizards"
+            element={
+                <PlatformRoute>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <WizardManager />
+                        </MotionWrapper>
+                    </AppLayout>
+                </PlatformRoute>
             }
         />
     </>

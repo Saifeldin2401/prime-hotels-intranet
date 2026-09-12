@@ -123,6 +123,20 @@ export const platformService = {
         ? Math.round(((progressCompleted || 0) / (progressTotal || 1)) * 1000) / 10
         : 0
 
+      // 8. Platform-wide user counts (uncapped — used by the Platform User Directory
+      //    KPI cards, which must not be derived from a paginated results page)
+      const { count: totalPlatformUsers } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+      const { count: suspendedPlatformUsers } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .or('account_status.eq.suspended,is_active.eq.false')
+      const { count: lockedPlatformUsers } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .or(`account_status.eq.locked,locked_until.gt.${new Date().toISOString()},failed_login_attempts.gt.0`)
+
       return {
         totalOrganizations,
         activeOrganizations,
@@ -133,7 +147,10 @@ export const platformService = {
         totalMasterSops: totalMasterSops || 0,
         totalMasterCourses,
         totalDeployments: totalDeployments || 0,
-        averageCompletionRate
+        averageCompletionRate,
+        totalPlatformUsers: totalPlatformUsers || 0,
+        suspendedPlatformUsers: suspendedPlatformUsers || 0,
+        lockedPlatformUsers: lockedPlatformUsers || 0,
       }
     } catch (err) {
       console.error('Error in getPlatformStats:', err)
@@ -149,7 +166,10 @@ export const platformService = {
         totalMasterSops: 0,
         totalMasterCourses: 0,
         totalDeployments: 0,
-        averageCompletionRate: 0
+        averageCompletionRate: 0,
+        totalPlatformUsers: 0,
+        suspendedPlatformUsers: 0,
+        lockedPlatformUsers: 0,
       }
     }
   },
@@ -1388,38 +1408,41 @@ export const platformService = {
     limit?: number
     offset?: number
   }): Promise<{
-    id: string
-    email: string
-    full_name: string
-    avatar_url?: string
-    is_active: boolean
-    is_platform_user: boolean
-    platform_role?: string
-    primary_organization_id?: string
-    primary_organization_name?: string
-    membership_count: number
-    account_status?: string
-    suspend_reason?: string | null
-    suspended_at?: string | null
-    suspended_until?: string | null
-    failed_login_attempts?: number
-    locked_until?: string | null
-    force_password_reset?: boolean
-    job_title?: string | null
-    phone?: string | null
-    last_login_at?: string | null
-    memberships: Array<{
-      organization_id: string
-      organization_name: string
-      role: string
-      hotel_id?: string
-      hotel_name?: string
-      department_id?: string
-      department_name?: string
+    users: Array<{
+      id: string
+      email: string
+      full_name: string
+      avatar_url?: string
       is_active: boolean
+      is_platform_user: boolean
+      platform_role?: string
+      primary_organization_id?: string
+      primary_organization_name?: string
+      membership_count: number
+      account_status?: string
+      suspend_reason?: string | null
+      suspended_at?: string | null
+      suspended_until?: string | null
+      failed_login_attempts?: number
+      locked_until?: string | null
+      force_password_reset?: boolean
+      job_title?: string | null
+      phone?: string | null
+      last_login_at?: string | null
+      memberships: Array<{
+        organization_id: string
+        organization_name: string
+        role: string
+        hotel_id?: string
+        hotel_name?: string
+        department_id?: string
+        department_name?: string
+        is_active: boolean
+      }>
+      created_at: string
     }>
-    created_at: string
-  }[]> {
+    totalCount: number
+  }> {
     const { data, error } = await (supabase.rpc as any)('get_platform_user_directory', {
       p_search: params?.search || null,
       p_org_id: params?.organizationId || null,
@@ -1434,7 +1457,9 @@ export const platformService = {
     }
 
     const rows = data || []
-    if (rows.length === 0) return []
+    if (rows.length === 0) return { users: [], totalCount: 0 }
+
+    const totalCount = Number(rows[0]?.total_count || rows.length)
 
     const userIds = rows.map((u: any) => u.id)
     const { data: profileExtras } = await supabase
@@ -1444,10 +1469,11 @@ export const platformService = {
 
     const extrasMap = new Map((profileExtras || []).map((p: any) => [p.id, p]))
 
-    return rows.map((u: any) => {
+    const users = rows.map((u: any) => {
       const extra = extrasMap.get(u.id) || {}
+      const { total_count, ...rest } = u
       return {
-        ...u,
+        ...rest,
         account_status: extra.account_status || (u.is_active ? 'active' : 'suspended'),
         suspend_reason: extra.suspend_reason || null,
         suspended_at: extra.suspended_at || null,
@@ -1460,6 +1486,8 @@ export const platformService = {
         last_login_at: extra.last_login_at || null,
       }
     })
+
+    return { users, totalCount }
   },
 
   // ---- Platform operator identity management (platform_users / platform_role_assignments) ----

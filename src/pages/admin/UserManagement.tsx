@@ -806,6 +806,7 @@ export default function UserManagement() {
             )}
 
             <Link
+              data-tour="users-bulk-btn"
               to="/admin/users/bulk"
               className="inline-flex h-9 items-center justify-center rounded-2xl border border-border/60 bg-background/70 px-3.5 text-xs font-semibold text-foreground backdrop-blur-xl hover:border-amber-500/40 hover:bg-background/90 shadow-xs transition-colors"
             >
@@ -814,6 +815,7 @@ export default function UserManagement() {
             </Link>
 
             <Button
+              data-tour="users-invite-btn"
               variant="outline"
               onClick={() => setInviteDialogOpen(true)}
               disabled={isSeatLimitReached}
@@ -825,6 +827,7 @@ export default function UserManagement() {
             </Button>
 
             <Button
+              data-tour="users-add-btn"
               onClick={openCreateForm}
               disabled={isSeatLimitReached}
               title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add members.' : undefined}
@@ -992,7 +995,7 @@ export default function UserManagement() {
               <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
             </div>
           ) : filteredUsers && filteredUsers.length > 0 ? (
-            <div className="space-y-3">
+            <div data-tour="users-table" className="space-y-3">
               {filteredUsers.map((user) => (
                 <div
                   key={user.id}

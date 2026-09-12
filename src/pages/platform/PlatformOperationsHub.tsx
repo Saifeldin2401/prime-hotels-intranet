@@ -85,7 +85,7 @@ export default function PlatformOperationsHub() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div data-tour="platform-health-deck" className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card className="p-4 border shadow-sm">
           <span className="text-xs text-muted-foreground font-semibold">Total Pipeline Tasks</span>
           <div className="text-2xl font-black mt-1">{summary.total_jobs}</div>

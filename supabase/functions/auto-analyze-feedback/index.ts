@@ -242,10 +242,13 @@ Deno.serve(async (req) => {
 
       let assigneeId: string | null = null;
       if (deptId) {
+        // Department membership now lives on organization_memberships.department_id
+        // rather than a separate user_departments junction table.
         const { data: deptUsers } = await supabase
-          .from("user_departments")
+          .from("organization_memberships")
           .select("user_id")
-          .eq("department_id", deptId);
+          .eq("department_id", deptId)
+          .eq("is_active", true);
         const deptUserIds = (deptUsers ?? []).map((r: any) => r.user_id);
         if (deptUserIds.length > 0) {
           const { data: headRow } = await supabase

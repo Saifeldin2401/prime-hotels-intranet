@@ -68,63 +68,47 @@ const fetchReportData = async (
 
   switch (reportType) {
     case "operations": {
-      const [tasks, maintenance] = await Promise.all([
-        applyDateRange(
-          supabaseClient
-            .from("tasks")
-            .select("id,title,status,priority,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-        applyDateRange(
-          supabaseClient
-            .from("maintenance_tickets")
-            .select("id,title,status,priority,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-      ]);
+      // maintenance_tickets no longer exists in the schema (module never
+      // shipped in the current multi-tenant model) — that section is
+      // reported empty rather than issuing a query guaranteed to error.
+      const tasks = await applyDateRange(
+        supabaseClient
+          .from("tasks")
+          .select("id,title,status,priority,created_at")
+          .eq("organization_id", organizationId)
+          .limit(500),
+        "created_at",
+        dateFrom,
+        dateTo,
+      );
       return {
         tasks: tasks.data || [],
-        maintenance_tickets: maintenance.data || [],
+        maintenance_tickets: [],
       };
     }
     case "hr": {
-      const [profiles, leaves] = await Promise.all([
-        applyDateRange(
-          supabaseClient
-            .from("profiles")
-            .select("id,full_name,job_title,is_active,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-        applyDateRange(
-          supabaseClient
-            .from("leave_requests")
-            .select("id,type,status,start_date,end_date,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-      ]);
+      // leave_requests no longer exists in the schema — reported empty
+      // rather than issuing a query guaranteed to error.
+      const profiles = await applyDateRange(
+        supabaseClient
+          .from("profiles")
+          .select("id,full_name,job_title,is_active,created_at")
+          .eq("organization_id", organizationId)
+          .limit(500),
+        "created_at",
+        dateFrom,
+        dateTo,
+      );
       return {
         profiles: profiles.data || [],
-        leave_requests: leaves.data || [],
+        leave_requests: [],
       };
     }
     case "training": {
-      const [assignments, progress] = await Promise.all([
+      // learning_progress_v (a compatibility view over training_progress) has
+      // no organization_id column, so scoping goes through the org's
+      // training_modules instead.
+      const [assignments, orgModules] = await Promise.all([
         applyDateRange(
           supabaseClient
             .from("learning_assignments")
@@ -135,48 +119,39 @@ const fetchReportData = async (
           dateFrom,
           dateTo,
         ),
-        applyDateRange(
+        supabaseClient
+          .from("training_modules")
+          .select("id")
+          .eq("organization_id", organizationId),
+      ]);
+
+      const orgModuleIds = (orgModules.data || []).map((m: { id: string }) => m.id);
+      let progressRows: Record<string, unknown>[] = [];
+      if (orgModuleIds.length > 0) {
+        const progress = await applyDateRange(
           supabaseClient
-            .from("learning_progress")
-            .select("id,status,completion_percentage,updated_at")
-            .eq("organization_id", organizationId)
+            .from("learning_progress_v")
+            .select("id,status,progress_percentage,updated_at")
+            .in("training_module_id", orgModuleIds)
             .limit(500),
           "updated_at",
           dateFrom,
           dateTo,
-        ),
-      ]);
+        );
+        progressRows = progress.data || [];
+      }
+
       return {
         learning_assignments: assignments.data || [],
-        learning_progress: progress.data || [],
+        learning_progress: progressRows,
       };
     }
     case "audits": {
-      const [runs, findings] = await Promise.all([
-        applyDateRange(
-          supabaseClient
-            .from("audit_runs")
-            .select("id,status,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-        applyDateRange(
-          supabaseClient
-            .from("audit_findings")
-            .select("id,status,notes,created_at")
-            .eq("organization_id", organizationId)
-            .limit(500),
-          "created_at",
-          dateFrom,
-          dateTo,
-        ),
-      ]);
+      // audit_runs / audit_findings no longer exist in the schema — reported
+      // empty rather than issuing queries guaranteed to error.
       return {
-        audit_runs: runs.data || [],
-        audit_findings: findings.data || [],
+        audit_runs: [],
+        audit_findings: [],
       };
     }
     default:

@@ -77,7 +77,10 @@ export const ActiveLearningsWidget: React.FC = () => {
   })
 
   return (
-    <div className="flex flex-col justify-between rounded-3xl border border-border/50 bg-card/60 p-6 shadow-sm backdrop-blur-xl transition-all">
+    <div 
+      data-tour="dashboard-active-learnings"
+      className="flex flex-col justify-between rounded-3xl border border-border/50 bg-card/60 p-6 shadow-sm backdrop-blur-xl transition-all"
+    >
       <div>
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-border/40">

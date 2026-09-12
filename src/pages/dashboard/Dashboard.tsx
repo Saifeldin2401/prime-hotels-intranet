@@ -59,12 +59,12 @@ export function Dashboard() {
       className="min-h-screen space-y-6 pb-12"
     >
       {/* 1. Hero Welcome Header with Tenant Organization & Role Context */}
-      <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants} data-tour="dashboard-hero">
         <DashboardHeroHeader />
       </motion.div>
 
       {/* 2. Interactive Operational Lens Switcher Bar (Platform, Corporate, Property, Learner) */}
-      <motion.div variants={itemVariants}>
+      <motion.div variants={itemVariants} data-tour="dashboard-lens-bar">
         <DashboardLensBar />
       </motion.div>
 
@@ -79,6 +79,7 @@ export function Dashboard() {
       <AnimatePresence mode="wait">
         <motion.div
           key={effectiveLens}
+          data-tour="dashboard-cockpit"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}

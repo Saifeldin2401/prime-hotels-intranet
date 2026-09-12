@@ -45,6 +45,8 @@ import enErrors from './locales/en/errors.json';
 import enExtracted from './locales/en/extracted.json';
 import enLearning from './locales/en/learning.json';
 import enRequests from './locales/en/requests.json';
+import arWizard from './locales/ar/wizard.json';
+import enWizard from './locales/en/wizard.json';
 
 // Define the resources
 const resources = {
@@ -68,6 +70,13 @@ const resources = {
     requests: enRequests,
     extracted: enExtracted,
     media: enMedia,
+    wizard: {
+      ...enWizard,
+      wizard: {
+        ...enWizard,
+        ...(enWizard.wizard || {}),
+      },
+    },
   },
   ar: {
     common: arCommon,
@@ -89,6 +98,13 @@ const resources = {
     requests: arRequests,
     extracted: arExtracted,
     media: arMedia,
+    wizard: {
+      ...arWizard,
+      wizard: {
+        ...arWizard,
+        ...(arWizard.wizard || {}),
+      },
+    },
   },
 };
 

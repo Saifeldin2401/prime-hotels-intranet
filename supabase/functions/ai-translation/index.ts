@@ -352,7 +352,9 @@ serve(async (req) => {
             results[item.index] = translationResult.text;
             modelUsed = translationResult.model;
 
-            // Save to database cache asynchronously
+            // Save to database cache asynchronously. translation_cache doesn't
+            // exist in the current schema, so this is expected to no-op; the
+            // catch just avoids an unhandled rejection in the logs.
             void supabaseClient
               .from("translation_cache")
               .upsert(
@@ -365,7 +367,10 @@ serve(async (req) => {
                 },
                 { onConflict: "source_text_hash,target_lang" }
               )
-              .then(() => {});
+              .then(
+                () => {},
+                () => {},
+              );
           } else {
             // If the gateway fails, preserve original text as safe fallback
             results[item.index] = item.text;
