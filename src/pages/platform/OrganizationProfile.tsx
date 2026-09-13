@@ -360,6 +360,12 @@ export default function OrganizationProfile() {
   const maxAi = org.max_ai_credits_monthly ?? 1000
   const hotelPct = Math.min(100, Math.round(((counts?.hotels || 0) / maxH) * 100))
   const memberPct = Math.min(100, Math.round(((counts?.members || 0) / maxL) * 100))
+  // org.ai_credits_used_this_month is a real column (present on the org row returned by
+  // get_organization_profile) — the meter below previously ignored it and always showed
+  // a hardcoded 15%. There is no equivalent real per-org storage-usage figure anywhere in
+  // the schema, so that meter shows quota only rather than fabricating a percentage.
+  const aiCreditsUsed = org.ai_credits_used_this_month ?? 0
+  const aiCreditsPct = maxAi > 0 ? Math.min(100, Math.round((aiCreditsUsed / maxAi) * 100)) : 0
 
   const handleApplyAISuggestions = (sug: AIEmailBrandSuggestions) => {
     setEditSenderName(sug.emailSenderName)
@@ -439,7 +445,7 @@ export default function OrganizationProfile() {
         <div className="flex items-center gap-3">
           <div
             className="p-3 rounded-2xl text-white font-bold text-lg shadow-sm border shrink-0"
-            style={{ backgroundColor: org.brand_colors?.primary || '#0f172a' }}
+            style={{ backgroundColor: ensureReadableOnWhiteText(org.brand_colors?.primary || '#0f172a') }}
           >
             {org.name.slice(0, 2).toUpperCase()}
           </div>
@@ -552,11 +558,12 @@ export default function OrganizationProfile() {
                   <HardDrive className="h-3.5 w-3.5 text-emerald-500" />
                   Document Storage
                 </span>
-                <span className="font-mono">{maxStorage} GB</span>
+                <span className="font-mono">{maxStorage} GB quota</span>
               </div>
-              <Progress value={20} className="h-2 bg-muted" indicatorClassName="bg-emerald-600" />
-              <div className="text-[11px] text-muted-foreground flex justify-between">
-                <span>Standard cloud tier</span>
+              {/* No per-org storage-usage figure exists anywhere in the schema yet, so
+                  this previously showed a fabricated 20% rather than real consumption. */}
+              <div className="text-[11px] text-muted-foreground flex items-center justify-between p-1.5 rounded-lg bg-muted/40 border border-dashed">
+                <span>Usage tracking not available yet</span>
                 <span>Supabase S3</span>
               </div>
             </div>
@@ -568,11 +575,15 @@ export default function OrganizationProfile() {
                   <Sparkles className="h-3.5 w-3.5 text-purple-500" />
                   Monthly AI Credits
                 </span>
-                <span className="font-mono">{maxAi} / mo</span>
+                <span className="font-mono">{aiCreditsUsed} / {maxAi}</span>
               </div>
-              <Progress value={15} className="h-2 bg-muted" indicatorClassName="bg-purple-600" />
+              <Progress
+                value={aiCreditsPct}
+                className="h-2 bg-muted"
+                indicatorClassName={aiCreditsPct > 90 ? 'bg-rose-500' : aiCreditsPct > 70 ? 'bg-amber-500' : 'bg-purple-600'}
+              />
               <div className="text-[11px] text-muted-foreground flex justify-between">
-                <span>Auto-resets monthly</span>
+                <span>{aiCreditsPct}% consumed this month</span>
                 <span>AI Course & SOP Gen</span>
               </div>
             </div>

@@ -1196,7 +1196,11 @@ export default function MasterContentLibrary() {
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <Checkbox checked={isChecked} onCheckedChange={() => toggleOrgSelection(org.id)} />
+                              {/* No onCheckedChange here — the row's onClick already toggles
+                                  selection, and since the click bubbles up from the checkbox
+                                  too, wiring both fired toggleOrgSelection twice per click on
+                                  the checkbox itself, net cancelling out (it looked unclickable). */}
+                              <Checkbox checked={isChecked} />
                               <div>
                                 <div className="text-xs font-bold text-foreground">{org.name}</div>
                                 {org.name_ar && <div className="text-[11px] text-muted-foreground font-arabic">{org.name_ar}</div>}
@@ -1320,12 +1324,18 @@ export default function MasterContentLibrary() {
                 <Label className="text-xs font-bold">{t('admin:target_tenants', 'Target tenants')}</Label>
                 <div className="max-h-40 overflow-y-auto rounded-xl border border-border/60 divide-y divide-border/50">
                   {organizations.map((org) => (
-                    <label key={org.id} className="flex items-center gap-2.5 p-2.5 hover:bg-muted/40 cursor-pointer">
-                      <Checkbox
-                        checked={assignOrgIds.includes(org.id)}
-                        onCheckedChange={() => toggleAssignOrg(org.id)}
-                        disabled={isAssigning}
-                      />
+                    // A plain <label> only auto-forwards clicks to a real native <input> —
+                    // Radix's Checkbox renders a <button role="checkbox">, so despite the
+                    // hover/cursor-pointer styling implying the whole row was clickable,
+                    // clicking the org name did nothing; only the checkbox square itself
+                    // responded. Explicit onClick here + no onCheckedChange on the Checkbox
+                    // (same fix as the deploy dialog above) makes the whole row toggle once.
+                    <label
+                      key={org.id}
+                      onClick={() => !isAssigning && toggleAssignOrg(org.id)}
+                      className="flex items-center gap-2.5 p-2.5 hover:bg-muted/40 cursor-pointer"
+                    >
+                      <Checkbox checked={assignOrgIds.includes(org.id)} disabled={isAssigning} />
                       <span className="text-xs font-medium">{org.name}</span>
                     </label>
                   ))}
