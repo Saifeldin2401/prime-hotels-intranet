@@ -1367,23 +1367,40 @@ export const platformService = {
     }
   },
 
-  async getPlatformAuditLogs(limit = 100): Promise<PlatformAuditLog[]> {
-    const { data, error } = await supabase
+  /**
+   * `limit` alone (legacy call shape, still used by preview widgets) returns just the
+   * array. Passing an options object also returns `totalCount` (via a `count: 'exact'`
+   * head-count on the same filtered query) so the full Audit Logs page can paginate
+   * instead of only ever being able to see the most recent `limit` rows platform-wide.
+   */
+  async getPlatformAuditLogs(limit?: number): Promise<PlatformAuditLog[]>
+  async getPlatformAuditLogs(params: { limit?: number; offset?: number }): Promise<{ logs: PlatformAuditLog[]; totalCount: number }>
+  async getPlatformAuditLogs(
+    arg?: number | { limit?: number; offset?: number }
+  ): Promise<PlatformAuditLog[] | { logs: PlatformAuditLog[]; totalCount: number }> {
+    const isOptionsForm = typeof arg === 'object' && arg !== null
+    const limit = (isOptionsForm ? arg.limit : arg) ?? 100
+    const offset = isOptionsForm ? (arg.offset ?? 0) : 0
+
+    const { data, error, count } = await supabase
       .from('platform_audit_logs')
-      .select(`
+      .select(
+        `
         *,
         actor:profiles(full_name),
         target_org:organizations(name)
-      `)
+      `,
+        { count: 'exact' },
+      )
       .order('created_at', { ascending: false })
-      .limit(limit)
+      .range(offset, offset + limit - 1)
 
     if (error) {
       console.error('Error fetching platform audit logs:', error)
-      return []
+      return isOptionsForm ? { logs: [], totalCount: 0 } : []
     }
 
-    return (data || []).map((row: any) => ({
+    const logs = (data || []).map((row: any) => ({
       id: row.id,
       actor_id: row.actor_id,
       actor_name: row.actor?.full_name || 'System Admin',
@@ -1396,6 +1413,8 @@ export const platformService = {
       metadata: row.metadata || {},
       created_at: row.created_at
     }))
+
+    return isOptionsForm ? { logs, totalCount: count ?? logs.length } : logs
   },
 
   // ============================================================================

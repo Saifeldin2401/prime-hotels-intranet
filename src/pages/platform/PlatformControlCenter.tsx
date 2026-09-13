@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -35,6 +35,35 @@ export default function PlatformControlCenter() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState('')
+  // The results overlay previously had no way to close except deleting the query text —
+  // no click-outside or Escape handler. dismissed resets whenever the query text changes
+  // (so typing again always reopens it) and is set on outside click / Escape / navigating
+  // away via a result.
+  const [searchOverlayDismissed, setSearchOverlayDismissed] = useState(false)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setSearchOverlayDismissed(false)
+  }, [searchQuery])
+
+  useEffect(() => {
+    const handlePointerDown = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setSearchOverlayDismissed(true)
+      }
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSearchOverlayDismissed(true)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
+  const closeSearchOverlay = () => setSearchOverlayDismissed(true)
 
   const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = useQuery({
     queryKey: ['platform-executive-stats'],
@@ -123,13 +152,14 @@ export default function PlatformControlCenter() {
       </div>
 
       {/* Cross-Tenant Global Search Bar */}
-      <div className="relative">
+      <div className="relative" ref={searchContainerRef}>
         <div className="relative">
           <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Global search across all customer tenants, hotels, staff, master SOPs, and master courses..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => setSearchOverlayDismissed(false)}
             className="ps-11 h-12 bg-card border-slate-200 dark:border-slate-800 shadow-sm text-sm rounded-xl"
           />
           {isSearching && (
@@ -141,7 +171,7 @@ export default function PlatformControlCenter() {
         </div>
 
         {/* Global Search Results Overlay */}
-        {searchQuery.trim().length >= 2 && searchResults && (
+        {searchQuery.trim().length >= 2 && searchResults && !searchOverlayDismissed && (
           <Card className="absolute top-14 start-0 end-0 z-50 shadow-2xl border bg-card/95 backdrop-blur-lg max-h-[32rem] overflow-y-auto">
             <CardContent className="p-4 space-y-4 text-xs">
               {/* Organizations */}
@@ -154,7 +184,7 @@ export default function PlatformControlCenter() {
                     {searchResults.organizations.map((org: any) => (
                       <div
                         key={org.id}
-                        onClick={() => navigate(`/platform/organizations/${org.id}`)}
+                        onClick={() => { closeSearchOverlay(); navigate(`/platform/organizations/${org.id}`) }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -181,7 +211,7 @@ export default function PlatformControlCenter() {
                     {searchResults.hotels.map((h: any) => (
                       <div
                         key={h.id}
-                        onClick={() => navigate('/platform/organizations')}
+                        onClick={() => { closeSearchOverlay(); navigate(h.organization_id ? `/platform/organizations/${h.organization_id}` : '/platform/organizations') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -207,7 +237,7 @@ export default function PlatformControlCenter() {
                     {searchResults.users.map((u: any) => (
                       <div
                         key={u.id}
-                        onClick={() => navigate('/platform/users')}
+                        onClick={() => { closeSearchOverlay(); navigate('/platform/users') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -233,7 +263,7 @@ export default function PlatformControlCenter() {
                     {(searchResults.master_courses || []).map((c: any) => (
                       <div
                         key={c.id}
-                        onClick={() => navigate('/platform/master-library')}
+                        onClick={() => { closeSearchOverlay(); navigate('/platform/master-library') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -246,6 +276,7 @@ export default function PlatformControlCenter() {
                     {(searchResults.tenant_courses || []).map((c: any) => (
                       <div
                         key={c.id}
+                        onClick={() => { closeSearchOverlay(); navigate(c.organization_id ? `/platform/organizations/${c.organization_id}` : '/platform/organizations') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -269,6 +300,7 @@ export default function PlatformControlCenter() {
                     {(searchResults.assessments || []).map((a: any) => (
                       <div
                         key={a.id}
+                        onClick={() => { closeSearchOverlay(); navigate(a.organization_id ? `/platform/organizations/${a.organization_id}` : '/platform/organizations') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
@@ -281,6 +313,7 @@ export default function PlatformControlCenter() {
                     {(searchResults.question_banks || []).map((qb: any) => (
                       <div
                         key={qb.id}
+                        onClick={() => { closeSearchOverlay(); navigate(qb.organization_id ? `/platform/organizations/${qb.organization_id}` : '/platform/organizations') }}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>

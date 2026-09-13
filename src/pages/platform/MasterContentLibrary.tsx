@@ -205,7 +205,7 @@ export default function MasterContentLibrary() {
         masterId: assignItem.id,
         orgIds: assignOrgIds,
         contentType: 'course',
-        scopeType: assignScope === 'role' ? 'organization' : 'organization',
+        scopeType: assignScope === 'role' ? 'role' : 'organization',
         targetRole: assignScope === 'role' ? assignRole : null,
         dueDate: assignDueDate ? new Date(assignDueDate).toISOString() : null,
         instructions: assignInstructions.trim() || null,

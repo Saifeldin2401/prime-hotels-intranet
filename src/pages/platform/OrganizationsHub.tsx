@@ -63,6 +63,13 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Organization, SubscriptionPlan } from '@/lib/types/tenant'
+import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
+
+// Must match the minimum enforced in TenantContext.enterOrganization() — that check is
+// the real authority, but the button here should reflect it instead of only checking
+// for non-empty, which let a 1-2 character reason pass the button gate and then fail
+// after the click with no upfront indication of the actual requirement.
+const MIN_ACCESS_REASON_LENGTH = 10
 
 const COLOR_PRESETS = [
   { name: 'Altus Copper & Charcoal', primary: '#0B1528', secondary: '#C45B2F', accent: '#D9C6A3' },
@@ -832,7 +839,7 @@ export default function OrganizationsHub() {
                         <div className="flex items-center gap-3">
                           <div
                             className="h-9 w-9 rounded-lg flex items-center justify-center font-bold text-xs text-white border shrink-0"
-                            style={{ backgroundColor: org.brand_colors?.primary || '#0f172a' }}
+                            style={{ backgroundColor: ensureReadableOnWhiteText(org.brand_colors?.primary || '#0f172a') }}
                           >
                             {org.name.slice(0, 2).toUpperCase()}
                           </div>
@@ -1113,6 +1120,9 @@ export default function OrganizationsHub() {
                   placeholder="e.g. Master SOP deployment, Onboarding review, Support ticket #1042"
                   className="h-9 text-xs"
                 />
+                <div className={`text-[10px] ${enterReason.trim().length >= MIN_ACCESS_REASON_LENGTH ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {enterReason.trim().length}/{MIN_ACCESS_REASON_LENGTH} characters minimum
+                </div>
               </div>
             </div>
             <DialogFooter className="pt-2 border-t">
@@ -1122,7 +1132,7 @@ export default function OrganizationsHub() {
               <Button
                 size="sm"
                 onClick={handleEnterOrg}
-                disabled={isEntering || !enterReason.trim()}
+                disabled={isEntering || enterReason.trim().length < MIN_ACCESS_REASON_LENGTH}
                 className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 font-semibold text-xs"
               >
                 {isEntering ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <LogIn className="h-3.5 w-3.5" />}

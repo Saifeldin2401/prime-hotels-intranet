@@ -304,21 +304,25 @@ export default function PlatformSettings() {
         <CardContent className="p-5 pt-2 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
           <div className="space-y-1.5">
             <Label className="text-[11px] font-bold">Default session TTL (minutes)</Label>
-            <Input type="number" min={5} max={480} defaultValue={cfg?.default_session_ttl_minutes ?? 30}
+            {/* key forces a remount once `cfg` resolves from its async fetch — without it,
+                this uncontrolled input keeps showing its initial `?? 30` fallback forever
+                even after the real saved value loads, and blurring untouched would then
+                silently overwrite the real value with 30 (v !== cfg?.… would be true). */}
+            <Input type="number" min={5} max={480} key={cfg?.default_session_ttl_minutes ?? 'loading'} defaultValue={cfg?.default_session_ttl_minutes ?? 30}
               disabled={!canSessionCfg}
               onBlur={(e) => { const v = Number(e.target.value); if (v && v !== cfg?.default_session_ttl_minutes) cfgMutation.mutate({ default_session_ttl_minutes: v }) }}
               className="h-8" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-[11px] font-bold">Maximum session TTL (minutes)</Label>
-            <Input type="number" min={5} max={1440} defaultValue={cfg?.max_session_ttl_minutes ?? 480}
+            <Input type="number" min={5} max={1440} key={cfg?.max_session_ttl_minutes ?? 'loading'} defaultValue={cfg?.max_session_ttl_minutes ?? 480}
               disabled={!canSessionCfg}
               onBlur={(e) => { const v = Number(e.target.value); if (v && v !== cfg?.max_session_ttl_minutes) cfgMutation.mutate({ max_session_ttl_minutes: v }) }}
               className="h-8" />
           </div>
           <div className="space-y-1.5">
             <Label className="text-[11px] font-bold">Minimum access-reason length</Label>
-            <Input type="number" min={0} max={500} defaultValue={cfg?.min_session_reason_length ?? 10}
+            <Input type="number" min={0} max={500} key={cfg?.min_session_reason_length ?? 'loading'} defaultValue={cfg?.min_session_reason_length ?? 10}
               disabled={!canSessionCfg}
               onBlur={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v) && v !== cfg?.min_session_reason_length) cfgMutation.mutate({ min_session_reason_length: v }) }}
               className="h-8" />

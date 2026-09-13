@@ -28,24 +28,37 @@ import {
   User,
   Building,
   Code,
-  FileText
+  FileText,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatDateTime } from '@/lib/utils'
 import type { PlatformAuditLog } from '@/lib/types/platform'
 
+const PAGE_SIZE = 100
+
 export default function PlatformAuditLogs() {
   const { t } = useTranslation(['admin', 'common'])
   const [logs, setLogs] = useState<PlatformAuditLog[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [page, setPage] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [selectedLogForDetail, setSelectedLogForDetail] = useState<PlatformAuditLog | null>(null)
 
-  const loadLogs = async () => {
+  // Previously always fetched the most recent 100 rows platform-wide with no way to see
+  // anything older — for a page billed as an "immutable security audit trail" that meant
+  // events could become permanently unreachable within days on an active platform.
+  const loadLogs = async (targetPage = page) => {
     setIsLoading(true)
     try {
-      const data = await platformService.getPlatformAuditLogs(100)
+      const { logs: data, totalCount: count } = await platformService.getPlatformAuditLogs({
+        limit: PAGE_SIZE,
+        offset: targetPage * PAGE_SIZE,
+      })
       setLogs(data)
+      setTotalCount(count)
     } catch (err) {
       console.error('Failed to load audit logs:', err)
     } finally {
@@ -54,8 +67,9 @@ export default function PlatformAuditLogs() {
   }
 
   useEffect(() => {
-    loadLogs()
-  }, [])
+    loadLogs(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
 
   const filteredLogs = logs.filter((log) => {
     const term = searchTerm.toLowerCase()
@@ -81,7 +95,7 @@ export default function PlatformAuditLogs() {
         title={t('admin:cross_tenant_audit', 'Cross-Tenant Security Audit Trail')}
         description={t('admin:cross_tenant_audit_desc', 'Immutable security log of all platform administrator actions, impersonation sessions, master content deployments, and tenant modifications.')}
         actions={
-          <Button variant="outline" onClick={loadLogs} disabled={isLoading}>
+          <Button variant="outline" onClick={() => loadLogs()} disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
             {t('common:refresh', 'Refresh')}
           </Button>
@@ -89,7 +103,7 @@ export default function PlatformAuditLogs() {
       />
 
       <Card className="border shadow-sm">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-2">
           <div className="relative">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -99,6 +113,11 @@ export default function PlatformAuditLogs() {
               className="ps-9"
             />
           </div>
+          {totalCount > PAGE_SIZE && (
+            <p className="text-[11px] text-muted-foreground">
+              Search only filters the {PAGE_SIZE} rows on this page — use pagination below to reach older events.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -170,6 +189,36 @@ export default function PlatformAuditLogs() {
           </Table>
         </CardContent>
       </Card>
+
+      {totalCount > PAGE_SIZE && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground font-mono">
+            Page {page + 1} of {Math.max(Math.ceil(totalCount / PAGE_SIZE), 1)} · {totalCount} events total
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === 0 || isLoading}
+              onClick={() => setPage((p) => Math.max(p - 1, 0))}
+              className="h-8 text-xs gap-1"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              {t('common:previous', 'Previous')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoading || (page + 1) * PAGE_SIZE >= totalCount}
+              onClick={() => setPage((p) => p + 1)}
+              className="h-8 text-xs gap-1"
+            >
+              {t('common:next', 'Next')}
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Metadata Detail Modal */}
       {selectedLogForDetail && (
