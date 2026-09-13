@@ -1,7 +1,6 @@
 export * from '../useDashboardFocus'
 export * from '../useDashboardMetrics'
 export * from '../useDashboardPreferences'
-export * from '../useDashboardStats'
 export * from '../useQuickActions'
 export * from '../useQuickCreate'
 export * from '../useSidebarCounts'

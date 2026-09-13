@@ -7,7 +7,7 @@
  *
  *   import { useTraining, useCertificates } from '@/hooks/training'
  *   import { useAIDocumentSummarizer } from '@/hooks/ai'
- *   import { useDashboardStats } from '@/hooks/dashboard'
+ *   import { useDashboardPreferences } from '@/hooks/dashboard'
  *
  * Domain groups:
  *   ai/           - AI-powered features
