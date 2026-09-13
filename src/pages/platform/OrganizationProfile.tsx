@@ -1194,12 +1194,11 @@ export default function OrganizationProfile() {
               </div>
 
               {/* Live preview so picking a color has an immediate, visible effect inside
-                  this dialog. Saving still writes brand_colors to the organization row and
-                  TenantContext sets --tenant-primary/secondary/accent from it, but no CSS in
-                  the app currently reads those variables — today this setting has no visible
-                  effect anywhere outside this preview. Wiring it into the tenant's actual
-                  portal chrome is a larger, separate design-system unification effort
-                  (see docs/remaining-architecture-work.md §67), not a scoped fix. */}
+                  this dialog too. Saving writes brand_colors to the organization row;
+                  Header.tsx reads currentOrganization.brand_colors directly to override
+                  the default ALTUS navy header bar for that tenant's own session (see
+                  Header.tsx). Full design-system-wide theming (sidebar, buttons, every
+                  screen) is still out of scope — see docs/remaining-architecture-work.md §67. */}
               <div className="rounded-lg border p-3 space-y-2" style={{ backgroundColor: `${primaryColor}0d` }}>
                 <div className="text-[10px] font-semibold text-muted-foreground">Preview</div>
                 <div className="flex items-center justify-between rounded-md px-3 py-2" style={{ backgroundColor: primaryColor }}>

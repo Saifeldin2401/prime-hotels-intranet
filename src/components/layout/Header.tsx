@@ -90,6 +90,18 @@ export function Header({
     busy: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]'
   }
 
+  // Tenant brand colors (set via Organization Settings / Platform Org Profile) override
+  // the default ALTUS navy header for that tenant's own session. Only applied when a
+  // tenant has actually saved custom colors — orgs that never touched that setting (and
+  // the platform admin's own scope, where currentOrganization is unset) keep the default
+  // look untouched. No contrast validation is done on the saved color, same as the color
+  // picker itself; an org that picks a very light primary color will get low-contrast
+  // white header text.
+  const tenantBrand = !isPlatformActive ? currentOrganization?.brand_colors : undefined
+  const tenantHeaderStyle = tenantBrand?.primary
+    ? { backgroundColor: tenantBrand.primary, borderColor: tenantBrand.accent || tenantBrand.primary }
+    : undefined
+
   const handleOpenSearch = () => {
     if (onOpenSearch) {
       onOpenSearch()
@@ -105,8 +117,12 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-200">
-      {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent */}
-      <div className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative">
+      {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent.
+          A tenant with saved brand_colors overrides the background/border via tenantHeaderStyle. */}
+      <div
+        className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative"
+        style={tenantHeaderStyle}
+      >
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3">
             {setSidebarCollapsed && (
