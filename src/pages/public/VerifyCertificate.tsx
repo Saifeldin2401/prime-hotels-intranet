@@ -5,6 +5,7 @@ import {
     verifyCertificate,
     generateCertificatePDF,
     loadLogoAsDataUrl,
+    fetchAsDataUrl,
     type Certificate
 } from '@/services/certificateService';
 import { format } from 'date-fns';
@@ -148,8 +149,12 @@ export default function VerifyCertificate() {
         toast.info(t('verification.generating_pdf', 'Generating official PDF certificate...'));
 
         try {
-            const logoUrl = await loadLogoAsDataUrl();
-            const pdfBlob = await generateCertificatePDF(result.certificate, logoUrl || undefined);
+            // organizationLogoUrl is already resolved by the verify_certificate RPC --
+            // no need for loadLogoAsDataUrl()'s own org-id lookup here.
+            const logoUrl = result.certificate.organizationLogoUrl
+                ? await fetchAsDataUrl(result.certificate.organizationLogoUrl)
+                : null
+            const pdfBlob = await generateCertificatePDF(result.certificate, logoUrl || (await loadLogoAsDataUrl()) || undefined);
             
             const downloadUrl = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
@@ -583,9 +588,15 @@ export default function VerifyCertificate() {
                     {/* Header with Logo */}
                     <div className="flex items-center justify-between border-b-2 border-amber-600 pb-4 mb-4">
                         <div className="flex items-center gap-3">
-                            <img src="/altus-logo-web.png" alt="ALTUS Advisory Logo" className="h-12 w-auto object-contain" />
+                            <img
+                                src={result.certificate.organizationLogoUrl || '/altus-logo-web.png'}
+                                alt={result.certificate.organizationName || 'ALTUS Advisory'}
+                                className="h-12 w-auto object-contain"
+                            />
                             <div>
-                                <h1 className="text-xl font-bold text-slate-950 uppercase tracking-wide">ALTUS Advisory</h1>
+                                <h1 className="text-xl font-bold text-slate-950 uppercase tracking-wide">
+                                    {result.certificate.organizationName || 'ALTUS Advisory'}
+                                </h1>
                                 <p className="text-[10px] font-sans text-amber-800 font-semibold tracking-wider uppercase">Kingdom of Saudi Arabia • Excellence Center</p>
                             </div>
                         </div>

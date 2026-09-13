@@ -12,6 +12,7 @@ import {
     useAllCertificates,
     useDownloadCertificate,
     useMyCertificates,
+    useOrganizationLogo,
     useVerifyCertificate
 } from '@/hooks/useCertificates'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -47,6 +48,12 @@ export default function TrainingCertificates() {
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null)
   const [showCertificateDialog, setShowCertificateDialog] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
+
+  // The on-screen preview previously always rendered the static ALTUS logo regardless
+  // of which tenant issued the certificate. Resolves that tenant's own uploaded logo,
+  // falling back to the ALTUS default further below when there isn't one.
+  const { data: certOrgLogoUrl } = useOrganizationLogo(selectedCertificate?.organizationId)
+  const certLogoSrc = certOrgLogoUrl || '/altus-logo-web.png'
 
   useEffect(() => {
     if (selectedCertificate?.verificationCode) {
@@ -318,7 +325,7 @@ export default function TrainingCertificates() {
                   
                   {/* Subtle Background Watermark Motif */}
                   <div className="absolute inset-0 opacity-[0.045] pointer-events-none flex items-center justify-center">
-                    <img src="/altus-logo-web.png" alt="Altus Watermark" className="w-[650px] md:w-[720px] max-w-none object-contain" />
+                    <img src={certLogoSrc} alt="Watermark" className="w-[650px] md:w-[720px] max-w-none object-contain" />
                   </div>
 
                   {/* Corner Art-Deco Ornaments (Top-Left, Top-Right, Bottom-Left, Bottom-Right) */}
@@ -346,7 +353,7 @@ export default function TrainingCertificates() {
                     
                     {/* Header Logo & Subheader */}
                     <div className="flex flex-col items-center justify-center space-y-1">
-                      <img src="/altus-logo-web.png" alt="Altus Advisory" className="h-12 md:h-14 w-auto object-contain" />
+                      <img src={certLogoSrc} alt="Certificate issuer logo" className="h-12 md:h-14 w-auto object-contain" />
                       <div className="flex items-center justify-center gap-3 pt-1">
                         <div className="h-[1px] w-16 bg-[#C5A059]" />
                         <span className="text-[#C5A059] text-[9px]">◆</span>

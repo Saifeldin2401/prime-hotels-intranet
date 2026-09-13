@@ -61,6 +61,28 @@ export function useAllCertificates() {
 }
 
 /**
+ * Look up an organization's uploaded logo, for on-screen certificate previews that
+ * render their own <img> (e.g. TrainingCertificates.tsx's print/preview dialog) rather
+ * than going through generateCertificatePDF()'s own logo resolution.
+ */
+export function useOrganizationLogo(organizationId?: string | null) {
+    return useQuery({
+        queryKey: ['organization-logo', organizationId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('organizations')
+                .select('logo_url')
+                .eq('id', organizationId!)
+                .maybeSingle()
+            if (error) throw error
+            return data?.logo_url || null
+        },
+        enabled: !!organizationId,
+        staleTime: 5 * 60 * 1000
+    })
+}
+
+/**
  * Fetch certificates for any user (admin view)
  */
 export function useUserCertificates(userId?: string) {
@@ -127,8 +149,10 @@ export function useDownloadCertificate() {
                 throw new Error(`Certificate is ${certificate.status}`)
             }
 
-            // Load logo for PDF
-            const logoDataUrl = await loadLogoAsDataUrl()
+            // Load logo for PDF -- prefers the issuing tenant's own uploaded logo
+            // (certificate.organizationId, now populated by mapCertificateFromDb),
+            // falling back to the ALTUS default when the tenant has none set.
+            const logoDataUrl = await loadLogoAsDataUrl(certificate.organizationId)
 
             // Generate PDF
             const pdfBlob = await generateCertificatePDF(certificate, logoDataUrl || undefined)

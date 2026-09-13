@@ -168,8 +168,10 @@ export function TrainingTrackCommandCenter({
                         id,
                         full_name,
                         email,
-                        user_departments (
-                            department:departments (id, name, property_id, property:properties(id, name))
+                        organization_memberships (
+                            hotel_id,
+                            department_id,
+                            department:departments (id, name, hotel_id)
                         )
                     )
                 `)
@@ -214,6 +216,7 @@ export function TrainingTrackCommandCenter({
                     passing_score,
                     training_module_id,
                     training_progress_id,
+                    organization_id,
                     property_id,
                     department_id,
                     status,
@@ -304,13 +307,13 @@ export function TrainingTrackCommandCenter({
         // Filter rows by property and department
         const filteredProgress = progressRows.filter((row: any) => {
             const profile = row.profiles as any
-            const userDepts = profile?.user_departments || []
+            const memberships = profile?.organization_memberships || []
             if (selectedPropertyId !== 'all') {
-                const hasProp = userDepts.some((ud: any) => ud.department?.property_id === selectedPropertyId)
+                const hasProp = memberships.some((m: any) => m.hotel_id === selectedPropertyId || m.department?.hotel_id === selectedPropertyId)
                 if (!hasProp) return false
             }
             if (selectedDepartmentId !== 'all') {
-                const hasDept = userDepts.some((ud: any) => ud.department?.id === selectedDepartmentId)
+                const hasDept = memberships.some((m: any) => m.department_id === selectedDepartmentId || m.department?.id === selectedDepartmentId)
                 if (!hasDept) return false
             }
             return true
@@ -399,8 +402,8 @@ export function TrainingTrackCommandCenter({
         const deptMap = new Map<string, { name: string; total: number; completed: number; scoreSum: number; scoreCount: number }>()
         filteredProgress.forEach(r => {
             const profile = r.profiles as any
-            const depts = profile?.user_departments || []
-            const deptName = depts[0]?.department?.name || (isRTL ? 'عام' : 'General')
+            const memberships = profile?.organization_memberships || []
+            const deptName = memberships[0]?.department?.name || (isRTL ? 'عام' : 'General')
             if (!deptMap.has(deptName)) {
                 deptMap.set(deptName, { name: deptName, total: 0, completed: 0, scoreSum: 0, scoreCount: 0 })
             }
@@ -654,6 +657,7 @@ export function TrainingTrackCommandCenter({
                 passingScore: certRecord.passing_score,
                 trainingModuleId: certRecord.training_module_id,
                 trainingProgressId: certRecord.training_progress_id,
+                organizationId: certRecord.organization_id,
                 propertyId: certRecord.property_id,
                 propertyName: certRecord.metadata?.propertyName,
                 departmentId: certRecord.department_id,
@@ -662,7 +666,7 @@ export function TrainingTrackCommandCenter({
                 createdAt: new Date(certRecord.created_at)
             }
 
-            const logoUrl = await loadLogoAsDataUrl()
+            const logoUrl = await loadLogoAsDataUrl(mappedCert.organizationId)
             const pdfBlob = await generateCertificatePDF(mappedCert, logoUrl || undefined)
             
             const blobUrl = URL.createObjectURL(pdfBlob)

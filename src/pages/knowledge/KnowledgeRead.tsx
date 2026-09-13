@@ -341,7 +341,9 @@ export default function KnowledgeRead() {
     const handlePrint = async () => {
         if (!article) return
 
-        const logo = await loadLogoAsDataUrl()
+        // Brands the exported PDF with the current tenant's own uploaded logo when set,
+        // falling back to the ALTUS default inside loadLogoAsDataUrl() otherwise.
+        const logo = await loadLogoAsDataUrl(currentOrganization?.logo_url)
 
         const blocks = []
 
@@ -584,7 +586,7 @@ export default function KnowledgeRead() {
             {
                 reportType: 'knowledge_article',
                 title: article.title,
-                hotelName: currentOrganization?.name || 'Prime Connect',
+                hotelName: currentOrganization?.name || 'ALTUS',
                 period: {
                     start: article.created_at || new Date().toISOString(),
                     end: article.updated_at || new Date().toISOString()

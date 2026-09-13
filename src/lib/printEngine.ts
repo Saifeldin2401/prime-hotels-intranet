@@ -793,20 +793,32 @@ function generateFileName(config: PrintConfig): string {
 }
 
 /**
- * Load company logo as data URL
+ * Load a logo as a data URL for embedding in generated PDFs/reports. Pass the current
+ * tenant's own logo_url (e.g. currentOrganization?.logo_url) to brand the export with
+ * their logo instead of the ALTUS default -- previously this always fetched the static
+ * ALTUS file regardless of which tenant's document was being exported.
  */
-export async function loadLogoAsDataUrl(): Promise<string | null> {
-    try {
-        const response = await fetch('/altus-logo-web.png')
-        if (!response.ok) return null
-        const blob = await response.blob()
-        return new Promise((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.onerror = () => resolve(null)
-            reader.readAsDataURL(blob)
-        })
-    } catch {
-        return null
+export async function loadLogoAsDataUrl(logoUrl?: string | null): Promise<string | null> {
+    const fetchAsDataUrl = async (url: string): Promise<string | null> => {
+        try {
+            const response = await fetch(url)
+            if (!response.ok) return null
+            const blob = await response.blob()
+            return await new Promise((resolve) => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result as string)
+                reader.onerror = () => resolve(null)
+                reader.readAsDataURL(blob)
+            })
+        } catch {
+            return null
+        }
     }
+
+    if (logoUrl) {
+        const tenantLogo = await fetchAsDataUrl(logoUrl)
+        if (tenantLogo) return tenantLogo
+    }
+
+    return fetchAsDataUrl('/altus-logo-web.png')
 }

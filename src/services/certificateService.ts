@@ -81,6 +81,7 @@ type CertificateRecord = {
     training_progress_id?: string | null
     sop_id?: string | null
     quiz_attempt_id?: string | null
+    organization_id?: string | null
     property_id?: string | null
     department_id?: string | null
     issued_by?: string | null
@@ -477,7 +478,7 @@ async function dispatchCertificateEmail(data: CertificateData, resultCertificate
         let attachments: Array<{ filename: string; content: string }> | undefined
 
         try {
-            const logoDataUrl = await loadLogoAsDataUrl()
+            const logoDataUrl = await loadLogoAsDataUrl(data.organizationId)
             const pdfBlob = await generateCertificatePDF(resultCertificate, logoDataUrl || undefined)
             const fileReader = new FileReader()
             const base64Promise = new Promise<string>((resolve, reject) => {
@@ -559,7 +560,7 @@ export async function getUserCertificates(userId: string): Promise<Certificate[]
  */
 export async function verifyCertificate(verificationCode: string): Promise<{
     isValid: boolean
-    certificate?: Partial<Certificate>
+    certificate?: Partial<Certificate> & { organizationName?: string; organizationLogoUrl?: string }
 }> {
     const { data, error } = await supabase
         .rpc('verify_certificate', { verification_code_param: verificationCode })
@@ -583,7 +584,9 @@ export async function verifyCertificate(verificationCode: string): Promise<{
             status: resolvedStatus,
             createdAt: new Date(result.issued_at),
             propertyName: result.property_name ?? undefined,
-            departmentName: result.department_name ?? undefined
+            departmentName: result.department_name ?? undefined,
+            organizationName: result.organization_name ?? undefined,
+            organizationLogoUrl: result.organization_logo_url ?? undefined
         }
     }
 }
@@ -662,6 +665,7 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
         trainingProgressId: record.training_progress_id,
         sopId: record.sop_id,
         quizAttemptId: record.quiz_attempt_id,
+        organizationId: record.organization_id || undefined,
         propertyId: record.property_id,
         propertyName: metadata?.propertyName,
         departmentId: record.department_id,
@@ -675,13 +679,16 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
 }
 
 /**
- * Load logo as data URL for embedding in PDF
+ * Fetch any image URL and convert it to a data URL, e.g. for a logo already resolved
+ * elsewhere (a verify_certificate RPC result carries organization_logo_url directly, so
+ * that call site doesn't need loadLogoAsDataUrl()'s own organizationId DB lookup below).
  */
-export async function loadLogoAsDataUrl(): Promise<string | null> {
+export async function fetchAsDataUrl(url: string): Promise<string | null> {
     try {
-        const response = await fetch('/altus-logo-web.png')
+        const response = await fetch(url)
+        if (!response.ok) return null
         const blob = await response.blob()
-        return new Promise((resolve) => {
+        return await new Promise((resolve) => {
             const reader = new FileReader()
             reader.onloadend = () => resolve(reader.result as string)
             reader.onerror = () => resolve(null)
@@ -690,4 +697,29 @@ export async function loadLogoAsDataUrl(): Promise<string | null> {
     } catch {
         return null
     }
+}
+
+/**
+ * Load a logo as a data URL for embedding in the certificate PDF. Previously always
+ * fetched the static ALTUS logo regardless of which tenant issued the certificate --
+ * organizationId (now populated by mapCertificateFromDb, and available directly on
+ * CertificateData at creation time) is used to look up that org's own uploaded
+ * logo_url first, falling back to the ALTUS default when the org has none set or the
+ * lookup/fetch fails.
+ */
+export async function loadLogoAsDataUrl(organizationId?: string | null): Promise<string | null> {
+    if (organizationId) {
+        const { data: org } = await supabase
+            .from('organizations')
+            .select('logo_url')
+            .eq('id', organizationId)
+            .maybeSingle()
+
+        if (org?.logo_url) {
+            const tenantLogo = await fetchAsDataUrl(org.logo_url)
+            if (tenantLogo) return tenantLogo
+        }
+    }
+
+    return fetchAsDataUrl('/altus-logo-web.png')
 }
