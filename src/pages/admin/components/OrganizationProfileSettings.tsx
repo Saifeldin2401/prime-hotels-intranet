@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
-import { Building, Palette, Mail, Check, RefreshCw, Globe, Image as ImageIcon } from 'lucide-react'
+import { Building, Palette, Mail, Check, RefreshCw, Globe, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
 import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
@@ -37,6 +37,35 @@ export function OrganizationProfileSettings() {
   const [emailFooterTextAr, setEmailFooterTextAr] = useState(currentOrganization?.email_footer_text_ar || '')
 
   const [isSaving, setIsSaving] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingFavicon, setUploadingFavicon] = useState(false)
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
+  const faviconFileInputRef = useRef<HTMLInputElement>(null)
+
+  const uploadOrgImage = async (file: File, kind: 'logo' | 'favicon') => {
+    if (!currentOrganization?.id) return
+    const setUploading = kind === 'logo' ? setUploadingLogo : setUploadingFavicon
+    const setUrl = kind === 'logo' ? setLogoUrl : setFaviconUrl
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop() || (kind === 'favicon' ? 'ico' : 'png')
+      // Org UUID must be the first path segment to satisfy the "media" bucket's
+      // org-scoped storage RLS (see storage.foldername(name))[1] check).
+      const filePath = `${currentOrganization.id}/org-branding/${kind}-${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath)
+      setUrl(urlData.publicUrl)
+      toast({ title: kind === 'logo' ? 'Logo uploaded' : 'Favicon uploaded' })
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' })
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleApplyAISuggestions = (sug: AIEmailBrandSuggestions) => {
     setEmailSenderName(sug.emailSenderName)
@@ -199,33 +228,101 @@ export function OrganizationProfileSettings() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="org-logo" className="flex items-center gap-1.5 text-xs">
+                <Label className="flex items-center gap-1.5 text-xs">
                   <ImageIcon className="h-3.5 w-3.5" />
-                  {t('admin:logo_url', 'Logo URL (PNG/SVG)')}
+                  {t('admin:logo_url', 'Logo (PNG/SVG)')}
                 </Label>
-                <Input
-                  id="org-logo"
-                  value={logoUrl}
-                  onChange={(e) => setLogoUrl(e.target.value)}
-                  disabled={!isOrgAdmin}
-                  placeholder="https://.../logo.png"
-                  className="text-xs"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 shrink-0 rounded border bg-muted/40 flex items-center justify-center overflow-hidden">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <input
+                    ref={logoFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) uploadOrgImage(file, 'logo')
+                      e.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!isOrgAdmin || uploadingLogo}
+                    onClick={() => logoFileInputRef.current?.click()}
+                    className="h-9 text-xs flex-1"
+                  >
+                    {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 me-1.5" />}
+                    {logoUrl ? t('admin:replace', 'Replace') : t('admin:upload', 'Upload')}
+                  </Button>
+                  {logoUrl && isOrgAdmin && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setLogoUrl('')}
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="org-favicon" className="flex items-center gap-1.5 text-xs">
+                <Label className="flex items-center gap-1.5 text-xs">
                   <Globe className="h-3.5 w-3.5" />
-                  {t('admin:favicon_url', 'Favicon URL')}
+                  {t('admin:favicon_url', 'Favicon')}
                 </Label>
-                <Input
-                  id="org-favicon"
-                  value={faviconUrl}
-                  onChange={(e) => setFaviconUrl(e.target.value)}
-                  disabled={!isOrgAdmin}
-                  placeholder="https://.../favicon.ico"
-                  className="text-xs"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 shrink-0 rounded border bg-muted/40 flex items-center justify-center overflow-hidden">
+                    {faviconUrl ? (
+                      <img src={faviconUrl} alt="Favicon preview" className="h-full w-full object-contain" />
+                    ) : (
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <input
+                    ref={faviconFileInputRef}
+                    type="file"
+                    accept="image/*,.ico"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) uploadOrgImage(file, 'favicon')
+                      e.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!isOrgAdmin || uploadingFavicon}
+                    onClick={() => faviconFileInputRef.current?.click()}
+                    className="h-9 text-xs flex-1"
+                  >
+                    {uploadingFavicon ? <Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 me-1.5" />}
+                    {faviconUrl ? t('admin:replace', 'Replace') : t('admin:upload', 'Upload')}
+                  </Button>
+                  {faviconUrl && isOrgAdmin && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setFaviconUrl('')}
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 

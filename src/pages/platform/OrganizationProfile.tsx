@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -48,6 +48,9 @@ import {
   Search,
   Trash2,
   SlidersHorizontal,
+  Upload,
+  Loader2,
+  X,
 } from 'lucide-react'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
 import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
@@ -190,6 +193,10 @@ export default function OrganizationProfile() {
   const [primaryColor, setPrimaryColor] = useState('#0f172a')
   const [secondaryColor, setSecondaryColor] = useState('#2563eb')
   const [accentColor, setAccentColor] = useState('#d97706')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingFavicon, setUploadingFavicon] = useState(false)
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
+  const faviconFileInputRef = useRef<HTMLInputElement>(null)
 
   // Email branding states
   const [editSenderName, setEditSenderName] = useState('')
@@ -270,6 +277,36 @@ export default function OrganizationProfile() {
     onError: (e: any) => toast({ title: 'Details update failed', description: e.message, variant: 'destructive' }),
   })
 
+  // Real file uploads for the tenant's logo/favicon, following the same pattern as
+  // avatar uploads elsewhere (MyProfile.tsx): upload to a public storage bucket,
+  // then store the resulting public URL. Previously these were plain text inputs —
+  // an admin had to already have the image hosted somewhere else and paste a link.
+  const uploadOrgImage = async (file: File, kind: 'logo' | 'favicon') => {
+    const setUploading = kind === 'logo' ? setUploadingLogo : setUploadingFavicon
+    const setUrl = kind === 'logo' ? setEditLogoUrl : setEditFaviconUrl
+    setUploading(true)
+    try {
+      const fileExt = file.name.split('.').pop() || (kind === 'favicon' ? 'ico' : 'png')
+      // Org UUID must be the first path segment — the "media" bucket's storage RLS
+      // grants org-scoped upload access by matching (storage.foldername(name))[1]
+      // against the uploader's organization id (platform operators bypass this via
+      // is_platform_operator(), but tenant-side admins rely on this exact shape).
+      const filePath = `${id}/org-branding/${kind}-${Date.now()}.${fileExt}`
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath)
+      setUrl(urlData.publicUrl)
+      toast({ title: kind === 'logo' ? 'Logo uploaded' : 'Favicon uploaded' })
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' })
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const org = profile?.organization
   const ent = profile?.entitlements
   const counts = profile?.counts
@@ -324,8 +361,8 @@ export default function OrganizationProfile() {
   const handleApplyAISuggestions = (sug: AIEmailBrandSuggestions) => {
     setEditSenderName(sug.emailSenderName)
     setEditReplyTo(sug.emailReplyTo)
-    setSupportEmail(sug.supportEmail)
-    setWebsiteUrl(sug.websiteUrl)
+    setEditSupportEmail(sug.supportEmail)
+    setEditWebsiteUrl(sug.websiteUrl)
     setEditFooterText(sug.emailFooterText)
     setEditFooterTextAr(sug.emailFooterTextAr)
     setPrimaryColor(sug.brandColors.primary)
@@ -1006,26 +1043,98 @@ export default function OrganizationProfile() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center gap-1">
-                  <ImageIcon className="h-3 w-3" /> Logo URL (PNG/SVG)
+                  <ImageIcon className="h-3 w-3" /> Logo (PNG/SVG)
                 </Label>
-                <Input
-                  value={editLogoUrl}
-                  onChange={(e) => setEditLogoUrl(e.target.value)}
-                  placeholder="https://.../logo.png"
-                  className="h-9 text-xs"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 shrink-0 rounded border bg-muted/40 flex items-center justify-center overflow-hidden">
+                    {editLogoUrl ? (
+                      <img src={editLogoUrl} alt="Logo preview" className="h-full w-full object-contain" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <input
+                    ref={logoFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) uploadOrgImage(file, 'logo')
+                      e.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingLogo}
+                    onClick={() => logoFileInputRef.current?.click()}
+                    className="h-9 text-xs flex-1"
+                  >
+                    {uploadingLogo ? <Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 me-1.5" />}
+                    {editLogoUrl ? 'Replace' : 'Upload'}
+                  </Button>
+                  {editLogoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditLogoUrl('')}
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold flex items-center gap-1">
-                  <Globe className="h-3 w-3" /> Favicon URL
+                  <Globe className="h-3 w-3" /> Favicon
                 </Label>
-                <Input
-                  value={editFaviconUrl}
-                  onChange={(e) => setEditFaviconUrl(e.target.value)}
-                  placeholder="https://.../favicon.ico"
-                  className="h-9 text-xs"
-                />
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 shrink-0 rounded border bg-muted/40 flex items-center justify-center overflow-hidden">
+                    {editFaviconUrl ? (
+                      <img src={editFaviconUrl} alt="Favicon preview" className="h-full w-full object-contain" />
+                    ) : (
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <input
+                    ref={faviconFileInputRef}
+                    type="file"
+                    accept="image/*,.ico"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) uploadOrgImage(file, 'favicon')
+                      e.target.value = ''
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingFavicon}
+                    onClick={() => faviconFileInputRef.current?.click()}
+                    className="h-9 text-xs flex-1"
+                  >
+                    {uploadingFavicon ? <Loader2 className="h-3.5 w-3.5 me-1.5 animate-spin" /> : <Upload className="h-3.5 w-3.5 me-1.5" />}
+                    {editFaviconUrl ? 'Replace' : 'Upload'}
+                  </Button>
+                  {editFaviconUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditFaviconUrl('')}
+                      className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1082,6 +1191,28 @@ export default function OrganizationProfile() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Live preview so picking a color has an immediate, visible effect inside
+                  this dialog. Saving still writes brand_colors to the organization row and
+                  TenantContext sets --tenant-primary/secondary/accent from it, but no CSS in
+                  the app currently reads those variables — today this setting has no visible
+                  effect anywhere outside this preview. Wiring it into the tenant's actual
+                  portal chrome is a larger, separate design-system unification effort
+                  (see docs/remaining-architecture-work.md §67), not a scoped fix. */}
+              <div className="rounded-lg border p-3 space-y-2" style={{ backgroundColor: `${primaryColor}0d` }}>
+                <div className="text-[10px] font-semibold text-muted-foreground">Preview</div>
+                <div className="flex items-center justify-between rounded-md px-3 py-2" style={{ backgroundColor: primaryColor }}>
+                  <span className="text-xs font-bold text-white">{editName || 'Tenant'} Portal</span>
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
+                </div>
+                <button
+                  type="button"
+                  className="text-xs font-semibold rounded-md px-3 py-1.5 text-white"
+                  style={{ backgroundColor: secondaryColor }}
+                >
+                  Sample Button
+                </button>
               </div>
             </div>
 
