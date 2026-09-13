@@ -154,19 +154,29 @@ export function Header({
             )}
 
             <Link to={logoHref} className="flex items-center gap-2 group lg:hidden">
-              <img
-                src="/altus-emblem-icon.png"
-                alt="ALTUS Advisory"
-                className="h-8 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
-              />
-              <div className="hidden xs:flex flex-col text-start">
-                <span className="font-serif text-sm font-bold text-white tracking-wide leading-none">
-                  ALTUS
-                </span>
-                <span className="font-sans text-[7px] tracking-[0.25em] text-[#C45B2F] font-bold mt-0.5">
-                  ADVISORY
-                </span>
-              </div>
+              {!isPlatformActive && currentOrganization?.logo_url ? (
+                <img
+                  src={currentOrganization.logo_url}
+                  alt={currentOrganization.name}
+                  className="h-8 w-auto max-w-[120px] object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+                />
+              ) : (
+                <>
+                  <img
+                    src="/altus-emblem-icon.png"
+                    alt="ALTUS Advisory"
+                    className="h-8 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+                  />
+                  <div className="hidden xs:flex flex-col text-start">
+                    <span className="font-serif text-sm font-bold text-white tracking-wide leading-none">
+                      ALTUS
+                    </span>
+                    <span className="font-sans text-[7px] tracking-[0.25em] text-[#C45B2F] font-bold mt-0.5">
+                      ADVISORY
+                    </span>
+                  </div>
+                </>
+              )}
             </Link>
           </div>
 

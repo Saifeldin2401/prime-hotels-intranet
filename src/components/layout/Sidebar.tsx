@@ -81,19 +81,33 @@ export function Sidebar({ onNavigate }: SidebarProps = {}) {
     <div className="flex flex-col w-full lg:w-64 bg-card border-e border-border/60 h-full lg:h-screen select-none">
       <div className="flex flex-col gap-2.5 p-4 border-b border-border/60 bg-white/50 dark:bg-hotel-navy/50 backdrop-blur-md overflow-hidden">
         <Link to={logoHref} onClick={onNavigate} data-tour="sidebar-logo" className="flex items-center justify-center gap-3 py-1 group">
-          <img
-            src="/altus-emblem-icon.png"
-            alt="ALTUS Advisory"
-            className="h-10 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
-          />
-          <div className="flex flex-col text-start">
-            <span className="font-serif text-lg font-bold text-foreground tracking-wide leading-none">
-              ALTUS
-            </span>
-            <span className="font-sans text-[8px] tracking-[0.25em] text-altus-copper font-bold mt-0.5">
-              ADVISORY
-            </span>
-          </div>
+          {/* A tenant with its own uploaded logo shows that instead of the ALTUS mark —
+              same override pattern as the header brand color (see Header.tsx) and
+              driven by the same currentOrganization.logo_url set via Organization
+              Details / Settings. Platform-admin scope always keeps the ALTUS mark. */}
+          {!isPlatformActive && currentOrganization?.logo_url ? (
+            <img
+              src={currentOrganization.logo_url}
+              alt={currentOrganization.name}
+              className="h-10 w-auto max-w-[180px] object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+            />
+          ) : (
+            <>
+              <img
+                src="/altus-emblem-icon.png"
+                alt="ALTUS Advisory"
+                className="h-10 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+              />
+              <div className="flex flex-col text-start">
+                <span className="font-serif text-lg font-bold text-foreground tracking-wide leading-none">
+                  ALTUS
+                </span>
+                <span className="font-sans text-[8px] tracking-[0.25em] text-altus-copper font-bold mt-0.5">
+                  ADVISORY
+                </span>
+              </div>
+            </>
+          )}
         </Link>
 
         {/* Scope Context Banner */}

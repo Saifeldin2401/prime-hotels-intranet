@@ -242,6 +242,20 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentOrganization])
 
+  // Swap the browser tab favicon to the tenant's uploaded one, same override pattern as
+  // the brand colors above. favicon_url was previously saved but had zero consumers
+  // anywhere in the app. Restores the site default when the tenant has none set (or
+  // outside tenant scope), so switching tenants/orgs never leaves a stale icon behind.
+  useEffect(() => {
+    const DEFAULT_FAVICON = '/remal-favicon-small.png'
+    const href = currentOrganization?.favicon_url || DEFAULT_FAVICON
+
+    const iconLink = document.querySelector<HTMLLinkElement>("link[rel='icon']")
+    const shortcutLink = document.querySelector<HTMLLinkElement>("link[rel='shortcut icon']")
+    if (iconLink) iconLink.href = href
+    if (shortcutLink) shortcutLink.href = href
+  }, [currentOrganization])
+
   const switchOrganization = async (orgId: string) => {
     const targetOrg = organizations.find(o => o.id === orgId)
     if (!targetOrg) return
