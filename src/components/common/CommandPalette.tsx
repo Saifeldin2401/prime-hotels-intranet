@@ -10,10 +10,10 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 import {
+  Award,
   BookOpen,
   Briefcase,
-  CalendarDays,
-  CheckSquare,
+  Compass,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -33,7 +33,8 @@ interface CommandPaletteProps {
 }
 
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
-  const { t } = useTranslation(['common', 'nav'])
+  const { t, i18n } = useTranslation(['common', 'nav'])
+  const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   
@@ -55,10 +56,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       training: <GraduationCap className="me-2 h-4 w-4" />,
       announcement: <Megaphone className="me-2 h-4 w-4" />,
       sop: <BookOpen className="me-2 h-4 w-4" />,
-      task: <CheckSquare className="me-2 h-4 w-4" />,
-      ticket: <Wrench className="me-2 h-4 w-4" />,
-      referral: <Briefcase className="me-2 h-4 w-4" />,
       page: <LayoutDashboard className="me-2 h-4 w-4" />,
+      certificate: <Award className="me-2 h-4 w-4" />,
+      course: <Compass className="me-2 h-4 w-4" />,
     }
     return iconMap[type] || <FileText className="me-2 h-4 w-4" />
   }
@@ -73,7 +73,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
       <CommandInput 
-        placeholder={t('search.command_palette_placeholder', 'Type a command or search...')} 
+        placeholder={isRTL ? 'ابحث في دورات ومقررات وإجراءات ألتوس...' : 'Search ALTUS courses, modules, SOPs, certificates...'} 
         value={query}
         onValueChange={setQuery}
       />
@@ -81,62 +81,78 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         <CommandEmpty>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-6">
-              <Loader2 className="h-6 w-6 animate-spin text-hotel-gold mb-2" />
-              <p className="text-sm text-gray-500">{t('loading', 'Searching...')}</p>
+              <Loader2 className="h-6 w-6 animate-spin text-amber-500 mb-2" />
+              <p className="text-sm text-gray-500">{isRTL ? 'جاري البحث في منظومة ألتوس...' : 'Searching ALTUS ecosystem...'}</p>
             </div>
           ) : (
-            t('search.no_results', 'No results found.')
+            isRTL ? 'لا توجد نتائج مطابقة.' : 'No results found.'
           )}
         </CommandEmpty>
 
         {/* Quick Actions - always show when no query */}
         {!debouncedQuery && (
           <>
-            <CommandGroup heading={t('search.common_actions', 'Common Actions')}>
+            <CommandGroup heading={isRTL ? 'إجراءات التعلم السريعة' : 'Learning Actions'}>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/hr/leave'))}
-                onClick={() => runCommand(() => navigate('/hr/leave'))}
+                onSelect={() => runCommand(() => navigate('/courses'))}
+                onClick={() => runCommand(() => navigate('/courses'))}
                 className="cursor-pointer"
               >
-                <CalendarDays className="me-2 h-4 w-4" />
-                <span>Request Leave</span>
+                <Compass className="me-2 h-4 w-4 text-amber-500" />
+                <span>{isRTL ? 'دليل ومكتبة الدورات التدريبية' : 'Explore Course Catalog'}</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/hr/payslips'))}
-                onClick={() => runCommand(() => navigate('/hr/payslips'))}
+                onSelect={() => runCommand(() => navigate('/learning/my'))}
+                onClick={() => runCommand(() => navigate('/learning/my'))}
                 className="cursor-pointer"
               >
-                <FileText className="me-2 h-4 w-4" />
-                <span>View Payslip</span>
+                <BookOpen className="me-2 h-4 w-4 text-amber-500" />
+                <span>{isRTL ? 'مساري التعليمي ومقرراتي' : 'My Learning Curriculum'}</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/maintenance'))}
-                onClick={() => runCommand(() => navigate('/maintenance'))}
+                onSelect={() => runCommand(() => navigate('/training/certificates'))}
+                onClick={() => runCommand(() => navigate('/training/certificates'))}
                 className="cursor-pointer"
               >
-                <Wrench className="me-2 h-4 w-4" />
-                <span>Submit Maintenance Ticket</span>
+                <Award className="me-2 h-4 w-4 text-amber-500" />
+                <span>{isRTL ? 'الشهادات والاعتمادات الرسمية' : 'My Certificates & Accreditations'}</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/knowledge'))}
+                onClick={() => runCommand(() => navigate('/knowledge'))}
+                className="cursor-pointer"
+              >
+                <FileText className="me-2 h-4 w-4 text-amber-500" />
+                <span>{isRTL ? 'دليل المعايير والإجراءات القياسية (SOPs)' : 'Hospitality Standards & SOPs'}</span>
               </CommandItem>
             </CommandGroup>
             
             <CommandSeparator />
             
-            <CommandGroup heading={t('search.navigation', 'Navigation')}>
+            <CommandGroup heading={isRTL ? 'التنقل المباشر' : 'Navigation'}>
               <CommandItem
                 onSelect={() => runCommand(() => navigate('/profile'))}
                 onClick={() => runCommand(() => navigate('/profile'))}
                 className="cursor-pointer"
               >
-                <User className="me-2 h-4 w-4" />
-                <span>My Profile</span>
+                <User className="me-2 h-4 w-4 text-slate-400" />
+                <span>{isRTL ? 'الملف المهني' : 'My Profile'}</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/training/paths'))}
+                onClick={() => runCommand(() => navigate('/training/paths'))}
+                className="cursor-pointer"
+              >
+                <GraduationCap className="me-2 h-4 w-4 text-slate-400" />
+                <span>{isRTL ? 'المسارات التخصصية' : 'Learning Paths'}</span>
               </CommandItem>
               <CommandItem
                 onSelect={() => runCommand(() => navigate('/settings'))}
                 onClick={() => runCommand(() => navigate('/settings'))}
                 className="cursor-pointer"
               >
-                <Settings className="me-2 h-4 w-4" />
-                <span>Settings</span>
+                <Settings className="me-2 h-4 w-4 text-slate-400" />
+                <span>{isRTL ? 'إعدادات الحساب' : 'Settings'}</span>
               </CommandItem>
             </CommandGroup>
           </>

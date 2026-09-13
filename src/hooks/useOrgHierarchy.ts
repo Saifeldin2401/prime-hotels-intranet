@@ -295,8 +295,10 @@ export function useOrgHierarchy(searchTerm?: string) {
           staff_id,
           reporting_to,
           user_roles(role),
-          user_properties(property:properties(id, name)),
-          user_departments(department:departments(id, name, property_id))
+          organization_memberships(
+            hotel:hotels(id, name),
+            department:departments(id, name, property_id)
+          )
         `)
                 .eq('is_active', true)
             // Sorting is now done in memory by job title hierarchy
@@ -353,13 +355,13 @@ export function useOrgHierarchy(searchTerm?: string) {
         }
 
         // Transform profiles to OrgEmployee
-        const employees: OrgEmployee[] = profiles.map((p) => {
-            const propertyIds = (p.user_properties || [])
-                .map((up) => getRelatedId(up.property as RelatedEntityWithId | RelatedEntityWithId[]))
-                .filter((id): id is string => !!id)
-            const departmentIds = (p.user_departments || [])
-                .map((ud) => getRelatedId(ud.department as RelatedEntityWithId | RelatedEntityWithId[]))
-                .filter((id): id is string => !!id)
+        const employees: OrgEmployee[] = (profiles as any[]).map((p) => {
+            const propertyIds = (p.organization_memberships || [])
+                .map((om: any) => om.hotel?.id)
+                .filter((id: any): id is string => !!id)
+            const departmentIds = (p.organization_memberships || [])
+                .map((om: any) => om.department?.id)
+                .filter((id: any): id is string => !!id)
 
             return ({
                 id: p.id,

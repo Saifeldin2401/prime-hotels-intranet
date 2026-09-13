@@ -59,11 +59,9 @@ export function useLearningProgress() {
             full_name,
             email,
             avatar_url,
-            user_departments (
-              departments ( id, name )
-            ),
-            user_properties (
-              properties ( id, name )
+            organization_memberships (
+              department:departments ( id, name ),
+              hotel:hotels ( id, name )
             )
           )
         `)
@@ -109,8 +107,10 @@ export function useLearningProgress() {
                     full_name: string | null
                     email: string
                     avatar_url: string | null
-                    user_departments?: Array<{ departments: LearningProgressDept | null }> | null
-                    user_properties?: Array<{ properties: { name: string } | null }> | null
+                    organization_memberships?: Array<{
+                        department: LearningProgressDept | null
+                        hotel: { id: string; name: string } | null
+                    }> | null
                 } | null
 
                 const trainingModule = row.content_type === 'module'
@@ -141,8 +141,8 @@ export function useLearningProgress() {
                             full_name: rawProfile.full_name || 'Unknown',
                             email: rawProfile.email,
                             avatar_url: rawProfile.avatar_url ?? undefined,
-                            user_departments: rawProfile.user_departments ?? undefined,
-                            user_properties: rawProfile.user_properties ?? undefined
+                            user_departments: rawProfile.organization_memberships?.map(om => ({ departments: om.department })) ?? undefined,
+                            user_properties: rawProfile.organization_memberships?.map(om => ({ properties: om.hotel ? { name: om.hotel.name } : null })) ?? undefined
                         }
                         : undefined,
                     training_modules: trainingModule
@@ -162,16 +162,19 @@ export function useOrgUsers() {
     return useQuery({
         queryKey: ['org-users'],
         queryFn: async () => {
-            // profiles has no direct department_id/property_id FK -- department and
-            // property membership live in the user_departments/user_properties
-            // join tables, so those have to be embedded instead.
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, full_name, email, user_departments(departments(name)), user_properties(properties(name))')
+                .select('id, full_name, email, organization_memberships(department:departments(name), hotel:hotels(name))')
                 .order('full_name')
 
             if (error) throw error
-            return data || []
+            return (data || []).map((p: any) => ({
+                id: p.id,
+                full_name: p.full_name,
+                email: p.email,
+                user_departments: (p.organization_memberships || []).map((om: any) => ({ departments: om.department })),
+                user_properties: (p.organization_memberships || []).map((om: any) => ({ properties: om.hotel }))
+            }))
         }
     })
 }

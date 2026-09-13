@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/components/ui/use-toast'
-import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
+import { ROLES, ROLE_HIERARCHY, STANDARD_JOB_TITLES } from '@/lib/constants'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { supabase } from '@/lib/supabase'
 import { userSchema, type UserFormData } from '@/lib/validationSchemas'
@@ -58,8 +58,7 @@ interface PotentialManagerRow {
   job_title: string | null
   staff_id: string | null
   user_roles?: { role: string }[]
-  user_departments?: { department_id: string }[]
-  user_properties?: { property_id: string }[]
+  organization_memberships?: { hotel_id: string | null; department_id: string | null }[]
 }
 
 interface PotentialManager {
@@ -276,22 +275,18 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
     enabled: !!effectiveOrgId
   })
 
-  // Fetch Job Titles from DB
-  const { data: jobTitlesList, isLoading: jobTitlesLoading } = useQuery({
-    queryKey: ['job_titles'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('job_titles')
-        .select(`
-            *,
-            department:departments(id, property_id)
-        `)
-        .order('title', { ascending: true })
-
-      if (error) throw error
-      return data as { id: string; title: string; default_role: AppRole; category: string; department?: { id: string; property_id: string } }[]
-    },
-  })
+  // Standard Job Titles (lookup table was unified into free-text profile column)
+  const jobTitlesList = useMemo(() => {
+    return STANDARD_JOB_TITLES.map(item => ({
+      id: item.id,
+      title: isRTL ? item.title_ar : item.title,
+      raw_title: item.title,
+      default_role: item.default_role,
+      category: isRTL ? item.category_ar : item.category,
+      department: undefined as { id: string; property_id: string } | undefined
+    }))
+  }, [isRTL])
+  const jobTitlesLoading = false
   const [openJobTitle, setOpenJobTitle] = useState(false)
   const jobTitleListId = useId()
 
@@ -310,8 +305,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           job_title,
           staff_id,
           user_roles(role),
-          user_departments(department_id),
-          user_properties(property_id)
+          organization_memberships(hotel_id, department_id)
         `)
         .eq('is_active', true)
 
@@ -328,8 +322,8 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           if (!hasManagerRole) return false
 
           // Check if they're in the same department or property
-          const deptIds = p.user_departments?.map((d) => d.department_id) || []
-          const propIds = p.user_properties?.map((pp) => pp.property_id) || []
+          const deptIds = p.organization_memberships?.map((m) => m.department_id).filter(Boolean) || []
+          const propIds = p.organization_memberships?.map((m) => m.hotel_id).filter(Boolean) || []
 
           const sameDept = selectedDepartments.some(d => deptIds.includes(d))
           const sameProp = selectedProperties.some(p => propIds.includes(p))
@@ -384,8 +378,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           job_title,
           staff_id,
           user_roles(role),
-          user_departments(department_id),
-          user_properties(property_id)
+          organization_memberships(hotel_id, department_id)
         `)
         .eq('is_active', true)
         .or(`full_name.ilike.%${escaped}%,staff_id.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)

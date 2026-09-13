@@ -1,10 +1,17 @@
 import { useContext } from 'react'
-import { WizardContext, type WizardContextType } from '@/contexts/WizardContext'
+import { 
+  WizardContext, 
+  defaultWizardFallback, 
+  type WizardContextType 
+} from '@/contexts/wizardContextDef'
 
 export function useWizard(): WizardContextType {
   const context = useContext(WizardContext)
   if (!context) {
-    throw new Error('useWizard must be used within a WizardProvider')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[useWizard] Called outside of WizardProvider; returning resilient fallback.')
+    }
+    return defaultWizardFallback
   }
   return context
 }

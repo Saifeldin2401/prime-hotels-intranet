@@ -225,7 +225,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                     job_title,
                     staff_id,
                     user_roles(role),
-                    user_properties(property_id)
+                    organization_memberships(hotel_id)
                 `)
                 .eq('is_active', true)
                 .or(`full_name.ilike.%${escaped}%,staff_id.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
@@ -239,7 +239,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 job_title: string | null
                 staff_id: string | null
                 user_roles?: { role: string }[]
-                user_properties?: { property_id: string }[]
+                organization_memberships?: { hotel_id: string | null }[]
             }[]
 
             return rows
@@ -250,8 +250,8 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 })
                 .filter((p) => {
                     if (isCorpAdmin || !allowedPropertyIds?.length) return true
-                    const propIds = p.user_properties?.map((up) => up.property_id) || []
-                    return propIds.some((id) => allowedPropertyIds.includes(id))
+                    const propIds = p.organization_memberships?.map((om) => om.hotel_id).filter(Boolean) || []
+                    return propIds.some((id) => allowedPropertyIds.includes(id as string))
                 })
                 .sort((a, b) => a.full_name.localeCompare(b.full_name))
         },

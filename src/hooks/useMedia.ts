@@ -544,17 +544,13 @@ export function useMedia(options: UseMediaOptions = {}) {
           throw new Error(uploadError.message);
         }
 
-        // Step 9: Get signed URL with fallback to public URL
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-          .from('media')
-          .createSignedUrl(storagePath, 3600); // 1 hour expiry
-
-        if (signedUrlError) {
-          console.warn('Notice creating signed URL:', signedUrlError);
-        }
-
+        // Step 9: Get the permanent public URL. The `media` bucket is public, so this
+        // previously preferred a 1-hour createSignedUrl() over the stable public URL --
+        // the signed URL got baked into media_assets.public_url forever, so every video
+        // silently stopped playing exactly one hour after upload (existing rows fixed
+        // via a one-off backfill; see git history for this comment).
         const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(storagePath);
-        const secureUrl = signedUrlData?.signedUrl || publicUrlData?.publicUrl || '';
+        const secureUrl = publicUrlData?.publicUrl || '';
 
         // Step 10: Create database record with security metadata
         let orgId: string | null = null;

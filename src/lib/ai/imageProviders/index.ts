@@ -1,6 +1,6 @@
 /**
  * Image Generation Service Registry
- * Exclusive Cloudflare Workers AI Engine for PRIME Hotels Intranet
+ * Exclusive Cloudflare Workers AI Engine for ALTUS Learning Platform
  */
 
 import { ImageCostTier, ImageProviderType } from '@/types/aiCourseEngine'

@@ -113,14 +113,14 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
           full_name,
           job_title,
           user_roles!inner(role),
-          user_properties(property_id)
+          organization_memberships(hotel_id)
         `)
                 .eq('is_active', true)
                 .order('full_name')
 
             // Filter by property if specified
             if (normalizedPropertyId) {
-                query = query.eq('user_properties.property_id', normalizedPropertyId)
+                query = query.not('organization_memberships', 'is', null).eq('organization_memberships.hotel_id', normalizedPropertyId)
             }
 
             // Exclude the user being edited (can't report to self)

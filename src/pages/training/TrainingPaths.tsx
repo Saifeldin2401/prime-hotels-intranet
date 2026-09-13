@@ -26,17 +26,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     BookOpen,
     Briefcase,
+    Compass,
     Edit,
     GraduationCap,
     Loader2,
     Plus,
+    Sparkles,
     Target,
     Trash2,
     Users
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PathRoadmapView } from '@/components/learner/PathRoadmapView'
+import { useTenant } from '@/contexts/TenantContext'
 
 type PathType = 'new_hire' | 'department' | 'leadership' | 'compliance' | 'skills'
 
@@ -56,6 +61,8 @@ interface PathForm {
 
 export default function TrainingPaths() {
   const { profile, primaryRole } = useAuth()
+  const { currentOrganization } = useTenant()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('training')
   const [activeTab, setActiveTab] = useState('my')
@@ -63,6 +70,35 @@ export default function TrainingPaths() {
 
   // Fetch all user progress to calculate path completion
   const { data: allUserProgress } = useTrainingProgress(profile?.id)
+
+  // Enroll in path mutation
+  const enrollInPathMutation = useMutation({
+    mutationFn: async (pathId: string) => {
+      if (!profile?.id) throw new Error('Not authenticated')
+      const orgId = currentOrganization?.id || (profile as any)?.organization_id || '00000000-0000-0000-0000-000000000000'
+      const { data, error } = await supabase
+        .from('user_path_enrollments')
+        .insert({
+          user_id: profile.id,
+          path_id: pathId,
+          organization_id: orgId,
+          enrolled_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-path-enrollments', profile?.id] })
+      toast.success(isRTL ? 'تم التسجيل في المسار التدريبي بنجاح' : 'Enrolled in learning path successfully')
+      setActiveTab('my')
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || (isRTL ? 'تعذر التسجيل في المسار' : 'Failed to enroll in path'))
+    }
+  })
 
   // State for dialogs
   const [showPathDialog, setShowPathDialog] = useState(false)
@@ -147,6 +183,10 @@ export default function TrainingPaths() {
     },
     enabled: !!profile?.id
   })
+
+  const enrolledPathIds = useMemo(() => {
+    return new Set((myEnrollments || []).map(e => e.training_paths?.id).filter(Boolean))
+  }, [myEnrollments])
 
   // Fetch available modules
   const { data: availableModules } = useQuery({
@@ -407,67 +447,80 @@ export default function TrainingPaths() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="my">{t('myPaths')}</TabsTrigger>
+        <TabsList className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl">
+          <TabsTrigger value="my" className="rounded-xl text-xs sm:text-sm font-bold">{t('myPaths', 'My Active Roadmaps')}</TabsTrigger>
+          <TabsTrigger value="explore" className="rounded-xl text-xs sm:text-sm font-bold">{t('explorePaths', 'Explore All Paths')}</TabsTrigger>
           {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
-            <TabsTrigger value="all">{t('allPaths')}</TabsTrigger>
+            <TabsTrigger value="all" className="rounded-xl text-xs sm:text-sm font-bold">{t('allPaths', 'Path Management')}</TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="my" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('myPaths')}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {enrollmentsLoading ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
-                </div>
-              ) : myEnrollments && myEnrollments.length > 0 ? (
-                <div className="space-y-4">
-                  {myEnrollments.map((enrollment) => (
-                    <div key={enrollment.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        {getPathIcon(enrollment.training_paths.path_type)}
-                        <div>
-                          <h3 className="font-medium">{enrollment.training_paths.title}</h3>
-                          <p className="text-sm text-gray-600">
-                            {enrollment.training_paths.description}
-                          </p>
-                          <div className={cn("flex items-center gap-4 mt-2 text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
-                            <span>{t('modules')}: {enrollment.training_paths.training_path_modules?.length || 0}</span>
-                            <span>{t('estimatedDuration')}: {enrollment.training_paths.estimated_duration_hours}{t('h')}</span>
-                            <span>{t('enrolled')}: {new Date(enrollment.enrolled_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                        <div className={isRTL ? "text-left" : "text-right"}>
-                          <div className="text-sm font-medium">{calculateProgress(enrollment)}%</div>
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${calculateProgress(enrollment)}%` }}
-                            />
-                          </div>
-                        </div>
-                        <Button size="sm">
-                          {calculateProgress(enrollment) > 0 ? t('continuePath') : t('startPath')}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  icon={BookOpen}
-                  title={t('noEnrollments')}
-                  description={t('no_enrollments_desc')}
+        <TabsContent value="my" className="space-y-6">
+          {enrollmentsLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            </div>
+          ) : myEnrollments && myEnrollments.length > 0 ? (
+            <div className="space-y-8">
+              {myEnrollments.map((enrollment) => (
+                <PathRoadmapView
+                  key={enrollment.id}
+                  path={enrollment.training_paths as any}
+                  userProgress={allUserProgress}
+                  isEnrolled={true}
                 />
-              )}
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="rounded-3xl p-12 text-center border-dashed">
+              <BookOpen className="h-12 w-12 text-amber-500/60 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-foreground">
+                {isRTL ? 'لم تسجل في أي مسار تدريبي حتى الآن' : 'No active learning paths enrolled'}
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
+                {isRTL
+                  ? 'استكشف المسارات التدريبية المعتمدة لاكتساب كفاءات متقدمة والحصول على اعتمادات مهنية موثقة.'
+                  : 'Browse available executive pathways to build mastery and achieve accredited credentials.'}
+              </p>
+              <Button
+                onClick={() => setActiveTab('explore')}
+                className="rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
+              >
+                <Compass className="h-4 w-4 me-2" />
+                {isRTL ? 'استكشاف المسارات المتاحة' : 'Explore Available Paths'}
+              </Button>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="explore" className="space-y-6">
+          {pathsLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            </div>
+          ) : paths && paths.length > 0 ? (
+            <div className="space-y-8">
+              {paths.map((path) => {
+                const isUserEnrolled = enrolledPathIds.has(path.id)
+                return (
+                  <PathRoadmapView
+                    key={path.id}
+                    path={path as any}
+                    userProgress={allUserProgress}
+                    isEnrolled={isUserEnrolled}
+                    onEnroll={(pId) => enrollInPathMutation.mutate(pId)}
+                    isEnrolling={enrollInPathMutation.isPending}
+                  />
+                )
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              icon={BookOpen}
+              title={t('noPaths', 'No Paths Found')}
+              description={t('no_paths_desc', 'No published learning paths are currently available.')}
+            />
+          )}
         </TabsContent>
 
         {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (

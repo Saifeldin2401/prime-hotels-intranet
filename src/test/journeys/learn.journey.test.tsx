@@ -52,14 +52,11 @@ function setup(overrides: Partial<Record<string, unknown>> = {}) {
 beforeEach(() => vi.clearAllMocks())
 
 describe('journey: learn', () => {
-    it('step 1: renders all six learner-home sections', () => {
+    it('step 1: renders learner cockpit hero and core surfaces', () => {
         setup()
         renderJourney(<LearnerHome />, { route: '/home/learner' })
-        expect(screen.getByText('Continue learning')).toBeInTheDocument()
+        expect(screen.getByText(/ALTUS Hospitality Excellence Cockpit/i)).toBeInTheDocument()
         expect(screen.getByText('Assigned training')).toBeInTheDocument()
-        expect(screen.getByText('Recommended')).toBeInTheDocument()
-        expect(screen.getByText('My progress')).toBeInTheDocument()
-        expect(screen.getByText('Certificates & skills')).toBeInTheDocument()
         expect(screen.getByText('Saved knowledge')).toBeInTheDocument()
     })
 
@@ -90,8 +87,8 @@ describe('journey: learn', () => {
         })
         renderJourney(<LearnerHome />, { route: '/home/learner' })
         expect(screen.getByText('Fire Safety Basics')).toBeInTheDocument()
-        expect(screen.getByText('65% complete')).toBeInTheDocument()
-        const resume = screen.getByRole('link', { name: 'Resume' })
+        expect(screen.getByText('65%')).toBeInTheDocument()
+        const resume = screen.getByRole('link', { name: /Resume Module/i })
         expect(resume).toHaveAttribute('href', '/learning/training/mod-42')
     })
 
@@ -129,9 +126,9 @@ describe('journey: learn', () => {
     it('step 4: honest empty states when nothing is assigned or recommended', () => {
         setup()
         renderJourney(<LearnerHome />, { route: '/home/learner' })
-        expect(screen.getByText('No assigned training')).toBeInTheDocument()
-        expect(screen.getByText('Nothing recommended yet')).toBeInTheDocument()
-        expect(screen.getByText('No certificates yet')).toBeInTheDocument()
+        expect(screen.getByText('All assignments complete')).toBeInTheDocument()
+        expect(screen.getByText('Ready to start your next learning journey?')).toBeInTheDocument()
+        expect(screen.getByText('No saved knowledge')).toBeInTheDocument()
     })
 
     it('step 5: recommended excludes assigned and started modules', () => {
@@ -150,11 +147,10 @@ describe('journey: learn', () => {
             ]),
         })
         renderJourney(<LearnerHome />, { route: '/home/learner' })
-        const rec = screen.getByText('Recommended').closest('div')?.parentElement as HTMLElement
-        expect(within(rec).getByText('Fresh Course')).toBeInTheDocument()
-        expect(within(rec).queryByText('Started One')).not.toBeInTheDocument()
-        expect(within(rec).queryByText('Assigned One')).not.toBeInTheDocument()
-        expect(within(rec).queryByText('Draft Course')).not.toBeInTheDocument()
+        expect(screen.getByText('Fresh Course')).toBeInTheDocument()
+        expect(screen.queryByText('Started One')).not.toBeInTheDocument()
+        expect(screen.queryByText('Assigned One')).not.toBeInTheDocument()
+        expect(screen.queryByText('Draft Course')).not.toBeInTheDocument()
     })
 
     // Not-yet-built: these depend on features outside this slice.

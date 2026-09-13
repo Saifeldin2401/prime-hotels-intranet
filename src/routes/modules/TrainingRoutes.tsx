@@ -18,6 +18,8 @@ const SkillsMatrix = lazy(() => import('@/pages/training/SkillsMatrix'))
 const CompetencyMatrix = lazy(() => import('@/pages/training/CompetencyMatrix'))
 const InstructorWorkspace = lazy(() => import('@/pages/training/InstructorWorkspace'))
 const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
+const CourseCatalog = lazy(() => import('@/pages/learning/CourseCatalog'))
+const CourseDetail = lazy(() => import('@/pages/learning/CourseDetail'))
 // Consolidated assessment surfaces (see src/pages/assessments/). The QuestionBank
 // browse page is routed from KnowledgeRoutes at /assessments.
 const AssessmentBuilder = lazy(() => import('@/pages/assessments/AssessmentBuilder'))
@@ -49,18 +51,41 @@ export const TrainingRoutes = () => (
     <Route element={<TenantContextGuard resourceName="Training & Learning" />}>
         <Route
             path="/training"
-            element={<PreserveQueryNavigate to="/training/hub" />}
+            element={<PreserveQueryNavigate to="/courses" />}
             errorElement={<RouteErrorBoundary section="Training" />}
         />
         <Route
             path="/courses"
-            element={<PreserveQueryNavigate to="/training/hub" />}
-            errorElement={<RouteErrorBoundary section="Training" />}
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <CourseCatalog />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Course Catalog" />}
         />
         <Route
-            path="/courses/*"
-            element={<PreserveQueryNavigate to="/training/hub" />}
-            errorElement={<RouteErrorBoundary section="Training" />}
+            path="/courses/:id"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <CourseDetail />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Course Detail" />}
+        />
+        <Route
+            path="/learning/catalog"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <CourseCatalog />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Course Catalog" />}
         />
         <Route
             path="/training/modules"
@@ -263,6 +288,17 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/learning/training/:id"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <TrainingPlayer />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Training Player" />}
+        />
+        <Route
+            path="/training/player/:id"
             element={
                 <ProtectedRoute>
                     <AppLayout>

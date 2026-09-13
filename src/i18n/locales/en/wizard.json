@@ -171,8 +171,8 @@
   },
   "steps": {
     "welcome": {
-      "title": "Welcome to PRIME Connect",
-      "desc": "Getting started with your personalized hotel operating platform."
+      "title": "Welcome to ALTUS",
+      "desc": "Getting started with your personalized learning and development platform."
     },
     "role_mental_model": {
       "title": "Your Role & Operational Boundaries",
@@ -310,7 +310,7 @@
     "learner_item3": "Certificates are permanently stored and verifiable on your profile."
   },
   "notifications_step": {
-    "intro": "PRIME Connect differentiates between Actionable alerts (deadlines, approvals) and Informational broadcasts:",
+    "intro": "ALTUS differentiates between Actionable alerts (deadlines, approvals) and Informational broadcasts:",
     "actionable": "Actionable Notifications",
     "actionable_desc": "Pending requests waiting for your review, training deadlines in <48 hours, shift changes.",
     "informational": "Informational Notifications",
@@ -329,7 +329,7 @@
     "human_support": "Assisted"
   },
   "security_step": {
-    "ready_title": "You are ready to use PRIME Connect!",
+    "ready_title": "You are ready to use ALTUS!",
     "ready_desc": "Always protect your credentials. All platform activity is securely logged for compliance and operational integrity.",
     "session": "Session Timeout",
     "session_desc": "Automatic lockout after inactivity.",

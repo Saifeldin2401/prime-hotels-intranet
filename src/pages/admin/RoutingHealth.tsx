@@ -157,7 +157,7 @@ export default function RoutingHealth() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, is_active, user_roles(role), user_properties(property_id)')
+        .select('id, full_name, email, is_active, user_roles(role), organization_memberships(hotel_id)')
         .eq('is_active', true)
         .order('full_name')
 
@@ -196,12 +196,12 @@ export default function RoutingHealth() {
   })
 
   const candidates = useMemo<Candidate[]>(() => {
-    return (profiles || []).map((profile) => ({
+    return (profiles || []).map((profile: any) => ({
       id: profile.id,
       full_name: profile.full_name ?? null,
       email: profile.email,
-      roles: (profile.user_roles || []).map((role) => role.role) as AppRole[],
-      property_ids: (profile.user_properties || []).map((p) => p.property_id) as string[],
+      roles: (profile.user_roles || []).map((role: any) => role.role) as AppRole[],
+      property_ids: (profile.organization_memberships || []).map((m: any) => m.hotel_id).filter(Boolean) as string[],
     }))
   }, [profiles])
 

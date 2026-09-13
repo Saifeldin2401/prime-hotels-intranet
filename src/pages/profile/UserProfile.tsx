@@ -6,14 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
-import { useHRSettings } from '@/hooks/useSystemSettings'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
     AlertCircle,
-    AlertTriangle,
     ArrowLeft,
     Briefcase,
     Building,
@@ -72,17 +70,8 @@ interface PublicProfileData {
 }
 
 interface PrivateProfileData {
-  date_of_birth: string | null
-  employee_id: string | null
-  emergency_contact_name: string | null
-  emergency_contact_phone: string | null
-  national_id: string | null
-  salary_grade: string | null
   phone: string | null
   nationality: string | null
-  blood_group: string | null
-  iqama_number: string | null
-  iqama_expiry: string | null
 }
 
 const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']
@@ -107,7 +96,6 @@ export default function UserProfile() {
   const navigate = useNavigate()
   const { t } = useTranslation(['profile', 'common'])
   const { user, primaryRole } = useAuth()
-  const { iqamaExpiryWarningDays } = useHRSettings()
   const isValidProfileId = isValidUuid(id)
 
   const canViewPrivate = useMemo(() => {
@@ -382,77 +370,29 @@ export default function UserProfile() {
                     </>
                   )}
 
-                  {canViewPrivate && privateProfile && (
+                  {canViewPrivate && privateProfile && (privateProfile.phone || privateProfile.nationality) && (
                     <>
                       <Separator className="bg-hotel-gold/10" />
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-red-500" />
-                          <h3 className="font-bold text-red-700 uppercase tracking-wider text-xs">
-                            {t('profile:private_info', 'Private HR/Admin Info')}
+                          <AlertCircle className="h-4 w-4 text-amber-500" />
+                          <h3 className="font-bold text-gray-700 uppercase tracking-wider text-xs">
+                            {t('profile:contact_details', 'Contact Details')}
                           </h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:date_of_birth', 'Date of Birth')}</div>
-                            <div className="font-medium">
-                              {privateProfile.date_of_birth ? format(new Date(privateProfile.date_of_birth), 'MMMM d, yyyy') : '-'}
+                          {privateProfile.phone && (
+                            <div className="rounded-md border p-3">
+                              <div className="text-xs text-gray-500 mb-1">{t('profile:phone_number', 'Phone Number')}</div>
+                              <div className="font-medium">{privateProfile.phone}</div>
                             </div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:staff_id', 'Employee ID')}</div>
-                            <div className="font-medium">{privateProfile.employee_id || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:emergency_contact_name', 'Emergency Contact')}</div>
-                            <div className="font-medium">{privateProfile.emergency_contact_name || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:emergency_contact_phone', 'Emergency Phone')}</div>
-                            <div className="font-medium">{privateProfile.emergency_contact_phone || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:national_id', 'National ID')}</div>
-                            <div className="font-medium">{privateProfile.national_id || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:salary_grade', 'Salary Grade')}</div>
-                            <div className="font-medium">{privateProfile.salary_grade || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:phone_number', 'Phone Number')}</div>
-                            <div className="font-medium">{privateProfile.phone || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:nationality', 'Nationality')}</div>
-                            <div className="font-medium">{privateProfile.nationality || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:blood_group', 'Blood Group')}</div>
-                            <div className="font-medium">{privateProfile.blood_group || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:iqama_number', 'Iqama Number')}</div>
-                            <div className="font-medium">{privateProfile.iqama_number || '-'}</div>
-                          </div>
-                          <div className="rounded-md border p-3">
-                            <div className="text-xs text-gray-500 mb-1">{t('profile:iqama_expiry', 'Iqama Expiry')}</div>
-                            <div className="font-medium flex items-center justify-between">
-                              <span>{privateProfile.iqama_expiry ? format(new Date(privateProfile.iqama_expiry), 'MMMM d, yyyy') : '-'}</span>
-                              {privateProfile.iqama_expiry && (() => {
-                                const daysLeft = Math.ceil((new Date(privateProfile.iqama_expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-                                if (daysLeft <= iqamaExpiryWarningDays) {
-                                  return (
-                                    <Badge variant="destructive" className="text-[10px] gap-1 animate-pulse">
-                                      <AlertTriangle className="w-3 h-3" />
-                                      {daysLeft <= 0 ? 'Expired' : `Expires in ${daysLeft} days (Threshold: ${iqamaExpiryWarningDays}d)`}
-                                    </Badge>
-                                  )
-                                }
-                                return null
-                              })()}
+                          )}
+                          {privateProfile.nationality && (
+                            <div className="rounded-md border p-3">
+                              <div className="text-xs text-gray-500 mb-1">{t('profile:nationality', 'Nationality')}</div>
+                              <div className="font-medium">{privateProfile.nationality}</div>
                             </div>
-                          </div>
+                          )}
                         </div>
                       </div>
                     </>

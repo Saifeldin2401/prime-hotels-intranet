@@ -1,7 +1,7 @@
 import { usePermissions, type Permission } from '@/hooks/usePermissions'
 import { cn } from '@/lib/utils'
 import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { BarChart3, Calendar, CheckCircle, FileText, GraduationCap, MessageSquare, Users, Wrench } from 'lucide-react'
+import { Award, BarChart3, BookOpen, CheckCircle, FileText, GraduationCap, Library, Sparkles } from 'lucide-react'
 import { useTranslation } from "react-i18next"
 import { Link } from 'react-router-dom'
 
@@ -15,55 +15,54 @@ interface QuickAction {
 
 const allActions: QuickAction[] = [
   {
-    key: 'documents',
-    icon: FileText,
-    href: '/documents',
-    color: 'from-blue-500 to-indigo-500 shadow-blue-500/20 text-white',
-    permission: 'documents.view'
+    key: 'courses',
+    icon: BookOpen,
+    href: '/courses',
+    color: 'from-amber-500 to-yellow-500 shadow-amber-500/20 text-slate-950',
   },
   {
     key: 'training',
     icon: GraduationCap,
     href: '/learning/my',
-    color: 'from-emerald-500 to-teal-500 shadow-emerald-500/20 text-white',
+    color: 'from-blue-600 to-indigo-600 shadow-blue-500/20 text-white',
     permission: 'training.view'
+  },
+  {
+    key: 'certificates',
+    icon: Award,
+    href: '/training/certificates',
+    color: 'from-emerald-500 to-teal-500 shadow-emerald-500/20 text-white',
+  },
+  {
+    key: 'paths',
+    icon: Sparkles,
+    href: '/training/paths',
+    color: 'from-purple-500 to-violet-600 shadow-purple-500/20 text-white',
+  },
+  {
+    key: 'knowledge',
+    icon: Library,
+    href: '/knowledge',
+    color: 'from-cyan-500 to-blue-500 shadow-cyan-500/20 text-white',
+    permission: 'documents.view'
+  },
+  {
+    key: 'documents',
+    icon: FileText,
+    href: '/documents',
+    color: 'from-indigo-500 to-purple-500 shadow-indigo-500/20 text-white',
+    permission: 'documents.view'
   },
   {
     key: 'tasks',
     icon: CheckCircle,
     href: '/tasks',
-    color: 'from-violet-500 to-fuchsia-500 shadow-violet-500/20 text-white' // Tasks accessible to all
-  },
-  {
-    key: 'directory',
-    icon: Users,
-    href: '/directory',
-    color: 'from-amber-500 to-orange-500 shadow-amber-500/20 text-white',
-    permission: 'users.view'
-  },
-  {
-    key: 'maintenance',
-    icon: Wrench,
-    href: '/maintenance',
-    color: 'from-rose-500 to-red-500 shadow-rose-500/20 text-white',
-    permission: 'maintenance.view'
-  },
-  {
-    key: 'schedule',
-    icon: Calendar,
-    href: '/hr/scheduling',
-    color: 'from-cyan-500 to-blue-500 shadow-cyan-500/20 text-white'
-  },
-  {
-    key: 'messages',
-    icon: MessageSquare,
-    href: '/messaging',
-    color: 'from-pink-500 to-rose-500 shadow-pink-500/20 text-white'
+    color: 'from-violet-500 to-fuchsia-500 shadow-violet-500/20 text-white'
   },
   {
     key: 'analytics',
     icon: BarChart3,
-    href: '/reports',
+    href: '/learning/analytics',
     color: 'from-[#C39A45] to-amber-600 shadow-amber-500/20 text-slate-950',
     permission: 'analytics.view'
   },
@@ -73,17 +72,7 @@ export function QuickActions() {
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('dashboard');
 
-  const actions = allActions.map(action => {
-    if (action.key === 'schedule') {
-      const hasSchedulingPrivileges = hasPermission('scheduling.manage');
-
-      return {
-        ...action,
-        href: hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
-      };
-    }
-    return action;
-  }).filter(action =>
+  const actions = allActions.filter(action =>
     !action.permission || hasPermission(action.permission)
   )
 

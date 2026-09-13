@@ -239,7 +239,7 @@ export function evaluateWizardJourney(ctx: EvaluationContext): EvaluatedWizard {
     roleTitle: blueprint.roleName,
     organizationName: ctx.isPlatformOperator 
       ? 'ALTUS Platform Operations' 
-      : (ctx.organization?.name || 'PRIME Hotels Intranet'),
+      : (ctx.organization?.name || 'ALTUS'),
     primaryResponsibilities: blueprint.youCanKeys,
     allowedActions: blueprint.youCanKeys,
     restrictedActions: blueprint.youCannotKeys,

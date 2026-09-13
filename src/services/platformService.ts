@@ -1373,8 +1373,6 @@ export const platformService = {
    * head-count on the same filtered query) so the full Audit Logs page can paginate
    * instead of only ever being able to see the most recent `limit` rows platform-wide.
    */
-  async getPlatformAuditLogs(limit?: number): Promise<PlatformAuditLog[]>
-  async getPlatformAuditLogs(params: { limit?: number; offset?: number }): Promise<{ logs: PlatformAuditLog[]; totalCount: number }>
   async getPlatformAuditLogs(
     arg?: number | { limit?: number; offset?: number }
   ): Promise<PlatformAuditLog[] | { logs: PlatformAuditLog[]; totalCount: number }> {

@@ -15,10 +15,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAIOnboardingPath } from '@/hooks/useAIOnboardingPath'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { STANDARD_JOB_TITLES } from '@/lib/constants'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useMemo, useState } from 'react'
 import {
     BookOpen,
     Briefcase,
@@ -72,18 +73,10 @@ export function AIOnboardingPathGenerator({
     const { departments } = useDepartments()
     const { data: properties = [] } = useProperties()
 
-    // Fetch job titles from the system
-    const { data: jobTitles = [] } = useQuery({
-        queryKey: ['job_titles'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('job_titles')
-                .select('id, title')
-                .order('title')
-            if (error) throw error
-            return data as { id: string; title: string }[]
-        }
-    })
+    // Standard job titles (unified free-text system)
+    const jobTitles = useMemo(() => {
+        return STANDARD_JOB_TITLES.map(j => ({ id: j.id, title: j.title }))
+    }, [])
 
     const [formData, setFormData] = useState<{
         employeeName: string

@@ -118,25 +118,41 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       // (start_platform_session). localStorage / the current path never grant
       // tenant context to an operator.
       if (account.isPlatformOperator) {
-        const { data: activeSession } = await (supabase
+        const { data: activeSessions } = await (supabase
           .from('platform_access_sessions')
           .select('*, target_organization:organizations(*)')
           .eq('admin_user_id', user.id)
           .eq('is_active', true)
-          .maybeSingle() as unknown as Promise<{ data: PlatformAccessSession | null }>)
+          .order('started_at', { ascending: false })
+          .limit(1) as unknown as Promise<{ data: PlatformAccessSession[] | null }>)
 
-        if (activeSession && activeSession.target_organization) {
-          setImpersonationSession(activeSession)
-          setCurrentOrganization(activeSession.target_organization as Organization)
-          await loadScopesForOrg(activeSession.target_organization_id)
-          setIsLoading(false)
-          return
+        const activeSession = activeSessions?.[0] || null
+
+        if (activeSession) {
+          const targetOrg =
+            (activeSession.target_organization as Organization | undefined) ||
+            fetchedOrgs.find((o) => o.id === activeSession.target_organization_id) ||
+            null
+
+          if (targetOrg) {
+            setImpersonationSession(activeSession)
+            setCurrentOrganization(targetOrg)
+            if (user) {
+              safeLocalStorage.setItem(`active_tenant_id_${user.id}`, targetOrg.id)
+            }
+            safeLocalStorage.removeItem('altus_active_tenant_id')
+            await loadScopesForOrg(targetOrg.id)
+            setIsLoading(false)
+            return
+          }
         }
 
         setImpersonationSession(null)
         setCurrentOrganization(null)
         clearTenantScopes()
-        safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+        if (user) {
+          safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
+        }
         safeLocalStorage.removeItem('altus_active_tenant_id')
         setIsLoading(false)
         return
@@ -256,36 +272,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (shortcutLink) shortcutLink.href = href
   }, [currentOrganization])
 
-  const switchOrganization = async (orgId: string) => {
-    const targetOrg = organizations.find(o => o.id === orgId)
-    if (!targetOrg) return
-
-    // Platform operators may only enter a tenant through enterOrganization(),
-    // which creates an audited, time-bound access session server-side.
-    if (account.isPlatformOperator) {
-      throw new Error('Platform operators must enter organizations through an audited access session')
-    }
-
-    const isMember = (account.tenantMemberships || []).some(m => m.organization_id === orgId)
-    if (!isMember) {
-      console.warn('switchOrganization: refused — not a member of', orgId)
-      return
-    }
-
-    // Immediately clear query cache so no data from the previous tenant lingers
-    queryClient.clear()
-
-    if (user) {
-      safeLocalStorage.setItem(`active_tenant_id_${user.id}`, orgId)
-    }
-    safeLocalStorage.removeItem('altus_active_tenant_id')
-    setCurrentOrganization(targetOrg)
-    setCurrentBrand(null)
-    setCurrentHotel(null)
-
-    await loadScopesForOrg(orgId)
-  }
-
   const enterOrganization = async (targetOrgId: string, reason: string, actingRole = 'organization_admin') => {
     if (!user) throw new Error('Not authenticated')
     if (!account.can('tenant.enter')) {
@@ -314,11 +300,49 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       organizations.find(o => o.id === targetOrgId) ||
       (session.target_organization as Organization | undefined) ||
       null
-    if (targetOrg) setCurrentOrganization(targetOrg)
+    if (targetOrg) {
+      setCurrentOrganization(targetOrg)
+      if (user) {
+        safeLocalStorage.setItem(`active_tenant_id_${user.id}`, targetOrg.id)
+      }
+      safeLocalStorage.removeItem('altus_active_tenant_id')
+    }
     setCurrentBrand(null)
     setCurrentHotel(null)
     await loadScopesForOrg(targetOrgId)
     await account.refresh()
+  }
+
+  const switchOrganization = async (orgId: string) => {
+    const targetOrg = organizations.find(o => o.id === orgId)
+    if (!targetOrg) return
+
+    // Platform operators must enter a tenant through an audited access session.
+    // If the operator has tenant.enter permission, establish an audited session server-side.
+    // Platform operators may only enter a tenant through enterOrganization(),
+    // which creates an audited, time-bound access session server-side.
+    if (account.isPlatformOperator) {
+      throw new Error('Platform operators must enter organizations through an audited access session')
+    }
+
+    const isMember = (account.tenantMemberships || []).some(m => m.organization_id === orgId)
+    if (!isMember) {
+      console.warn('switchOrganization: refused — not a member of', orgId)
+      return
+    }
+
+    // Immediately clear query cache so no data from the previous tenant lingers
+    queryClient.clear()
+
+    if (user) {
+      safeLocalStorage.setItem(`active_tenant_id_${user.id}`, orgId)
+    }
+    safeLocalStorage.removeItem('altus_active_tenant_id')
+    setCurrentOrganization(targetOrg)
+    setCurrentBrand(null)
+    setCurrentHotel(null)
+
+    await loadScopesForOrg(orgId)
   }
 
   const exitImpersonation = async () => {
@@ -467,10 +491,37 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useTenant() {
+const defaultTenantFallback: TenantContextType = {
+  currentOrganization: null,
+  organizations: [],
+  isLoading: false,
+  availableBrands: [],
+  availableHotels: [],
+  currentBrand: null,
+  currentHotel: null,
+  currentMembership: null,
+  userTenantRole: null,
+  isOrgAdmin: false,
+  isPlatformAdmin: false,
+  isPlatformScope: false,
+  isImpersonating: false,
+  impersonationSession: null,
+  enterOrganization: async () => {},
+  exitImpersonation: async () => {},
+  switchOrganization: async () => {},
+  returnToPlatformScope: async () => {},
+  setBrandScope: () => {},
+  setHotelScope: () => {},
+  refreshTenantData: async () => {},
+}
+
+export function useTenant(): TenantContextType {
   const context = useContext(TenantContext)
   if (!context) {
-    throw new Error('useTenant must be used within a TenantProvider')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[TenantContext] useTenant was called outside of a TenantProvider; returning safe fallback.')
+    }
+    return defaultTenantFallback
   }
   return context
 }

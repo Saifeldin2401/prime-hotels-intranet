@@ -103,7 +103,7 @@ export const WhatCanIDoSheet: React.FC = () => {
 
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Building2 className="h-3.5 w-3.5" />
-              <span className="truncate max-w-[180px]">{whatCanIDoSummary?.organizationName || 'PRIME Hotels Intranet'}</span>
+              <span className="truncate max-w-[180px]">{whatCanIDoSummary?.organizationName || 'ALTUS'}</span>
             </div>
           </div>
 

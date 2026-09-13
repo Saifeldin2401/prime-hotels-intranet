@@ -206,3 +206,45 @@ export const TRAINING_STATUSES: Record<TrainingProgressStatus, { label: string; 
 
 export const ESCALATION_THRESHOLD_HOURS = 48
 
+export interface StandardJobTitle {
+  id: string
+  title: string
+  title_ar: string
+  category: string
+  category_ar: string
+  default_role: AppRole
+}
+
+export const STANDARD_JOB_TITLES: StandardJobTitle[] = [
+  { id: 'gm', title: 'General Manager', title_ar: 'المدير العام', category: 'Executive', category_ar: 'الإدارة التنفيذية', default_role: 'administrator' },
+  { id: 'agm', title: 'Assistant General Manager', title_ar: 'مساعد المدير العام', category: 'Executive', category_ar: 'الإدارة التنفيذية', default_role: 'administrator' },
+  { id: 'ops-dir', title: 'Director of Operations', title_ar: 'مدير العمليات', category: 'Operations', category_ar: 'العمليات', default_role: 'corporate_admin' },
+  { id: 'fom', title: 'Front Office Manager', title_ar: 'مدير المكاتب الأمامية', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'department_head' },
+  { id: 'afom', title: 'Assistant Front Office Manager', title_ar: 'مساعد مدير المكاتب الأمامية', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'department_head' },
+  { id: 'fd-sup', title: 'Front Desk Supervisor', title_ar: 'مشرف الاستقبال', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'staff' },
+  { id: 'fd-agent', title: 'Front Desk Agent', title_ar: 'موظف استقبال', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'staff' },
+  { id: 'concierge', title: 'Concierge', title_ar: 'كونسيرج', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'staff' },
+  { id: 'night-audit', title: 'Night Auditor', title_ar: 'مراجع ليلي', category: 'Front Office', category_ar: 'المكاتب الأمامية', default_role: 'staff' },
+  { id: 'exec-hk', title: 'Executive Housekeeper', title_ar: 'مدير التدبير المنزلي', category: 'Housekeeping', category_ar: 'التدبير المنزلي', default_role: 'department_head' },
+  { id: 'hk-sup', title: 'Housekeeping Supervisor', title_ar: 'مشرف التدبير المنزلي', category: 'Housekeeping', category_ar: 'التدبير المنزلي', default_role: 'staff' },
+  { id: 'room-attendant', title: 'Room Attendant', title_ar: 'عامل غرف', category: 'Housekeeping', category_ar: 'التدبير المنزلي', default_role: 'staff' },
+  { id: 'laundry-sup', title: 'Laundry Supervisor', title_ar: 'مشرف المغسلة', category: 'Housekeeping', category_ar: 'التدبير المنزلي', default_role: 'staff' },
+  { id: 'fb-dir', title: 'Food & Beverage Director', title_ar: 'مدير الأغذية والمشروبات', category: 'Food & Beverage', category_ar: 'الأغذية والمشروبات', default_role: 'department_head' },
+  { id: 'fb-mgr', title: 'Restaurant Manager', title_ar: 'مدير المطعم', category: 'Food & Beverage', category_ar: 'الأغذية والمشروبات', default_role: 'department_head' },
+  { id: 'exec-chef', title: 'Executive Chef', title_ar: 'رئيس الطهاة', category: 'Culinary', category_ar: 'المطبخ', default_role: 'department_head' },
+  { id: 'sous-chef', title: 'Sous Chef', title_ar: 'مساعد رئيس الطهاة', category: 'Culinary', category_ar: 'المطبخ', default_role: 'staff' },
+  { id: 'fb-captain', title: 'F&B Captain', title_ar: 'كابتن مطعم', category: 'Food & Beverage', category_ar: 'الأغذية والمشروبات', default_role: 'staff' },
+  { id: 'waiter', title: 'Waiter / Server', title_ar: 'نادل', category: 'Food & Beverage', category_ar: 'الأغذية والمشروبات', default_role: 'staff' },
+  { id: 'hr-dir', title: 'Director of Human Resources', title_ar: 'مدير الموارد البشرية', category: 'Human Resources', category_ar: 'الموارد البشرية', default_role: 'property_hr' },
+  { id: 'hr-mgr', title: 'Human Resources Manager', title_ar: 'مدير الموارد البشرية', category: 'Human Resources', category_ar: 'الموارد البشرية', default_role: 'property_hr' },
+  { id: 'training-mgr', title: 'Training Manager', title_ar: 'مدير التدريب', category: 'Human Resources', category_ar: 'الموارد البشرية', default_role: 'training_manager' },
+  { id: 'chief-eng', title: 'Chief Engineer', title_ar: 'كبير المهندسين', category: 'Engineering & Maintenance', category_ar: 'الهندسة والصيانة', default_role: 'department_head' },
+  { id: 'maint-tech', title: 'Maintenance Technician', title_ar: 'فني صيانة', category: 'Engineering & Maintenance', category_ar: 'الهندسة والصيانة', default_role: 'staff' },
+  { id: 'sec-mgr', title: 'Security Manager', title_ar: 'مدير الأمن والسلامة', category: 'Security', category_ar: 'الأمن', default_role: 'department_head' },
+  { id: 'sec-officer', title: 'Security Officer', title_ar: 'ضابط أمن', category: 'Security', category_ar: 'الأمن', default_role: 'staff' },
+  { id: 'fin-dir', title: 'Director of Finance', title_ar: 'المدير المالي', category: 'Finance', category_ar: 'المالية', default_role: 'department_head' },
+  { id: 'sales-dir', title: 'Director of Sales & Marketing', title_ar: 'مدير المبيعات والتسويق', category: 'Sales & Marketing', category_ar: 'المبيعات والتسويق', default_role: 'department_head' },
+  { id: 'it-mgr', title: 'IT Manager', title_ar: 'مدير تقنية المعلومات', category: 'Information Technology', category_ar: 'تقنية المعلومات', default_role: 'department_head' },
+  { id: 'learner', title: 'Trainee / Intern', title_ar: 'متدرب', category: 'Training', category_ar: 'التدريب', default_role: 'learner' },
+]
+

@@ -308,7 +308,7 @@ function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
   </g>
 
   <!-- Footer Brand -->
-  <text x="36" y="405" fill="#64748b" font-size="10.5">PRIME CONNECT • RECRAFT VECTOR VISUAL ASSET</text>
+  <text x="36" y="405" fill="#64748b" font-size="10.5">ALTUS • RECRAFT VECTOR VISUAL ASSET</text>
   <text x="764" y="405" fill="#64748b" font-size="10.5" text-anchor="end">KSA REGULATORY & FORBES COMPLIANT</text>
 </svg>`
 

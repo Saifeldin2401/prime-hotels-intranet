@@ -121,10 +121,23 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     )
 }
 
-export function useProperty() {
+const defaultPropertyFallback: PropertyContextType = {
+    currentProperty: null,
+    availableProperties: [],
+    isLoading: false,
+    isMultiPropertyUser: false,
+    propertyIds: [],
+    switchProperty: () => {},
+    refreshProperties: async () => {},
+}
+
+export function useProperty(): PropertyContextType {
     const context = useContext(PropertyContext)
     if (context === undefined) {
-        throw new Error('useProperty must be used within a PropertyProvider')
+        if (process.env.NODE_ENV !== 'production') {
+            console.warn('[PropertyContext] useProperty was called outside of a PropertyProvider; returning safe fallback.')
+        }
+        return defaultPropertyFallback
     }
     return context
 }

@@ -44,7 +44,7 @@ vi.mock('./providers/multiProviderRouter', () => ({
 describe('DocumentIngestionEngine', () => {
   it('should parse document text and synthesize a full CourseBlueprint', async () => {
     const rawText = `
-    PRIME HOTELS STANDARD OPERATING PROCEDURE: VIP GUEST ARRIVAL
+    ALTUS STANDARD OPERATING PROCEDURE: VIP GUEST ARRIVAL
     1. Curbside Welcome: Bell Captain must greet guest within 30 seconds of vehicle arrival.
     2. Front Desk Escort: Duty Manager conducts in-suite registration for Presidential Suite guests.
     3. Welcome Amenity: Traditional Saudi Arabian dates and signature Qahwa served upon arrival.

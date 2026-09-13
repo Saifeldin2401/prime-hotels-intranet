@@ -9,7 +9,35 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
-import { Building2, Crown, ShieldAlert, ArrowRight, ArrowLeft } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import type { Organization } from '@/lib/types/tenant'
+import {
+  Building2,
+  Crown,
+  ShieldAlert,
+  ShieldCheck,
+  LogIn,
+  RefreshCw,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react'
 
 interface TenantContextGuardProps {
   children?: React.ReactNode
@@ -26,7 +54,8 @@ interface TenantContextGuardProps {
  * - When inside an active tenant: passes through to children or Outlet.
  * - When unauthenticated: passes through so ProtectedRoute can redirect to login.
  * - When in Platform Context (platform operator without break-glass session):
- *   displays an authoritative explanation and redirects to Organizations Hub.
+ *   displays an authoritative explanation and redirects to Organizations Hub or
+ *   allows audited entrance into a tenant.
  *   Exception: Global Master Content authoring/previewing (`?master=true` or `?isMaster=true`).
  * - When a multi-tenant user has not selected an active tenant:
  *   displays an organization selector card to establish the context.
@@ -40,14 +69,22 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
     isPlatformScope, 
     isPlatformAdmin, 
     isLoading, 
-    switchOrganization 
+    switchOrganization,
+    enterOrganization
   } = useTenant()
   const isInsideLayout = React.useContext(InsideAppLayoutContext)
   const { t, i18n } = useTranslation(['admin', 'common'])
   const isRtl = i18n.dir() === 'rtl'
   const navigate = useNavigate()
   const location = useLocation()
+  const { toast } = useToast()
   const ArrowIcon = isRtl ? ArrowLeft : ArrowRight
+
+  // Audited platform access dialog state
+  const [selectedOrgForEnter, setSelectedOrgForEnter] = React.useState<Organization | null>(null)
+  const [enterReason, setEnterReason] = React.useState('')
+  const [actingRole, setActingRole] = React.useState('organization_admin')
+  const [isEntering, setIsEntering] = React.useState(false)
 
   // Honour an explicit `?org=<id>` deep link: a shared tenant URL should restore
   // the right tenant for a user who is a member of it. This is the URL carrying
@@ -58,8 +95,58 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
     if (!orgParam || account.isPlatformOperator) return
     if (currentOrganization?.id === orgParam) return
     const isMember = (account.tenantMemberships || []).some((m) => m.organization_id === orgParam)
-    if (isMember) void switchOrganization(orgParam)
+    if (isMember) void switchOrganization(orgParam).catch(console.warn)
   }, [orgParam, account.isPlatformOperator, account.tenantMemberships, currentOrganization?.id, switchOrganization])
+
+  const handleOrgClick = async (org: Organization) => {
+    if (account.isPlatformOperator) {
+      // Platform operators must enter organizations through an audited session
+      setSelectedOrgForEnter(org)
+      setEnterReason(`Operational review of ${resourceName || 'customer environment'}`)
+    } else {
+      try {
+        await switchOrganization(org.id)
+      } catch (err: unknown) {
+        const error = err as { message?: string }
+        toast({
+          title: t('common:error', 'Error'),
+          description: error?.message || 'Failed to switch organization',
+          variant: 'destructive',
+        })
+      }
+    }
+  }
+
+  const handleConfirmEnterOrg = async () => {
+    if (!selectedOrgForEnter || !enterReason.trim()) return
+    if (enterReason.trim().length < 10) {
+      toast({
+        title: t('common:error', 'Error'),
+        description: t('admin:reason_min_chars', 'At least 10 characters required for the audit log'),
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setIsEntering(true)
+      await enterOrganization(selectedOrgForEnter.id, enterReason.trim(), actingRole)
+      toast({
+        title: t('admin:entered_tenant', 'Entered Customer Environment'),
+        description: `${selectedOrgForEnter.name} (${actingRole})`,
+      })
+      setSelectedOrgForEnter(null)
+    } catch (err: unknown) {
+      const error = err as { message?: string }
+      toast({
+        title: t('common:error', 'Error'),
+        description: error?.message || 'Failed to enter organization',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsEntering(false)
+    }
+  }
 
   if (authLoading || isLoading) {
     return <PageSkeleton />
@@ -81,10 +168,80 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
   }
 
   const renderContainer = (content: React.ReactNode) => {
+    const wrappedContent = (
+      <>
+        {content}
+
+        {/* Audited Enter Organization Modal for Platform Operators */}
+        {selectedOrgForEnter && (
+          <Dialog open={!!selectedOrgForEnter} onOpenChange={(open) => { if (!open) setSelectedOrgForEnter(null) }}>
+            <DialogContent className="sm:max-w-[480px]">
+              <DialogHeader>
+                <div className="flex items-center gap-2 text-primary">
+                  <ShieldCheck className="h-5 w-5 text-amber-500" />
+                  <DialogTitle className="text-base font-bold">{t('admin:enter_org_env', 'Enter Organization Environment')}</DialogTitle>
+                </div>
+                <DialogDescription className="text-xs">
+                  {t('admin:enter_org_desc', 'You are establishing an authorized Platform Operator session into')} <strong>{selectedOrgForEnter.name}</strong>. {t('admin:action_audited', 'This action will be permanently recorded in the security audit log.')}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="acting-role" className="text-xs font-semibold">{t('admin:acting_role', 'Operating Role')}</Label>
+                  <Select value={actingRole} onValueChange={setActingRole}>
+                    <SelectTrigger id="acting-role" className="h-9 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="organization_admin">Organization Administrator (Full Tenant Admin)</SelectItem>
+                      <SelectItem value="training_manager">Training Manager (Curriculum & Courses)</SelectItem>
+                      <SelectItem value="knowledge_manager">Knowledge Manager (SOPs & Docs)</SelectItem>
+                      <SelectItem value="instructor">Platform Instructor (Assessments & Cohorts)</SelectItem>
+                      <SelectItem value="support_specialist">Support & Troubleshooting Specialist</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="access-reason" className="text-xs font-semibold">
+                    {t('admin:access_reason', 'Access Reason / Operational Justification')}{' '}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="access-reason"
+                    value={enterReason}
+                    onChange={(e) => setEnterReason(e.target.value)}
+                    placeholder="e.g. Master SOP deployment, Course management, Support ticket"
+                    className="h-9 text-xs"
+                  />
+                  <div className={`text-[10px] ${enterReason.trim().length >= 10 ? 'text-muted-foreground' : 'text-amber-600 dark:text-amber-400 font-medium'}`}>
+                    {enterReason.trim().length}/10 characters minimum
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="pt-2 border-t">
+                <Button variant="outline" size="sm" onClick={() => setSelectedOrgForEnter(null)}>
+                  {t('common:cancel', 'Cancel')}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleConfirmEnterOrg}
+                  disabled={isEntering || enterReason.trim().length < 10}
+                  className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 font-semibold text-xs"
+                >
+                  {isEntering ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <LogIn className="h-3.5 w-3.5" />}
+                  {t('admin:confirm_enter', 'Authorize & Enter Tenant')}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+      </>
+    )
+
     if (isInsideLayout) {
-      return <>{content}</>
+      return wrappedContent
     }
-    return <AppLayout>{content}</AppLayout>
+    return <AppLayout>{wrappedContent}</AppLayout>
   }
 
   // Account resolution is the authority for both platform-operator status and
@@ -116,7 +273,7 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
     return <>{children ?? <Outlet />}</>
   }
 
-  // Case 1: Platform Operator in Platform Scope
+  // Case 1: Platform Operator in Global Scope (No Active Customer Environment)
   if (isPlatformScope || isPlatformAdmin) {
     return renderContainer(
       <div className="max-w-2xl mx-auto py-12 px-4">
@@ -155,7 +312,7 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
                   {organizations.map((org) => (
                     <button
                       key={org.id}
-                      onClick={() => switchOrganization(org.id)}
+                      onClick={() => handleOrgClick(org)}
                       className="w-full flex items-center justify-between p-3 rounded-xl border border-border/70 hover:border-hotel-gold/60 bg-muted/20 hover:bg-muted/50 transition-all text-start group"
                     >
                       <div className="flex items-center gap-2.5">
@@ -222,7 +379,7 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
             {organizations.map((org) => (
               <button
                 key={org.id}
-                onClick={() => switchOrganization(org.id)}
+                onClick={() => handleOrgClick(org)}
                 className="w-full flex items-center justify-between p-3.5 rounded-xl border border-border/70 hover:border-hotel-gold/50 bg-background/60 hover:bg-muted/50 transition-all text-start group"
               >
                 <div className="flex items-center gap-3">

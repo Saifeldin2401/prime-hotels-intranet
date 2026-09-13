@@ -176,7 +176,7 @@ export function TenantEmailPreviewModal({
             <div className="flex items-center gap-2">
               <span className="text-muted-foreground font-semibold w-16">From:</span>
               <span className="font-medium text-slate-800 dark:text-slate-200">
-                {effectiveSenderName} &lt;notifications@phg-connect.com&gt;
+                {effectiveSenderName} &lt;notifications@altus-lms.com&gt;
               </span>
             </div>
             <div className="flex items-center gap-2">

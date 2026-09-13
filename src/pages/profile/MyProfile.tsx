@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { getReportingLineDisplay } from '@/lib/displayHelpers'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
 import { differenceInMonths, differenceInYears, format } from 'date-fns'
-import { Briefcase, Building, Calendar, CheckCircle2, Clock, FileText, Key, Loader2, Mail, Phone, Save, Shield, Star, Target, Upload, User as UserIcon, Wallet } from 'lucide-react'
+import { Award, BookOpen, Briefcase, Building, Calendar, CheckCircle2, Compass, FileText, Key, Loader2, Mail, Phone, Save, Shield, Star, Upload, User as UserIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -31,8 +31,6 @@ function computeCompletion(p: {
     phone_extension?: string | null
     job_title?: string | null
     hire_date?: string | null
-    emergency_contact_name?: string | null
-    emergency_contact_phone?: string | null
 }): { percent: number; missing: string[] } {
     const fields: Array<{ label: string; value: string | null | undefined }> = [
         { label: 'Full Name', value: p.full_name },
@@ -43,8 +41,6 @@ function computeCompletion(p: {
         { label: 'Phone Extension', value: p.phone_extension },
         { label: 'Job Title', value: p.job_title },
         { label: 'Joining Date', value: p.hire_date },
-        { label: 'Emergency Contact Name', value: p.emergency_contact_name },
-        { label: 'Emergency Contact Phone', value: p.emergency_contact_phone },
     ]
     const missing = fields.filter(f => !f.value).map(f => f.label)
     const percent = Math.round(((fields.length - missing.length) / fields.length) * 100)
@@ -65,12 +61,8 @@ export default function MyProfile() {
     const [phone, setPhone] = useState('')
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [nationality, setNationality] = useState('')
-    const [bloodGroup, setBloodGroup] = useState('')
-    const [emergencyName, setEmergencyName] = useState('')
-    const [emergencyPhone, setEmergencyPhone] = useState('')
     const [bio, setBio] = useState('')
     const [phoneExtension, setPhoneExtension] = useState('')
-    const [iqamaNumber, setIqamaNumber] = useState('')
 
     useEffect(() => {
         if (authProfile) {
@@ -78,12 +70,8 @@ export default function MyProfile() {
             setPhone(authProfile.phone || '')
             setAvatarUrl(authProfile.avatar_url)
             setNationality(authProfile.nationality || '')
-            setBloodGroup(authProfile.blood_group || '')
-            setEmergencyName(authProfile.emergency_contact_name || '')
-            setEmergencyPhone(authProfile.emergency_contact_phone || '')
             setBio(authProfile.bio || '')
             setPhoneExtension(authProfile.phone_extension || '')
-            setIqamaNumber(authProfile.iqama_number || '')
         }
     }, [authProfile])
 
@@ -97,8 +85,6 @@ export default function MyProfile() {
         phone_extension: phoneExtension,
         job_title: authProfile?.job_title,
         hire_date: authProfile?.hire_date,
-        emergency_contact_name: emergencyName,
-        emergency_contact_phone: emergencyPhone,
     })
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -112,12 +98,8 @@ export default function MyProfile() {
                     full_name: fullName,
                     phone,
                     nationality,
-                    blood_group: bloodGroup,
-                    emergency_contact_name: emergencyName,
-                    emergency_contact_phone: emergencyPhone,
                     bio: bio || null,
                     phone_extension: phoneExtension || null,
-                    iqama_number: iqamaNumber || null,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id)
@@ -170,6 +152,26 @@ export default function MyProfile() {
         }
     }
 
+    const handleSetPresetAvatar = async (presetUrl: string) => {
+        if (!user?.id) return
+        try {
+            setUploading(true)
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: presetUrl })
+                .eq('id', user.id)
+            if (updateError) throw updateError
+
+            setAvatarUrl(presetUrl)
+            await refreshSession()
+            toast.success(isRTL ? 'تم تعيين الصورة الرسمية' : 'Official avatar preset selected')
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to update avatar'))
+        } finally {
+            setUploading(false)
+        }
+    }
+
     const getTenure = () => {
         if (!authProfile?.hire_date) return null
         const hireDate = new Date(authProfile.hire_date)
@@ -190,21 +192,50 @@ export default function MyProfile() {
                 <div className="relative z-10 px-8 pt-10 pb-20">
                     <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
                         {/* Avatar */}
-                        <div className="relative group">
-                            <Avatar className="w-28 h-28 text-4xl ring-4 ring-white/20 shadow-2xl">
-                                <AvatarImage src={avatarUrl || undefined} className="object-cover object-center" />
-                                <AvatarFallback className="bg-indigo-700 text-white text-3xl">
-                                    {fullName ? fullName.charAt(0).toUpperCase() : <UserIcon className="w-12 h-12" />}
-                                </AvatarFallback>
-                            </Avatar>
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="absolute bottom-0 end-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-                            >
-                                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                            </button>
-                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
+                        <div className="flex flex-col items-center gap-2">
+                            <div className="relative group">
+                                <Avatar className="w-28 h-28 text-4xl ring-4 ring-white/20 shadow-2xl">
+                                    <AvatarImage src={avatarUrl || undefined} className="object-cover object-center" />
+                                    <AvatarFallback className="bg-indigo-700 text-white text-3xl">
+                                        {fullName ? fullName.charAt(0).toUpperCase() : <UserIcon className="w-12 h-12" />}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                    title={isRTL ? 'رفع صورة شخصية' : 'Upload custom photo'}
+                                    className="absolute bottom-0 end-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
+                                >
+                                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                </button>
+                                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
+                            </div>
+
+                            {/* Official ALTUS Avatar Presets */}
+                            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSetPresetAvatar('/assets/altus/learner-male.jpg')}
+                                    title={isRTL ? 'الصورة الرسمية (رجال)' : 'ALTUS Male Executive Preset'}
+                                    className={cn(
+                                        "w-6 h-6 rounded-full overflow-hidden border transition-all",
+                                        avatarUrl === '/assets/altus/learner-male.jpg' ? "border-amber-400 ring-2 ring-amber-400/50 scale-110" : "border-white/30 opacity-70 hover:opacity-100"
+                                    )}
+                                >
+                                    <img src="/assets/altus/learner-male.jpg" alt="Male preset" className="w-full h-full object-cover" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSetPresetAvatar('/assets/altus/learner-female.jpg')}
+                                    title={isRTL ? 'الصورة الرسمية (سيدات)' : 'ALTUS Female Executive Preset'}
+                                    className={cn(
+                                        "w-6 h-6 rounded-full overflow-hidden border transition-all",
+                                        avatarUrl === '/assets/altus/learner-female.jpg' ? "border-amber-400 ring-2 ring-amber-400/50 scale-110" : "border-white/30 opacity-70 hover:opacity-100"
+                                    )}
+                                >
+                                    <img src="/assets/altus/learner-female.jpg" alt="Female preset" className="w-full h-full object-cover" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Name / Role Info */}
@@ -322,24 +353,9 @@ export default function MyProfile() {
                                                 <Input id="phoneExtension" placeholder="e.g. 1234" value={phoneExtension} onChange={(e) => setPhoneExtension(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
                                             </div>
                                         </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="nationality">{t('nationality')}</Label>
-                                                <Input id="nationality" name="country-name" autoComplete="country-name" value={nationality} onChange={(e) => setNationality(e.target.value)} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="bloodGroup">{t('blood_group')}</Label>
-                                                <Select value={bloodGroup} onValueChange={setBloodGroup}>
-                                                    <SelectTrigger id="bloodGroup">
-                                                        <SelectValue placeholder={t('select_blood_group', 'Select Blood Group')} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
-                                                            <SelectItem key={group} value={group}>{group}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="nationality">{t('nationality')}</Label>
+                                            <Input id="nationality" name="country-name" autoComplete="country-name" value={nationality} onChange={(e) => setNationality(e.target.value)} />
                                         </div>
 
                                         {/* Bio */}
@@ -360,27 +376,6 @@ export default function MyProfile() {
                                                 maxLength={500}
                                             />
                                             <p className="text-xs text-gray-400 text-right">{bio.length}/500</p>
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Emergency Contact */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Shield className="w-4 h-4 text-red-500" />
-                                            <h3 className="text-sm font-bold uppercase tracking-wider text-red-500">{t('emergency_info')}</h3>
-                                            <span className="text-xs text-red-400 font-normal">(private – HR only)</span>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="emergencyName">{t('emergency_contact_name')}</Label>
-                                                <Input id="emergencyName" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="emergencyPhone">{t('emergency_contact_phone')}</Label>
-                                                <Input id="emergencyPhone" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
-                                            </div>
                                         </div>
                                     </div>
 
@@ -414,40 +409,17 @@ export default function MyProfile() {
                                                 <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{getReportingLineDisplay(authProfile) || t('not_specified', 'Not specified')}</div>
                                             </div>
                                         </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>{t('employment_type')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100 capitalize">{authProfile?.employment_type?.replace('_', ' ') || t('not_specified', 'Not specified')}</div>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label>{t('contract_end_date')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.contract_end_date ? format(new Date(authProfile.contract_end_date), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>{t('iqama_expiry', 'Iqama Expiry')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.iqama_expiry ? format(new Date(authProfile.iqama_expiry), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
-                                                </div>
-                                            </div>
-                                        </div>
                                         <div className="grid gap-2 pt-4">
-                                            <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{t('hr_quick_links')}</Label>
+                                            <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{isRTL ? 'روابط التعلم السريعة' : 'Learning Quick Links'}</Label>
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/attendance')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
-                                                    <Clock className="w-3.5 h-3.5 me-2" />{t('attendance')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learning/my')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                    <BookOpen className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'مساري التعليمي' : 'My Learning'}
                                                 </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/performance')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
-                                                    <Star className="w-3.5 h-3.5 me-2" />{t('performance')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/courses')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                    <Compass className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'دليل الدورات' : 'Course Catalog'}
                                                 </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/goals')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
-                                                    <Target className="w-3.5 h-3.5 me-2" />{t('career_goals')}
-                                                </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/hr/payslips')} className="hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200">
-                                                    <Wallet className="w-3.5 h-3.5 me-2" />{t('payroll')}
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/training/certificates')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                    <Award className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'الشهادات والاعتمادات' : 'My Certificates'}
                                                 </Button>
                                             </div>
                                         </div>

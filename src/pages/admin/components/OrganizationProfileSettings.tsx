@@ -459,7 +459,7 @@ export function OrganizationProfileSettings() {
                 placeholder="e.g. Royal Palace Hospitality"
               />
               <p className="text-[11px] text-muted-foreground">
-                {t('admin:sender_name_hint', 'Appears as From: "Sender Name <notifications@phg-connect.com>"')}
+                {t('admin:sender_name_hint', 'Appears as From: "Sender Name <notifications@altus-lms.com>"')}
               </p>
             </div>
 

@@ -1,6 +1,6 @@
 /**
  * Cloudflare Workers AI Image Generation Provider
- * Exclusive Enterprise Image Generation Engine for PRIME Hotels Intranet
+ * Exclusive Enterprise Image Generation Engine for ALTUS Learning Platform
  *
  * Exclusively uses approved $0.00-per-step Cloudflare Workers AI models:
  * 1. Primary: @cf/bytedance/stable-diffusion-xl-lightning ($0.00/step, 4-8 steps, fast 1024px)

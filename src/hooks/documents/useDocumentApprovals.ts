@@ -51,15 +51,15 @@ export function useSubmitForApproval() {
 
       let approverQuery = supabase
         .from('profiles')
-        .select('id, user_roles!inner(role), user_properties(property_id), user_departments(department_id)')
+        .select('id, user_roles!inner(role), organization_memberships(hotel_id, department_id)')
         .eq('is_active', true)
         .in('user_roles.role', roleFilters)
 
       if (doc.visibility === 'property' && doc.property_id) {
-        approverQuery = approverQuery.eq('user_properties.property_id', doc.property_id)
+        approverQuery = approverQuery.eq('organization_memberships.hotel_id', doc.property_id)
       }
       if (doc.visibility === 'department' && doc.department_id) {
-        approverQuery = approverQuery.eq('user_departments.department_id', doc.department_id)
+        approverQuery = approverQuery.eq('organization_memberships.department_id', doc.department_id)
       }
 
       const { data: approverProfiles, error: approverError } = await approverQuery

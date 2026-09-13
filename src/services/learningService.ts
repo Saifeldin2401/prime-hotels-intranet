@@ -770,15 +770,73 @@ export const learningService = {
             orSegments.push(`and(target_type.eq.property,target_id.eq.${propertyId},${notDeletedFilter})`)
         })
 
-        const { data, error } = await supabase
-            .from('training_assignment_rules')
+        // Query rule-based assignments from training_assignment_rules
+        const { data: rulesData, error: rulesError } = orSegments.length > 0
+            ? await supabase
+                .from('training_assignment_rules')
+                .select('*')
+                .or(orSegments.join(','))
+                .order('created_at', { ascending: false })
+            : { data: [], error: null }
+
+        if (rulesError) throw rulesError
+
+        // Query direct employee assignments from learning_assignments (primary enterprise table)
+        const { data: directData, error: directError } = await supabase
+            .from('learning_assignments')
             .select('*')
-            .or(orSegments.join(','))
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
 
-        if (error) throw error
+        if (directError) {
+            console.error('Error fetching direct learning_assignments:', directError)
+        }
 
-        const assignments = (data || []) as AssignmentRow[]
+        // Map direct assignments to uniform AssignmentRow structure
+        const directAssignments: AssignmentRow[] = (directData || []).map((row) => ({
+            id: row.id,
+            target_type: 'user' as const,
+            target_id: row.user_id,
+            content_type: 'module' as const,
+            content_id: row.training_module_id || row.course_id || '',
+            due_date: row.due_date,
+            priority: (row.is_mandatory ? 'compliance' : 'normal') as AssignmentPriority,
+            assigned_by: row.assigned_by,
+            instructions: row.notes,
+            created_at: row.created_at,
+        })).filter(a => Boolean(a.content_id))
+
+        // Query user's existing progress to include any self-enrolled or actively studied modules
+        const { data: userProgressData, error: userProgressError } = await supabase
+            .from('training_progress')
+            .select('*, content_id:training_id, content_type:lp_content_type')
+            .eq('user_id', user.id)
+
+        if (userProgressError) {
+            console.error('Error fetching user progress:', userProgressError)
+        }
+
+        const ruleAssignments = (rulesData || []) as AssignmentRow[]
+        const combinedAssignments = [...directAssignments, ...ruleAssignments]
+        const assignedContentIds = new Set(combinedAssignments.map(a => a.content_id).filter(Boolean))
+
+        // Also include any module the user has started that wasn't formally assigned
+        const selfEnrolledAssignments: AssignmentRow[] = (userProgressData || [])
+            .filter(p => p.training_id && !assignedContentIds.has(p.training_id))
+            .map(p => ({
+                id: p.id,
+                target_type: 'user' as const,
+                target_id: p.user_id,
+                content_type: (p.lp_content_type || 'module') as LearningContentType,
+                content_id: p.training_id,
+                due_date: null,
+                priority: 'normal' as AssignmentPriority,
+                assigned_by: null,
+                instructions: null,
+                created_at: p.created_at || new Date().toISOString(),
+            }))
+
+        const assignments: AssignmentRow[] = [...combinedAssignments, ...selfEnrolledAssignments]
         const contentIds = Array.from(new Set(assignments.map(a => a.content_id).filter(Boolean)))
         const assignmentKeys = new Set(assignments.map((assignment) => buildContentKey(
             assignment.content_type as LearningContentType,
@@ -852,8 +910,7 @@ export const learningService = {
                 } as LearningAssignment
             })
 
-        // Enrich with titles
-        // Enrich with titles and details
+        // Enrich with titles and details from assessments, training_modules, and courses
         const quizIds = filteredAssignments
             .filter(a => a.content_type === 'quiz')
             .map(a => a.content_id)
@@ -862,7 +919,7 @@ export const learningService = {
             .filter(a => a.content_type === 'module')
             .map(a => a.content_id)
 
-        const [quizResult, moduleResult] = await Promise.all([
+        const [quizResult, moduleResult, tmResult] = await Promise.all([
             quizIds.length > 0
                 ? supabase
                     .from('assessments')
@@ -876,11 +933,19 @@ export const learningService = {
                     .select('id, title, description, estimated_duration_minutes, status')
                     .in('id', moduleIds)
                     .eq('is_deleted', false)
+                : Promise.resolve({ data: [], error: null }),
+            moduleIds.length > 0
+                ? supabase
+                    .from('training_modules')
+                    .select('id, title, description, estimated_duration_minutes, difficulty_level, status')
+                    .in('id', moduleIds)
+                    .eq('is_deleted', false)
                 : Promise.resolve({ data: [], error: null })
         ])
 
         if (quizResult?.error) console.error('Error fetching quizzes:', quizResult.error)
-        if (moduleResult?.error) console.error('Error fetching modules:', moduleResult.error)
+        if (moduleResult?.error) console.error('Error fetching modules from courses:', moduleResult.error)
+        if (tmResult?.error) console.error('Error fetching modules from training_modules:', tmResult.error)
 
         const quizMap = new Map((quizResult?.data || []).map((q: {
             id: string
@@ -888,12 +953,29 @@ export const learningService = {
             description?: string | null
             time_limit_minutes?: number | null
         }) => [q.id, q]))
-        const moduleMap = new Map((moduleResult?.data || []).map((m: {
+
+        type ModuleDetails = {
             id: string
             title: string
             description?: string | null
             estimated_duration_minutes?: number | null
-        }) => [m.id, m]))
+        }
+
+        const moduleMap = new Map<string, ModuleDetails>()
+        ;(moduleResult?.data || []).forEach((m: ModuleDetails) => {
+            if (m.id) moduleMap.set(m.id, m)
+        })
+        ;(tmResult?.data || []).forEach((tm: ModuleDetails) => {
+            if (tm.id) {
+                const existing = moduleMap.get(tm.id)
+                moduleMap.set(tm.id, {
+                    id: tm.id,
+                    title: tm.title || existing?.title || 'Hospitality Module',
+                    description: tm.description || existing?.description || null,
+                    estimated_duration_minutes: tm.estimated_duration_minutes || existing?.estimated_duration_minutes || 20,
+                })
+            }
+        })
 
         filteredAssignments.forEach(a => {
             if (a.content_type === 'quiz') {

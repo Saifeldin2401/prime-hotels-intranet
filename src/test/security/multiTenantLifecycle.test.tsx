@@ -89,6 +89,7 @@ const createChainableQuery = (data: any = []) => {
     select: vi.fn(() => q),
     eq: vi.fn(() => q),
     order: vi.fn(() => q),
+    limit: vi.fn(() => q),
     single: vi.fn(() => Promise.resolve({ data: Array.isArray(data) ? data[0] : data, error: null })),
     maybeSingle: vi.fn(() => Promise.resolve({ data: Array.isArray(data) ? data[0] || null : data, error: null })),
     then: (resolve: any) => Promise.resolve(resolve({ data, error: null })),

@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
 import { learningService } from '@/services/learningService'
 import { useQuery } from '@tanstack/react-query'
@@ -43,9 +43,9 @@ export function useTrainingAssignmentsData(manageModuleId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('training_modules')
-        .select('id, title, description, status, is_active')
+        .select('id, title, description, status')
         .eq('status', 'published')
-        .eq('is_active', true)
+        .not('is_deleted', 'is', true)
         .order('title')
       if (error) throw error
       return data as TrainingModule[]

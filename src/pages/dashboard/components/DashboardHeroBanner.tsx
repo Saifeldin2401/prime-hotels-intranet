@@ -9,7 +9,11 @@ import {
   Users,
   Clock,
   Wrench,
-  Sparkles
+  Sparkles,
+  GraduationCap,
+  BookOpen,
+  Award,
+  Library
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -42,28 +46,28 @@ export function DashboardHeroBanner({ onStatusClick }: DashboardHeroBannerProps)
 
   const dockItems = [
     {
-      icon: <CheckSquare size={22} />,
-      label: t('quick_actions.my_tasks', 'My Tasks'),
-      onClick: () => setTaskModalOpen(true),
-      className: 'bg-indigo-600 border-indigo-500 hover:bg-indigo-500',
+      icon: <BookOpen size={22} />,
+      label: t('quick_actions.courses', 'Courses'),
+      onClick: () => navigate('/courses'),
+      className: 'bg-amber-600 border-amber-500 hover:bg-amber-500',
     },
     {
-      icon: <Wrench size={22} />,
-      label: t('quick_actions.maintenance', 'Maintenance'),
-      onClick: () => navigate('/maintenance'),
-      className: 'bg-purple-600 border-purple-500 hover:bg-purple-500',
-    },
-    {
-      icon: <Calendar size={22} />,
-      label: t('quick_actions.schedule', 'My Schedule'),
-      onClick: () => navigate('/hr/scheduling'),
+      icon: <GraduationCap size={22} />,
+      label: t('quick_actions.my_learning', 'My Learning'),
+      onClick: () => navigate('/learning/my'),
       className: 'bg-blue-600 border-blue-500 hover:bg-blue-500',
     },
     {
-      icon: <Users size={22} />,
-      label: t('quick_actions.directory', 'Staff Directory'),
-      onClick: () => navigate('/directory'),
-      className: 'bg-orange-600 border-orange-500 hover:bg-orange-500',
+      icon: <Award size={22} />,
+      label: t('quick_actions.certificates', 'Certificates'),
+      onClick: () => navigate('/training/certificates'),
+      className: 'bg-emerald-600 border-emerald-500 hover:bg-emerald-500',
+    },
+    {
+      icon: <Library size={22} />,
+      label: t('quick_actions.knowledge', 'Knowledge Base'),
+      onClick: () => navigate('/knowledge'),
+      className: 'bg-purple-600 border-purple-500 hover:bg-purple-500',
     }
   ]
 
@@ -96,33 +100,37 @@ export function DashboardHeroBanner({ onStatusClick }: DashboardHeroBannerProps)
             </p>
           </div>
 
-          {/* Working Dropdown Menu for Schedule & Operational Actions */}
+          {/* Working Dropdown Menu for Learning & Development Actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-950/80 hover:bg-blue-900/90 text-white text-xs font-bold transition-all border border-blue-400/30 backdrop-blur-md active:scale-95 shadow-md group"
               >
-                <Calendar className="w-3.5 h-3.5 text-blue-300 me-0.5" />
-                <span>{t('hero.view_schedule', 'My Schedule')}</span>
+                <GraduationCap className="w-3.5 h-3.5 text-blue-300 me-0.5" />
+                <span>{t('hero.learning_hub', 'Learning Hub')}</span>
                 <ChevronDown className="w-3.5 h-3.5 text-blue-300 transition-transform duration-200 group-data-[state=open]:rotate-180" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56 bg-slate-900 border-slate-800 text-white shadow-2xl rounded-2xl p-1.5 z-50">
-              <DropdownMenuItem onClick={() => navigate('/hr/scheduling')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
-                <Calendar className="w-4 h-4 text-blue-400" />
-                <span>{t('hero.shift_schedule', 'Shift Scheduling')}</span>
+              <DropdownMenuItem onClick={() => navigate('/courses')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+                <BookOpen className="w-4 h-4 text-amber-400" />
+                <span>{t('hero.course_catalog', 'Course Catalog')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(user?.id ? `/tasks?assignedToIds=${user.id}` : '/tasks')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
-                <CheckSquare className="w-4 h-4 text-emerald-400" />
-                <span>{t('hero.my_tasks_queue', 'My Task Queue')}</span>
+              <DropdownMenuItem onClick={() => navigate('/learning/my')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+                <GraduationCap className="w-4 h-4 text-blue-400" />
+                <span>{t('hero.my_learning', 'My Learning')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/hr/leave')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
-                <Clock className="w-4 h-4 text-amber-400" />
-                <span>{t('hero.my_leave_requests', 'Leave & Attendance')}</span>
+              <DropdownMenuItem onClick={() => navigate('/training/paths')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span>{t('hero.learning_paths', 'Learning Paths')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/maintenance')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
-                <Wrench className="w-4 h-4 text-purple-400" />
-                <span>{t('hero.maintenance_requests', 'Maintenance Tickets')}</span>
+              <DropdownMenuItem onClick={() => navigate('/training/certificates')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+                <Award className="w-4 h-4 text-emerald-400" />
+                <span>{t('hero.my_certificates', 'Certificates & Badges')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate('/knowledge')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+                <Library className="w-4 h-4 text-cyan-400" />
+                <span>{t('hero.knowledge_base', 'Knowledge SOPs')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

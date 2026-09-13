@@ -5,7 +5,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { useAuth } from '@/hooks/useAuth'
-import { useTenant } from '@/contexts/TenantContext'
 import { buildLoginUrl, setPostLoginRedirect } from '@/lib/authRedirect'
 import type { PlatformPermission, PlatformRole } from '@/lib/types/platform'
 
@@ -35,15 +34,8 @@ export function PlatformRoute({
 }: PlatformRouteProps) {
   const { user, loading } = useAuth()
   const account = useAccountContext()
-  const { currentOrganization, returnToPlatformScope } = useTenant()
   const { t } = useTranslation('common')
   const location = useLocation()
-
-  useEffect(() => {
-    if (!requireActiveSession && currentOrganization && account.isPlatformOperator) {
-      void returnToPlatformScope()
-    }
-  }, [requireActiveSession, currentOrganization, account.isPlatformOperator, returnToPlatformScope])
 
   useEffect(() => {
     if (!user && !loading) {

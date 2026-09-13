@@ -12,13 +12,18 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const DEFAULT_ALLOWED_ORIGINS = [
+  "https://phg-connect.com",
+  "https://www.phg-connect.com",
+  "https://prime-hotels-intranet.vercel.app",
+  "https://altus-hospitality-erp.vercel.app",
+  "https://altus-advisory.com",
   "https://www.altus-advisory.com",
-  "https://www.altus-advisory.com",
+  "https://connect.altusadvisory.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:3000",
 ] as const;
-const CANONICAL_APP_URL = "https://www.altus-advisory.com";
+const CANONICAL_APP_URL = "https://phg-connect.com";
 
 function getAllowedOrigins(): string[] {
   const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
@@ -32,9 +37,29 @@ function getAllowedOrigins(): string[] {
 
 function resolveCorsOrigin(req: Request): string {
   const origin = (req.headers.get("origin") || "").trim();
-  const allowed = getAllowedOrigins();
-  if (origin && allowed.includes(origin)) return origin;
-  return allowed[0] || "https://www.altus-advisory.com";
+  const allowedOrigins = getAllowedOrigins();
+
+  if (!origin) return allowedOrigins[0] || "https://phg-connect.com";
+
+  const cleanOrigin = origin.trim().replace(/\/$/, "");
+
+  const isLocalDevOrigin =
+    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{2,5})?$/.test(
+      cleanOrigin,
+    );
+  if (isLocalDevOrigin) return origin;
+
+  const isVercelOrNetlify =
+    /^https:\/\/([a-z0-9-]+)\.vercel\.app$/i.test(cleanOrigin) ||
+    /^https:\/\/([a-z0-9-]+)\.netlify\.app$/i.test(cleanOrigin);
+  if (isVercelOrNetlify) return origin;
+
+  const isAllowed = allowedOrigins.some((ao) => {
+    const cleanAo = ao.trim().replace(/\/$/, "");
+    return cleanAo === cleanOrigin;
+  });
+
+  return isAllowed ? origin : allowedOrigins[0] || "https://phg-connect.com";
 }
 
 function buildCorsHeaders(req: Request): Record<string, string> {

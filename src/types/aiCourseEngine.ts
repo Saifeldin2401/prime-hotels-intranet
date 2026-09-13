@@ -1,6 +1,6 @@
 /**
  * AI Course & Assessment Generation Engine - Types
- * Production LCMS Architecture for PRIME Hotels Intranet
+ * Production LCMS Architecture for ALTUS Learning Platform
  */
 
 import type { QuestionDifficulty, QuestionType } from './questions'

@@ -711,7 +711,7 @@ export const GuidedWizardModal: React.FC = () => {
           {currentStep.id === 'notification_preferences' && (
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('notifications_step.intro', 'PRIME Connect differentiates between Actionable alerts (deadlines, approvals) and Informational broadcasts:')}
+                {t('notifications_step.intro', 'ALTUS differentiates between Actionable alerts (deadlines, approvals) and Informational broadcasts:')}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -789,7 +789,7 @@ export const GuidedWizardModal: React.FC = () => {
               <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-2 text-center sm:text-start">
                 <h4 className="text-sm font-bold text-foreground flex items-center justify-center sm:justify-start gap-2">
                   <ShieldCheck className="h-5 w-5 text-emerald-600" />
-                  {t('security_step.ready_title', 'You are ready to use PRIME Connect!')}
+                  {t('security_step.ready_title', 'You are ready to use ALTUS!')}
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {t('security_step.ready_desc', 'Always protect your credentials. All platform activity is securely logged for compliance and operational integrity.')}

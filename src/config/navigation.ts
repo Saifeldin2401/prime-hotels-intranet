@@ -34,6 +34,7 @@ import {
     ClipboardCheck,
     ClipboardList,
     Clock,
+    Compass,
     Crown,
     FileQuestion,
     FileText,
@@ -297,6 +298,16 @@ export const ROUTES: RouteConfig[] = [
     // 3. LEARNING & ACADEMY (learning_academy)
     // -------------------------------------------------------------------------
     {
+        path: '/courses',
+        title: 'course_catalog',
+        icon: Compass,
+        description: 'Browse all published ALTUS Academy courses and luxury hospitality standards',
+        allowedRoles: 'all',
+        keywords: ['courses', 'catalog', 'academy', 'curriculum', 'explore'],
+        group: 'learning_academy',
+        order: 1,
+    },
+    {
         path: '/training/hub',
         title: 'lms_admin',
         icon: GraduationCap,
@@ -304,7 +315,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'author', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         keywords: ['academy', 'lms', 'curriculum', 'training creator', 'courses'],
         group: 'learning_academy',
-        order: 1,
+        order: 2,
     },
     {
         path: '/training/paths',

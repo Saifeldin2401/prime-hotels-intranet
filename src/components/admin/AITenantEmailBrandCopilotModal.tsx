@@ -475,7 +475,7 @@ Respond ONLY with a valid JSON object matching this exact schema:
                 <TabsContent value="email_preview" className="pt-2">
                   <div className="rounded-xl border overflow-hidden bg-muted/30">
                     <div className="p-2.5 bg-muted/70 border-b text-[11px] font-mono text-muted-foreground flex items-center justify-between">
-                      <span>From: {generatedData.emailSenderName} &lt;notifications@phg-connect.com&gt;</span>
+                      <span>From: {generatedData.emailSenderName} &lt;notifications@altus-lms.com&gt;</span>
                       <span>Reply-To: {generatedData.emailReplyTo}</span>
                     </div>
 

@@ -184,11 +184,6 @@ export function CalendarWidget() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  // Roles that can access the full scheduling/shift management tool
-  const schedulingRoles = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
-  const hasSchedulingPrivileges = schedulingRoles.includes(primaryRole || '')
-  const schedulePath = hasSchedulingPrivileges ? '/hr/scheduling' : '/hr/attendance'
-
   const { data: fetchedHolidays = [] } = useQuery<CalendarHolidayEvent[]>({
     queryKey: ['ksa-holidays', currentYear, i18n.language],
     queryFn: async () => {
@@ -553,10 +548,11 @@ export function CalendarWidget() {
               </h4>
               <div className="space-y-4">
                 {upcomingDisplayEvents.slice(0, 3).map((event) => (
-                  <Link
+                  <button
                     key={event.id}
-                    to={schedulePath}
-                    className="flex items-center gap-3 text-sm hover:-translate-y-0.5 transition-transform group"
+                    type="button"
+                    onClick={() => setSelectedEvent(event)}
+                    className="flex items-center gap-3 text-sm hover:-translate-y-0.5 transition-transform group w-full text-start"
                   >
                     <div className={cn(
                       "w-2.5 h-2.5 rounded-full shadow-sm shrink-0",
@@ -566,7 +562,7 @@ export function CalendarWidget() {
                     <span className="text-[11px] font-bold text-slate-400 bg-white border border-slate-100 px-2 py-0.5 rounded-md">
                       {format(parseISO(event.start_time), 'MMM d')}
                     </span>
-                  </Link>
+                  </button>
                 ))}
               </div>
             </div>

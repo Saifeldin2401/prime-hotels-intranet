@@ -50,8 +50,7 @@ interface EmployeeRow {
     job_title: string | null
     reporting_to: string | null
     is_active: boolean
-    user_departments?: { department_id: string }[]
-    user_properties?: { property_id: string }[]
+    organization_memberships?: { department_id: string | null; hotel_id: string | null }[]
 }
 
 export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTerm }: OrgByDepartmentProps) {
@@ -89,8 +88,7 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
           job_title,
           reporting_to,
           is_active,
-          user_departments(department_id),
-          user_properties(property_id)
+          organization_memberships(hotel_id, department_id)
         `)
                 .eq('is_active', true)
                 .order('full_name')
@@ -111,7 +109,7 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                         const employeeRows = (employees || []) as EmployeeRow[]
 
                         const deptEmployees: Employee[] = employeeRows
-                            .filter((emp) => emp.user_departments?.some((ud) => ud.department_id === dept.id))
+                            .filter((emp) => emp.organization_memberships?.some((om) => om.department_id === dept.id))
                             .map((emp) => ({
                                 id: emp.id,
                                 full_name: emp.full_name,

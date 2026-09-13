@@ -193,10 +193,20 @@ export function LensProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useLens() {
+const defaultLensFallback: LensContextValue = {
+  activeLens: 'learner',
+  setLens: () => {},
+  availableLenses: [],
+  switchLens: async () => {},
+}
+
+export function useLens(): LensContextValue {
   const context = useContext(LensContext)
   if (!context) {
-    throw new Error('useLens must be used within a LensProvider')
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn('[LensContext] useLens was called outside of a LensProvider; returning safe fallback.')
+    }
+    return defaultLensFallback
   }
   return context
 }

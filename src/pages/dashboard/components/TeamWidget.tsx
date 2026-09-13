@@ -42,7 +42,9 @@ export function TeamWidget() {
           full_name,
           avatar_url,
           job_title,
-          department:user_departments(departments(id, name))
+          organization_memberships(
+            department:departments(id, name)
+          )
         `)
         .eq('reporting_to', user.id)
         .eq('is_active', true)
@@ -51,9 +53,9 @@ export function TeamWidget() {
 
       if (error) throw error
 
-      return (data || []).map((member) => {
-        const deptEntry = Array.isArray(member.department) ? member.department[0] : member.department
-        const dept = Array.isArray(deptEntry?.departments) ? deptEntry.departments[0] : deptEntry?.departments
+      return (data || []).map((member: any) => {
+        const mem = Array.isArray(member.organization_memberships) ? member.organization_memberships[0] : member.organization_memberships
+        const dept = Array.isArray(mem?.department) ? mem.department[0] : mem?.department
         return {
           id: member.id,
           full_name: member.full_name,
@@ -124,8 +126,8 @@ export function TeamWidget() {
               Your direct reports - {teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'}
             </CardDescription>
           </div>
-          <Button variant="outline" size="sm" onClick={() => navigate('/hr/team')}>
-            Open Team Hub
+          <Button variant="outline" size="sm" onClick={() => navigate('/training/instructor')}>
+            Team Learning
           </Button>
         </div>
       </CardHeader>

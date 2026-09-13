@@ -16,6 +16,7 @@ vi.mock('@/lib/supabase', () => ({
       eq: vi.fn().mockReturnThis(),
       limit: vi.fn().mockReturnThis(),
       single: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: 'org-123' }, error: null }),
     })),
   },
 }))
@@ -191,6 +192,9 @@ describe('AnalyticsService', () => {
     it('should flush when batch size is reached', async () => {
       const mockInsert = vi.fn().mockResolvedValue({ error: null })
       vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: 'org-123' }, error: null }),
         insert: mockInsert,
       } as any)
 
@@ -218,6 +222,9 @@ describe('AnalyticsService', () => {
         error: { code: 'PGRST301', message: 'Unauthorized' },
       })
       vi.mocked(supabase.from).mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: 'org-123' }, error: null }),
         insert: mockInsert,
       } as any)
 
@@ -312,6 +319,7 @@ describe('AnalyticsService', () => {
         eq: vi.fn().mockReturnThis(),
         select: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { organization_id: 'org-123' }, error: null }),
         insert: vi.fn().mockResolvedValue({ data: [{ id: 'new-session' }], error: null }),
         limit: vi.fn().mockReturnThis(),
       } as any)

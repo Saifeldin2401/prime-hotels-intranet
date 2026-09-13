@@ -1,7 +1,7 @@
 /**
  * AIMediaGeneratorModal
  * ----------------------------------------------------------------------------
- * 5-Star Luxury AI Visual Studio for PRIME Connect Media Library.
+ * 5-Star Luxury AI Visual Studio for ALTUS Media Library.
  * Generates photorealistic hospitality photography, Forbes SOP vector schematics,
  * and educational illustrations, saving them directly to the Media Library.
  */

@@ -57,27 +57,27 @@ export function useProfiles(filters?: {
                     updated_at,
                     reporting_to,
                     user_roles(role),
-                    user_properties(property:properties(id, name)),
-                    user_departments(department:departments(id, name)),
+                    organization_memberships(
+                        hotel_id,
+                        department_id,
+                        hotel:hotels(id, name),
+                        department:departments(id, name)
+                    ),
                     reporting_to_profile:profiles!reporting_to(id, full_name, job_title, email)
                 `)
                 .eq('is_active', true)
                 .order('full_name')
 
             if (normalizedPropertyId) {
-                // Filter by users who have a user_properties entry for this property
-                // This requires a join filter or a subquery. Supabase postgrest supports filtering on joined tables.
-                // However, user_properties is M:N. Simplest is !inner join if we want users belonging to property.
-                // Let's use the relation filtering syntax:
-                query = query.not('user_properties', 'is', null).eq('user_properties.property_id', normalizedPropertyId)
+                query = query.not('organization_memberships', 'is', null).eq('organization_memberships.hotel_id', normalizedPropertyId)
             }
 
             if (filters?.department_id) {
-                query = query.not('user_departments', 'is', null).eq('user_departments.department_id', filters.department_id)
+                query = query.not('organization_memberships', 'is', null).eq('organization_memberships.department_id', filters.department_id)
             }
 
             if (filters?.department_ids && filters.department_ids.length > 0) {
-                query = query.not('user_departments', 'is', null).in('user_departments.department_id', filters.department_ids)
+                query = query.not('organization_memberships', 'is', null).in('organization_memberships.department_id', filters.department_ids)
             }
 
             // In a real app, strict RLS would handle this, but for now we might filter here
@@ -92,11 +92,11 @@ export function useProfiles(filters?: {
 
             // Transform to simpler structure if needed, or return as is.
             // The types might need adjusting if we want nice nested objects.
-            return data.map(profile => ({
+            return (data || []).map((profile: any) => ({
                 ...profile,
-                roles: profile.user_roles?.map((ur) => ur.role) || [],
-                properties: profile.user_properties?.map((up) => up.property) || [],
-                departments: profile.user_departments?.map((ud) => ud.department) || []
+                roles: profile.user_roles?.map((ur: any) => ur.role) || [],
+                properties: (profile.organization_memberships || []).map((om: any) => om.hotel).filter(Boolean),
+                departments: (profile.organization_memberships || []).map((om: any) => om.department).filter(Boolean)
             }))
         }
     })

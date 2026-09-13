@@ -1,6 +1,6 @@
 /**
  * AI Course & Assessment Generation Engine
- * Multi-Stage LCMS Orchestration for PRIME Hotels Intranet
+ * Multi-Stage LCMS Orchestration for ALTUS Learning Platform
  */
 
 import {

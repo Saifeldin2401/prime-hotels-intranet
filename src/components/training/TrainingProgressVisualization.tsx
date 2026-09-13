@@ -173,13 +173,13 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
         .select(`
           *,
           user_roles(role),
-          user_properties(property_id)
+          organization_memberships(hotel_id)
         `)
         .eq('id', user.id)
         .single()
 
       const userRoles = profile?.user_roles?.map((r: any) => r.role) || []
-      const propertyIds = profile?.user_properties?.map((p: any) => p.property_id) || []
+      const propertyIds = (profile as any)?.organization_memberships?.map((p: any) => p.hotel_id).filter(Boolean) || []
       const isAdminByRole = userRoles.some(r => ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'property_manager', 'property_hr', 'compliance_officer'].includes(r))
 
       const startDate = new Date()
