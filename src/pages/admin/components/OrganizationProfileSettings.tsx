@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
+import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
 import { useToast } from '@/components/ui/use-toast'
 import { Building, Palette, Mail, Check, RefreshCw, Globe, Image as ImageIcon, Upload, Loader2, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -139,6 +140,11 @@ export function OrganizationProfileSettings() {
       setIsSaving(false)
     }
   }
+
+  // Same guard the live header applies (Header.tsx / lib/colorContrast.ts) — the header
+  // only ever uses primaryColor as its background with fixed white text, so this preview
+  // should show admins the same darkened result they'll actually get, not the raw pick.
+  const readablePrimaryColor = ensureReadableOnWhiteText(primaryColor)
 
   return (
     <div className="space-y-6">
@@ -393,25 +399,33 @@ export function OrganizationProfileSettings() {
             <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
               <p className="text-xs font-semibold text-muted-foreground">{t('admin:preview', 'Live Theme Palette')}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <div 
+                <div
                   className="px-4 py-2 rounded-lg text-white text-xs font-bold shadow-sm"
-                  style={{ backgroundColor: primaryColor }}
+                  style={{ backgroundColor: readablePrimaryColor }}
                 >
                   {name || 'Primary Header'}
                 </div>
-                <div 
+                <div
                   className="px-4 py-2 rounded-lg text-white text-xs font-medium shadow-sm"
                   style={{ backgroundColor: secondaryColor }}
                 >
                   Action Button
                 </div>
-                <div 
+                <div
                   className="px-4 py-2 rounded-lg text-white text-xs font-bold shadow-sm"
                   style={{ backgroundColor: accentColor }}
                 >
                   Accent Badge
                 </div>
               </div>
+              {readablePrimaryColor !== primaryColor && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                  {t('admin:primary_color_darkened_notice', {
+                    adjusted: readablePrimaryColor,
+                    defaultValue: `Your header background will show as ${readablePrimaryColor} — ${primaryColor} is too light for the header's white text to stay readable.`,
+                  })}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

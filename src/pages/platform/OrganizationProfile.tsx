@@ -22,6 +22,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { platformService } from '@/services/platformService'
 import { supabase } from '@/lib/supabase'
+import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
 import { OrgStructureTree } from '@/components/org/OrgStructureTree'
 import {
   ArrowLeft,
@@ -314,6 +315,8 @@ export default function OrganizationProfile() {
   const needsReason = status === 'suspended' || status === 'archived'
 
   const currentStatus = useMemo(() => org?.lifecycle_status ?? 'active', [org])
+  // Same guard the real header applies — see Header.tsx / lib/colorContrast.ts.
+  const readablePrimaryColor = useMemo(() => ensureReadableOnWhiteText(primaryColor), [primaryColor])
 
   const openEntitlementsModal = () => {
     if (!org) return
@@ -1198,13 +1201,20 @@ export default function OrganizationProfile() {
                   Header.tsx reads currentOrganization.brand_colors directly to override
                   the default ALTUS navy header bar for that tenant's own session (see
                   Header.tsx). Full design-system-wide theming (sidebar, buttons, every
-                  screen) is still out of scope — see docs/remaining-architecture-work.md §67. */}
+                  screen) is still out of scope — see docs/remaining-architecture-work.md §67.
+                  Uses the same ensureReadableOnWhiteText() guard as the real header, so a
+                  too-light primary color previews exactly what tenants will actually see. */}
               <div className="rounded-lg border p-3 space-y-2" style={{ backgroundColor: `${primaryColor}0d` }}>
                 <div className="text-[10px] font-semibold text-muted-foreground">Preview</div>
-                <div className="flex items-center justify-between rounded-md px-3 py-2" style={{ backgroundColor: primaryColor }}>
+                <div className="flex items-center justify-between rounded-md px-3 py-2" style={{ backgroundColor: readablePrimaryColor }}>
                   <span className="text-xs font-bold text-white">{editName || 'Tenant'} Portal</span>
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
                 </div>
+                {readablePrimaryColor !== primaryColor && (
+                  <div className="text-[10px] text-amber-600 dark:text-amber-400">
+                    Header background darkened to {readablePrimaryColor} for legible white text — {primaryColor} is too light on its own.
+                  </div>
+                )}
                 <button
                   type="button"
                   className="text-xs font-semibold rounded-md px-3 py-1.5 text-white"

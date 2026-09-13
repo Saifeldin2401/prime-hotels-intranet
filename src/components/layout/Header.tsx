@@ -52,6 +52,7 @@ import {
     User
 } from 'lucide-react'
 import { useWizard } from '@/hooks/useWizard'
+import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -94,12 +95,15 @@ export function Header({
   // the default ALTUS navy header for that tenant's own session. Only applied when a
   // tenant has actually saved custom colors — orgs that never touched that setting (and
   // the platform admin's own scope, where currentOrganization is unset) keep the default
-  // look untouched. No contrast validation is done on the saved color, same as the color
-  // picker itself; an org that picks a very light primary color will get low-contrast
-  // white header text.
+  // look untouched. The header text is fixed white, so a too-light chosen primary color
+  // is darkened just enough to keep it WCAG-AA legible (contrast >= 4.5:1) — the tenant's
+  // hue still comes through, it just can't render illegible white-on-pale-yellow headers.
   const tenantBrand = !isPlatformActive ? currentOrganization?.brand_colors : undefined
   const tenantHeaderStyle = tenantBrand?.primary
-    ? { backgroundColor: tenantBrand.primary, borderColor: tenantBrand.accent || tenantBrand.primary }
+    ? {
+        backgroundColor: ensureReadableOnWhiteText(tenantBrand.primary),
+        borderColor: tenantBrand.accent || tenantBrand.primary,
+      }
     : undefined
 
   const handleOpenSearch = () => {
