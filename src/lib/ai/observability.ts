@@ -25,7 +25,7 @@ export type AIErrorType =
   | 'quota_exhausted'
   | 'unknown'
 
-export interface AIRequestLog {
+interface AIRequestLog {
   generationId?: string
   pipelineRunId?: string
   courseId?: string
@@ -44,12 +44,6 @@ export interface AIRequestLog {
   errorMessage?: string
   errorType?: AIErrorType
   metadata?: Record<string, unknown>
-}
-
-/** Cheap heuristic token estimate (~4 chars/token for mixed EN/AR). */
-export function estimateTokens(text: string | undefined | null): number {
-  if (!text) return 0
-  return Math.max(1, Math.ceil(text.length / 4))
 }
 
 /** Classify a raw error message into a stable bucket for dashboards. */
@@ -183,8 +177,4 @@ export function logAIRequest(log: AIRequestLog): void {
 
 export function getPipelineTelemetry(pipelineRunId: string): PipelineTelemetry | undefined {
   return telemetryByRun.get(pipelineRunId)
-}
-
-export function resetPipelineTelemetry(pipelineRunId: string): void {
-  telemetryByRun.delete(pipelineRunId)
 }

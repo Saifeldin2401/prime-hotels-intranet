@@ -10,7 +10,7 @@ import { BaseAIAgent, type AgentExecutionOptions } from '../baseAgent'
 import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedChecklistItem, KnowledgeArticleGenerationConfig } from './types'
 
-export interface SopWriterOutput {
+interface SopWriterOutput {
   sopCode: string
   title: string
   titleAr: string
@@ -25,7 +25,7 @@ export interface SopWriterOutput {
   checklistItems: GeneratedChecklistItem[]
 }
 
-export class SopWriterAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, SopWriterOutput> {
+class SopWriterAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, SopWriterOutput> {
   public readonly role: AgentRole = 'content_writer'
   public readonly name = 'Standard Operating Procedure (SOP) Writer Agent'
   public readonly nameAr = 'وكيل صياغة الإجراءات التشغيلية القياسية (SOP)'

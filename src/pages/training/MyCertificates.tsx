@@ -1,12 +1,3 @@
-/**
- * MyCertificates Page - ALTUS Accreditations, Credentials & Skill Badges Hub
- *
- * Design: ALTUS Luxury Hospitality Excellence & Executive Accreditation aesthetic.
- * Luxury gold/copper border accents, cryptographic credential verification,
- * interactive skill badges, and Forbes 5-Star milestone tracking.
- */
-
-import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +9,6 @@ import {
     useAchievementDefinitions,
     useAchievementStats,
     useUserAchievements,
-    type Achievement,
     type AchievementDefinition,
 } from '@/hooks/useAchievements'
 import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificates'
@@ -33,88 +23,26 @@ import {
     Calendar as CalendarIcon,
     CheckCircle,
     CheckCircle2,
-    Clock,
     Compass,
     Copy,
     Download,
-    ExternalLink,
     Eye,
     Flame,
-    GraduationCap,
-    HeartHandshake,
     Loader2,
     Lock,
-    QrCode,
     Search,
     Shield,
     ShieldCheck,
     Sparkles,
     Star,
     Trophy,
-    XCircle,
-    Zap,
+    XCircle
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { toSimpleT } from '@/lib/simpleT'
 
-// Default competency benchmarks for luxury hospitality if database definitions are pending
-const BENCHMARK_BADGES: Omit<AchievementDefinition, 'id'>[] = [
-    {
-        achievement_type: 'skill',
-        title: 'Forbes 5-Star Protocol',
-        description: 'Demonstrated flawless adherence to international five-star guest interaction standards and discretion.',
-        icon: 'award',
-        color: 'gold',
-        points: 120,
-        criteria: { requirement: 'Complete Forbes Hospitality Masterclass with >= 90% score' },
-    },
-    {
-        achievement_type: 'certification',
-        title: 'Front Office SOP Mastery',
-        description: 'Flawless precision across guest arrivals, VIP check-in protocols, and express departure routines.',
-        icon: 'shield-check',
-        color: 'emerald',
-        points: 85,
-        criteria: { requirement: '100% SOP checklist completion on Front Office operations' },
-    },
-    {
-        achievement_type: 'special',
-        title: 'Saudi Hospitality Heritage (حفاوة)',
-        description: 'Exemplifies genuine Saudi warmth, authentic coffee serving etiquette, and cultural elegance.',
-        icon: 'trophy',
-        color: 'amber',
-        points: 150,
-        criteria: { requirement: 'Complete Saudi Cultural Heritage & Guest Relations Module' },
-    },
-    {
-        achievement_type: 'compliance',
-        title: 'HACCP & Hygiene Sentinel',
-        description: 'Verified adherence to high-standard food safety, kitchen sanitation, and public health guidelines.',
-        icon: 'check-circle',
-        color: 'blue',
-        points: 75,
-        criteria: { requirement: 'Pass annual HACCP and Hygiene compliance evaluation' },
-    },
-    {
-        achievement_type: 'milestone',
-        title: 'Rapid Service Recovery',
-        description: 'Empathetic issue de-escalation and positive guest turn-around executed within 15 minutes.',
-        icon: 'zap',
-        color: 'purple',
-        points: 100,
-        criteria: { requirement: 'Successfully resolve service recovery case scenario' },
-    },
-    {
-        achievement_type: 'streak',
-        title: '7-Day Continuous Scholar',
-        description: 'Maintained an unbroken daily learning streak for 7 consecutive operational days.',
-        icon: 'flame',
-        color: 'orange',
-        points: 50,
-        criteria: { requirement: 'Log in and complete at least 1 lesson per day for 7 days' },
-    },
-]
 
 export default function MyCertificates() {
     const { t, i18n } = useTranslation(['training', 'common'])
@@ -137,6 +65,11 @@ export default function MyCertificates() {
     const downloadCertificate = useDownloadCertificate()
     const { data: userAchievements = [], isLoading: achievementsLoading } = useUserAchievements(100)
     const { data: definitions = [] } = useAchievementDefinitions()
+    // Real, not-yet-earned achievement definitions (earned rows are keyed by achievement_type).
+    const lockedDefinitions = useMemo(() => {
+        const earned = new Set(userAchievements.map((a) => a.achievement_type))
+        return definitions.filter((d) => !earned.has(d.achievement_type))
+    }, [definitions, userAchievements])
     const { data: stats } = useAchievementStats()
 
     const isLoading = certsLoading || achievementsLoading
@@ -489,7 +422,7 @@ export default function MyCertificates() {
                                                 isDownloading={downloadCertificate.isPending}
                                                 dateLocale={dateLocale}
                                                 isRTL={isRTL}
-                                                t={t}
+                                                t={toSimpleT(t)}
                                             />
                                         ))}
                                     </div>
@@ -519,7 +452,7 @@ export default function MyCertificates() {
                                                 isDownloading={downloadCertificate.isPending}
                                                 dateLocale={dateLocale}
                                                 isRTL={isRTL}
-                                                t={t}
+                                                t={toSimpleT(t)}
                                             />
                                         ))}
                                     </div>
@@ -605,6 +538,7 @@ export default function MyCertificates() {
                     </div>
 
                     {/* Available & Upcoming Badges Section */}
+                    {lockedDefinitions.length > 0 && (
                     <div className="space-y-4 pt-4 border-t border-border/40">
                         <div>
                             <h2 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
@@ -619,7 +553,7 @@ export default function MyCertificates() {
                         </div>
 
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {BENCHMARK_BADGES.map((badge, idx) => (
+                            {lockedDefinitions.map((badge, idx) => (
                                 <Card
                                     key={idx}
                                     className="relative overflow-hidden rounded-2xl border border-border/60 bg-muted/10 p-4 opacity-85 hover:opacity-100 hover:border-amber-500/30 transition-all"
@@ -654,6 +588,7 @@ export default function MyCertificates() {
                             ))}
                         </div>
                     </div>
+                    )}
                 </TabsContent>
 
                 {/* TAB 3: FORBES 5-STAR MILESTONES & VERIFY */}

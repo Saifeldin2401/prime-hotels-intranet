@@ -16,7 +16,7 @@ export type TranslationTargetLanguage =
     | 'id'
     | 'tl'
 
-export type TranslationSourceLanguage = TranslationTargetLanguage | 'auto'
+type TranslationSourceLanguage = TranslationTargetLanguage | 'auto'
 
 export const SUPPORTED_TRANSLATION_LANGUAGES: Array<{
     code: TranslationTargetLanguage
@@ -37,7 +37,7 @@ export const SUPPORTED_TRANSLATION_LANGUAGES: Array<{
     { code: 'tr', label: 'Türkçe (Turkish)', direction: 'ltr' }
 ]
 
-export interface TranslationRequest {
+interface TranslationRequest {
     text?: string
     texts?: string[]
     file_url?: string
@@ -48,7 +48,7 @@ export interface TranslationRequest {
     strict_target_only?: boolean
 }
 
-export interface TranslationMeta {
+interface TranslationMeta {
     model_used?: string
     used_fallback?: boolean
     partial_failures?: number
@@ -57,7 +57,7 @@ export interface TranslationMeta {
     translated_segments?: number
 }
 
-export interface TranslationResponse {
+interface TranslationResponse {
     translated_text?: string
     translated_texts?: string[]
     extracted_text?: string

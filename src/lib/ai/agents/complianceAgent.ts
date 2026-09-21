@@ -14,12 +14,12 @@ import type { CourseBlueprint } from '@/types/aiCourseEngine'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface ComplianceAgentInput {
+interface ComplianceAgentInput {
   blueprint: CourseBlueprint
   propertyId?: string
 }
 
-export class ComplianceAgent extends BaseAIAgent<ComplianceAgentInput, ComplianceAuditReport> {
+class ComplianceAgent extends BaseAIAgent<ComplianceAgentInput, ComplianceAuditReport> {
   public readonly role: AgentRole = 'compliance'
   public readonly name = 'KSA Regulatory Compliance & Brand Shield Agent'
   public readonly nameAr = 'مدقق الامتثال للأنظمة واللوائح السعودية'

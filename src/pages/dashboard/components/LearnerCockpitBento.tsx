@@ -1,15 +1,12 @@
-import React from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
-import { useMyAssignments, useTrainingModules } from '@/hooks/useTraining'
 import { useMyCertificates } from '@/hooks/useCertificates'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Skeleton } from '@/components/ui/skeleton'
 import {
   ActiveLearningsWidget,
   RecentKnowledgeWidget,
@@ -20,12 +17,10 @@ import {
 import {
   GraduationCap,
   Award,
-  BookOpen,
   ArrowRight,
   Flame,
   CheckCircle2,
   Clock,
-  Sparkles,
   ExternalLink,
 } from 'lucide-react'
 
@@ -34,8 +29,34 @@ export function LearnerCockpitBento() {
   const isRtl = i18n.dir() === 'rtl'
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const { streakCount, completedCount, inProgressCount } = useLearningProgress()
-  const { certificates = [], isLoading: isLoadingCerts } = useMyCertificates()
+  const { data: progressRows = [] } = useLearningProgress()
+  const { data: certificates = [], isLoading: isLoadingCerts } = useMyCertificates()
+
+  // useLearningProgress is RLS-scoped, so managers also receive their team's rows.
+  const myProgress = useMemo(
+    () => progressRows.filter((row) => row.user_id === user?.id),
+    [progressRows, user?.id],
+  )
+  const completedCount = myProgress.filter((row) => row.status === 'completed').length
+  const inProgressCount = myProgress.filter((row) => row.status === 'in_progress').length
+  const streakCount = useMemo(() => {
+    // Consecutive calendar days with learning activity, ending today or yesterday.
+    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+    const activeDays = new Set(
+      myProgress
+        .flatMap((row) => [row.last_accessed_at, row.completed_at])
+        .filter((v): v is string => Boolean(v))
+        .map((v) => dayKey(new Date(v))),
+    )
+    const cursor = new Date()
+    if (!activeDays.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
+    let streak = 0
+    while (activeDays.has(dayKey(cursor))) {
+      streak++
+      cursor.setDate(cursor.getDate() - 1)
+    }
+    return streak
+  }, [myProgress])
 
   return (
     <div className="space-y-6">
@@ -50,10 +71,12 @@ export function LearnerCockpitBento() {
                 <GraduationCap className="h-3.5 w-3.5" />
                 Learner Cockpit
               </span>
-              <Badge variant="outline" className="text-[11px] text-amber-300 border-amber-400/40 bg-amber-500/10 flex items-center gap-1">
-                <Flame className="h-3 w-3 text-amber-400" />
-                {streakCount || 1} Day Streak
-              </Badge>
+              {streakCount > 0 && (
+                <Badge variant="outline" className="text-[11px] text-amber-300 border-amber-400/40 bg-amber-500/10 flex items-center gap-1">
+                  <Flame className="h-3 w-3 text-amber-400" />
+                  {streakCount} Day Streak
+                </Badge>
+              )}
             </div>
             <h2 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight text-white">
               Personal Learning & Credentials Hub
@@ -95,7 +118,7 @@ export function LearnerCockpitBento() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-serif text-foreground">
-              {inProgressCount || 0}
+              {inProgressCount}
             </div>
             <p className="text-[11px] text-muted-foreground mt-1">Modules currently in flight</p>
           </CardContent>
@@ -110,9 +133,9 @@ export function LearnerCockpitBento() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-serif text-emerald-500">
-              {completedCount || 0}
+              {completedCount}
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1">Verified certificates awarded</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Modules finished</p>
           </CardContent>
         </Card>
 

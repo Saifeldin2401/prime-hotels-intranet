@@ -1,9 +1,9 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Award, Compass, ShieldCheck, Utensils, Star } from 'lucide-react'
+import { Award } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface CompetencyRingData {
+interface CompetencyRingData {
     id: string
     titleEn: string
     titleAr: string

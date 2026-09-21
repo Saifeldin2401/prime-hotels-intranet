@@ -48,7 +48,7 @@ import * as React from "react";
 import { useTranslation } from "react-i18next";
 import { useDropzone } from "react-dropzone";
 
-export interface DocumentVersion {
+interface DocumentVersion {
   id: string;
   versionNumber: number;
   fileName: string;

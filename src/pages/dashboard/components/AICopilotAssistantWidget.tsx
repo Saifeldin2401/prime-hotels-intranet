@@ -4,15 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { 
   Sparkles, 
-  Search, 
   Send, 
-  Brain, 
   BookOpen, 
   HelpCircle, 
   Bot, 
   ArrowRight,
   Zap,
-  CheckCircle2,
   FileText
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'

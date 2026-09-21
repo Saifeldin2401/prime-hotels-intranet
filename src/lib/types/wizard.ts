@@ -2,7 +2,7 @@
 
 export type WizardStatus = 'not_started' | 'in_progress' | 'skipped' | 'completed' | 'reset' | 'required'
 
-export type CapabilityAccessLevel = 'manage' | 'view' | 'none'
+type CapabilityAccessLevel = 'manage' | 'view' | 'none'
 
 export type StepCategory = 'orientation' | 'role' | 'tasks' | 'workspace' | 'governance'
 
@@ -106,14 +106,4 @@ export interface WhatCanIDoSummary {
   restrictedActions: string[]
   capabilities: RoleCapability[]
   quickLinks: Array<{ label: string; route: string; icon: string }>
-}
-
-export interface SearchableHelpItem {
-  id: string
-  questionKey: string
-  answerKey: string
-  category: string
-  relevantRoles: string[]
-  actionRoute?: string
-  actionKey?: string
 }

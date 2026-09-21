@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface FloatingConciergeBadgeProps {
   number?: string;
   label?: string;

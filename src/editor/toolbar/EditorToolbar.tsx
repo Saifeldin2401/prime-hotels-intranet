@@ -83,7 +83,7 @@ const headingOptions = [
   { label: 'Heading 4', value: 'h4' },
 ]
 
-export function EditorToolbar({
+function EditorToolbar({
   editor,
   disabled = false,
   config,

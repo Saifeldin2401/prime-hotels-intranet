@@ -41,14 +41,14 @@ import type { DocumentTag } from "./DocumentTagManager";
 
 export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
 
-export interface SavedSearch {
+interface SavedSearch {
   id: string;
   name: string;
   filters: SearchFilters;
   createdAt: string;
 }
 
-export interface SearchFilters {
+interface SearchFilters {
   query?: string;
   dateFrom?: Date;
   dateTo?: Date;
@@ -419,7 +419,7 @@ export function DocumentSearchAdvanced({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-start font-normal"
                     >
                       {filters.dateFrom ? (
                         format(filters.dateFrom, "PP")
@@ -442,7 +442,7 @@ export function DocumentSearchAdvanced({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-start font-normal"
                     >
                       {filters.dateTo ? (
                         format(filters.dateTo, "PP")
@@ -506,7 +506,7 @@ export function DocumentSearchAdvanced({
                     key={option.value}
                     onClick={() => toggleArrayFilter("confidentiality", option.value)}
                     className={cn(
-                      "w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors",
+                      "w-full flex items-center gap-2 p-2 rounded-md text-start transition-colors",
                       filters.confidentiality?.includes(option.value)
                         ? "bg-accent"
                         : "hover:bg-muted/50"
@@ -543,7 +543,7 @@ export function DocumentSearchAdvanced({
                       key={author.id}
                       onClick={() => toggleArrayFilter("authorIds", author.id)}
                       className={cn(
-                        "w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors",
+                        "w-full flex items-center gap-2 p-2 rounded-md text-start transition-colors",
                         filters.authorIds?.includes(author.id)
                           ? "bg-accent"
                           : "hover:bg-muted/50"

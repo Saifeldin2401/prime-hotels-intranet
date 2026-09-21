@@ -3,6 +3,7 @@ import type {
   PracticalAssessment,
   PracticalSubmission
 } from '@/types/enterpriseOperatingModel'
+import type { TablesInsert } from '@/lib/database.types'
 
 export const practicalAssessmentService = {
   async getAssessments(filters?: {
@@ -17,7 +18,7 @@ export const practicalAssessmentService = {
         *,
         course:courses(id, title),
         department:departments(id, name)
-      `.trim()
+      `
       )
       .eq('is_active', true)
       .order('title')
@@ -34,7 +35,7 @@ export const practicalAssessmentService = {
 
     const { data, error } = await query
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as PracticalAssessment[]
   },
 
   async getSubmissions(filters?: {
@@ -51,7 +52,7 @@ export const practicalAssessmentService = {
         learner:profiles!practical_submissions_learner_id_fkey(id, full_name, email, avatar_url),
         evaluator:profiles!practical_submissions_evaluator_id_fkey(id, full_name, email),
         assessment:practical_assessments(*)
-      `.trim()
+      `
       )
       .order('evaluated_at', { ascending: false })
 
@@ -70,7 +71,7 @@ export const practicalAssessmentService = {
 
     const { data, error } = await query
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as PracticalSubmission[]
   },
 
   async submitEvaluation(evaluation: {
@@ -94,18 +95,18 @@ export const practicalAssessmentService = {
       .single()
 
     if (error) throw error
-    return data
+    return data as unknown as PracticalSubmission
   },
 
   async createAssessment(assessment: Partial<PracticalAssessment>): Promise<PracticalAssessment> {
     const { data, error } = await supabase
       .from('practical_assessments')
-      .insert(assessment)
+      .insert(assessment as unknown as TablesInsert<'practical_assessments'>)
       .select()
       .single()
 
     if (error) throw error
-    return data
+    return data as unknown as PracticalAssessment
   }
 }
 

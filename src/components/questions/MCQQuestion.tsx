@@ -60,7 +60,7 @@ export function MCQQuestion({
                         onClick={() => handleSelect(option.id)}
                         disabled={disabled}
                         className={cn(
-                            'w-full flex items-start gap-3 p-3 rounded-lg border text-left transition-all',
+                            'w-full flex items-start gap-3 p-3 rounded-lg border text-start transition-all',
                             'hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500',
                             disabled && 'cursor-not-allowed opacity-75',
                             !disabled && !selected && 'border-gray-200 bg-white',

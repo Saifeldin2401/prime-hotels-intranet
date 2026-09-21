@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import type { TrainingContentBlock } from '@/lib/types/training'
@@ -17,18 +16,11 @@ import {
   type GuestTemperament,
 } from '@/lib/ai/roleplayEngine'
 import {
-  Bot,
-  CheckCircle2,
-  ChevronRight,
-  Flame,
-  HeartHandshake,
   Lightbulb,
   Loader2,
   MessageSquare,
-  RefreshCcw,
   RotateCcw,
   Send,
-  ShieldCheck,
   Sparkles,
   Trophy,
   User,
@@ -343,8 +335,8 @@ export function RoleplaySimulationBlockRenderer({
                     className={cn(
                       'p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed shadow-xs',
                       isGuest
-                        ? 'bg-amber-50/80 dark:bg-amber-950/40 text-foreground border border-amber-200/60 dark:border-amber-800/40 rounded-tl-xs'
-                        : 'bg-primary text-primary-foreground rounded-tr-xs'
+                        ? 'bg-amber-50/80 dark:bg-amber-950/40 text-foreground border border-amber-200/60 dark:border-amber-800/40 rounded-ss-xs'
+                        : 'bg-primary text-primary-foreground rounded-se-xs'
                     )}
                   >
                     {msg.text}

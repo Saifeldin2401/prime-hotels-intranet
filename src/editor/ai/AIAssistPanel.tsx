@@ -30,7 +30,7 @@ interface PendingReplacement {
   replaceAll?: boolean
 }
 
-export function AIAssistPanel({
+function AIAssistPanel({
   editor,
   open,
   onOpenChange,

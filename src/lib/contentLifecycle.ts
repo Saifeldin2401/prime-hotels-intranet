@@ -97,7 +97,7 @@ export const TRANSITIONS: Record<LifecycleTransition, TransitionSpec> = {
   },
 }
 
-export interface TransitionCheck {
+interface TransitionCheck {
   allowed: boolean
   /** Populated when `allowed` is false. */
   reason?: string
@@ -169,7 +169,7 @@ export function resolveActor(opts: {
 }
 
 /** Role names (app_role) that count as content managers for the queue. */
-export const CONTENT_MANAGER_ROLES = [
+const CONTENT_MANAGER_ROLES = [
   'administrator',
   'super_admin',
   'corporate_admin',
@@ -186,17 +186,6 @@ export function isContentManagerRole(role: string | null | undefined): boolean {
 // ---------------------------------------------------------------------------
 // Named helpers -- thin wrappers the service/UI call by intent.
 // ---------------------------------------------------------------------------
-export const submitForReview = (s: ContentStatus, a: LifecycleActor) =>
-  applyTransition('submitForReview', s, a)
-export const approve = (s: ContentStatus, a: LifecycleActor) =>
-  applyTransition('approve', s, a)
-export const requestChanges = (s: ContentStatus, a: LifecycleActor) =>
-  applyTransition('requestChanges', s, a)
-export const publish = (s: ContentStatus, a: LifecycleActor) =>
-  applyTransition('publish', s, a)
-export const archive = (s: ContentStatus, a: LifecycleActor) =>
-  applyTransition('archive', s, a)
-
 /** Which DB table backs each content type. */
 export const CONTENT_TABLE: Record<ContentType, string> = {
   course: 'training_modules',

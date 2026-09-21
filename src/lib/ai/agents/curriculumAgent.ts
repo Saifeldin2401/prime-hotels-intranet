@@ -14,7 +14,7 @@ import type { AgentExecutionResult, AgentRole } from './types'
 import type { ResearchFindings } from './researchAgent'
 import type { GroundedKnowledgeResult } from './knowledgeAgent'
 
-export interface CurriculumAgentInput {
+interface CurriculumAgentInput {
   config: FullCourseGenerationConfig
   research?: ResearchFindings
   groundedKnowledge?: GroundedKnowledgeResult
@@ -23,7 +23,7 @@ export interface CurriculumAgentInput {
   sourceMaterial?: string
 }
 
-export class CurriculumAgent extends BaseAIAgent<CurriculumAgentInput, CourseBlueprint> {
+class CurriculumAgent extends BaseAIAgent<CurriculumAgentInput, CourseBlueprint> {
   public readonly role: AgentRole = 'curriculum'
   public readonly name = 'Curriculum Architect Agent'
   public readonly nameAr = 'مهندس المناهج والهيكل التعليمي'

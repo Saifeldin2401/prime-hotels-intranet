@@ -9,8 +9,7 @@ import {
   FileQuestion,
   Image as ImageIcon,
   Cpu,
-  CheckCircle2,
-  Sparkles,
+  CheckCircle2
 } from 'lucide-react'
 
 export type StudioStageId =
@@ -22,7 +21,7 @@ export type StudioStageId =
   | 'ai_settings'
   | 'review'
 
-export interface StudioStageConfig {
+interface StudioStageConfig {
   id: StudioStageId
   number: number
   titleKey: string

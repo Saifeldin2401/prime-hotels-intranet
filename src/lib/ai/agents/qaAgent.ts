@@ -17,14 +17,14 @@ import {
   type QAScoreCategory,
 } from './types'
 
-export interface QAAgentInput {
+interface QAAgentInput {
   blueprint: CourseBlueprint
   courseType?: CourseType
   targetLanguage?: string
   fullContentSummary?: string
 }
 
-export class QACriticAgent extends BaseAIAgent<QAAgentInput, ComprehensiveQAReport> {
+class QACriticAgent extends BaseAIAgent<QAAgentInput, ComprehensiveQAReport> {
   public readonly role: AgentRole = 'qa_critic'
   public readonly name = 'Independent Pedagogical QA Critic Agent'
   public readonly nameAr = 'المدقق الأكاديمي والرقابي المستقل للجودة'

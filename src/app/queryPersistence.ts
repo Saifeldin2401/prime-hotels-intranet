@@ -23,7 +23,7 @@ const getPrimaryQueryKey = (queryKey: readonly unknown[]) => {
   return typeof primaryKey === 'string' ? primaryKey : null
 }
 
-export const shouldPersistQuery = (query: Pick<Query, 'queryKey' | 'meta' | 'state'>) => {
+const shouldPersistQuery = (query: Pick<Query, 'queryKey' | 'meta' | 'state'>) => {
   if (query.meta?.persist === false) return false
   if (query.state.status !== 'success') return false
 

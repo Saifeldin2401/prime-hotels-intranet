@@ -134,74 +134,6 @@ export interface QuestionOption {
     match_value_ar?: string | null
 }
 
-export interface QuestionUsage {
-    id: string
-    question_id: string
-    usage_type: QuestionUsageType
-    usage_entity_id: string
-    display_order: number
-    is_required: boolean
-    weight: number
-    created_at: string
-
-    // Joined
-    question?: KnowledgeQuestion
-}
-
-export interface QuestionAttempt {
-    id: string
-    user_id: string
-    question_id: string
-    session_id?: string
-
-    selected_answer?: string
-    selected_options?: string[]
-    is_correct: boolean
-    partial_score?: number
-
-    context_type?: QuestionUsageType
-    context_entity_id?: string
-
-    time_spent_seconds?: number
-    attempt_number: number
-    hint_used: boolean
-
-    created_at: string
-
-    // Joined
-    question?: KnowledgeQuestion
-}
-
-export interface QuestionVersion {
-    id: string
-    question_id: string
-    version_number: number
-    data_snapshot
-    changed_by?: string
-    changed_at: string
-    change_reason?: string
-}
-
-export interface QuizSession {
-    id: string
-    user_id: string
-    quiz_type: QuestionUsageType
-    quiz_entity_id?: string
-
-    started_at: string
-    completed_at?: string
-
-    total_questions: number
-    correct_answers: number
-    total_points: number
-    earned_points: number
-    score_percentage?: number
-    passed?: boolean
-
-    time_limit_seconds?: number
-    passing_score?: number
-}
-
 // ============================================================================
 // AI GENERATION TYPES
 // ============================================================================
@@ -241,12 +173,6 @@ export interface AIQuestionGenerationRequest {
     grounded_only?: boolean
     include_citations?: boolean
     source_title?: string
-}
-
-export interface AIQuestionGenerationResponse {
-    questions: GeneratedQuestion[]
-    model_used: string
-    generation_time_ms: number
 }
 
 // ============================================================================
@@ -310,36 +236,6 @@ export interface QuestionGradeResult {
 // ============================================================================
 // ANALYTICS TYPES
 // ============================================================================
-
-export interface QuestionAnalytics {
-    question_id: string
-    total_attempts: number
-    correct_attempts: number
-    accuracy_rate: number
-    avg_time_seconds: number
-    hint_usage_rate: number
-    difficulty_validation: 'too_easy' | 'accurate' | 'too_hard'
-}
-
-export interface UserQuestionStats {
-    user_id: string
-    total_attempts: number
-    correct_answers: number
-    accuracy_rate: number
-    total_time_spent: number
-    questions_by_difficulty: Record<QuestionDifficulty, number>
-    recent_streak: number
-}
-
-export interface KnowledgeGapAnalysis {
-    category_id: string
-    category_name: string
-    total_questions: number
-    accuracy_rate: number
-    improvement_trend: number
-    recommended_questions: string[]
-}
-
 // ============================================================================
 // UI CONFIG
 // ============================================================================

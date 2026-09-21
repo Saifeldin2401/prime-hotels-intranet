@@ -18,7 +18,7 @@ import { AuthSecurityContext } from './AuthSecurityContext'
 import { useUserDataLoader } from './useUserDataLoader'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export interface UserDataContextType {
+interface UserDataContextType {
   profile: Profile | null
   roles: UserRole[]
   properties: Property[]

@@ -13,13 +13,13 @@
  */
 
 import { supabase } from './supabase'
-import { sanitizeSearchInput, sanitizeUUID, sanitizeUUIDArray } from './utils'
+import { sanitizeSearchInput, sanitizeUUID } from './utils'
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface SecureDocumentFilters {
+interface SecureDocumentFilters {
   search?: string
   status?: string
   visibility?: string
@@ -38,7 +38,7 @@ export interface SecureDocumentFilters {
   offset?: number
 }
 
-export interface SecureTaskFilters {
+interface SecureTaskFilters {
   search?: string
   status?: string[]
   priority?: string[]
@@ -50,7 +50,7 @@ export interface SecureTaskFilters {
   offset?: number
 }
 
-export interface SecureUserFilters {
+interface SecureUserFilters {
   search?: string
   property_id?: string
   department_id?: string
@@ -142,64 +142,6 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
   }
 
   return data || []
-}
-
-/**
- * SECURE: Get document count using parameterized database function.
- */
-export async function secureCountDocuments(filters: Omit<SecureDocumentFilters, 'sort_by' | 'sort_order' | 'offset'> = {}) {
-  const {
-    search,
-    status,
-    visibility,
-    property_id,
-    department_id,
-    file_type,
-    date_from,
-    date_to,
-    confidentiality_level,
-    include_deleted = false,
-    include_archived = false
-  } = filters
-
-  const sanitizedSearch = search ? sanitizeSearchInput(search) : null
-  const sanitizedPropertyId = sanitizeUUID(property_id)
-  const sanitizedDepartmentId = sanitizeUUID(department_id)
-
-  const validStatuses = ['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'REJECTED', 'ARCHIVED']
-  const validVisibilities = ['all_properties', 'property', 'department', 'role', 'specific_departments']
-
-  const sanitizedStatus = status && validStatuses.includes(status.toUpperCase()) 
-    ? status.toUpperCase() 
-    : null
-  const sanitizedVisibility = visibility && validVisibilities.includes(visibility) 
-    ? visibility 
-    : null
-
-  const sanitizedFileType = Array.isArray(file_type) 
-    ? file_type.filter(t => /^[a-zA-Z0-9_-]+$/.test(t))
-    : file_type && /^[a-zA-Z0-9_-]+$/.test(file_type) ? [file_type] : null
-
-  const { data, error } = await supabase.rpc('secure_count_documents', {
-    p_search_query: sanitizedSearch,
-    p_property_id: sanitizedPropertyId,
-    p_status: sanitizedStatus,
-    p_visibility: sanitizedVisibility,
-    p_department_id: sanitizedDepartmentId,
-    p_file_type: sanitizedFileType,
-    p_date_from: date_from || null,
-    p_date_to: date_to || null,
-    p_confidentiality_level: confidentiality_level || null,
-    p_include_deleted: include_deleted,
-    p_include_archived: include_archived
-  })
-
-  if (error) {
-    console.error('secureCountDocuments error:', error)
-    throw new Error('Failed to count documents securely')
-  }
-
-  return data || 0
 }
 
 // ============================================================================
@@ -300,86 +242,6 @@ export async function secureSearchUsers(filters: SecureUserFilters = {}) {
 // ============================================================================
 // Safe Query Builder Helpers
 // ============================================================================
-
-/**
- * Build a safe PostgREST "or" filter using only safe, non-user-controlled values.
- * This is a fallback when RPC functions cannot be used.
- * 
- * WARNING: Only use with trusted/internal values, never with raw user input.
- */
-export function buildSafeOrFilter(
-  conditions: Array<{ field: string; operator: 'eq' | 'ilike'; value: string }>
-): string {
-  const validFieldPattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/
-  
-  const safeConditions = conditions
-    .filter(({ field, operator, value }) => {
-      // Validate field name
-      if (!validFieldPattern.test(field)) return false
-      // Validate operator
-      if (!['eq', 'ilike'].includes(operator)) return false
-      // Validate value (no commas, parentheses, or operators)
-      if (/[,()|&]/.test(value)) return false
-      return true
-    })
-    .map(({ field, operator, value }) => {
-      // Escape any remaining special characters
-      const escapedValue = value
-        .replace(/\\/g, '\\\\')
-        .replace(/%/g, '\\%')
-        .replace(/_/g, '\\_')
-      return `${field}.${operator}.${operator === 'ilike' ? `%${escapedValue}%` : escapedValue}`
-    })
-  
-  return safeConditions.join(',')
-}
-
-/**
- * Validate and sanitize sort column name
- */
-export function sanitizeSortColumn(
-  input: string,
-  allowedColumns: string[]
-): string {
-  return allowedColumns.includes(input) ? input : allowedColumns[0]
-}
-
-/**
- * Validate sort order
- */
-export function sanitizeSortOrder(input: string): 'asc' | 'desc' {
-  return input === 'asc' ? 'asc' : 'desc'
-}
-
 // ============================================================================
 // Rate Limiting
 // ============================================================================
-
-/**
- * Check rate limit using server-side rate limiting.
- * Replaces vulnerable client-side rate limiting.
- */
-export async function checkRateLimit(
-  action: string,
-  maxRequests: number = 100,
-  windowSeconds: number = 900  // 15 minutes
-): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.rpc('check_user_rate_limit', {
-      p_action: action,
-      p_max_requests: maxRequests,
-      p_window_seconds: windowSeconds
-    })
-    
-    if (error) {
-      console.error('Rate limit check error:', error)
-      // Fail open (allow request) on error to prevent DoS
-      return true
-    }
-    
-    return data !== false
-  } catch (e) {
-    console.error('Rate limit check exception:', e)
-    return true
-  }
-}

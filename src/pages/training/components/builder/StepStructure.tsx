@@ -158,7 +158,7 @@ export function StepStructure({
                     <div className="flex-1 space-y-3">
                       <div className="space-y-1.5">
                         <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                          <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
+                          <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-end block" : "")}>
                             {t('builder.sectionLabel', { number: index + 1 })}
                           </Label>
                           {(!section.title || section.title.trim().length === 0 || section.title.toLowerCase().startsWith('section')) && (
@@ -183,12 +183,12 @@ export function StepStructure({
                           value={section.title}
                           onChange={(e) => handleRenameSection(section.id, e.target.value)}
                           placeholder="e.g. Front Office Standard Operating Procedures"
-                          className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                          className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                          <Label className={cn("text-xs font-medium text-slate-400", isRTL ? "text-right block" : "")}>
+                          <Label className={cn("text-xs font-medium text-slate-400", isRTL ? "text-end block" : "")}>
                             {t('builder.sectionDescription', 'Section Description / Objectives')}
                           </Label>
                           <Button
@@ -215,7 +215,7 @@ export function StepStructure({
                             )
                           }
                           placeholder="e.g. Master guest check-in protocols and key card security."
-                          className={cn("bg-slate-50/50 text-xs border-slate-200", isRTL ? "text-right" : "")}
+                          className={cn("bg-slate-50/50 text-xs border-slate-200", isRTL ? "text-end" : "")}
                         />
                       </div>
                     </div>
@@ -346,20 +346,22 @@ export function StepStructure({
                             display_order: oIdx,
                           }))
                           await supabase.from('unified_question_options').insert(optionsToInsert)
-                          await supabase.from('unified_quiz_questions').insert({
-                            quiz_id: createdQuiz.id,
-                            question_id: newQ.id,
-                            order_index: qIdx,
-                          })
                         }
+                        // Link every question to the quiz, including option-less types (short answer, etc.).
+                        await supabase.from('unified_quiz_questions').insert({
+                          quiz_id: createdQuiz.id,
+                          question_id: newQ.id,
+                          display_order: qIdx,
+                        })
                       }
                     }
                   } else {
                     linkedQuestionCount = await generateAndLinkCheckpointQuestions({
                       quizId: createdQuiz.id,
                       sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
-                      difficulty: generated.difficulty,
-                      language: generated.language,
+                      difficulty: generated.difficulty ?? 'intermediate',
+                      // Checkpoint quizzes are single-language; bilingual courses get English questions.
+                    language: generated.language === 'Arabic' ? 'Arabic' : 'English',
                       trainingModuleId: ctx.moduleId,
                       createdBy: profile?.id,
                     })

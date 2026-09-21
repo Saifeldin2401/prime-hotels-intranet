@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
@@ -11,8 +11,7 @@ import {
     Save,
     X,
     Check,
-    FileText,
-    Sparkles
+    FileText
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -168,7 +167,7 @@ export function PlayerNotesDrawer({
             <div
                 className={cn(
                     "fixed inset-y-0 z-[100] w-full sm:w-[440px] bg-slate-950 text-slate-100 shadow-2xl border-s border-slate-800 flex flex-col transition-transform duration-300 animate-in slide-in-from-right",
-                    isRTL ? "left-0 border-r border-s-0 slide-in-from-left" : "right-0"
+                    isRTL ? "start-0 border-e border-s-0 slide-in-from-left" : "end-0"
                 )}
             >
                 {/* Header */}

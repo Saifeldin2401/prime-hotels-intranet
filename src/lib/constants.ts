@@ -30,7 +30,7 @@ export type LegacyRole =
 
 export type AppRole = PlatformRole | LegacyRole
 
-export const PLATFORM_ROLES: PlatformRole[] = [
+const PLATFORM_ROLES: PlatformRole[] = [
   'administrator',
   'training_manager',
   'knowledge_manager',
@@ -39,7 +39,7 @@ export const PLATFORM_ROLES: PlatformRole[] = [
 ]
 
 /** Legacy role -> platform role. Mirrors public.platform_role_map in the DB. */
-export const LEGACY_ROLE_MAP: Record<LegacyRole, PlatformRole> = {
+const LEGACY_ROLE_MAP: Record<LegacyRole, PlatformRole> = {
   super_admin: 'administrator',
   corporate_admin: 'administrator',
   regional_admin: 'training_manager', // business call: curate/assign, not platform admin
@@ -86,20 +86,6 @@ export const ROLE_HIERARCHY: AppRole[] = [
   'author',
   'learner',
 ]
-
-/** Full legacy hierarchy, retained for code that still walks the old ladder. */
-export const LEGACY_ROLE_HIERARCHY: LegacyRole[] = [
-  'super_admin',
-  'corporate_admin',
-  'regional_admin',
-  'regional_hr',
-  'property_manager',
-  'property_hr',
-  'department_head',
-  'manager',
-  'staff',
-]
-
 export type DocumentStatus =
   | 'DRAFT'
   | 'PENDING_REVIEW'
@@ -131,82 +117,13 @@ export const DOCUMENT_VISIBILITY_OPTIONS: { value: DocumentVisibility; label: st
   { value: 'specific_departments', label: 'Specific Departments (Custom)' },
   { value: 'role', label: 'Specific Role' },
 ]
-
-export type AnnouncementPriority =
-  | 'normal'
-  | 'important'
-  | 'critical'
-
-export const ANNOUNCEMENT_PRIORITIES: Record<AnnouncementPriority, { label: string; color: string }> = {
-  normal: { label: 'Normal', color: 'blue' },
-  important: { label: 'Important', color: 'orange' },
-  critical: { label: 'Critical', color: 'red' },
-}
-
-export type NotificationType =
-  // Approval workflow
-  | 'approval_required'
-  | 'request_approved'
-  | 'request_rejected'
-  | 'request_submitted'
-  | 'request_returned'
-  | 'request_closed'
-  // Comments
-  | 'comment_added'
-  // Training
-  | 'training_assigned'
-  | 'training_deadline'
-  | 'training_completed'
-  | 'training_overdue'
-  // Documents
-  | 'document_published'
-  | 'document_acknowledgment_required'
-  | 'document_approved'
-  | 'document_rejected'
-  // Announcements
-  | 'announcement_new'
-  // Escalation
-  | 'escalation_alert'
-  // HR
-  | 'referral_status_update'
-  | 'promotion_approved'
-  | 'transfer_approved'
-  // Maintenance
-  | 'maintenance_assigned'
-  | 'maintenance_resolved'
-  | 'maintenance_updated'
-  // Messaging
-  | 'message_received'
-  | 'mention'
-  // Tasks
-  | 'task_assigned'
-  | 'task_due_soon'
-  | 'task_overdue'
-  | 'task_completed'
-  // SOP
-  | 'sop_assigned'
-  | 'sop_quiz_required'
-  | 'sop_quiz_passed'
-  | 'sop_quiz_failed'
-  // System
-  | 'system'
-
 export type TrainingProgressStatus =
   | 'not_started'
   | 'in_progress'
   | 'completed'
   | 'expired'
 
-export const TRAINING_STATUSES: Record<TrainingProgressStatus, { label: string; color: string }> = {
-  not_started: { label: 'Not Started', color: 'gray' },
-  in_progress: { label: 'In Progress', color: 'blue' },
-  completed: { label: 'Completed', color: 'green' },
-  expired: { label: 'Expired', color: 'red' },
-}
-
-export const ESCALATION_THRESHOLD_HOURS = 48
-
-export interface StandardJobTitle {
+interface StandardJobTitle {
   id: string
   title: string
   title_ar: string

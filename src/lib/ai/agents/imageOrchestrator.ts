@@ -1,20 +1,3 @@
-/**
- * Image Generation Orchestrator
- * ----------------------------------------------------------------------------
- * Owns the decision layer that sits between the Course Orchestrator and the
- * Image Agent:
- *
- *   Course Orchestrator
- *     → planVisualRequirement()   "does this lesson benefit from a visual?"
- *     → classifyVisual()          photorealistic / diagram / infographic / …
- *     → routeImageModel()         registry-driven, free-first, with fallbacks
- *     → Image Agent (executes)
- *
- * It NEVER string-matches model ids and it can only ever return image models
- * (a text model can never leak out of here).
- */
-
-import type { LessonBlueprint } from '@/types/aiCourseEngine'
 import type { VisualAssetDecision, VisualStrategyType } from './types'
 import {
   getModelMetadata,
@@ -25,7 +8,7 @@ import {
   type ModelDecision,
 } from './modelRegistry'
 
-export type VisualCategory = ImageRequirement['category']
+type VisualCategory = ImageRequirement['category']
 
 /** Map the agent's high-level strategy to a concrete image category. */
 export function classifyVisual(
@@ -48,48 +31,7 @@ export function classifyVisual(
   return 'illustration'
 }
 
-export interface VisualPlan {
-  /** Whether a generated visual is actually worthwhile for this lesson. */
-  recommended: boolean
-  reason: string
-  category: VisualCategory
-}
-
-/**
- * Lightweight heuristic pre-filter. The Image Agent still runs its own LLM
- * "should generate" check — this just avoids obviously-pointless generations
- * (pure reflection / discussion lessons) before spending a model call.
- */
-export function planVisualRequirement(
-  lesson: Pick<LessonBlueprint, 'title' | 'templateType' | 'description'> & { renderedHtml?: string },
-): VisualPlan {
-  const text = `${lesson.title} ${lesson.description || ''} ${lesson.renderedHtml || ''}`
-    .replace(/<[^>]*>/g, ' ')
-    .toLowerCase()
-  const tmpl = (lesson.templateType || '').toLowerCase()
-
-  const reflective = /reflect|discuss|journal|self[- ]assessment|debrief/.test(tmpl)
-  const proceduralOrVisual =
-    /procedure|checklist|setup|layout|standard|diagram|equipment|uniform|table setting|room|floor plan/.test(text)
-
-  if (reflective && !proceduralOrVisual) {
-    return {
-      recommended: false,
-      reason: 'Reflective/discussion lesson — a decorative image would not reinforce a benchmark.',
-      category: 'illustration',
-    }
-  }
-
-  return {
-    recommended: true,
-    reason: proceduralOrVisual
-      ? 'Lesson describes a concrete procedure/layout that a visual reinforces.'
-      : 'Lesson can be supported by a conceptual visual.',
-    category: classifyVisual(undefined, { prompt: text }),
-  }
-}
-
-export interface ImageRouteResult extends ModelDecision {
+interface ImageRouteResult extends ModelDecision {
   category: VisualCategory
   endpointProvider: 'google' | 'openrouter' | 'cloudflare' | 'recraft'
 }

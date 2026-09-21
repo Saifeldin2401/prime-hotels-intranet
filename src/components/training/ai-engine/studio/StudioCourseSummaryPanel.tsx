@@ -1,15 +1,9 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
-  BookOpen,
-  BrainCircuit,
   Clock,
-  Compass,
   Cpu,
   FileQuestion,
   FileText,
@@ -17,10 +11,8 @@ import {
   Layers,
   Sparkles,
   Target,
-  Wand2,
   ChevronRight,
-  ShieldCheck,
-  Zap,
+  ShieldCheck
 } from 'lucide-react'
 import type { StudioStageId } from './StudioWorkflowStepper'
 import type {
@@ -28,7 +20,6 @@ import type {
   CourseGenerationMode,
   CourseType,
   ImageDensity,
-  InstructionalStrategy,
   LessonDurationMinutes,
   OverallContentDepth,
   QuizPlacement,
@@ -38,7 +29,7 @@ import type {
 import { cn } from '@/lib/utils'
 import { AVAILABLE_COURSE_AI_MODELS } from '@/lib/gemini'
 
-export interface CourseSummaryStats {
+interface CourseSummaryStats {
   generationMode: CourseGenerationMode
   courseTopic: string
   targetAudience: TargetAudience

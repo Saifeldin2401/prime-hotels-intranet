@@ -1,4 +1,4 @@
-import { type Easing, type Transition, type Variants } from 'framer-motion'
+import { type Variants } from 'framer-motion'
 
 // ==========================================
 // MOTION PHILOSOPHY & CONSTANTS
@@ -12,31 +12,13 @@ import { type Easing, type Transition, type Variants } from 'framer-motion'
 // MAY USE: Nav hover, Buttons, Page entry (soft fade/slide).
 // MUST NOT USE: SOPs, Manuals, Forms, Tables, Data-heavy views.
 
-export const DURATION = {
+const DURATION = {
     FAST: 0.15,   // 150ms - Taps, Exits
     MEDIUM: 0.25, // 250ms - Hovers, Slides
     SLOW: 0.35,   // 350ms - Page Transitions
     XL: 0.5       // 500ms - Reserved for complex sequences
 }
-
-export const EASING = {
-    // easeOut for most entrances
-    DEFAULT: [0, 0, 0.2, 1] as Easing,
-    // Linear for color/opacity changes
-    LINEAR: 'linear' as Easing,
-}
-
 // Standard transition preset
-export const TRANSITION_DEFAULT: Transition = {
-    duration: DURATION.MEDIUM,
-    ease: EASING.DEFAULT,
-}
-
-export const TRANSITION_FAST: Transition = {
-    duration: DURATION.FAST,
-    ease: EASING.DEFAULT,
-}
-
 // ==========================================
 // CENTRALIZED VARIANTS
 // ==========================================
@@ -75,39 +57,7 @@ export const pageVariants: Variants = {
 }
 
 // 2. Micro-interactions (Buttons, Cards)
-export const microInteractionVariants: Variants = {
-    idle: { scale: 1 },
-    hover: {
-        scale: 1.02,
-        transition: { duration: DURATION.MEDIUM, ease: EASING.DEFAULT }
-    },
-    tap: {
-        scale: 0.98,
-        transition: { duration: DURATION.FAST, ease: EASING.DEFAULT }
-    }
-}
-
 // 3. Staggered List Children
-export const listContainerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05,
-            delayChildren: 0.05
-        }
-    }
-}
-
-export const listItemVariants: Variants = {
-    hidden: { opacity: 0, y: 4 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: TRANSITION_FAST
-    }
-}
-
 // 4. Notification Bell Shake (Single shake, no loop)
 export const bellVariants: Variants = {
     idle: { rotate: 0 },
@@ -122,29 +72,8 @@ export const bellVariants: Variants = {
 }
 
 // 5. Sidebar Item (Fade + Slide In)
-export const sidebarItemVariants: Variants = {
-    hidden: { opacity: 0, x: -4 },
-    visible: {
-        opacity: 1,
-        x: 0,
-        transition: TRANSITION_FAST
-    }
-}
-
 // ==========================================
 // UTILITY HELPERS
 // ==========================================
 
 // Combine standard transition with custom override
-export const withTransition = (
-    variants: Variants,
-    customTransition: Transition = TRANSITION_DEFAULT
-): Variants => {
-    return Object.keys(variants).reduce((acc, key) => {
-        acc[key] = {
-            ...variants[key],
-            transition: customTransition
-        }
-        return acc
-    }, {} as Variants)
-}

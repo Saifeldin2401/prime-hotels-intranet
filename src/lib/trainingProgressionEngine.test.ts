@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   evaluateModuleProgression,
-  evaluateSingleBlockState,
   getNextRequiredLearningItem,
   validateNavigationTarget,
   type LearnerProgressState

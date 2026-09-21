@@ -228,7 +228,7 @@ export default function PlatformAnalytics() {
         <CardContent className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-left text-muted-foreground border-b">
+              <tr className="text-start text-muted-foreground border-b">
                 <th className="py-2 pe-3 font-semibold">Organization</th>
                 <th className="py-2 px-3 font-semibold">Plan</th>
                 <th className="py-2 px-3 font-semibold">Status</th>

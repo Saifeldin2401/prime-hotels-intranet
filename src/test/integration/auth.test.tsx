@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import { renderHook } from '@testing-library/react'
 import { createMockSupabaseClient, mockQueryResponse } from '../mocks/supabase'
 import { createMockUserContext } from '../factories'
 

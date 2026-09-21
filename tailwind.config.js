@@ -8,6 +8,24 @@ export default {
     './src/**/*.{ts,tsx}',
   ],
   prefix: "",
+  // Physical-direction utilities the codebase no longer uses (it now uses logical
+  // ms-/ps-/start-/border-s-… classes so Arabic RTL mirrors correctly), kept only
+  // because AI-generated lesson/article HTML already stored in the database still
+  // references them and Tailwind would otherwise stop emitting their CSS.
+  safelist: [
+    '-mr-1', '-mr-2', '-right-2',
+    'border-l', 'border-l-2', 'border-l-4', 'border-l-transparent', 'hover:border-l-primary',
+    'border-l-amber-500', 'border-l-blue-500', 'border-l-emerald-500', 'border-l-green-500',
+    'border-l-hotel-gold', 'border-l-hotel-navy', 'border-l-indigo-500', 'border-l-orange-500',
+    'border-l-pink-500', 'border-l-purple-500', 'border-l-red-500', 'border-l-slate-300',
+    'border-r-0', 'border-r-2', 'border-r-4', 'md:border-r',
+    'left-0', 'left-1', 'left-2', 'left-2.5', 'left-3', 'left-5', 'sm:left-6',
+    'right-0', 'right-1', 'right-2', 'right-3', 'right-5', 'sm:right-6',
+    'ml-2', 'mr-1', 'mr-1.5', 'mr-2', 'pl-4', 'pl-6', 'pl-9', 'pr-1', 'pr-4', 'pr-9',
+    'rounded-bl-xl', 'rounded-br-xl', 'rounded-l-md', 'rounded-r-md', 'sm:rounded-l-2xl', 'sm:rounded-r-2xl',
+    'rounded-tl-none', 'rounded-tl-xl', 'rounded-tl-xs', 'rounded-tr-none', 'rounded-tr-xl', 'rounded-tr-xs',
+    'text-left', 'text-right', 'sm:text-left',
+  ],
   theme: {
     container: {
       center: true,

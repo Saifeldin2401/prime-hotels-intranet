@@ -1,7 +1,6 @@
 import React from 'react'
 import { Calendar as CalendarIcon, Sparkles, Award } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 
 interface LearnerHeroCockpitProps {
     firstName: string

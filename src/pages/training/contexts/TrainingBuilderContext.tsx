@@ -3,7 +3,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTenant } from '@/contexts/TenantContext'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { safeLocalStorage } from '@/lib/storage'
-import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
 import { analytics } from '@/services/analyticsService'
@@ -50,7 +49,7 @@ import { auditTrainingModule, type TrainingAuditResult } from '@/lib/trainingBui
 // Context value shape
 // ---------------------------------------------------------------------------
 
-export interface TrainingBuilderContextValue {
+interface TrainingBuilderContextValue {
   // Routing / IDs
   id: string | undefined
   moduleId: string | null
@@ -1651,6 +1650,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       // Best-effort: register in media_assets so training builder uploads show in Media Library
       try {
+        // eslint-disable-next-line no-restricted-properties -- 'training-content' is a public bucket (verified live); a durable public URL is intended here.
         const { data: publicUrlData } = supabase.storage.from('training-content').getPublicUrl(filePath)
         await supabase.from('media_assets').insert({
           title: displayName || file.name,
@@ -1946,12 +1946,9 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         content_language: contentLanguage || null,
         template_id: templatePreset && templatePreset !== 'none' ? templatePreset : null,
         created_by: profile?.id ?? null,
+        ...(isMasterTemplate ? { is_master_template: true, scope_type: 'global' } : {}),
       }
 
-      if (isMasterTemplate) {
-        payload.is_master_template = true
-        payload.scope_type = 'global'
-      }
 
       if (moduleId) {
         const { error } = await supabase

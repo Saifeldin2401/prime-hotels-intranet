@@ -1,21 +1,19 @@
 import type { TrainingContentBlock } from '@/lib/types/training'
 import {
   evaluateModuleProgression,
-  type LearningItemState,
-  type ProgressionBlocker,
   type QuizCompletionResult as EngineQuizResult,
   type LearnerProgressState
 } from './trainingProgressionEngine'
 
-export type QuizCompletionResult = EngineQuizResult
+type QuizCompletionResult = EngineQuizResult
 
-export type TrainingCompletionBlocker = {
+type TrainingCompletionBlocker = {
   blockId: string
   label: string
   reason: 'content' | 'quiz-not-submitted' | 'quiz-not-passed' | 'assignment-not-submitted' | 'assignment-under-review' | 'assignment-revision-required'
 }
 
-export type TrainingCompletionState = {
+type TrainingCompletionState = {
   complete: boolean
   totalRequiredContent: number
   completedRequiredContent: number

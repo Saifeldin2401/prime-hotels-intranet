@@ -41,10 +41,6 @@ export function formatRelativeTime(date: Date | string | null | undefined): stri
   return formatDate(d)
 }
 
-export function formatDistanceToNow(date: Date | string | null | undefined): string {
-  return formatRelativeTime(date)
-}
-
 /**
  * Format file size in bytes to human readable format
  */
@@ -99,38 +95,4 @@ export function sanitizeUUID(id: string | null | undefined): string | null {
   if (!id) return null
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   return uuidRegex.test(id) ? id.toLowerCase() : null
-}
-
-/**
- * SECURITY CRITICAL: Validate array of UUIDs
- * @param ids - Array of potential UUID strings
- * @returns Array of valid UUIDs
- */
-export function sanitizeUUIDArray(ids: string[] | null | undefined): string[] {
-  if (!Array.isArray(ids)) return []
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-  return ids.filter(id => uuidRegex.test(id)).map(id => id.toLowerCase())
-}
-
-/**
- * Build a safe PostgREST filter object.
- * Returns null if input is unsafe.
- */
-export function buildSafeFilter(
-  field: string,
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike',
-  value: string | number | boolean
-): { field: string; operator: string; value: string | number | boolean } | null {
-  // Validate field name (only allow alphanumeric and underscore)
-  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(field)) {
-    return null
-  }
-  
-  // Validate operator
-  const validOperators = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike']
-  if (!validOperators.includes(operator)) {
-    return null
-  }
-  
-  return { field, operator, value }
 }

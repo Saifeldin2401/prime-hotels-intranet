@@ -1,11 +1,7 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ArrowDown,
   ArrowUp,
@@ -14,16 +10,8 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
-  Edit,
-  Eye,
-  FileCode,
   FileQuestion,
-  FileText,
   Image as ImageIcon,
-  Layers,
-  Plus,
-  RefreshCw,
-  Sparkles,
   Trash2,
   Wand2,
 } from 'lucide-react'

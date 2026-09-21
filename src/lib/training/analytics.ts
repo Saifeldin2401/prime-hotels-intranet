@@ -58,22 +58,3 @@ export function calculateStreak(completions: { completed_at: string | null }[]):
 
     return streak
 }
-
-/**
- * Processes completions to count proficiency/completions per category.
- * useful for Radar charts.
- */
-export function processCategoryStats(completions: CompletionItem[]): Record<string, number> {
-    const stats: Record<string, number> = {}
-
-    completions.forEach(c => {
-        // Resolve category from nested module or direct property
-        const category = c.training_module?.category || c.category || 'Uncategorized'
-
-        // Normalize string
-        const normalizedKey = category.trim()
-        stats[normalizedKey] = (stats[normalizedKey] || 0) + 1
-    })
-
-    return stats
-}

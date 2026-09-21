@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
 // Types
-export interface DepartmentKPI {
+interface DepartmentKPI {
     department_id: string
     department_name: string
     head_name: string | null
@@ -14,18 +14,8 @@ export interface DepartmentKPI {
         training_completion_rate: number
         sop_compliance_rate: number
         avg_response_time_hours: number
-        attendance_rate: number
     }
     overall_score: number
-}
-
-export interface DepartmentComparisonData {
-    departments: DepartmentKPI[]
-    property_average: {
-        task_completion_rate: number
-        training_completion_rate: number
-        sop_compliance_rate: number
-    }
 }
 
 // Get KPIs for all departments in a property (or cluster)
@@ -97,8 +87,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                             task_completion_rate: 0,
                             training_completion_rate: 0,
                             sop_compliance_rate: 0,
-                            avg_response_time_hours: 0,
-                            attendance_rate: 0
+                            avg_response_time_hours: 0
                         },
                         overall_score: 0
                     })
@@ -181,36 +170,11 @@ export function useDepartmentKPIs(propertyId?: string) {
                     }
                 }
 
-                // Calculate Attendance Rate (Today's Shifts)
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-                const tomorrow = new Date(today)
-                tomorrow.setDate(tomorrow.getDate() + 1)
-
-                const deptShifts: any[] = [] // DEPRECATED: shifts table removed
-                /*
-                const { data: deptShifts } = await supabase
-                    .from('shifts')
-                    .select('status')
-                    .in('user_id', userIds)
-                    .gte('start_time', today.toISOString())
-                    .lt('start_time', tomorrow.toISOString())
-                    .neq('status', 'cancelled')
-                */
-
-                const scheduledCount = deptShifts?.length || 0
-                const presentCount = deptShifts?.filter(s => ['in_progress', 'completed'].includes(s.status)).length || 0
-
-                const attendanceRate = scheduledCount > 0
-                    ? Math.round((presentCount / scheduledCount) * 100)
-                    : 0
-
                 // Calculate Overall Score (weighted average)
                 const overallScore = Math.round(
-                    (taskCompletionRate * 0.4) +
-                    (trainingCompletionRate * 0.3) +
-                    (sopComplianceRate * 0.2) +
-                    (attendanceRate * 0.1)
+                    (taskCompletionRate * 0.45) +
+                    (trainingCompletionRate * 0.33) +
+                    (sopComplianceRate * 0.22)
                 )
 
                 kpis.push({
@@ -222,8 +186,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                         task_completion_rate: taskCompletionRate,
                         training_completion_rate: trainingCompletionRate,
                         sop_compliance_rate: sopComplianceRate,
-                        avg_response_time_hours: avgResponseTime,
-                        attendance_rate: attendanceRate
+                        avg_response_time_hours: avgResponseTime
                     },
                     overall_score: overallScore
                 })
@@ -237,100 +200,4 @@ export function useDepartmentKPIs(propertyId?: string) {
 }
 
 // Get department comparison data
-export function useDepartmentComparison(propertyId?: string) {
-    const { data: kpis } = useDepartmentKPIs(propertyId)
-
-    return useQuery({
-        queryKey: ['department-comparison', propertyId, kpis],
-        queryFn: async (): Promise<DepartmentComparisonData | null> => {
-            if (!kpis || kpis.length === 0) return null
-
-            // Calculate property averages
-            const avgTaskCompletion = Math.round(
-                kpis.reduce((sum, d) => sum + d.metrics.task_completion_rate, 0) / kpis.length
-            )
-            const avgTrainingCompletion = Math.round(
-                kpis.reduce((sum, d) => sum + d.metrics.training_completion_rate, 0) / kpis.length
-            )
-            const avgSopCompliance = Math.round(
-                kpis.reduce((sum, d) => sum + d.metrics.sop_compliance_rate, 0) / kpis.length
-            )
-
-            return {
-                departments: kpis,
-                property_average: {
-                    task_completion_rate: avgTaskCompletion,
-                    training_completion_rate: avgTrainingCompletion,
-                    sop_compliance_rate: avgSopCompliance
-                }
-            }
-        },
-        enabled: !!kpis && kpis.length > 0
-    })
-}
-
 // Get a single department's KPI trend over time (last 30 days)
-export function useDepartmentKPITrend(departmentId: string) {
-    return useQuery({
-        queryKey: ['department-kpi-trend', departmentId],
-        queryFn: async () => {
-            const today = new Date()
-            const trend = []
-
-            // Get users in department from memberships
-            const { data: deptUsers } = await supabase
-                .from('organization_memberships')
-                .select('user_id')
-                .eq('department_id', departmentId)
-                .eq('is_active', true)
-
-            const userIds = deptUsers?.map((u: any) => u.user_id) || []
-
-            if (userIds.length === 0) {
-                // Return empty trend with dates
-                for (let i = 29; i >= 0; i--) {
-                    const date = new Date(today)
-                    date.setDate(date.getDate() - i)
-                    trend.push({
-                        date: date.toISOString().split('T')[0],
-                        overall_score: 0
-                    })
-                }
-                return trend
-            }
-
-            const thirtyDaysAgo = new Date(today)
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-            const { data: completedTasks } = await supabase
-                .from('tasks')
-                .select('updated_at')
-                .in('assigned_to_id', userIds)
-                .eq('status', 'completed')
-                .gte('updated_at', thirtyDaysAgo.toISOString())
-
-            const tasksByDate: Record<string, number> = {}
-            completedTasks?.forEach(task => {
-                const date = task.updated_at.split('T')[0]
-                tasksByDate[date] = (tasksByDate[date] || 0) + 1
-            })
-
-            for (let i = 29; i >= 0; i--) {
-                const date = new Date(today)
-                date.setDate(date.getDate() - i)
-                const dateStr = date.toISOString().split('T')[0]
-
-                const count = tasksByDate[dateStr] || 0
-                const scoreProxy = Math.min(60 + (count * 5), 100)
-
-                trend.push({
-                    date: dateStr,
-                    overall_score: scoreProxy
-                })
-            }
-
-            return trend
-        },
-        enabled: !!departmentId
-    })
-}

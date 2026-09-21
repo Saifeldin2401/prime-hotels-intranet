@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { AnswerSubmission, QuestionAttempt, QuestionGradeResult, QuizSession } from '@/types/questions';
+import type { AnswerSubmission, QuestionGradeResult } from '@/types/questions';
 
 export async function recordAttempt(
     _userId: string,
@@ -43,95 +43,4 @@ export async function recordAttempt(
             feedback: o.feedback || undefined,
         })),
     }
-}
-
-export async function getUserAttempts(
-    userId: string,
-    questionId?: string,
-    limit = 50
-): Promise<QuestionAttempt[]> {
-    // Read via backward-compat view (knowledge_question_attempts → unified_question_attempts)
-    let query = supabase
-        .from('knowledge_question_attempts')
-        .select(`
-      *,
-      question:knowledge_questions(id, question_text, question_type)
-    `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(limit)
-
-    if (questionId) {
-        query = query.eq('question_id', questionId)
-    }
-
-    const { data, error } = await query
-    if (error) throw error
-    return (data || []) as unknown as QuestionAttempt[]
-}
-
-export async function startQuizSession(
-    userId: string,
-    quizType: QuizSession['quiz_type'],
-    entityId?: string,
-    settings?: { timeLimit?: number; passingScore?: number }
-): Promise<QuizSession> {
-    // Write directly to unified_quiz_sessions
-    const { data, error } = await supabase
-        .from('unified_quiz_sessions')
-        .insert({
-            user_id: userId,
-            quiz_type: quizType,
-            quiz_entity_id: entityId,
-            time_limit_seconds: settings?.timeLimit,
-            passing_score: settings?.passingScore
-        })
-        .select()
-        .single()
-
-    if (error) throw error
-    return data as unknown as QuizSession
-}
-
-export async function completeQuizSession(
-    sessionId: string,
-    results: {
-        totalQuestions: number
-        correctAnswers: number
-        totalPoints: number
-        earnedPoints: number
-    }
-): Promise<QuizSession> {
-    const scorePercentage = results.totalPoints > 0
-        ? (results.earnedPoints / results.totalPoints) * 100
-        : 0
-
-    // Get session to check passing score from unified_quiz_sessions
-    const { data: session } = await supabase
-        .from('unified_quiz_sessions')
-        .select('passing_score')
-        .eq('id', sessionId)
-        .single()
-
-    const passed = session?.passing_score
-        ? scorePercentage >= session.passing_score
-        : scorePercentage >= 70
-
-    const { data, error } = await supabase
-        .from('unified_quiz_sessions')
-        .update({
-            completed_at: new Date().toISOString(),
-            total_questions: results.totalQuestions,
-            correct_answers: results.correctAnswers,
-            total_points: results.totalPoints,
-            earned_points: results.earnedPoints,
-            score_percentage: scorePercentage,
-            passed
-        })
-        .eq('id', sessionId)
-        .select()
-        .single()
-
-    if (error) throw error
-    return data as unknown as QuizSession
 }

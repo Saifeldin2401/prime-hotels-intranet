@@ -40,8 +40,8 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
   }
 }
 
-export const CANONICAL_APP_URL = canonicalizeAppUrl(import.meta.env.VITE_APP_URL)
-export const CANONICAL_APP_HOST = new URL(CANONICAL_APP_URL).hostname
+const CANONICAL_APP_URL = canonicalizeAppUrl(import.meta.env.VITE_APP_URL)
+const CANONICAL_APP_HOST = new URL(CANONICAL_APP_URL).hostname
 const WWW_HOST_REDIRECT_ATTEMPTED_KEY = '__altus_www_host_redirect_attempted__'
 
 export function normalizePathname(pathname: string): string {

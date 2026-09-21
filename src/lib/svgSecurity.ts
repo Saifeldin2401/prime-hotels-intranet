@@ -33,7 +33,7 @@ const ALLOWED_SVG_ATTRIBUTES = new Set([
  * Sanitize SVG content
  * Returns null if SVG contains dangerous content
  */
-export function sanitizeSvg(svgContent: string): string | null {
+function sanitizeSvg(svgContent: string): string | null {
   // Check for dangerous patterns
   for (const pattern of DANGEROUS_SVG_PATTERNS) {
     if (pattern.test(svgContent)) {

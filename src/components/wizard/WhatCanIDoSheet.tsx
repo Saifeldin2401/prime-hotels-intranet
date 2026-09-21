@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  ShieldCheck, 
   CheckCircle2, 
   Lock, 
   ArrowUpRight, 
@@ -47,14 +46,15 @@ export const WhatCanIDoSheet: React.FC = () => {
   const location = useLocation()
 
   // Resilient translation helper
-  const tKey = (key?: string, fallback?: string, options?: any) => {
+  const tKey = (key?: string, fallback?: string, options?: any): string => {
     if (!key) return fallback || ''
-    const val = t(key, options)
-    if (val && val !== key) return val
+    // t() returns an object when a key names a nested block; never render that.
+    const val: unknown = t(key, options)
+    if (typeof val === 'string' && val && val !== key) return val
     if (key.startsWith('wizard.')) {
       const stripped = key.substring(7)
-      const strippedVal = t(stripped, options)
-      if (strippedVal && strippedVal !== stripped) return strippedVal
+      const strippedVal: unknown = t(stripped, options)
+      if (typeof strippedVal === 'string' && strippedVal && strippedVal !== stripped) return strippedVal
     }
     return fallback || key
   }

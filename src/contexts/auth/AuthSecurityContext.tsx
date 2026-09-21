@@ -32,12 +32,12 @@ const log = {
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export interface SecurityRequirements {
+interface SecurityRequirements {
   passwordRotationRequired: boolean
   setupComplete: boolean
 }
 
-export interface AuthSecurityContextType {
+interface AuthSecurityContextType {
   securityRequirements: SecurityRequirements | null
   setSecurityRequirements: (requirements: SecurityRequirements | null) => void
   resetSecurityState: () => void

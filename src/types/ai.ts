@@ -1,4 +1,4 @@
-export const AI_TASKS = ['chat', 'summarization'] as const
+const AI_TASKS = ['chat', 'summarization'] as const
 
 export type AiTask = (typeof AI_TASKS)[number]
 

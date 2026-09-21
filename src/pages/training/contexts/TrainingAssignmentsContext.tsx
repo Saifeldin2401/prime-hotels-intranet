@@ -151,7 +151,7 @@ const describeAssignmentMutationResult = (
 
 // ─── Context Value Interface ───────────────────────────────────────────────────
 
-export interface TrainingAssignmentsContextValue {
+interface TrainingAssignmentsContextValue {
   // i18n / layout
   isRTL: boolean
   t: ReturnType<typeof useTranslation<'training'>>['t']
@@ -169,6 +169,7 @@ export interface TrainingAssignmentsContextValue {
   // Assignment dialog
   showAssignmentDialog: boolean
   setShowAssignmentDialog: Dispatch<SetStateAction<boolean>>
+  invalidateAssignmentControlQueries: () => void
 
   // Assignment search / filter / sort / view state
   search: string
@@ -1905,6 +1906,7 @@ export function TrainingAssignmentsProvider({
 
     // Dialog
     showAssignmentDialog, setShowAssignmentDialog,
+    invalidateAssignmentControlQueries,
 
     // Assignment tab state
     search, setSearch,

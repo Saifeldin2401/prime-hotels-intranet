@@ -6,14 +6,14 @@
  * Synchronized with the runtime Progression Engine.
  */
 
-import type { ContentBlockForm, TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
+import type { TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
 import { analyzeBuilderContent } from './trainingBuilderRulesEngine'
 
 // ---------------------------------------------------------------------------
 // Audit Types
 // ---------------------------------------------------------------------------
 
-export type AuditSeverity = 'error' | 'warning' | 'opportunity'
+type AuditSeverity = 'error' | 'warning' | 'opportunity'
 
 export interface AuditIssue {
   id: string
@@ -44,7 +44,7 @@ export interface TrainingAuditResult {
   }
 }
 
-export interface AuditInputContext {
+interface AuditInputContext {
   title: string
   description?: string
   category?: string

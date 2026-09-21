@@ -119,7 +119,7 @@ export default function TrainingCertificates() {
   const isAdmin = hasPermission('training.report')
 
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
       <PageHeader
         title={t('certificates')}
         description={t('certificateDescription')}
@@ -329,21 +329,21 @@ export default function TrainingCertificates() {
                   </div>
 
                   {/* Corner Art-Deco Ornaments (Top-Left, Top-Right, Bottom-Left, Bottom-Right) */}
-                  <div className="absolute top-2 left-2 w-10 h-10 border-t-2 border-l-2 border-[#0B1C3E] pointer-events-none p-1">
-                    <div className="w-4 h-4 border-t border-l border-[#C5A059]" />
-                    <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
+                  <div className="absolute top-2 start-2 w-10 h-10 border-t-2 border-s-2 border-[#0B1C3E] pointer-events-none p-1">
+                    <div className="w-4 h-4 border-t border-s border-[#C5A059]" />
+                    <div className="absolute top-1 start-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
                   </div>
-                  <div className="absolute top-2 right-2 w-10 h-10 border-t-2 border-r-2 border-[#0B1C3E] pointer-events-none p-1 flex justify-end">
-                    <div className="w-4 h-4 border-t border-r border-[#C5A059]" />
-                    <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
+                  <div className="absolute top-2 end-2 w-10 h-10 border-t-2 border-e-2 border-[#0B1C3E] pointer-events-none p-1 flex justify-end">
+                    <div className="w-4 h-4 border-t border-e border-[#C5A059]" />
+                    <div className="absolute top-1 end-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
                   </div>
-                  <div className="absolute bottom-2 left-2 w-10 h-10 border-b-2 border-l-2 border-[#0B1C3E] pointer-events-none p-1 flex items-end">
-                    <div className="w-4 h-4 border-b border-l border-[#C5A059]" />
-                    <div className="absolute bottom-1 left-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
+                  <div className="absolute bottom-2 start-2 w-10 h-10 border-b-2 border-s-2 border-[#0B1C3E] pointer-events-none p-1 flex items-end">
+                    <div className="w-4 h-4 border-b border-s border-[#C5A059]" />
+                    <div className="absolute bottom-1 start-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
                   </div>
-                  <div className="absolute bottom-2 right-2 w-10 h-10 border-b-2 border-r-2 border-[#0B1C3E] pointer-events-none p-1 flex items-end justify-end">
-                    <div className="w-4 h-4 border-b border-r border-[#C5A059]" />
-                    <div className="absolute bottom-1 right-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
+                  <div className="absolute bottom-2 end-2 w-10 h-10 border-b-2 border-e-2 border-[#0B1C3E] pointer-events-none p-1 flex items-end justify-end">
+                    <div className="w-4 h-4 border-b border-e border-[#C5A059]" />
+                    <div className="absolute bottom-1 end-1 w-1.5 h-1.5 bg-[#C5A059] rotate-45" />
                   </div>
 
                   {/* Inner Fine Gold Inset Line */}
@@ -376,7 +376,7 @@ export default function TrainingCertificates() {
                     <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-4 py-2 max-w-4xl mx-auto">
                       
                       {/* Left: Gold Laurel Wreath Shield Emblem */}
-                      <div className="md:col-span-3 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#C5A059]/40 pe-0 md:pe-6 py-2">
+                      <div className="md:col-span-3 flex items-center justify-center border-b md:border-b-0 md:border-e border-[#C5A059]/40 pe-0 md:pe-6 py-2">
                         <div className="relative w-24 h-24 flex items-center justify-center">
                           <svg viewBox="0 0 100 100" className="w-full h-full fill-none">
                             <path d="M30 75 C 22 65 20 45 32 30 C 26 38 27 52 35 62 Z" fill="#C5A059" />

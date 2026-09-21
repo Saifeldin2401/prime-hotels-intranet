@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, Copy, Crown, Edit, Eye, MoreVertical, RefreshCw, SendHorizonal, Trash2, Users, XCircle } from 'lucide-react'
+import { CheckCircle2, Copy, Edit, Eye, MoreVertical, RefreshCw, SendHorizonal, Trash2, Users, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrainingModule {
@@ -66,7 +66,7 @@ export function ModuleQuickActions({
             {t('common:action.more')}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align={isRTL ? 'start' : 'end'} className={cn(isRTL ? "text-right" : "text-left")}>
+        <DropdownMenuContent align={isRTL ? 'start' : 'end'} className={cn(isRTL ? "text-end" : "text-start")}>
           <DropdownMenuItem onClick={onView} className={cn(isRTL ? "flex-row-reverse" : "")}>
             <Eye className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('common:action.view')}

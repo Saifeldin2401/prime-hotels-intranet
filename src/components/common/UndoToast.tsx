@@ -4,7 +4,7 @@ import { Undo2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-export interface UndoToastProps {
+interface UndoToastProps {
   /** Message to display in the toast */
   message: string;
   /** Current countdown progress (0 to delay) */

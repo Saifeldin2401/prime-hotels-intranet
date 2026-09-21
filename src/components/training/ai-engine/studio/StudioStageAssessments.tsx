@@ -10,24 +10,15 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import {
   Award,
-  BookOpen,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   FileQuestion,
-  HelpCircle,
   Layers,
-  Lightbulb,
-  ListOrdered,
-  RotateCw,
-  Shuffle,
-  Sparkles,
-  Target,
-  Zap,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BLOOM_PRESETS } from '@/lib/ai/courseEngine'
-import { QUESTION_TYPE_CONFIG, type QuestionType } from '@/types/questions'
+import { type QuestionType } from '@/types/questions'
 import type {
   BloomDistribution,
   BloomPreset,

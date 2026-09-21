@@ -51,7 +51,7 @@ import { Briefcase, Plus, Building2, Check, RefreshCw, MoreVertical, Edit2, Tras
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
-export interface DepartmentItem {
+interface DepartmentItem {
   id: string
   organization_id?: string
   hotel_id?: string | null

@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  APPROVED_CLOUDFLARE_MODELS,
-  CloudflareWorkersAIProvider,
   DEFAULT_CLOUDFLARE_IMAGE_MODEL,
-  FALLBACK_CLOUDFLARE_IMAGE_MODEL,
   cloudflareProvider,
 } from './cloudflareProvider'
 

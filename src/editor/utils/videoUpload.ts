@@ -19,7 +19,7 @@ export interface VideoUploadPhase {
   progress?: number
 }
 
-export interface UploadVideoOptions {
+interface UploadVideoOptions {
   /** Auto-compress above this size. Default 50 MB. */
   compressAboveMB?: number
   /** Hard limit — reject before doing any work. Default 500 MB. */
@@ -31,7 +31,7 @@ export interface UploadVideoOptions {
 
 const DEFAULT_HARD_LIMIT_MB = 500
 
-export interface VideoUploadResult {
+interface VideoUploadResult {
   /** Public URL of the stored video. */
   url: string
   /** The file that was actually stored (compressed when it was oversized). */

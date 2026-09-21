@@ -38,7 +38,6 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
-import type { AppRole } from '@/lib/constants'
 import type { Profile } from '@/lib/types'
 import type { Database } from '@/types/database.generated'
 import { cn, escapeSearchQuery } from "@/lib/utils"
@@ -843,7 +842,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
                     role="combobox"
                     aria-expanded={openJobTitle}
                     aria-controls={jobTitleListId}
-                    className="w-full justify-between font-normal text-left"
+                    className="w-full justify-between font-normal text-start"
                   >
                     {jobTitle || t('form.select_job_title')}
                     <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1028,7 +1027,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
                     role="combobox"
                     aria-expanded={openReportingTo}
                     aria-controls={managerListId}
-                    className="w-full justify-between font-normal text-left"
+                    className="w-full justify-between font-normal text-start"
                   >
                     {reportingTo
                       ? selectedManager?.full_name || reportingToProfile?.full_name || t('form.selected_manager')

@@ -3,7 +3,7 @@ import type { AIConfig, AIRequestPayload } from '@/editor/types'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 
-export interface OpenAIResult {
+interface OpenAIResult {
   html: string
   usage?: {
     input_tokens?: number

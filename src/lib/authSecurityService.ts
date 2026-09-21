@@ -15,42 +15,24 @@
 
 import { supabase } from './supabase';
 import { recordAuthEvent } from './authMonitor';
-import { securityConfig } from './security-config';
 import { logAuditEvent } from './auditLog';
 
 // =============================================================================
 // TYPES & INTERFACES
 // =============================================================================
 
-export interface SessionFingerprint {
+interface SessionFingerprint {
   ipHash: string;
   userAgentHash: string;
   createdAt: number;
   lastVerifiedAt: number;
 }
 
-export interface LoginAttempt {
-  email: string;
-  timestamp: number;
-  ipHash: string;
-  userAgentHash: string;
-  success: boolean;
-}
-
-
-
-export interface AccountLockoutStatus {
+interface AccountLockoutStatus {
   isLocked: boolean;
   lockedUntil: Date | null;
   failedAttempts: number;
   remainingAttempts: number;
-}
-
-export interface PasswordValidationResult {
-  isValid: boolean;
-  errors: string[];
-  strength: 'weak' | 'fair' | 'good' | 'strong';
-  score: number;
 }
 
 // =============================================================================
@@ -64,7 +46,7 @@ const MAX_SESSION_AGE = 24 * 60 * 60 * 1000; // 24 hours
  * Generate a hash of the current session context (IP + User-Agent)
  * Note: In a production environment, IP should come from the server
  */
-export async function generateSessionFingerprint(): Promise<SessionFingerprint> {
+async function generateSessionFingerprint(): Promise<SessionFingerprint> {
   const userAgent = navigator.userAgent;
   const timestamp = Date.now();
   
@@ -83,7 +65,7 @@ export async function generateSessionFingerprint(): Promise<SessionFingerprint> 
 /**
  * Store session fingerprint securely
  */
-export function storeSessionFingerprint(fingerprint: SessionFingerprint): void {
+function storeSessionFingerprint(fingerprint: SessionFingerprint): void {
   try {
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(fingerprint));
   } catch {
@@ -94,7 +76,7 @@ export function storeSessionFingerprint(fingerprint: SessionFingerprint): void {
 /**
  * Get stored session fingerprint
  */
-export function getSessionFingerprint(): SessionFingerprint | null {
+function getSessionFingerprint(): SessionFingerprint | null {
   try {
     const stored = sessionStorage.getItem(SESSION_KEY);
     if (!stored) return null;
@@ -179,7 +161,6 @@ export function clearSessionFingerprint(): void {
 // all protection decisions to the server:
 
 // Constants for server-side brute force protection (used in server-side functions)
-const MAX_ATTEMPTS_BEFORE_CAPTCHA = 999;
 const MAX_ATTEMPTS_BEFORE_LOCKOUT = 5;
 const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -243,15 +224,6 @@ export async function recordLoginAttempt(
     captchaRequired,
     message: captchaRequired ? 'Please complete the CAPTCHA to continue.' : undefined,
   };
-}
-
-/**
- * Check if CAPTCHA is required for login
- * SECURITY: Checks server-side failed attempts only
- */
-export async function isCaptchaRequired(_email: string): Promise<boolean> {
-  // CAPTCHA disabled as requested
-  return false;
 }
 
 /**
@@ -442,64 +414,6 @@ export async function selfServiceUnlockAccount(email: string): Promise<{ success
 // =============================================================================
 
 /**
- * Validate password strength
- */
-export function validatePasswordStrength(password: string): PasswordValidationResult {
-  const errors: string[] = [];
-  let score = 0;
-  
-  const config = securityConfig.auth;
-  
-  // Length check
-  if (password.length < config.passwordMinLength) {
-    errors.push(`At least ${config.passwordMinLength} characters`);
-  } else {
-    score += 1;
-  }
-  
-  // Uppercase check
-  if (config.passwordRequireUppercase && !/[A-Z]/.test(password)) {
-    errors.push('One uppercase letter');
-  } else if (config.passwordRequireUppercase) {
-    score += 1;
-  }
-  
-  // Lowercase check
-  if (config.passwordRequireLowercase && !/[a-z]/.test(password)) {
-    errors.push('One lowercase letter');
-  } else if (config.passwordRequireLowercase) {
-    score += 1;
-  }
-  
-  // Number check
-  if (config.passwordRequireNumbers && !/[0-9]/.test(password)) {
-    errors.push('One number');
-  } else if (config.passwordRequireNumbers) {
-    score += 1;
-  }
-  
-  // Special character check
-  if (config.passwordRequireSpecialChars && !/[^A-Za-z0-9]/.test(password)) {
-    errors.push('One special character');
-  } else if (config.passwordRequireSpecialChars) {
-    score += 1;
-  }
-  
-  // Determine strength label
-  let strength: 'weak' | 'fair' | 'good' | 'strong' = 'weak';
-  if (score >= 5) strength = 'strong';
-  else if (score >= 4) strength = 'good';
-  else if (score >= 3) strength = 'fair';
-  
-  return {
-    isValid: errors.length === 0,
-    errors,
-    strength,
-    score,
-  };
-}
-
-/**
  * Check if password has been breached using HaveIBeenPwned API
  * Uses k-anonymity model (only sends first 5 chars of hash)
  */
@@ -545,25 +459,9 @@ export async function checkPasswordBreach(password: string): Promise<{ breached:
 }
 
 /**
- * Check if password was previously used by this user
- */
-export async function checkPasswordReused(userId: string, password: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.rpc('check_password_reuse', {
-      p_user_id: userId,
-      p_password: password,
-    });
-    if (error) return false;
-    return data as boolean;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Check if password rotation is required (for admins - 90 days)
  */
-export async function isPasswordRotationRequired(userId: string): Promise<{ required: boolean; daysRemaining?: number }> {
+async function isPasswordRotationRequired(userId: string): Promise<{ required: boolean; daysRemaining?: number }> {
   try {
     const { data: profile } = await supabase
       .from('profiles')
@@ -743,24 +641,6 @@ export async function logSecurityEvent(
   } catch {
     // Ignore logging errors
   }
-}
-
-/**
- * Log suspicious authentication activity
- */
-export async function logSuspiciousActivity(
-  activity: string,
-  details: Record<string, unknown>
-): Promise<void> {
-  await logSecurityEvent(`suspicious.${activity}`, details);
-  
-  // Also record to auth monitor
-  recordAuthEvent({
-    type: 'session_validation',
-    success: false,
-    error: activity,
-    details,
-  });
 }
 
 // =============================================================================

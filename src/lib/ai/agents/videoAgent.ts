@@ -8,20 +8,20 @@
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface VideoAgentInput {
+interface VideoAgentInput {
   lessonTitle: string
   briefingScript: string
   aspectRatio?: '16:9' | '9:16'
 }
 
-export interface VideoBriefingResult {
+interface VideoBriefingResult {
   videoUrl?: string
   status: 'placeholder_ready' | 'generated' | 'queued'
   durationSeconds: number
   promptUsed: string
 }
 
-export class VideoAgent extends BaseAIAgent<VideoAgentInput, VideoBriefingResult> {
+class VideoAgent extends BaseAIAgent<VideoAgentInput, VideoBriefingResult> {
   public readonly role: AgentRole = 'video_ai'
   public readonly name = 'Video Briefing AI Agent'
   public readonly nameAr = 'وكيل المقاطع المرئية الذكية والمحاكاة'
@@ -49,5 +49,3 @@ export class VideoAgent extends BaseAIAgent<VideoAgentInput, VideoBriefingResult
     }
   }
 }
-
-export const videoAgent = new VideoAgent()

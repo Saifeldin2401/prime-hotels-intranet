@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
@@ -13,7 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, BookOpen, TrendingDown, Search, Layers, Clock, Award, Sparkles, Filter } from 'lucide-react'
+import { AlertTriangle, BookOpen, TrendingDown, Search, Layers, Award, Sparkles } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -246,12 +245,12 @@ export default function CourseAnalyticsPanel() {
                           <TableHeader>
                               <TableRow className="bg-muted/30">
                                   <TableHead className="font-bold">{isRTL ? 'الدورة التدريبية' : 'Course'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'المسجلين' : 'Enrolled'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'المكتمل' : 'Completed'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'المسجلين' : 'Enrolled'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'المكتمل' : 'Completed'}</TableHead>
                                   <TableHead className="w-44 font-bold">{isRTL ? 'نسبة الإنجاز' : 'Completion Rate'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'متوسط الوقت' : 'Avg Time'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'معدل الدرجات' : 'Avg Score'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'نسبة النجاح' : 'Quiz Pass Rate'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'متوسط الوقت' : 'Avg Time'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'معدل الدرجات' : 'Avg Score'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'نسبة النجاح' : 'Quiz Pass Rate'}</TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -274,8 +273,8 @@ export default function CourseAnalyticsPanel() {
                                                   </Badge>
                                               )}
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.enrolled_count)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.completed_count)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.enrolled_count)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.completed_count)}</TableCell>
                                           <TableCell>
                                               <div className="flex items-center gap-2">
                                                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
@@ -284,16 +283,16 @@ export default function CourseAnalyticsPanel() {
                                                           style={{ width: `${Math.min(100, Math.max(0, row.completion_rate))}%` }}
                                                       />
                                                   </div>
-                                                  <span className="text-xs font-bold text-muted-foreground w-10 text-right">
+                                                  <span className="text-xs font-bold text-muted-foreground w-10 text-end">
                                                       {formatPercent(row.completion_rate)}
                                                   </span>
                                               </div>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatDuration(row.avg_time_seconds)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">{formatDuration(row.avg_time_seconds)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-bold text-foreground">
                                               {formatPercent(row.avg_score)}
                                           </TableCell>
-                                          <TableCell className="text-right">
+                                          <TableCell className="text-end">
                                               {row.quiz_pass_rate !== null ? (
                                                   <Badge
                                                       variant="outline"

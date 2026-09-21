@@ -151,58 +151,5 @@ export function useNotificationBatches() {
 }
 
 // Hook to get all user IDs for bulk assignment
-export function useAllUserIds() {
-    return useQuery({
-        queryKey: ['all-user-ids'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('is_active', true)
-
-            if (error) throw error
-            return data?.map(u => u.id) || []
-        },
-        staleTime: 5 * 60 * 1000 // Cache for 5 minutes
-    })
-}
-
 // Hook to get user IDs by department
-export function useUserIdsByDepartment(departmentIds: string[]) {
-    return useQuery({
-        queryKey: ['user-ids-by-department', departmentIds],
-        queryFn: async () => {
-            if (departmentIds.length === 0) return []
-
-            const { data, error } = await supabase
-                .from('organization_memberships')
-                .select('user_id')
-                .eq('is_active', true)
-                .in('department_id', departmentIds)
-
-            if (error) throw error
-            return [...new Set(data?.map((ud: any) => ud.user_id) || [])]
-        },
-        enabled: departmentIds.length > 0
-    })
-}
-
 // Hook to get user IDs by property
-export function useUserIdsByProperty(propertyIds: string[]) {
-    return useQuery({
-        queryKey: ['user-ids-by-property', propertyIds],
-        queryFn: async () => {
-            if (propertyIds.length === 0) return []
-
-            const { data, error } = await supabase
-                .from('organization_memberships')
-                .select('user_id')
-                .eq('is_active', true)
-                .in('hotel_id', propertyIds)
-
-            if (error) throw error
-            return [...new Set(data?.map((up: any) => up.user_id) || [])]
-        },
-        enabled: propertyIds.length > 0
-    })
-}

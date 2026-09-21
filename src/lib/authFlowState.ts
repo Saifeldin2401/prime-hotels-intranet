@@ -8,7 +8,7 @@ const AUTH_FLOW_PATHS = {
   'complete-invite': '/complete-invite',
 } as const
 
-export type AuthFlowName = keyof typeof AUTH_FLOW_PATHS
+type AuthFlowName = keyof typeof AUTH_FLOW_PATHS
 
 interface StoredAuthFlowState {
   flow: AuthFlowName
@@ -65,13 +65,6 @@ function readStoredAuthFlowState(): StoredAuthFlowState | null {
   } catch {
     return null
   }
-}
-
-export function isStandaloneAuthFlowPathname(pathname: string): pathname is (typeof AUTH_FLOW_PATHS)[AuthFlowName] {
-  const normalized = normalizePathname(pathname)
-  return Object.values(AUTH_FLOW_PATHS).some((flowPath) =>
-    normalized === flowPath || normalized.startsWith(`${flowPath}/`)
-  )
 }
 
 export function setAuthFlowState(flow: AuthFlowName, path?: string, location?: { pathname: string; search: string; hash: string }) {

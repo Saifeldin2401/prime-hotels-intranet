@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import {
-  AlertCircle,
   AlertTriangle,
   CheckCircle2,
   Sparkles,
@@ -97,7 +96,7 @@ export function StepPublish({
 
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
-            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-right' : 'text-left')}>{t('builder.publishTitle', 'Review & Publish Course')}</CardTitle>
+            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-end' : 'text-start')}>{t('builder.publishTitle', 'Review & Publish Course')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-3 gap-4">

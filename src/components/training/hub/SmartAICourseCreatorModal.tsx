@@ -4,20 +4,14 @@
  */
 
 import { AICourseEngineStudioModal } from '@/components/training/ai-engine/AICourseEngineStudioModal'
+import type { ComponentProps } from 'react'
 import type { CourseGenerationMode } from '@/types/aiCourseEngine'
 
 interface SmartAICourseCreatorModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCourseCreated?: (moduleId: string) => void
-  onApplyToBuilder?: (data: {
-    title: string
-    description: string
-    sections: any[]
-    checkpoints?: any[]
-    difficulty: 'beginner' | 'intermediate' | 'advanced'
-    language: 'English' | 'Arabic'
-  }) => void
+  onApplyToBuilder?: ComponentProps<typeof AICourseEngineStudioModal>['onApplyToBuilder']
   initialTopic?: string
   initialMode?: CourseGenerationMode
   initialDocumentId?: string

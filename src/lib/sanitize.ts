@@ -10,49 +10,9 @@
 export {
   // Core sanitization functions
   sanitizeHtml,
-  sanitizePlainText,
   sanitizeSvg,
   sanitizeUrl,
-  
-  // Encoding functions
-  encodeHtml,
-  encodeHtmlAttribute,
-  encodeJs,
-  encodeCss,
-  encodeUrl,
-  encodeUrlComponent,
-  encode,
-  
-  // CSRF protection
-  generateCsrfToken,
-  getCsrfToken,
-  validateCsrfToken,
-  clearCsrfToken,
-  getSecureHeaders,
-  
-  // Error handling
-  SAFE_ERROR_MESSAGES,
-  sanitizeErrorMessage,
-  getUserFriendlyError,
-  
-  // Validation helpers
-  validateLength,
-  validateNoHtml,
-  safeJsonParse,
-  safeJsonStringify,
-  
-  // Storage
-  secureStorage,
-  
-  // React helpers
-  createSafeHtml,
-  containsDangerousContent,
-  
-  // Types
-  type EncodingContext,
-  type SecurityConfig,
-  type ValidationResult,
-  type CsrfToken,
+  containsDangerousContent
 } from './security';
 
 // For backward compatibility - default export

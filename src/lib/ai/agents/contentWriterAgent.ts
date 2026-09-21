@@ -10,7 +10,7 @@ import type { LessonBlueprint, FullCourseGenerationConfig } from '@/types/aiCour
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface ContentWriterInput {
+interface ContentWriterInput {
   courseTitle: string
   moduleTitle: string
   lesson: LessonBlueprint
@@ -23,7 +23,7 @@ export interface ContentWriterInput {
   language?: 'en' | 'ar' | 'bilingual'
 }
 
-export class ContentWriterAgent extends BaseAIAgent<ContentWriterInput, string> {
+class ContentWriterAgent extends BaseAIAgent<ContentWriterInput, string> {
   public readonly role: AgentRole = 'content_writer'
   public readonly name = 'Content Writer & Instructional Synthesis Agent'
   public readonly nameAr = 'كاتب المحتوى التشغيلي والدروس التدريبية'

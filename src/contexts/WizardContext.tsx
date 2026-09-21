@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { useTenant } from '@/contexts/TenantContext'
@@ -8,14 +8,14 @@ import {
   getTourSequenceForRole, 
   getEventTourSequence, 
   getRoleEvents, 
-  type OnPageTourStep, 
-  type RoleEventDefinition 
+  type OnPageTourStep 
 } from '@/lib/wizard/tourSequences'
 import { 
   WizardContext, 
   type WizardContextType 
 } from './wizardContextDef'
 import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
+import type { WizardUserProgress } from '@/lib/types/wizard'
 
 export function WizardProvider({ children }: { children: React.ReactNode }) {
   const { user, profile, primaryRole, loading: authLoading } = useAuth()

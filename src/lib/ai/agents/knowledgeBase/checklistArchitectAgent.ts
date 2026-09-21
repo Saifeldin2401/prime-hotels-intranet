@@ -10,7 +10,7 @@ import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedChecklistItem, KnowledgeArticleGenerationConfig } from './types'
 import { buildArticleDirectives } from './articleDirectives'
 
-export interface ChecklistWriterOutput {
+interface ChecklistWriterOutput {
   code: string
   title: string
   titleAr: string
@@ -24,7 +24,7 @@ export interface ChecklistWriterOutput {
   suggestedTags: string[]
 }
 
-export class ChecklistArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, ChecklistWriterOutput> {
+class ChecklistArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, ChecklistWriterOutput> {
   public readonly role: AgentRole = 'activities'
   public readonly name = 'Operational Checklist Architect Agent'
   public readonly nameAr = 'وكيل صياغة قوائم التدقيق والفحص التشغيلي'

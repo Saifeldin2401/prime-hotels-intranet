@@ -41,7 +41,7 @@ export type AuditEventType =
     | 'import.data'
     | 'admin.action'
 
-export interface AuditLogEntry {
+interface AuditLogEntry {
     event_type: AuditEventType
     entity_type?: string // 'user' | 'document' | 'approval' | etc.
     entity_id?: string

@@ -157,24 +157,3 @@ export function useLearningProgress() {
         }
     })
 }
-
-export function useOrgUsers() {
-    return useQuery({
-        queryKey: ['org-users'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, email, organization_memberships(department:departments(name), hotel:hotels(name))')
-                .order('full_name')
-
-            if (error) throw error
-            return (data || []).map((p: any) => ({
-                id: p.id,
-                full_name: p.full_name,
-                email: p.email,
-                user_departments: (p.organization_memberships || []).map((om: any) => ({ departments: om.department })),
-                user_properties: (p.organization_memberships || []).map((om: any) => ({ properties: om.hotel }))
-            }))
-        }
-    })
-}

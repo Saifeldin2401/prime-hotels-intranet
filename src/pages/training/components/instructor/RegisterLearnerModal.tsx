@@ -140,17 +140,17 @@ export function RegisterLearnerModal({
 
         {/* Search Bar */}
         <div className="relative my-2">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={isAr ? 'البحث عن موظف بالاسم أو الوظيفة...' : 'Search staff by name or job title...'}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-sm"
+            className="ps-9 text-sm"
           />
         </div>
 
         {/* Staff List */}
-        <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[260px] max-h-[380px]">
+        <div className="flex-1 overflow-y-auto space-y-2 pe-1 min-h-[260px] max-h-[380px]">
           {isLoadingProfiles ? (
             <div className="py-12 flex flex-col items-center justify-center text-muted-foreground gap-2">
               <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
@@ -210,9 +210,9 @@ export function RegisterLearnerModal({
                         className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-medium"
                       >
                         {isPending ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                          <Loader2 className="h-3.5 w-3.5 animate-spin me-1" />
                         ) : (
-                          <UserPlus className="h-3.5 w-3.5 mr-1" />
+                          <UserPlus className="h-3.5 w-3.5 me-1" />
                         )}
                         <span>{isAr ? 'تسجيل' : 'Enroll'}</span>
                       </Button>

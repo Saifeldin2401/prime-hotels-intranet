@@ -117,7 +117,7 @@ export default function AuditLogs() {
       if (error) throw error
 
       const rawLogs = data || []
-      const userIds = Array.from(new Set(rawLogs.map((l: any) => l.actor_id).filter((id: any): id is string => Boolean(id))))
+      const userIds: string[] = Array.from(new Set<string>(rawLogs.map((l: any) => l.actor_id as string | null).filter((id): id is string => Boolean(id))))
 
       const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
       if (userIds.length > 0) {
@@ -238,7 +238,7 @@ export default function AuditLogs() {
       if (error) throw error
       if (!exportData || exportData.length === 0) return
 
-      const userIds = Array.from(new Set(exportData.map((l: any) => l.actor_id).filter((id: any): id is string => Boolean(id))))
+      const userIds: string[] = Array.from(new Set<string>(exportData.map((l: any) => l.actor_id as string | null).filter((id): id is string => Boolean(id))))
       const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
       if (userIds.length > 0) {
         const { data: profiles } = await supabase

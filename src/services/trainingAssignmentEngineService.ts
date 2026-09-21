@@ -1,6 +1,6 @@
 ﻿import { supabase } from '@/lib/supabase'
 
-export interface CallerAssignmentScopes {
+interface CallerAssignmentScopes {
   is_platform_admin: boolean
   effective_org_id?: string
   can_assign_org: boolean
@@ -17,7 +17,7 @@ export interface CallerAssignmentScopes {
   primary_department_id?: string | null
 }
 
-export interface AssignableLearner {
+interface AssignableLearner {
   id: string
   full_name: string
   email: string
@@ -32,7 +32,7 @@ export interface AssignableLearner {
   job_title?: string | null
 }
 
-export interface AssignableRecipientsSummary {
+interface AssignableRecipientsSummary {
   recipient_count: number
   hotel_count: number
   dept_count: number
@@ -40,7 +40,7 @@ export interface AssignableRecipientsSummary {
 
 export type AssignmentScopeType = 'organization' | 'brand' | 'hotel' | 'department' | 'role' | 'individual'
 
-export interface CreateScopedAssignmentParams {
+interface CreateScopedAssignmentParams {
   courseId: string
   scopeType: AssignmentScopeType
   organizationId: string
@@ -78,7 +78,7 @@ export const trainingAssignmentEngineService = {
         primary_role: 'learner',
       }
     }
-    return data as CallerAssignmentScopes
+    return data as unknown as CallerAssignmentScopes
   },
 
   /**
@@ -139,7 +139,7 @@ export const trainingAssignmentEngineService = {
       console.error('Failed to compute recipient count:', error)
       return { recipient_count: 0, hotel_count: 0, dept_count: 0 }
     }
-    return data as AssignableRecipientsSummary
+    return data as unknown as AssignableRecipientsSummary
   },
 
   /**

@@ -15,7 +15,7 @@ import type { CourseBlueprint, GeneratedUnifiedQuestion } from '@/types/aiCourse
 describe('blueprintToBlocks - component mapping (SSOT)', () => {
   it('maps every LessonComponentKey to a builder ContentType', () => {
     const keys = Object.keys(LESSON_COMPONENT_BLOCK_MAP)
-    expect(keys.length).toBe(22)
+    expect(keys.length).toBe(26)
     expect(mapLessonComponentToBlockType('scenario')).toBe('roleplay')
     expect(mapLessonComponentToBlockType('dialogue_script')).toBe('roleplay')
     expect(mapLessonComponentToBlockType('step_procedure')).toBe('practical')
@@ -24,6 +24,9 @@ describe('blueprintToBlocks - component mapping (SSOT)', () => {
     expect(mapLessonComponentToBlockType('assessment')).toBe('quiz')
     expect(mapLessonComponentToBlockType('summary')).toBe('text')
     expect(mapLessonComponentToBlockType('checklist')).toBe('interactive')
+    // Harmonizer-preset components
+    expect(mapLessonComponentToBlockType('scenario_branch')).toBe('roleplay')
+    expect(mapLessonComponentToBlockType('pro_tips')).toBe('text')
   })
 
   it('clamps non-HTML-renderable block types back to text', () => {

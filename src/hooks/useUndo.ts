@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export interface UndoState<T = unknown> {
+interface UndoState<T = unknown> {
   status: 'idle' | 'pending' | 'executed' | 'cancelled';
   data: T | null;
   timeRemaining: number;
 }
 
-export interface UseUndoOptions {
+interface UseUndoOptions {
   delay?: number;
   onExecute?: () => void;
   onCancel?: () => void;
 }
 
-export interface UseUndoReturn<T = unknown> {
+interface UseUndoReturn<T = unknown> {
   state: UndoState<T>;
   queue: (data?: T) => void;
   undo: () => void;

@@ -254,11 +254,9 @@ export class AltusAIClient {
     } = options
 
     const routerTask =
-      task === 'code'
-        ? 'reasoning'
-        : task === 'translation'
+      task === 'translation'
         ? 'compliance'
-        : task === 'summary'
+        : task === 'summarization'
         ? 'fast'
         : 'general'
 
@@ -404,5 +402,4 @@ Respond ONLY with a valid JSON object matching this exact schema:
 }
 
 export const altusAI = new AltusAIClient()
-export const primeAI = altusAI
 export const aiClient = altusAI

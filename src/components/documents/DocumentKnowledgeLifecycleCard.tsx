@@ -9,7 +9,7 @@
  * - Version superseding status and audit timestamps
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,12 +39,10 @@ import {
   ShieldCheck,
   EyeOff,
   AlertTriangle,
-  BookOpen,
   CheckCircle2,
   Lock,
   RefreshCw,
   History,
-  FileCheck,
   XCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';

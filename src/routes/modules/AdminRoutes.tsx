@@ -13,19 +13,15 @@ const OrganizationalControlCenter = lazy(() => import('@/pages/admin/Organizatio
 const PropertyManagement = lazy(() => import('@/pages/admin/PropertyManagement'))
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
 const PIIAuditViewer = lazy(() => import('@/pages/admin/PIIIAuditViewer').then(m => ({ default: m.PIIAuditViewer })))
-const EscalationRules = lazy(() => import('@/pages/admin/EscalationRules'))
 const NotificationBatches = lazy(() => import('@/pages/admin/notifications/NotificationBatches'))
 const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsDashboard'))
-const RoutingHealth = lazy(() => import('@/pages/admin/RoutingHealth'))
 const AICourseGeneratorSettings = lazy(() => import('@/pages/admin/AICourseGeneratorSettings'))
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
-const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
 const TrainingCertificates = lazy(() => import('@/pages/training/TrainingCertificates'))
 const EmailAnalytics = lazy(() => import('@/pages/admin/EmailAnalytics'))
 const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
 const EmailTemplateEditor = lazy(() => import('@/pages/admin/EmailTemplateEditor'))
-const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
@@ -113,26 +109,6 @@ export const AdminRoutes = () => (
             }
         />
         <Route
-            path="/admin/escalation"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <EscalationRules />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/routing-health"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr']}>
-                    <AppLayout>
-                        <RoutingHealth />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/admin/ai-course-generator"
             element={<PreserveQueryNavigate to="/platform/ai-settings" />}
         />
@@ -171,16 +147,6 @@ export const AdminRoutes = () => (
             }
         />
         <Route
-            path="/admin/sla"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <SLASettings />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/admin/settings"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
@@ -206,18 +172,6 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <ManualCertificateGenerator />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/news-publisher"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <NewsPublisher />
-                        </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -428,7 +382,7 @@ export const AdminRoutes = () => (
         <Route
             path="/admin/wizards"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'administrator', 'general_manager']}>
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'administrator']}>
                     <AppLayout>
                         <MotionWrapper>
                             <WizardManager />

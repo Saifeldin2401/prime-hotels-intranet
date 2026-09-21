@@ -27,8 +27,7 @@ import {
   Eye, 
   Users, 
   Calendar,
-  Sparkles,
-  TrendingUp
+  Sparkles
 } from 'lucide-react'
 import {
     getSearchTerms,
@@ -180,22 +179,22 @@ export default function KnowledgeAnalyticsPanel() {
                               <TableHeader>
                                   <TableRow className="bg-muted/30">
                                       <TableHead className="font-bold">{isRTL ? 'الدليل / الوثيقة' : 'SOP / Article'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'مشاهدات الفترة' : 'Views (Window)'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'القراء المتميزين' : 'Distinct Readers'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'الإجمالي التاريخي' : 'Lifetime Views'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'آخر قراءة' : 'Last Read'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'مشاهدات الفترة' : 'Views (Window)'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'القراء المتميزين' : 'Distinct Readers'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'الإجمالي التاريخي' : 'Lifetime Views'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'آخر قراءة' : 'Last Read'}</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
                                   {docs.data.map(row => (
                                       <TableRow key={row.document_id} className="hover:bg-muted/20">
                                           <TableCell className="font-bold text-foreground text-xs">{row.title}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(row.recent_views)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.distinct_recent_viewers)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">
+                                          <TableCell className="text-end font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">{formatNumber(row.recent_views)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.distinct_recent_viewers)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">
                                               {formatNumber(row.lifetime_views)}
                                           </TableCell>
-                                          <TableCell className="text-right text-xs text-muted-foreground">
+                                          <TableCell className="text-end text-xs text-muted-foreground">
                                               {formatDate(row.last_viewed_at)}
                                           </TableCell>
                                       </TableRow>
@@ -233,22 +232,22 @@ export default function KnowledgeAnalyticsPanel() {
                               <TableHeader>
                                   <TableRow className="bg-muted/30">
                                       <TableHead className="font-bold">{isRTL ? 'المصطلح / الاستعلام' : 'Search Term'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'مرات البحث' : 'Searches'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'المستخدمين' : 'Distinct Users'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'متوسط النتائج' : 'Avg Results'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'بدون نتائج' : 'Zero-Result'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'مرات البحث' : 'Searches'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'المستخدمين' : 'Distinct Users'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'متوسط النتائج' : 'Avg Results'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'بدون نتائج' : 'Zero-Result'}</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
                                   {terms.data.map(row => (
                                       <TableRow key={row.term} className="hover:bg-muted/20">
                                           <TableCell className="font-bold text-foreground text-xs">{row.term}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.searches)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_users)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold">
+                                          <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.searches)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_users)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-bold">
                                               {row.avg_result_count === null ? '--' : row.avg_result_count}
                                           </TableCell>
-                                          <TableCell className="text-right">
+                                          <TableCell className="text-end">
                                               {row.zero_result_searches > 0 ? (
                                                   <Badge variant="destructive" className="text-[10px] font-bold">{formatNumber(row.zero_result_searches)}</Badge>
                                               ) : (
@@ -290,9 +289,9 @@ export default function KnowledgeAnalyticsPanel() {
                               <TableHeader>
                                   <TableRow className="bg-muted/30">
                                       <TableHead className="font-bold">{isRTL ? 'المصطلح المفقود' : 'Requested Query'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'مرات البحث' : 'Query Count'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'الموظفين الباحثين' : 'Unique Users'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'آخر بحث' : 'Last Attempt'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'مرات البحث' : 'Query Count'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'الموظفين الباحثين' : 'Unique Users'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'آخر بحث' : 'Last Attempt'}</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -304,9 +303,9 @@ export default function KnowledgeAnalyticsPanel() {
                                             </Badge>
                                             <span>{row.term}</span>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold text-rose-600 dark:text-rose-400">{formatNumber(row.searches)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_users)}</TableCell>
-                                          <TableCell className="text-right text-xs text-muted-foreground">
+                                          <TableCell className="text-end font-mono text-xs font-bold text-rose-600 dark:text-rose-400">{formatNumber(row.searches)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_users)}</TableCell>
+                                          <TableCell className="text-end text-xs text-muted-foreground">
                                               {formatDate(row.last_searched_at)}
                                           </TableCell>
                                       </TableRow>

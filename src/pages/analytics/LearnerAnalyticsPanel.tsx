@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -68,10 +67,10 @@ function TopicBreakdown({ userId, name }: { userId: string; name: string }) {
                           <TableHeader>
                               <TableRow className="bg-muted/30">
                                   <TableHead className="font-bold">Training Module</TableHead>
-                                  <TableHead className="text-right font-bold">Attempts</TableHead>
-                                  <TableHead className="text-right font-bold">Correct</TableHead>
+                                  <TableHead className="text-end font-bold">Attempts</TableHead>
+                                  <TableHead className="text-end font-bold">Correct</TableHead>
                                   <TableHead className="w-48 font-bold">Accuracy</TableHead>
-                                  <TableHead className="text-right font-bold">Status</TableHead>
+                                  <TableHead className="text-end font-bold">Status</TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -82,8 +81,8 @@ function TopicBreakdown({ userId, name }: { userId: string; name: string }) {
                                   return (
                                       <TableRow key={`${row.training_module_id ?? 'none'}`} className="hover:bg-muted/20">
                                           <TableCell className="font-semibold">{row.module_title}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs">{formatNumber(row.attempts)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.correct)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs">{formatNumber(row.attempts)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.correct)}</TableCell>
                                           <TableCell>
                                               <div className="flex items-center gap-2.5">
                                                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
@@ -98,12 +97,12 @@ function TopicBreakdown({ userId, name }: { userId: string; name: string }) {
                                                           style={{ width: `${acc}%` }}
                                                       />
                                                   </div>
-                                                  <span className={`text-xs font-bold w-12 text-right ${isLow ? 'text-rose-500 font-bold' : ''}`}>
+                                                  <span className={`text-xs font-bold w-12 text-end ${isLow ? 'text-rose-500 font-bold' : ''}`}>
                                                       {formatPercent(row.accuracy)}
                                                   </span>
                                               </div>
                                           </TableCell>
-                                          <TableCell className="text-right">
+                                          <TableCell className="text-end">
                                               <Badge 
                                                   variant="outline" 
                                                   className={`text-[10px] font-bold ${
@@ -287,14 +286,14 @@ export default function LearnerAnalyticsPanel() {
                           <TableHeader>
                               <TableRow className="bg-muted/30">
                                   <TableHead className="font-bold">{isRTL ? 'الموظف / المتعلم' : 'Learner'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'المسارات' : 'Enrolled'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'المكتمل' : 'Completed'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'المسارات' : 'Enrolled'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'المكتمل' : 'Completed'}</TableHead>
                                   <TableHead className="w-44 font-bold">{isRTL ? 'متوسط التقدم' : 'Avg Progress'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'الوقت' : 'Time Spent'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'الجلسات' : 'Quizzes'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'المعدل' : 'Avg Score'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'الاجتياز' : 'Pass Rate'}</TableHead>
-                                  <TableHead className="text-right font-bold">{isRTL ? 'آخر نشاط' : 'Last Active'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'الوقت' : 'Time Spent'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'الجلسات' : 'Quizzes'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'المعدل' : 'Avg Score'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'الاجتياز' : 'Pass Rate'}</TableHead>
+                                  <TableHead className="text-end font-bold">{isRTL ? 'آخر نشاط' : 'Last Active'}</TableHead>
                               </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -325,8 +324,8 @@ export default function LearnerAnalyticsPanel() {
                                                   </div>
                                               </div>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.enrolled_count)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.completed_count)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.enrolled_count)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.completed_count)}</TableCell>
                                           <TableCell>
                                               <div className="flex items-center gap-2">
                                                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
@@ -335,17 +334,17 @@ export default function LearnerAnalyticsPanel() {
                                                           style={{ width: `${Math.min(100, Math.max(0, row.avg_progress))}%` }}
                                                       />
                                                   </div>
-                                                  <span className="text-xs font-bold text-muted-foreground w-10 text-right">
+                                                  <span className="text-xs font-bold text-muted-foreground w-10 text-end">
                                                       {formatPercent(row.avg_progress)}
                                                   </span>
                                               </div>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatDuration(row.total_time_seconds)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs">{formatNumber(row.quiz_sessions)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">{formatDuration(row.total_time_seconds)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs">{formatNumber(row.quiz_sessions)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs font-bold text-foreground">
                                               {formatPercent(row.avg_quiz_score)}
                                           </TableCell>
-                                          <TableCell className="text-right">
+                                          <TableCell className="text-end">
                                               {row.pass_rate !== null ? (
                                                   <Badge
                                                       variant="outline"
@@ -363,7 +362,7 @@ export default function LearnerAnalyticsPanel() {
                                                   <span className="text-muted-foreground text-xs">--</span>
                                               )}
                                           </TableCell>
-                                          <TableCell className="text-right text-xs text-muted-foreground">
+                                          <TableCell className="text-end text-xs text-muted-foreground">
                                               {formatDate(row.last_activity_at)}
                                           </TableCell>
                                       </TableRow>

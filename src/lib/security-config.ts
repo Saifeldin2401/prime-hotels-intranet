@@ -193,18 +193,6 @@ export const securityConfig = {
 // Security headers configuration
 // SECURITY NOTE: X-XSS-Protection is intentionally omitted
 // It's deprecated and can introduce vulnerabilities. CSP is the modern protection.
-export const securityHeaders = {
-  'Content-Security-Policy': Object.entries(securityConfig.csp.directives)
-    .map(([directive, values]) => `${directive} ${values.join(' ')}`)
-    .join('; '),
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()',
-  'Strict-Transport-Security': securityConfig.isDevelopment ? '' : 'max-age=63072000; includeSubDomains; preload',
-  'Cross-Origin-Resource-Policy': 'cross-origin'
-}
-
 // Export security utilities
 export const securityUtils = {
   // Check if feature is enabled

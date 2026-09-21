@@ -19,7 +19,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  Clock,
   Crown,
   FileText,
   Globe,
@@ -29,8 +28,7 @@ import {
   RefreshCw,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
-  Users
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

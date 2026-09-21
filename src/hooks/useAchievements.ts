@@ -14,7 +14,7 @@ import { useAuth } from './useAuth'
 
 export type AchievementType = Database['public']['Enums']['achievement_type']
 
-export interface Achievement {
+interface Achievement {
   id: string
   user_id: string
   achievement_type: AchievementType
@@ -38,7 +38,7 @@ export interface AchievementDefinition {
   criteria: Json
 }
 
-export interface AchievementStats {
+interface AchievementStats {
   totalAchievements: number
   totalPoints: number
   recentAchievements: Achievement[]
@@ -143,41 +143,6 @@ export function useAchievementStats() {
       }
     },
     enabled: !!user?.id
-  })
-}
-
-/**
- * Fetch achievement leaderboard
- */
-export function useAchievementLeaderboard(limit = 10) {
-  return useQuery({
-    queryKey: ['achievement-leaderboard', limit],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('achievement_leaderboard')
-        .select('*')
-        .limit(limit)
-
-      if (error) {
-        console.error('Failed to fetch leaderboard:', error)
-        throw error
-      }
-
-      if (!data || data.length === 0) return []
-
-      const userIds = data.map(d => d.user_id).filter((id): id is string => Boolean(id))
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .in('id', userIds)
-
-      const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
-
-      return data.map(row => ({
-        ...row,
-        user: row.user_id ? profileMap.get(row.user_id) : undefined
-      }))
-    }
   })
 }
 

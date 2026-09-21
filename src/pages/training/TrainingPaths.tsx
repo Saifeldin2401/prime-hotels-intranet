@@ -31,7 +31,6 @@ import {
     GraduationCap,
     Loader2,
     Plus,
-    Sparkles,
     Target,
     Trash2,
     Users
@@ -430,7 +429,7 @@ export default function TrainingPaths() {
   }
 
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
       <PageHeader
         title={t('paths')}
         description={t('paths_description')}
@@ -599,7 +598,7 @@ export default function TrainingPaths() {
               <TabsTrigger value="targeting">{t('targeting')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="general" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
+            <TabsContent value="general" className={cn("space-y-4 pt-4", isRTL ? "text-end" : "text-start")}>
               <div className="space-y-2">
                 <Label>{t('pathTitle')}</Label>
                 <Input
@@ -675,7 +674,7 @@ export default function TrainingPaths() {
               </div>
             </TabsContent>
 
-            <TabsContent value="modules" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
+            <TabsContent value="modules" className={cn("space-y-4 pt-4", isRTL ? "text-end" : "text-start")}>
               <div className="space-y-2">
                 <Label>{t('selectModules')}</Label>
                 <div className="border rounded-md p-4 max-h-[300px] overflow-y-auto space-y-2">
@@ -708,7 +707,7 @@ export default function TrainingPaths() {
               </div>
             </TabsContent>
 
-            <TabsContent value="targeting" className={cn("space-y-4 pt-4", isRTL ? "text-right" : "text-left")}>
+            <TabsContent value="targeting" className={cn("space-y-4 pt-4", isRTL ? "text-end" : "text-start")}>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>{t('targetHotel')}</Label>
@@ -785,7 +784,7 @@ export default function TrainingPaths() {
 
               <div className={cn("p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2", isRTL ? "flex-row-reverse" : "")}>
                 <Target className={cn("w-4 h-4 mt-0.5 text-blue-600", isRTL ? "ms-2" : "")} />
-                <p className={isRTL ? "text-right" : ""}>
+                <p className={isRTL ? "text-end" : ""}>
                   <strong>{t('targeting_logic')}:</strong> {t('targeting_logic_desc')}
                 </p>
               </div>

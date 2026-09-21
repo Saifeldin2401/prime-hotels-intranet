@@ -9,7 +9,7 @@ import type { Database } from '@/types/supabase'
 
 type EntityStatus = Database['public']['Enums']['entity_status']
 
-export type EntityType = 'task' | 'maintenance_ticket' | 'leave_request' | 'job_posting'
+type EntityType = 'task' | 'maintenance_ticket' | 'leave_request' | 'job_posting'
 
 /**
  * Valid status transitions for each entity type

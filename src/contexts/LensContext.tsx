@@ -5,7 +5,7 @@ import { safeLocalStorage } from '@/lib/storage'
 
 export type SystemLens = 'platform' | 'corporate' | 'property' | 'learner'
 
-export interface LensDefinition {
+interface LensDefinition {
   id: SystemLens
   labelEn: string
   labelAr: string
@@ -16,7 +16,7 @@ export interface LensDefinition {
   isAvailable: boolean
 }
 
-export interface LensContextValue {
+interface LensContextValue {
   activeLens: SystemLens
   setLens: (lens: SystemLens) => void
   availableLenses: LensDefinition[]

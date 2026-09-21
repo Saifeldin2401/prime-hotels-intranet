@@ -8,21 +8,18 @@ import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import {
   BookOpen,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   FileCheck,
   FileCode,
   FileQuestion,
   FileText,
-  Flame,
   Layers,
   ListOrdered,
   MessageSquare,
   ShieldAlert,
   Sparkles,
   Target,
-  Wand2,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

@@ -1,6 +1,6 @@
 import type { AIAssistCommand } from '@/editor/types'
 
-export const DEFAULT_AI_COMMANDS: AIAssistCommand[] = [
+const DEFAULT_AI_COMMANDS: AIAssistCommand[] = [
   {
     id: 'beautify',
     label: 'Beautify (Default)',

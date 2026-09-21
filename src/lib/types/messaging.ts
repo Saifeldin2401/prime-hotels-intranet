@@ -1,7 +1,7 @@
 import type { Department, Profile, Property } from './profile'
 
 // Messaging System Interfaces
-export interface Message {
+interface Message {
   id: string
   sender_id: string
   recipient_id: string | null // null for broadcast messages
@@ -29,7 +29,7 @@ export interface Message {
   attachments?: MessageAttachment[]
 }
 
-export interface MessageAttachment {
+interface MessageAttachment {
   id: string
   message_id: string
   uploaded_by_id: string
@@ -43,38 +43,4 @@ export interface MessageAttachment {
   // Relations
   message?: Message
   uploaded_by?: Profile
-}
-
-export interface Comment {
-  id: string
-  entity_type: 'task' | 'maintenance_ticket' | 'document' | 'training'
-  entity_id: string
-  author_id: string
-  content: string
-  parent_comment_id: string | null // for replies
-  is_internal: boolean // only visible to staff
-  is_edited: boolean
-  edited_at: string | null
-  created_at: string
-  updated_at: string
-
-  // Relations
-  author?: Profile
-  parent_comment?: Comment
-  replies?: Comment[]
-  mentions?: Profile[]
-}
-
-export interface Conversation {
-  id: string
-  participant_ids: string[]
-  last_message_at: string
-  last_message_preview: string
-  is_archived: boolean
-  created_at: string
-  updated_at: string
-
-  // Relations
-  participants?: Profile[]
-  messages?: Message[]
 }

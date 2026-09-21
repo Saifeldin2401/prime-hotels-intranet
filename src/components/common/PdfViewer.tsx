@@ -208,7 +208,7 @@ export function PdfViewer({ url, className, onRetry }: PdfViewerProps) {
                 <div className="flex items-center gap-4">
                     {onRetry && (
                         <Button variant="outline" size="sm" onClick={onRetry} className="h-8">
-                            <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+                            <RotateCw className="h-3.5 w-3.5 me-1.5" />
                             Retry
                         </Button>
                     )}

@@ -18,7 +18,7 @@ import type { CourseVisualAsset } from '@/types/aiCourseEngine'
 /* Block renderer resolution                                           */
 /* ------------------------------------------------------------------ */
 
-export type BlockRendererKind =
+type BlockRendererKind =
     | 'text'
     | 'video'
     | 'audio'
@@ -38,7 +38,7 @@ const blockData = (block: Pick<TrainingContentBlock, 'content_data'>): Record<st
     asRecord(block.content_data)
 
 /** True when the block is an assignment/practical regardless of how it was authored. */
-export function isAssignmentBlock(block: Pick<TrainingContentBlock, 'type' | 'content_data'>): boolean {
+function isAssignmentBlock(block: Pick<TrainingContentBlock, 'type' | 'content_data'>): boolean {
     const type = String(block.type)
     if (type === 'assignment' || type === 'practical') return true
     const cd = blockData(block)
@@ -46,7 +46,7 @@ export function isAssignmentBlock(block: Pick<TrainingContentBlock, 'type' | 'co
 }
 
 /** True when the block is an AI-guest roleplay simulation regardless of authoring. */
-export function isRoleplayBlock(block: Pick<TrainingContentBlock, 'type' | 'content_data'>): boolean {
+function isRoleplayBlock(block: Pick<TrainingContentBlock, 'type' | 'content_data'>): boolean {
     const type = String(block.type)
     if (type === 'roleplay') return true
     const cd = blockData(block)
@@ -248,7 +248,7 @@ export function isBlockContentEmpty(block: Pick<TrainingContentBlock, 'content' 
 /* Visual assets                                                       */
 /* ------------------------------------------------------------------ */
 
-export type NormalizedVisualSource =
+type NormalizedVisualSource =
     | { kind: 'svg'; markup: string }
     | { kind: 'raster'; url: string }
     | null

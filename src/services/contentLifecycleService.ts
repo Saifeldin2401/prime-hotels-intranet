@@ -17,9 +17,7 @@
 import { supabase } from '@/lib/supabase'
 import {
   CONTENT_TABLE,
-  applyTransition,
   canTransition,
-  resolveActor,
   type ContentStatus,
   type ContentType,
   type LifecycleActor,
@@ -43,7 +41,7 @@ export interface ContentReview {
   updated_at: string
 }
 
-export interface SourceChangeFlag {
+interface SourceChangeFlag {
   id: string
   training_module_id: string
   document_id: string
@@ -64,23 +62,8 @@ export interface ReviewQueueItem {
 // Reads
 // ---------------------------------------------------------------------------
 
-/** All reviews for one piece of content, newest first. */
-export async function listReviewsForContent(
-  contentType: ContentType,
-  contentId: string,
-): Promise<ContentReview[]> {
-  const { data, error } = await db
-    .from('content_reviews')
-    .select('*')
-    .eq('content_type', contentType)
-    .eq('content_id', contentId)
-    .order('submitted_at', { ascending: false })
-  if (error) throw error
-  return (data ?? []) as ContentReview[]
-}
-
 /** The single open (in_review) review for a piece of content, if any. */
-export async function getOpenReview(
+async function getOpenReview(
   contentType: ContentType,
   contentId: string,
 ): Promise<ContentReview | null> {
@@ -193,38 +176,12 @@ async function setLifecycleStatus(
   if (error) throw error
 }
 
-export interface TransitionInput {
+interface TransitionInput {
   contentType: ContentType
   contentId: string
   /** Caller's actor role relative to this content. */
   actor: LifecycleActor
   notes?: string
-}
-
-/**
- * Submit a piece of content for review.
- * Creates the `content_reviews` row and flips lifecycle_status -> in_review.
- */
-export async function submitForReview(input: TransitionInput): Promise<ContentReview> {
-  const status = await currentStatus(input.contentType, input.contentId)
-  applyTransition('submitForReview', status, input.actor) // throws if illegal
-
-  const userId = await currentUserId()
-  const { data, error } = await db
-    .from('content_reviews')
-    .insert({
-      content_type: input.contentType,
-      content_id: input.contentId,
-      status: 'in_review',
-      submitted_by: userId,
-      review_notes: input.notes ?? null,
-    })
-    .select('*')
-    .single()
-  if (error) throw error
-
-  await setLifecycleStatus(input.contentType, input.contentId, 'in_review')
-  return data as ContentReview
 }
 
 async function resolveOpenReview(
@@ -288,12 +245,6 @@ export const approve = (input: TransitionInput) =>
 export const requestChanges = (input: TransitionInput) =>
   resolveOpenReview(input, 'requestChanges', 'draft')
 
-export const publish = (input: TransitionInput) =>
-  resolveOpenReview(input, 'publish', 'published')
-
-export const archive = (input: TransitionInput) =>
-  resolveOpenReview(input, 'archive', 'archived')
-
 /** Mark a source-change flag as reviewed. */
 export async function resolveSourceChangeFlag(flagId: string): Promise<void> {
   const userId = await currentUserId()
@@ -310,5 +261,3 @@ export async function scanSourceChanges(): Promise<number> {
   if (error) throw error
   return (data as number) ?? 0
 }
-
-export { resolveActor }

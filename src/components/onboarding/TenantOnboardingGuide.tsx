@@ -95,7 +95,7 @@ export function TenantOnboardingGuide() {
         const { count: modCount } = await supabase
           .from('training_modules')
           .select('id', { count: 'exact', head: true })
-          .eq('is_active', true)
+          .eq('is_deleted', false)
 
         if (isMounted && typeof modCount === 'number') {
           setLearningCount(modCount)

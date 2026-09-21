@@ -1,4 +1,4 @@
-import type { RoleBlueprint, RoleLevel } from '@/lib/types/wizard'
+import type { RoleBlueprint } from '@/lib/types/wizard'
 import { platformOperatorBlueprint } from './platformOperatorBlueprint'
 import { tenantOwnerBlueprint } from './tenantOwnerBlueprint'
 import { tenantAdminBlueprint } from './tenantAdminBlueprint'
@@ -45,15 +45,4 @@ export function getRoleBlueprint(roleName: string, isPlatformOperator: boolean =
 
   const normalized = roleName?.toLowerCase()?.trim() || 'learner'
   return ROLE_BLUEPRINTS[normalized] || learnerBlueprint
-}
-
-export {
-  platformOperatorBlueprint,
-  tenantOwnerBlueprint,
-  tenantAdminBlueprint,
-  trainingManagerBlueprint,
-  knowledgeManagerBlueprint,
-  departmentManagerBlueprint,
-  learnerBlueprint,
-  viewerBlueprint
 }

@@ -1,7 +1,7 @@
 import { LoginForm } from '@/components/auth/LoginForm';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ChevronRight, Lock, ShieldCheck, Sparkles, UserCheck, Users, Zap } from 'lucide-react';
+import { ChevronRight, Lock, ShieldCheck, UserCheck, Users, Zap } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { canela, inter, mono, neueHaas } from './public/publicConstants';

@@ -12,7 +12,7 @@ interface UseInactivityTimeoutOptions {
     enabled?: boolean
 }
 
-export const STORAGE_KEY = 'altus_last_activity'
+const STORAGE_KEY = 'altus_last_activity'
 export const REMEMBER_ME_KEY = 'altus_remember_me'
 
 export function useInactivityTimeout({

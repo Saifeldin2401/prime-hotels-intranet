@@ -77,7 +77,7 @@ export default function CompetencyMatrix() {
 
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10">
-            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+            <Sparkles className="h-3.5 w-3.5 me-1.5" />
             {isAr ? 'معايير 5 نجوم' : '5-Star Benchmark Model'}
           </Badge>
         </div>
@@ -128,13 +128,13 @@ export default function CompetencyMatrix() {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/40 p-4 rounded-xl border border-border/40">
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               placeholder={isAr ? 'بحث في الكفاءات...' : 'Search competencies...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 text-sm rounded-lg border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              className="w-full ps-9 pe-4 py-1.5 text-sm rounded-lg border border-border/60 bg-background focus:outline-none focus:ring-2 focus:ring-amber-500/20"
             />
           </div>
 

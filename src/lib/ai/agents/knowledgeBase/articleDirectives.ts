@@ -7,7 +7,7 @@
 
 import type { KnowledgeArticleGenerationConfig } from './types'
 
-export interface ArticleDirectives {
+interface ArticleDirectives {
   /** One line describing how deep/verbose the document should be. */
   depthDirective: string
   /** One line describing which language field(s) to fill. */

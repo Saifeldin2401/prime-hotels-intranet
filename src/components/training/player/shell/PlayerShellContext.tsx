@@ -15,7 +15,7 @@ import type { PlayerActionRegistration } from './types'
 
 const EMPTY_REGISTRATION: PlayerActionRegistration = {}
 
-export interface PlayerShellContextValue {
+interface PlayerShellContextValue {
     register: (id: string, reg: PlayerActionRegistration) => void
     unregister: (id: string) => void
     /** The active registration (last registrant wins). */

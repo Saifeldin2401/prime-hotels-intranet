@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-export interface DocumentVersion {
+interface DocumentVersion {
   id: string
   document_id: string
   version_number: number

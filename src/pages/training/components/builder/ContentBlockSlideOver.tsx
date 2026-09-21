@@ -1,4 +1,3 @@
-import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
 import { Badge } from '@/components/ui/badge'
@@ -21,8 +20,8 @@ import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
 import { aiService } from '@/lib/gemini'
-import { HOTEL_ROLEPLAY_SCENARIOS, type RoleplayScenario } from '@/lib/ai/roleplayEngine'
-import { AlertTriangle, BookOpen, CheckCircle2, FileText, Loader2, MessageSquare, Search, Sparkles, Upload, X } from 'lucide-react'
+import { HOTEL_ROLEPLAY_SCENARIOS } from '@/lib/ai/roleplayEngine'
+import { AlertTriangle, BookOpen, CheckCircle2, Loader2, MessageSquare, Search, Sparkles, Upload, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
@@ -135,10 +134,10 @@ export function ContentBlockSlideOver({
         >
           <div>
             <SheetHeader className="pb-4 border-b border-slate-100 dark:border-slate-800">
-              <SheetTitle className={cn("text-base font-bold", isRTL ? 'text-right' : 'text-left')}>
+              <SheetTitle className={cn("text-base font-bold", isRTL ? 'text-end' : 'text-start')}>
                 {selectedContent ? t('builder.editContent', 'Edit Content Block') : t('builder.addContent', 'Add Content Block')}
               </SheetTitle>
-              <SheetDescription className={cn("text-xs text-muted-foreground", isRTL ? 'text-right' : 'text-left')}>
+              <SheetDescription className={cn("text-xs text-muted-foreground", isRTL ? 'text-end' : 'text-start')}>
                 {t('builder.contentDialogDescription', 'Configure lesson content, quizzes, and attachments for this section')}
               </SheetDescription>
             </SheetHeader>
@@ -160,13 +159,13 @@ export function ContentBlockSlideOver({
             {/* Form Fields */}
             <div className="space-y-5">
               {(currentBlock.type === 'text' || showTitleField) && (
-                <div className={isRTL ? 'text-right' : ''}>
+                <div className={isRTL ? 'text-end' : ''}>
                   <Label className="text-xs font-semibold">{t('title', 'Title')}</Label>
                   <Input
                     value={currentBlock.title}
                     onChange={(e) => setCurrentBlock({ ...currentBlock, title: e.target.value })}
                     placeholder={currentBlock.type === 'text' ? t('title', 'Lesson Title') : t('builder.labelOptionalHint', 'Optional display label')}
-                    className={cn("mt-1", isRTL ? 'text-right' : '')}
+                    className={cn("mt-1", isRTL ? 'text-end' : '')}
                   />
                   {currentBlock.type !== 'text' && (
                     <p className="text-[11px] text-muted-foreground mt-1">{t('builder.labelOptionalHint', 'Optional display label')}</p>
@@ -191,9 +190,9 @@ export function ContentBlockSlideOver({
 
               {/* Type: Quiz */}
               {currentBlock.type === 'quiz' && (
-                <div className={cn("bg-purple-50/70 dark:bg-purple-950/30 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-2", isRTL ? 'text-right' : '')}>
+                <div className={cn("bg-purple-50/70 dark:bg-purple-950/30 p-4 rounded-xl border border-purple-100 dark:border-purple-900/50 space-y-2", isRTL ? 'text-end' : '')}>
                   <Label className="text-xs font-bold text-purple-900 dark:text-purple-300">{t('builder.selectQuiz', 'Link Knowledge Quiz')}</Label>
-                  <div className="mt-1.5 text-left">
+                  <div className="mt-1.5 text-start">
                     <Select
                       value={(currentBlock.content_data?.quiz_id as string) || ''}
                       onValueChange={(val) => {
@@ -239,7 +238,7 @@ export function ContentBlockSlideOver({
                   : sopOptions
 
                 return (
-                  <div className={cn("bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-3", isRTL ? 'text-right' : '')}>
+                  <div className={cn("bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-3", isRTL ? 'text-end' : '')}>
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
                         <BookOpen className="h-4 w-4 text-emerald-600" />
@@ -261,7 +260,7 @@ export function ContentBlockSlideOver({
                         onChange={(e) => setSopSearchTerm(e.target.value)}
                         className={cn(
                           "h-8 text-xs bg-white dark:bg-slate-950 border-emerald-200 dark:border-emerald-800 shadow-xs",
-                          isRTL ? "pe-8 ps-7 text-right" : "ps-8 pe-7 text-left"
+                          isRTL ? "pe-8 ps-7 text-end" : "ps-8 pe-7 text-start"
                         )}
                       />
                       {sopSearchTerm && (
@@ -276,7 +275,7 @@ export function ContentBlockSlideOver({
                     </div>
 
                     {/* SOP Dropdown */}
-                    <div className="text-left">
+                    <div className="text-start">
                       <Select
                         value={selectedSopId}
                         onValueChange={(val) => {
@@ -334,7 +333,7 @@ export function ContentBlockSlideOver({
                 const maxTurns = Number(currentBlock.content_data?.max_turns ?? 5)
 
                 return (
-                  <div className={cn("bg-amber-50/70 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-3", isRTL ? 'text-right' : '')}>
+                  <div className={cn("bg-amber-50/70 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-3", isRTL ? 'text-end' : '')}>
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
                         <MessageSquare className="h-4 w-4 text-amber-600" />
@@ -458,7 +457,7 @@ export function ContentBlockSlideOver({
 
               {/* Type: Rich Text */}
               {currentBlock.type === 'text' && (
-                <div className={isRTL ? 'text-right' : ''}>
+                <div className={isRTL ? 'text-end' : ''}>
                   <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
                     <Label className="text-xs font-semibold">{t('content', 'Content')}</Label>
                     <Button
@@ -482,7 +481,7 @@ export function ContentBlockSlideOver({
                       value={currentBlock.content}
                       onChange={(val) => setCurrentBlock({ ...currentBlock, content: val })}
                       placeholder={t('content', 'Write lesson guidelines, SOP steps, or instructions...')}
-                      className="mt-2 text-left"
+                      className="mt-2 text-start"
                       minHeight={260}
                       direction={isRTL ? 'rtl' : 'ltr'}
                     />
@@ -493,7 +492,7 @@ export function ContentBlockSlideOver({
 
               {/* Type: Video */}
               {currentBlock.type === 'video' && (
-                <div className={isRTL ? 'text-right' : ''}>
+                <div className={isRTL ? 'text-end' : ''}>
                   <Label className="text-xs font-semibold">{t('builder.videoUrl', 'Video URL')}</Label>
                   <div className="space-y-3 mt-1.5">
                     <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
@@ -523,7 +522,7 @@ export function ContentBlockSlideOver({
                           setCurrentBlock({ ...currentBlock, content_url: url, title: nextTitle })
                         }}
                         placeholder="https://..."
-                        className={isRTL ? "text-right" : ""}
+                        className={isRTL ? "text-end" : ""}
                       />
                     ) : (
                       <div className="space-y-3">
@@ -542,7 +541,7 @@ export function ContentBlockSlideOver({
 
               {/* Type: Image */}
               {currentBlock.type === 'image' && (
-                <div className={isRTL ? 'text-right' : ''}>
+                <div className={isRTL ? 'text-end' : ''}>
                   <Label className="text-xs font-semibold">{t('builder.imageUrl', 'Image URL')}</Label>
                   <div className="space-y-3 mt-1.5">
                     <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
@@ -572,7 +571,7 @@ export function ContentBlockSlideOver({
                           setCurrentBlock({ ...currentBlock, content_url: url, title: nextTitle })
                         }}
                         placeholder="https://..."
-                        className={isRTL ? "text-right" : ""}
+                        className={isRTL ? "text-end" : ""}
                       />
                     ) : (
                       <div className="space-y-3">
@@ -591,7 +590,7 @@ export function ContentBlockSlideOver({
 
               {/* Type: Document Link */}
               {currentBlock.type === 'document_link' && (
-                <div className={isRTL ? 'text-right' : ''}>
+                <div className={isRTL ? 'text-end' : ''}>
                   <Label className="text-xs font-semibold">{t('builder.documentUrl', 'Document URL')}</Label>
                   <div className="space-y-3 mt-1.5">
                     <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
@@ -621,7 +620,7 @@ export function ContentBlockSlideOver({
                           setCurrentBlock({ ...currentBlock, content_url: url, title: nextTitle })
                         }}
                         placeholder="https://..."
-                        className={isRTL ? "text-right" : ""}
+                        className={isRTL ? "text-end" : ""}
                       />
                     ) : (
                       <div className="space-y-3">
@@ -640,7 +639,7 @@ export function ContentBlockSlideOver({
 
               {/* Type: Assignment / Practical */}
               {(currentBlock.type === 'assignment' || currentBlock.type === 'practical') && (
-                <div className={cn("space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/70 dark:border-amber-900/50", isRTL ? 'text-right' : '')}>
+                <div className={cn("space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/70 dark:border-amber-900/50", isRTL ? 'text-end' : '')}>
                   <div>
                     <Label className="text-xs font-bold text-amber-900 dark:text-amber-300">
                       {t('builder.assignmentPrompt', 'Assignment Instructions & Prompt')}
@@ -709,7 +708,7 @@ export function ContentBlockSlideOver({
                   onClick={() => setShowAdvancedBlockOptions(!showAdvancedBlockOptions)}
                   className={cn(
                     "w-full px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center justify-between hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors",
-                    isRTL ? "flex-row-reverse text-right" : "text-left"
+                    isRTL ? "flex-row-reverse text-end" : "text-start"
                   )}
                 >
                   <span>{t('builder.optionalSettings', 'Duration & Scoring Settings')}</span>
@@ -719,9 +718,9 @@ export function ContentBlockSlideOver({
                 </button>
 
                 {showAdvancedBlockOptions && (
-                  <div className={cn("p-4 space-y-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950", isRTL ? 'text-right' : '')}>
+                  <div className={cn("p-4 space-y-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950", isRTL ? 'text-end' : '')}>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className={isRTL ? 'text-right' : ''}>
+                      <div className={isRTL ? 'text-end' : ''}>
                         <Label className="text-xs font-semibold">{t('duration', 'Duration')}</Label>
                         <div className="relative mt-1">
                           <Input
@@ -729,12 +728,12 @@ export function ContentBlockSlideOver({
                             value={currentBlock.duration || ''}
                             onChange={(e) => setCurrentBlock({ ...currentBlock, duration: parseInt(e.target.value) || 0 })}
                             placeholder="10"
-                            className={cn(isRTL ? "ps-8 text-right" : "pe-8")}
+                            className={cn(isRTL ? "ps-8 text-end" : "pe-8")}
                           />
                           <span className={cn("absolute top-2.5 text-slate-400 text-xs", isRTL ? "start-3" : "end-3")}>{t('min', 'min')}</span>
                         </div>
                       </div>
-                      <div className={isRTL ? 'text-right' : ''}>
+                      <div className={isRTL ? 'text-end' : ''}>
                         <Label className="text-xs font-semibold">{t('points', 'Points')}</Label>
                         <div className="relative mt-1">
                           <Input
@@ -742,7 +741,7 @@ export function ContentBlockSlideOver({
                             value={currentBlock.points || ''}
                             onChange={(e) => setCurrentBlock({ ...currentBlock, points: parseInt(e.target.value) || 0 })}
                             placeholder="1"
-                            className={cn(isRTL ? "ps-8 text-right" : "pe-8")}
+                            className={cn(isRTL ? "ps-8 text-end" : "pe-8")}
                           />
                           <span className={cn("absolute top-2.5 text-slate-400 text-xs", isRTL ? "start-3" : "end-3")}>{t('pts', 'pts')}</span>
                         </div>
@@ -757,7 +756,7 @@ export function ContentBlockSlideOver({
                           onChange={(e) => setCurrentBlock({ ...currentBlock, content: e.target.value })}
                           placeholder={t('builder.optionalNotesHint', 'Add short guidance if needed')}
                           rows={2}
-                          className={cn("mt-1.5 text-xs bg-white dark:bg-slate-950", isRTL ? 'text-right' : '')}
+                          className={cn("mt-1.5 text-xs bg-white dark:bg-slate-950", isRTL ? 'text-end' : '')}
                         />
                       </div>
                     )}

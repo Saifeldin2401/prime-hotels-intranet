@@ -179,7 +179,7 @@ export function PracticalAssignmentBlockRenderer({
   }
 
   return (
-    <div className={cn("space-y-6 max-w-4xl mx-auto", isRTL && "text-right")}>
+    <div className={cn("space-y-6 max-w-4xl mx-auto", isRTL && "text-end")}>
       {/* Assignment Header Card */}
       <Card className="border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="h-2 bg-hotel-gold w-full" />

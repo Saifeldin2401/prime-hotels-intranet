@@ -12,7 +12,7 @@
 
 import { analytics } from '@/services/analyticsService'
 
-export interface AuthEvent {
+interface AuthEvent {
   type: 'session_validation' | 'logout' | 'network_error' | 'token_refresh' | 'tab_resume'
   timestamp: number
   success: boolean
@@ -148,23 +148,9 @@ function sendToAnalytics(event: AuthEvent): void {
 }
 
 /**
- * Get current session metrics
- */
-export function getSessionMetrics(): Readonly<SessionMetrics> {
-  return { ...metrics }
-}
-
-/**
- * Get recent auth events
- */
-export function getRecentEvents(limit = 10): AuthEvent[] {
-  return eventBuffer.slice(-limit)
-}
-
-/**
  * Check if session is healthy based on recent metrics
  */
-export function isSessionHealthy(): { healthy: boolean; concerns: string[] } {
+function isSessionHealthy(): { healthy: boolean; concerns: string[] } {
   const concerns: string[] = []
 
   // High network error rate
@@ -189,21 +175,9 @@ export function isSessionHealthy(): { healthy: boolean; concerns: string[] } {
 }
 
 /**
- * Reset metrics (useful for testing)
- */
-export function resetMetrics(): void {
-  metrics.validationAttempts = 0
-  metrics.networkErrors = 0
-  metrics.authErrors = 0
-  metrics.successfulResumes = 0
-  metrics.lastValidationAt = null
-  eventBuffer.length = 0
-}
-
-/**
  * Report current state for debugging
  */
-export function reportAuthHealth(): void {
+function reportAuthHealth(): void {
   const health = isSessionHealthy()
   if (health.concerns.length > 0) {
     console.warn('Concerns:', health.concerns)

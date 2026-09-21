@@ -10,11 +10,10 @@ import {
   getPendingSubmissions, 
   removeSubmission,
   isOnline,
-  waitForOnline,
   type PendingSubmission 
 } from '@/services/offlineService';
 
-export interface OfflineSyncState {
+interface OfflineSyncState {
   isOnline: boolean;
   pendingCount: number;
   pendingSubmissions: PendingSubmission[];
@@ -22,7 +21,7 @@ export interface OfflineSyncState {
   lastSyncError: string | null;
 }
 
-export interface OfflineSyncActions {
+interface OfflineSyncActions {
   refreshPending: () => Promise<void>;
   removePending: (id: string) => Promise<void>;
   syncNow: () => Promise<void>;

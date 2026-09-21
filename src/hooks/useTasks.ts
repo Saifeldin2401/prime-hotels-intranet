@@ -6,7 +6,7 @@ import { getTransitionErrorMessage, validateTransition } from '@/lib/statusTrans
 import { secureSearchTasks } from '@/lib/secureSearch'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { Task, TaskComment, TaskPriority, TaskStats, TaskStatus } from '@/lib/types'
+import type { Task, TaskPriority, TaskStats, TaskStatus } from '@/lib/types'
 import { sanitizeSearchInput } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -101,139 +101,7 @@ export function useTasks(filters?: {
 }
 
 // Paginated version of useTasks
-export function useTasksPaginated(
-  filters?: {
-    status?: TaskStatus
-    priority?: TaskPriority
-    assignedTo?: string
-    createdBy?: string
-    propertyId?: string
-    departmentId?: string
-    search?: string
-    ignorePropertyFilter?: boolean
-  },
-  pagination?: { from: number; to: number; setTotalCount: (count: number) => void }
-) {
-  const { currentProperty } = useProperty()
-
-  return useQuery({
-    queryKey: ['tasks-paginated', filters, currentProperty?.id, pagination?.from, pagination?.to],
-    queryFn: async () => {
-      // First get total count
-      let countQuery = supabase
-        .from('tasks')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_deleted', false)
-
-      if (filters?.status) countQuery = countQuery.eq('status', filters.status)
-      if (filters?.priority) countQuery = countQuery.eq('priority', filters.priority)
-      if (filters?.assignedTo) countQuery = countQuery.eq('assigned_to_id', filters.assignedTo)
-      if (filters?.createdBy) countQuery = countQuery.eq('created_by_id', filters.createdBy)
-      if (!filters?.ignorePropertyFilter) {
-        const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (isRealPropertyId(propertyIdToUse)) {
-          countQuery = countQuery.eq('property_id', propertyIdToUse)
-        }
-      }
-      if (filters?.departmentId) countQuery = countQuery.eq('department_id', filters.departmentId)
-      
-      // SECURE: Note - count with search uses secure RPC. Skipping count for search to avoid vulnerability.
-      let skipStandardCount = false
-      if (filters?.search) {
-        skipStandardCount = true
-      }
-
-      const { count, error: countError } = skipStandardCount 
-        ? { count: 0, error: null }  // Will use secure search for data
-        : await countQuery
-      if (countError) throw countError
-      if (pagination?.setTotalCount && count !== null) {
-        pagination.setTotalCount(count)
-      }
-
-      // Now get paginated data
-      let query = supabase
-        .from('tasks')
-        .select(`
-          *,
-          assigned_to:profiles!assigned_to_id(id, full_name, avatar_url),
-          created_by:profiles!created_by_id(id, full_name, avatar_url),
-          property:properties(id, name),
-          department:departments(id, name)
-        `)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: false })
-
-      if (filters?.status) query = query.eq('status', filters.status)
-      if (filters?.priority) query = query.eq('priority', filters.priority)
-      if (filters?.assignedTo) query = query.eq('assigned_to_id', filters.assignedTo)
-      if (filters?.createdBy) query = query.eq('created_by_id', filters.createdBy)
-      if (!filters?.ignorePropertyFilter) {
-        const propertyIdToUse = filters?.propertyId || currentProperty?.id
-        if (isRealPropertyId(propertyIdToUse)) {
-          query = query.eq('property_id', propertyIdToUse)
-        }
-      }
-      if (filters?.departmentId) query = query.eq('department_id', filters.departmentId)
-      
-      // SECURE: Handle search using parameterized RPC
-      if (filters?.search) {
-        const sanitized = sanitizeSearchInput(filters.search)
-        if (sanitized) {
-          const secureResults = await secureSearchTasks({
-            search: sanitized,
-            property_id: filters.propertyId || currentProperty?.id,
-            department_id: filters.departmentId,
-            assigned_to: filters.assignedTo,
-            created_by: filters.createdBy,
-            limit: (pagination?.to || 20) - (pagination?.from || 0) + 1,
-            offset: pagination?.from || 0
-          })
-          return (secureResults as unknown) as Task[]
-        }
-      }
-
-      // Apply pagination
-      if (pagination) {
-        query = query.range(pagination.from, pagination.to)
-      }
-
-      const { data, error } = await query
-      if (error) throw error
-      return (data as unknown) as Task[]
-    },
-  })
-}
-
 // Fetch single task
-export function useTask(taskId: string) {
-  return useQuery({
-    queryKey: ['task', taskId],
-    enabled: !!taskId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          assigned_to:profiles!assigned_to_id(id, full_name, avatar_url, email),
-          created_by:profiles!created_by_id(id, full_name, avatar_url),
-          property:properties(id, name),
-          department:departments(id, name),
-          comments:task_comments(
-            *,
-            author:profiles(id, full_name, avatar_url)
-          )
-        `)
-        .eq('is_deleted', false)
-        .eq('id', taskId)
-        .single()
-
-      if (error) throw error
-      return (data as unknown) as Task
-    },
-  })
-}
-
 // Fetch task stats
 export function useTaskStats(userId?: string) {
   return useQuery({
@@ -251,63 +119,6 @@ export function useTaskStats(userId?: string) {
 }
 
 // Create task
-export function useCreateTask() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-  const { currentProperty } = useProperty()
-
-  return useMutation({
-    mutationFn: async (task: Partial<Task>) => {
-      if (!user?.id) throw new Error('User must be authenticated')
-
-      const taskData = {
-        title: task.title,
-        description: task.description,
-        assigned_to_id: task.assigned_to_id,
-        department_id: task.department_id,
-        due_date: task.due_date,
-        start_date: task.start_date,
-        tags: task.tags,
-        estimated_hours: task.estimated_hours,
-        actual_hours: task.actual_hours,
-        created_by_id: user.id,
-        property_id: isRealPropertyId(task.property_id)
-          ? task.property_id
-          : (isRealPropertyId(currentProperty?.id) ? currentProperty.id : null),
-        status: task.status || 'todo',
-        priority: task.priority || 'medium'
-      }
-
-      let notificationPayload = null
-      if (taskData.assigned_to_id && taskData.assigned_to_id !== user.id) {
-        notificationPayload = {
-          type: 'task_assigned',
-          title: 'New Task Assigned',
-          message: `You have been assigned a new task: "${taskData.title || 'Untitled'}"`,
-          link: `/tasks`,
-          data: { taskTitle: taskData.title }
-        }
-      }
-
-      const { data, error } = await supabase.rpc('create_task_atomic', {
-        task_data: taskData,
-        notification_payload: notificationPayload
-      })
-
-      if (error) throw error
-      return (data as unknown) as Task
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
-      queryClient.invalidateQueries({ queryKey: ['task-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
-      crudToasts.create.success('Task')
-    },
-    onError: () => crudToasts.create.error('task')
-  })
-}
-
 // Update task
 export function useUpdateTask() {
   const queryClient = useQueryClient()
@@ -388,58 +199,4 @@ export function useUpdateTask() {
 }
 
 // Soft Delete task
-export function useDeleteTask() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-
-  return useMutation({
-    mutationFn: async (taskId: string) => {
-      if (!user?.id) throw new Error('User must be authenticated')
-
-      const { error } = await supabase
-        .from('tasks')
-        .update({ is_deleted: true })
-        .eq('id', taskId)
-
-      if (error) throw error
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      queryClient.invalidateQueries({ queryKey: ['tasks-paginated'] })
-      queryClient.invalidateQueries({ queryKey: ['task-stats'] })
-      crudToasts.delete.success('Task')
-    },
-    onError: () => crudToasts.delete.error('task')
-  })
-}
-
 // Add comment
-export function useAddTaskComment() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-
-  return useMutation({
-    mutationFn: async (comment: { task_id: string; content: string; author_id?: string }) => {
-      const authorId = comment.author_id || user?.id
-      if (!authorId) throw new Error('User must be authenticated')
-
-      const { data, error } = await supabase
-        .from('task_comments')
-        .insert({
-          task_id: comment.task_id,
-          content: comment.content,
-          author_id: authorId
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['task', variables.task_id] })
-      crudToasts.create.success('Comment')
-    },
-    onError: () => crudToasts.create.error('comment')
-  })
-}

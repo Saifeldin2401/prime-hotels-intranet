@@ -18,8 +18,7 @@ import {
   CheckCircle2,
   Sparkles,
   Wand2,
-  Building2,
-  FileCheck,
+  Building2
 } from 'lucide-react'
 import { complianceShield, type ComplianceAuditReport, type ComplianceFinding } from '@/lib/ai/complianceShield'
 import type { TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Eye, Mail, Globe, Sparkles } from 'lucide-react'
+import { Eye, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TenantEmailPreviewModalProps {
@@ -221,7 +221,7 @@ export function TenantEmailPreviewModal({
             </div>
 
             {/* Email Main Content */}
-            <div className={`p-8 space-y-5 ${isRtl ? 'text-right' : 'text-left'}`}>
+            <div className={`p-8 space-y-5 ${isRtl ? 'text-end' : 'text-start'}`}>
               <h2
                 className="text-xl font-bold tracking-tight"
                 style={{ color: primaryColor }}
@@ -238,7 +238,7 @@ export function TenantEmailPreviewModal({
               </p>
 
               {/* Action Button */}
-              <div className={`pt-3 pb-2 ${isRtl ? 'text-right' : 'text-left'}`}>
+              <div className={`pt-3 pb-2 ${isRtl ? 'text-end' : 'text-start'}`}>
                 <div
                   className="inline-block px-6 py-3 rounded-lg text-white font-semibold text-sm shadow-md cursor-pointer transition-transform hover:scale-105"
                   style={{ background: headerGradient }}

@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { useState } from 'react'
 
-export interface ScanResult {
+interface ScanResult {
     safe: boolean
     status?: 'clean' | 'suspicious' | 'infected' | 'error'
     riskScore?: number
@@ -11,7 +10,7 @@ export interface ScanResult {
     hashSha256?: string
 }
 
-export interface ScanOptions {
+interface ScanOptions {
     bucket?: string
     storagePath?: string
     context?: string
@@ -161,11 +160,11 @@ async function runServerScan(file: File, options?: ScanOptions): Promise<ScanRes
         if (body && typeof body.safe === 'boolean') {
             return {
                 safe: body.safe,
-                status: body.status || (body.safe ? 'clean' : 'suspicious'),
+                status: (typeof body.status === 'string' ? body.status : (body.safe ? 'clean' : 'suspicious')) as 'error' | 'clean' | 'suspicious' | 'infected',
                 riskScore: typeof body.risk_score === 'number' ? body.risk_score : undefined,
-                scanId: body.scan_id || null,
+                scanId: typeof body.scan_id === 'string' ? body.scan_id : null,
                 reasons: Array.isArray(body.reasons) ? body.reasons : [],
-                message: body.message || undefined,
+                message: typeof body.message === 'string' ? body.message : undefined,
                 hashSha256: fileHash
             }
         }
@@ -216,18 +215,3 @@ export async function scanFile(file: File, options?: ScanOptions): Promise<ScanR
 }
 
 // Hook for UI state management
-export function useVirusScan() {
-    const [isScanning, setIsScanning] = useState(false)
-
-    const scan = async (file: File, options?: ScanOptions): Promise<ScanResult> => {
-        setIsScanning(true)
-        const result = await scanFile(file, options)
-        setIsScanning(false)
-        return result
-    }
-
-    return {
-        scan,
-        isScanning
-    }
-}

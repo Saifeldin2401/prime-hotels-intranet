@@ -4,8 +4,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Crown,
-  Globe2,
-  Languages,
   Loader2,
   Save,
   Send,

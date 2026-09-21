@@ -47,7 +47,7 @@ import {
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
-export interface TrashedDocument {
+interface TrashedDocument {
   id: string;
   title: string;
   fileType: "pdf" | "doc" | "docx" | "xls" | "xlsx" | "image" | "other";
@@ -266,7 +266,7 @@ export function DocumentTrashBin({
             <Button
               variant={viewMode === "list" ? "secondary" : "ghost"}
               size="icon"
-              className="h-8 w-8 rounded-none rounded-l-md"
+              className="h-8 w-8 rounded-none rounded-s-md"
               onClick={() => setViewMode("list")}
               aria-label={t("accessibility.list_view", "List view")}
             >
@@ -275,7 +275,7 @@ export function DocumentTrashBin({
             <Button
               variant={viewMode === "grid" ? "secondary" : "ghost"}
               size="icon"
-              className="h-8 w-8 rounded-none rounded-r-md"
+              className="h-8 w-8 rounded-none rounded-e-md"
               onClick={() => setViewMode("grid")}
               aria-label={t("accessibility.grid_view", "Grid view")}
             >

@@ -12,7 +12,7 @@
 import { supabase } from '@/lib/supabase'
 import { isImageModel, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 
-export type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 'general'
+type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 'general'
 
 /**
  * Gateway capability class. When supplied, the edge gateway consults its
@@ -20,7 +20,7 @@ export type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 
  * model for this capability under the active policy — the client-side cascade
  * below becomes a fallback rather than the primary route.
  */
-export type AICapabilityClass =
+type AICapabilityClass =
   | 'structured_json'
   | 'reasoning'
   | 'fast'
@@ -28,7 +28,7 @@ export type AICapabilityClass =
   | 'long_form'
   | 'image'
 
-export interface MultiProviderRequestOptions {
+interface MultiProviderRequestOptions {
   task?: AITaskCategory
   capability?: AICapabilityClass
   /** Agent role — forwarded to the gateway so get_ai_routing_plan can apply the
@@ -43,7 +43,7 @@ export interface MultiProviderRequestOptions {
   onFailover?: (fromProvider: string, toProvider: string, reason: string) => void
 }
 
-export interface MultiProviderResponse<T = string> {
+interface MultiProviderResponse<T = string> {
   data: T
   rawText: string
   providerUsed: string
@@ -60,7 +60,7 @@ interface ProviderCandidate {
   supportsJson: boolean
 }
 
-export class MultiProviderRouter {
+class MultiProviderRouter {
   private static instance: MultiProviderRouter
 
   private constructor() {}

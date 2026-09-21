@@ -58,7 +58,7 @@ export interface LearnerAnalyticsRow {
     last_activity_at: string | null
 }
 
-export interface LearnerTopicRow {
+interface LearnerTopicRow {
     training_module_id: string | null
     module_title: string
     attempts: number
@@ -91,7 +91,7 @@ export interface CourseAnalyticsRow {
     last_activity_at: string | null
 }
 
-export interface CourseFunnelRow {
+interface CourseFunnelRow {
     block_id: string
     block_title: string | null
     block_type: string | null
@@ -109,7 +109,7 @@ export const getCourseFunnel = (moduleId: string) =>
 // ---------------------------------------------------------------------------
 // 3. Knowledge analytics
 // ---------------------------------------------------------------------------
-export interface KnowledgeDocumentRow {
+interface KnowledgeDocumentRow {
     document_id: string
     title: string
     content_type: string | null
@@ -119,7 +119,7 @@ export interface KnowledgeDocumentRow {
     last_viewed_at: string | null
 }
 
-export interface SearchTermRow {
+interface SearchTermRow {
     term: string
     searches: number
     distinct_users: number
@@ -128,7 +128,7 @@ export interface SearchTermRow {
     last_searched_at: string | null
 }
 
-export interface ZeroResultSearchRow {
+interface ZeroResultSearchRow {
     term: string
     searches: number
     distinct_users: number
@@ -171,7 +171,7 @@ export interface AssessmentQuestionRow {
     hint_used_rate: number | null
 }
 
-export interface WrongAnswerRow {
+interface WrongAnswerRow {
     answer_value: string
     answer_label: string
     is_correct: boolean
@@ -179,7 +179,7 @@ export interface WrongAnswerRow {
     pct_of_attempts: number | null
 }
 
-export interface PassRateRow {
+interface PassRateRow {
     quiz_type: string
     quiz_entity_id: string | null
     quiz_title: string

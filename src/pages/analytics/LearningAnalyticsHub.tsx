@@ -10,8 +10,6 @@ import {
   Printer, 
   RefreshCw, 
   Sparkles, 
-  Layers, 
-  Calendar, 
   Building2,
   Filter,
   Briefcase

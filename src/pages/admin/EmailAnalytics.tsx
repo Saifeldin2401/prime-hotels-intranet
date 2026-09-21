@@ -1,7 +1,6 @@
-import { Activity, CheckCircle2, XCircle, Mail, Loader2, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { format, subDays, startOfDay } from 'date-fns'
 
@@ -192,14 +191,14 @@ export default function EmailAnalytics() {
               <CardTitle>Template Breakdown</CardTitle>
             </CardHeader>
             <div className="p-0 border-t">
-              <table className="w-full text-sm text-left">
+              <table className="w-full text-sm text-start">
                 <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
                   <tr>
                     <th className="px-6 py-3 font-medium">Template Key</th>
-                    <th className="px-6 py-3 font-medium text-right">Processed</th>
-                    <th className="px-6 py-3 font-medium text-right">Delivered</th>
-                    <th className="px-6 py-3 font-medium text-right">Failed</th>
-                    <th className="px-6 py-3 font-medium text-right">Delivery Rate</th>
+                    <th className="px-6 py-3 font-medium text-end">Processed</th>
+                    <th className="px-6 py-3 font-medium text-end">Delivered</th>
+                    <th className="px-6 py-3 font-medium text-end">Failed</th>
+                    <th className="px-6 py-3 font-medium text-end">Delivery Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -208,10 +207,10 @@ export default function EmailAnalytics() {
                     return (
                       <tr key={tmpl.template_key} className="hover:bg-muted/30">
                         <td className="px-6 py-4 font-medium text-primary">{tmpl.template_key}</td>
-                        <td className="px-6 py-4 text-right">{tmpl.sent.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-green-600">{tmpl.delivered.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-destructive">{tmpl.failed.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-end">{tmpl.sent.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-end text-green-600">{tmpl.delivered.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-end text-destructive">{tmpl.failed.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-end">
                           <span className={rate >= 90 ? 'text-green-600' : rate >= 75 ? 'text-amber-500' : 'text-destructive'}>
                             {rate}%
                           </span>

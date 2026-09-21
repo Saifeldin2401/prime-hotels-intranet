@@ -13,7 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/use-toast';
 import { useTenant } from '@/contexts/TenantContext';
 
-export interface UserInvitation {
+interface UserInvitation {
   id: string;
   auth_user_id?: string | null;
   email: string;
@@ -30,7 +30,7 @@ export interface UserInvitation {
   metadata?: Record<string, unknown>;
 }
 
-export interface CreateInvitationData {
+interface CreateInvitationData {
   email: string;
   role: string;
   propertyId?: string;
@@ -38,7 +38,7 @@ export interface CreateInvitationData {
   metadata?: Record<string, unknown>;
 }
 
-export interface UseInvitationsReturn {
+interface UseInvitationsReturn {
   invitations: UserInvitation[];
   isLoading: boolean;
   isCreating: boolean;

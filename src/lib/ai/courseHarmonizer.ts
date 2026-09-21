@@ -4,19 +4,11 @@
  */
 
 import type {
-  CourseDifficulty,
   CourseGenerationMode,
   CourseType,
-  DifficultyProgression,
   FullCourseGenerationConfig,
-  InstructionalStrategy,
-  LessonComponentKey,
-  LessonDurationMinutes,
-  LessonTemplateType,
-  OverallContentDepth,
-  QuizPlacement,
+  LessonDurationMinutes
 } from '@/types/aiCourseEngine'
-import type { QuestionType } from '@/types/questions'
 
 export interface ConsistencyIssue {
   id: string
@@ -73,8 +65,8 @@ export function checkCourseConfigConsistency(
         patch: {
           granularity: {
             ...config.granularity,
-            moduleCount: modCount > 3 ? 2 : modCount,
-            lessonsPerModule: lessonsPerMod > 3 ? 2 : lessonsPerMod,
+            moduleCount: typeof modCount === 'number' && modCount > 3 ? 2 : modCount,
+            lessonsPerModule: typeof lessonsPerMod === 'number' && lessonsPerMod > 3 ? 2 : lessonsPerMod,
             lessonDuration: 5 as LessonDurationMinutes,
           },
           overallDepth: 'quick',
@@ -746,7 +738,6 @@ export function getSmartCourseTypePreset(
       }
 
     case 'soft_skills':
-    case 'guest_relations':
       return {
         courseType,
         instructionalStrategy: 'scenario_based',
@@ -824,7 +815,6 @@ export function getSmartCourseTypePreset(
       }
 
     case 'management':
-    case 'executive':
       return {
         courseType,
         instructionalStrategy: 'case_based',
@@ -863,7 +853,6 @@ export function getSmartCourseTypePreset(
       }
 
     case 'technical':
-    case 'culinary':
       return {
         courseType,
         instructionalStrategy: 'hands_on',

@@ -7,11 +7,6 @@ import { cn } from "@/lib/utils"
 import { useTranslation } from 'react-i18next'
 
 const Sheet = SheetPrimitive.Root
-
-const SheetTrigger = SheetPrimitive.Trigger
-
-const SheetClose = SheetPrimitive.Close
-
 const SheetPortal = SheetPrimitive.Portal
 
 const SheetOverlay = React.forwardRef<
@@ -94,7 +89,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
     <div
         className={cn(
-            "flex flex-col space-y-2 text-center sm:text-left",
+            "flex flex-col space-y-2 text-center sm:text-start",
             className
         )}
         {...props}
@@ -141,6 +136,6 @@ const SheetDescription = React.forwardRef<
 SheetDescription.displayName = SheetPrimitive.Description.displayName
 
 export {
-    Sheet, SheetClose,
-    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay, SheetPortal, SheetTitle, SheetTrigger
+    Sheet,
+    SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle
 }

@@ -10,7 +10,7 @@ import { searchHotelKnowledge, buildGroundedContext, type ArticleSource } from '
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface KnowledgeAgentInput {
+interface KnowledgeAgentInput {
   query: string
   propertyId?: string | null
   departmentId?: string | null
@@ -26,7 +26,7 @@ export interface GroundedKnowledgeResult {
   keyProceduresExtractedAr: string[]
 }
 
-export class KnowledgeAgent extends BaseAIAgent<KnowledgeAgentInput, GroundedKnowledgeResult> {
+class KnowledgeAgent extends BaseAIAgent<KnowledgeAgentInput, GroundedKnowledgeResult> {
   public readonly role: AgentRole = 'knowledge'
   public readonly name = 'Knowledge Base & RAG Grounding Agent'
   public readonly nameAr = 'وكيل استرجاع المعرفة والإجراءات القياسية (RAG)'

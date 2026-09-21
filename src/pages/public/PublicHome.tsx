@@ -3,7 +3,6 @@ import { RevealUp } from '@/components/public/RevealUp';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import {
-  ArrowRight,
   Award,
   BarChart3,
   Building2,
@@ -12,11 +11,8 @@ import {
   Compass,
   Cpu,
   Layers,
-  Lock,
   ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  Users,
+  Sparkles
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

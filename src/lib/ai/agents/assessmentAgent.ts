@@ -10,7 +10,7 @@ import type { QuestionDifficulty, QuestionType } from '@/types/questions'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole, ObjectiveAssessmentContext } from './types'
 
-export interface AssessmentAgentInput {
+interface AssessmentAgentInput {
   title: string
   contextContent: string
   count: number
@@ -20,7 +20,7 @@ export interface AssessmentAgentInput {
   language?: 'en' | 'ar' | 'bilingual'
 }
 
-export class AssessmentAgent extends BaseAIAgent<AssessmentAgentInput, GeneratedUnifiedQuestion[]> {
+class AssessmentAgent extends BaseAIAgent<AssessmentAgentInput, GeneratedUnifiedQuestion[]> {
   public readonly role: AgentRole = 'assessments'
   public readonly name = 'Psychometric Assessment & Quiz Specialist Agent'
   public readonly nameAr = 'أخصائي التقييمات والاختبارات القياسية'

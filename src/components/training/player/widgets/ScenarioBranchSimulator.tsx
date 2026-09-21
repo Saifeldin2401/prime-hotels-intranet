@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface ScenarioOption {
+interface ScenarioOption {
     id: string
     text: string
     text_ar?: string

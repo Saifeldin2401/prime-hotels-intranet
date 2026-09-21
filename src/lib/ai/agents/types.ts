@@ -4,7 +4,7 @@
  * Dynamic Capability-Based Architecture for Enterprise Hospitality Training
  */
 
-import type { CourseDifficulty, CourseType, InstructionalStrategy, LessonTemplateType } from '@/types/aiCourseEngine'
+import type { CourseType } from '@/types/aiCourseEngine'
 import type { QuestionDifficulty, QuestionType } from '@/types/questions'
 
 // ============================================================================
@@ -195,7 +195,7 @@ export interface AgentExecutionResult<T = unknown> {
 
 export type QAScoreCategory = 'major_revision' | 'targeted_revision' | 'acceptable' | 'production_ready'
 
-export interface QAThresholdConfig {
+interface QAThresholdConfig {
   minimumProductionReady: number // Default: 92
   minimumAcceptable: number       // Default: 80
   minimumTargetedRevision: number // Default: 68

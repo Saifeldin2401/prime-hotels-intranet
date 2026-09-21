@@ -32,20 +32,20 @@ const SERVICE_UNAVAILABLE_MESSAGE_PATTERNS = [
   /temporarily unavailable/i,
 ]
 
-export const AUTH_LINK_TIMEOUT_MS = 10_000
+const AUTH_LINK_TIMEOUT_MS = 10_000
 export const AUTH_SERVICE_UNAVAILABLE_MESSAGE =
   'The authentication service is temporarily unavailable. Please try again.'
 
-export type AuthLinkErrorKind = 'invalid_link' | 'service_unavailable' | 'unknown'
+type AuthLinkErrorKind = 'invalid_link' | 'service_unavailable' | 'unknown'
 
-export interface ClassifiedAuthLinkError {
+interface ClassifiedAuthLinkError {
   kind: AuthLinkErrorKind
   message: string
   status: number | null
   code: string | null
 }
 
-export function getAuthLinkErrorMessage(error: unknown): string {
+function getAuthLinkErrorMessage(error: unknown): string {
   if (typeof error === 'string') return error
   if (error && typeof error === 'object') {
     const maybeMessage = (error as { message?: unknown }).message
@@ -107,8 +107,4 @@ export function classifyAuthLinkError(error: unknown): ClassifiedAuthLinkError {
   }
 
   return { kind: 'unknown', message, status, code }
-}
-
-export function isServiceUnavailableAuthLinkError(error: unknown): boolean {
-  return classifyAuthLinkError(error).kind === 'service_unavailable'
 }

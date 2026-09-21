@@ -85,10 +85,10 @@ export function ModuleTemplateSelector({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className={cn(isRTL ? "text-right" : "text-left")}>
+          <DialogTitle className={cn(isRTL ? "text-end" : "text-start")}>
             {t('hub.templates.title')}
           </DialogTitle>
-          <DialogDescription className={cn(isRTL ? "text-right" : "text-left")}>
+          <DialogDescription className={cn(isRTL ? "text-end" : "text-start")}>
             {t('hub.templates.description')}
           </DialogDescription>
         </DialogHeader>
@@ -131,7 +131,7 @@ export function ModuleTemplateSelector({
                   key={template.id}
                   className={cn(
                     "cursor-pointer hover:shadow-lg transition-all border-2 hover:border-hotel-gold",
-                    isRTL ? "text-right" : "text-left"
+                    isRTL ? "text-end" : "text-start"
                   )}
                   onClick={() => onTemplateSelected(template)}
                 >
@@ -142,7 +142,7 @@ export function ModuleTemplateSelector({
                           <Icon className="h-5 w-5 text-hotel-navy" />
                           <CardTitle className="text-lg">{template.name}</CardTitle>
                         </div>
-                        <CardDescription className={cn("line-clamp-2", isRTL ? "text-right" : "text-left")}>
+                        <CardDescription className={cn("line-clamp-2", isRTL ? "text-end" : "text-start")}>
                           {template.description}
                         </CardDescription>
                       </div>

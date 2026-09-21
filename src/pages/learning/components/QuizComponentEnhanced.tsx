@@ -22,7 +22,6 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
     usePlayerShell,
     useRegisterPlayerAction,
@@ -264,13 +263,13 @@ function FeedbackOverlay({
                 )}
 
                 {explanation && (
-                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
+                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-start">
                         <p className="text-sm text-white/60 mb-1">Explanation:</p>
                         <p className="text-sm">{explanation}</p>
                     </div>
                 )}
                 {sourceSnippet && (
-                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-left">
+                    <div className="bg-white/10 rounded-xl p-4 mb-6 text-start">
                         <p className="text-sm text-white/60 mb-1">Source:</p>
                         <p className="text-sm">{sourceSnippet}</p>
                     </div>
@@ -1410,7 +1409,7 @@ export function QuizComponentEnhanced({
                 animate={{ opacity: 1, y: 0 }}
                 className="flex flex-wrap items-center justify-between gap-4"
             >
-                <div className={cn("space-y-1", isRTL && "text-right")}>
+                <div className={cn("space-y-1", isRTL && "text-end")}>
                     <p className="text-[10px] font-bold tracking-[0.2em] text-hotel-gold-dark uppercase">
                         {t('training:quizzes.player.question_counter', {
                             current: currentQuestionIndex + 1,
@@ -1542,7 +1541,7 @@ export function QuizComponentEnhanced({
                         <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden">
                             <CardContent className="p-6 md:p-10 space-y-6">
                                 {/* Question */}
-                                <div className={cn("space-y-4", isRTL && "text-right")}>
+                                <div className={cn("space-y-4", isRTL && "text-end")}>
                                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-hotel-navy text-white rounded-full text-[10px] font-bold tracking-widest uppercase">
                                         <HelpCircle className="h-3 w-3" />
                                         Question {currentQuestionIndex + 1}
@@ -1620,7 +1619,7 @@ export function QuizComponentEnhanced({
                                                             <span className={cn(
                                                                 "flex-1 text-sm sm:text-base font-sans transition-colors",
                                                                 isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
-                                                                isRTL && "text-right"
+                                                                isRTL && "text-end"
                                                             )}>
                                                                 {translatedOption}
                                                             </span>
@@ -1681,7 +1680,7 @@ export function QuizComponentEnhanced({
                                                             <span className={cn(
                                                                 "flex-1 text-sm sm:text-base font-sans transition-colors",
                                                                 isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
-                                                                isRTL && "text-right"
+                                                                isRTL && "text-end"
                                                             )}>
                                                                 {translatedOption}
                                                             </span>
@@ -1788,7 +1787,7 @@ export function QuizComponentEnhanced({
                                                             <span className={cn(
                                                                 "flex-1 text-sm sm:text-base font-sans transition-colors",
                                                                 isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
-                                                                isRTL && "text-right"
+                                                                isRTL && "text-end"
                                                             )}>
                                                                 {translatedOption}
                                                             </span>
@@ -1835,7 +1834,7 @@ export function QuizComponentEnhanced({
                                                                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hotel-navy/5 font-bold text-hotel-navy">
                                                                     {index + 1}
                                                                 </span>
-                                                                <span className={cn("flex-1 text-base text-slate-700", isRTL && "text-right")}>
+                                                                <span className={cn("flex-1 text-base text-slate-700", isRTL && "text-end")}>
                                                                     {displayOptionText(opt.id, opt.option_text)}
                                                                 </span>
                                                                 <div className="flex flex-col gap-1">
@@ -1893,7 +1892,7 @@ export function QuizComponentEnhanced({
                                                             key={opt.id}
                                                             className="flex flex-col sm:flex-row sm:items-center gap-3 border-2 border-slate-100 bg-white p-4 rounded-xl"
                                                         >
-                                                            <span className={cn("flex-1 text-base font-medium text-slate-700", isRTL && "text-right")}>
+                                                            <span className={cn("flex-1 text-base font-medium text-slate-700", isRTL && "text-end")}>
                                                                 {displayOptionText(opt.id, opt.option_text)}
                                                             </span>
                                                             <select

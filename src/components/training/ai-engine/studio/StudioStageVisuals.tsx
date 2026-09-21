@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,18 +7,12 @@ import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
-  AlertTriangle,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cpu,
-  Eye,
   Image as ImageIcon,
-  Layers,
-  ShieldCheck,
-  Sparkles,
-  Wand2,
-  Zap,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { cloudflareProvider } from '@/lib/ai/imageProviders/cloudflareProvider'

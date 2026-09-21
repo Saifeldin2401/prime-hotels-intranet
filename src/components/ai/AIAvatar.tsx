@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils'
-import * as React from 'react'
 
 interface AIAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'

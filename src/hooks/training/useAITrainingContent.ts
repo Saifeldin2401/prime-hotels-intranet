@@ -1344,7 +1344,7 @@ Return a JSON object with these fields:
     }
 }
 
-export type CourseConfiguration = {
+type CourseConfiguration = {
     assignmentType: 'manual' | 'auto_assign' | 'onboarding' | 'role_based'
     targetDepartments: string[]
     targetRoles: string[]

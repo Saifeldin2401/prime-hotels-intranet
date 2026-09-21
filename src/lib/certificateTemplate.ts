@@ -22,7 +22,7 @@ import '@fontsource-variable/dm-sans'
 export const CERTIFICATE_WIDTH_PX = 1200
 export const CERTIFICATE_HEIGHT_PX = 849
 
-export interface CertificateTemplateData {
+interface CertificateTemplateData {
     recipientName: string
     title: string
     completionDateLabel: string

@@ -31,11 +31,9 @@ import { curriculumAgent } from './curriculumAgent'
 import { knowledgeAgent, type GroundedKnowledgeResult } from './knowledgeAgent'
 import { contentWriterAgent } from './contentWriterAgent'
 import { activitiesAgent, type OperationalActivity } from './activitiesAgent'
-import { scenarioAgent } from './scenarioAgent'
 import { assessmentAgent } from './assessmentAgent'
 import { imageAgent } from './imageAgent'
 import { audioAgent, type AudioNarrationResult } from './audioAgent'
-import { videoAgent } from './videoAgent'
 import { qaCriticAgent } from './qaAgent'
 import { revisionAgent } from './revisionAgent'
 import { complianceAgent } from './complianceAgent'
@@ -46,7 +44,7 @@ import {
   type PipelineProgressEvent,
 } from './types'
 
-export interface OrchestratorOptions {
+interface OrchestratorOptions {
   pipelineRunId?: string
   preferredModel?: string
   skipImages?: boolean
@@ -83,7 +81,7 @@ export class CourseGenerationCancelledError extends Error {
   }
 }
 
-export interface OrchestratedCourseOutput {
+interface OrchestratedCourseOutput {
   pipelineRunId: string
   blueprint: CourseBlueprint
   researchFindings?: ResearchFindings
@@ -101,7 +99,7 @@ export interface OrchestratedCourseOutput {
   resumedFromCheckpoint: boolean
 }
 
-export class AICourseOrchestrator {
+class AICourseOrchestrator {
   private static instance: AICourseOrchestrator
 
   private constructor() {}
@@ -314,7 +312,7 @@ export class AICourseOrchestrator {
             topic: config.title || config.topic || 'Hotel Frontline Operations',
             courseType: config.courseType,
             targetAudience: config.targetAudience,
-            language: (config.aiControls?.targetLanguage || 'en').startsWith('ar') ? 'ar' : 'en',
+            language: (config.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar') ? 'ar' : 'en',
             rawSourceMaterial: config.sourceContent,
           },
           { pipelineRunId, phase: 'discovery_and_research', preferredModel: options.preferredModel, onProgress }
@@ -640,11 +638,15 @@ export class AICourseOrchestrator {
     // ========================================================================
     const totalQuizCount = blueprint.modules.length
     let completedQuizCount = Math.min(completedQuizModuleIds.size, totalQuizCount)
-    // Where the author wants assessments. `per_module` / `checkpoints` / `mid_course`
-    // -> a moduleQuiz on each module. `final_assessment` / `standalone` -> one
-    // comprehensive blueprint.finalAssessment pooled from every module.
+    // Where the author wants assessments (Studio offers per_module / final_exam / both / none):
+    //   per_module, checkpoints, mid_course, both -> a moduleQuiz on each module
+    //   final_exam, final_assessment, standalone  -> only one pooled blueprint.finalAssessment
+    //   both, mid_course                          -> module quizzes AND a final assessment
+    //   none                                      -> no graded quizzes at all
     const quizPlacement = config.quizConfig?.placement || 'per_module'
-    const wantsFinalOnly = quizPlacement === 'final_assessment' || quizPlacement === 'standalone'
+    const wantsFinalOnly = quizPlacement === 'final_exam' || quizPlacement === 'final_assessment' || quizPlacement === 'standalone'
+    const wantsFinalExam = wantsFinalOnly || quizPlacement === 'both' || quizPlacement === 'mid_course'
+    const wantsNoQuizzes = quizPlacement === 'none'
     const targetQuestionCount = config.quizConfig?.questionCount || 3
     const wrapQuiz = (title: string, questions: GeneratedUnifiedQuestion[]): QuizBlueprint => ({
       id: crypto.randomUUID(),
@@ -669,7 +671,7 @@ export class AICourseOrchestrator {
     })
 
     await pMap(
-      blueprint.modules.filter((mod) => !completedQuizModuleIds.has(mod.id)),
+      wantsNoQuizzes ? [] : blueprint.modules.filter((mod) => !completedQuizModuleIds.has(mod.id)),
       async (mod) => {
         try {
           const modCombinedContent = (mod.lessons || []).map((l) => l.renderedHtml || l.description || '').join('\n')
@@ -724,10 +726,7 @@ export class AICourseOrchestrator {
 
     // Build the comprehensive final exam when the author asked for one (or a
     // final-only placement), pooling from every module's questions.
-    if (
-      (wantsFinalOnly || quizPlacement === 'mid_course') &&
-      assessmentPool.length > 0
-    ) {
+    if (wantsFinalExam && assessmentPool.length > 0) {
       const finalCount = Math.max(targetQuestionCount, Math.min(assessmentPool.length, targetQuestionCount * 2))
       blueprint.finalAssessment = wrapQuiz(
         `${blueprint.title} — Final Comprehensive Assessment`,
@@ -854,26 +853,26 @@ export class AICourseOrchestrator {
       detailAr: `درجة الجودة النهائية: ${qaReport.overallScore}/100 • تم الإنجاز في ${(totalDurationMs / 1000).toFixed(1)} ثانية`,
     })
 
+    // The QA inspector renders the CourseQAQualityReport shape. Build it from a structural audit
+    // of the finished blueprint, then layer in the QA critic's overall score and findings.
+    const { auditCourseQuality } = await import('@/lib/ai/courseEngine')
+    const structuralReport = await auditCourseQuality(blueprint, config)
     const legacyQaReport: CourseQAQualityReport = {
+      ...structuralReport,
       overallScore: qaReport.overallScore,
-      pedagogicalCoherence: qaReport.dimensionScores.pedagogy,
-      operationalAccuracy: qaReport.dimensionScores.operationalAccuracy,
-      bloomsDistributionScore: qaReport.dimensionScores.bloomsAlignment,
-      assessmentAlignmentScore: qaReport.dimensionScores.operationalAccuracy,
-      serviceStandardScore: qaReport.dimensionScores.serviceStandards,
-      repetitionScore: 95,
-      distractorDiscriminationScore: 90,
-      identifiedGaps: qaReport.findings.map((f) => ({
-        area: f.dimension,
-        severity: f.severity === 'critical' ? 'critical' : f.severity === 'major' ? 'high' : 'medium',
-        issue: f.description,
-        issue_ar: f.descriptionAr,
-        suggestedFix: f.remediationSuggestion,
-        suggestedFix_ar: f.remediationSuggestionAr,
-        canAutoRegenerate: f.canAutoFix,
-      })),
-      timestamp: qaReport.evaluatedAt,
-      auditedBy: qaReport.evaluatedByModel,
+      identifiedGaps: [
+        ...qaReport.findings.map((f) => ({
+          area: f.dimension,
+          // The gap scale is low/medium/high; critical and major findings both surface as high.
+          severity: (f.severity === 'critical' || f.severity === 'major' ? 'high' : 'medium') as 'high' | 'medium',
+          issue: f.description,
+          issue_ar: f.descriptionAr,
+          suggestedFix: f.remediationSuggestion,
+          suggestedFix_ar: f.remediationSuggestionAr,
+          canAutoRegenerate: f.canAutoFix,
+        })),
+        ...structuralReport.identifiedGaps,
+      ],
     }
 
     emitCheckpoint('done', blueprint)

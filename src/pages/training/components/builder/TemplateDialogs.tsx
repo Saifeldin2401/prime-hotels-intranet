@@ -39,7 +39,7 @@ export function TemplatePreviewDialog({
             <Layers className="w-5 h-5 text-hotel-gold" />
             {t('builder.templatePreviewTitle', { name: selectedTemplate?.name || t('builder.template') })}
           </DialogTitle>
-          <DialogDescription className={isRTL ? 'text-right' : ''}>
+          <DialogDescription className={isRTL ? 'text-end' : ''}>
             {selectedTemplate?.description || t('builder.templatePreviewDesc')}
           </DialogDescription>
         </DialogHeader>
@@ -63,7 +63,7 @@ export function TemplatePreviewDialog({
               templateStats.sections.map((section) => (
                 <div
                   key={`${section.title}-${section.count}`}
-                  className={cn("flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700", isRTL ? "flex-row-reverse text-right" : "")}
+                  className={cn("flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700", isRTL ? "flex-row-reverse text-end" : "")}
                 >
                   <span className="font-medium">{section.title}</span>
                   <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal">
@@ -114,7 +114,7 @@ export function TemplateApplyConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             {t('builder.templateReplaceTitle', 'Replace current structure?')}
           </DialogTitle>
-          <DialogDescription className={isRTL ? 'text-right' : ''}>
+          <DialogDescription className={isRTL ? 'text-end' : ''}>
             {t('builder.templateReplaceDesc', 'Applying this template will clear your existing sections and content.')}
           </DialogDescription>
         </DialogHeader>

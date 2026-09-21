@@ -78,27 +78,6 @@ export interface UserRole {
   role: AppRole
 }
 
-export interface Company {
-  id: string
-  name: string
-  name_ar: string | null
-  code: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface Brand {
-  id: string
-  company_id: string
-  name: string
-  name_ar: string | null
-  code: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface Property {
   id: string
   name: string
@@ -140,10 +119,4 @@ export interface UserProperty {
   id: string
   user_id: string
   property_id: string
-}
-
-export interface UserDepartment {
-  id: string
-  user_id: string
-  department_id: string
 }

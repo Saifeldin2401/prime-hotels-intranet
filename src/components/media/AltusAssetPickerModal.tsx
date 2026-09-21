@@ -24,8 +24,8 @@ import {
 import { cn } from '@/lib/utils'
 import {
     ALTUS_ASSET_REGISTRY,
-    AltusAssetMetadata,
-    AltusAssetFamily,
+    type AltusAssetMetadata,
+    type AltusAssetFamily,
     searchAltusAssets,
 } from '@/lib/altusAssetRegistry'
 

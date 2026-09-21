@@ -5,7 +5,7 @@ import { ArrowRight, CheckCircle2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export interface ForgotPasswordSuccessViewProps {
+interface ForgotPasswordSuccessViewProps {
   email: string;
   isRTL?: boolean;
   onBackToLogin: () => void;

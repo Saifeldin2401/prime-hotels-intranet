@@ -47,7 +47,7 @@ function phaseLabel(phase: VideoUploadPhase | null): string | null {
   }
 }
 
-export function CustomRichTextEditor({
+function CustomRichTextEditor({
   value,
   onChange,
   onContentChange,

@@ -102,12 +102,3 @@ export interface BulkOperationResult {
   failed: Array<{ id: string; error: string }>
   total: number
 }
-
-export interface DocumentExpiryInfo {
-  id: string
-  title: string
-  expires_at: string
-  days_until_expiry: number
-  status: 'expired' | 'expiring_soon' | 'active'
-  folder_id: string | null
-}

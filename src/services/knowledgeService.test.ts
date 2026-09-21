@@ -11,7 +11,6 @@ import {
   toggleBookmark,
   submitFeedback,
   getFeedbackStats,
-  getRelatedArticles,
   trackRelatedClick,
   getContextualHelp,
   getCategories,

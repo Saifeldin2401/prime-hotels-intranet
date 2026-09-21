@@ -90,7 +90,7 @@ export default function TenantDataExport() {
             </div>
 
             <Badge variant="outline" className="border-emerald-500/30 text-emerald-600 bg-emerald-500/10 text-xs">
-              <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+              <ShieldCheck className="h-3.5 w-3.5 me-1" />
               {isAr ? 'مطابق للمعايير' : 'Compliant'}
             </Badge>
           </div>

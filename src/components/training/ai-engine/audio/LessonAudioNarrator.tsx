@@ -4,11 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
   Volume2,
-  VolumeX,
   Play,
   Pause,
-  RotateCcw,
-  Sparkles,
   Gauge,
 } from 'lucide-react'
 import { audioSynthesisEngine, type AudioLanguage } from '@/lib/ai/audio/audioSynthesisEngine'

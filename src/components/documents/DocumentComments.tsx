@@ -41,14 +41,14 @@ import {
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
-export interface User {
+interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
 }
 
-export interface Comment {
+interface Comment {
   id: string;
   content: string;
   author: User;

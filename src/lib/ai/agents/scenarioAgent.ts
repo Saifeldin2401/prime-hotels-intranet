@@ -9,7 +9,7 @@ import type { RoleplayScenario, HotelDepartmentRoleplay, GuestTemperament } from
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface ScenarioAgentInput {
+interface ScenarioAgentInput {
   department: HotelDepartmentRoleplay
   topic: string
   guestTemperament?: GuestTemperament
@@ -17,7 +17,7 @@ export interface ScenarioAgentInput {
   language?: 'en' | 'ar' | 'bilingual'
 }
 
-export class ScenarioAgent extends BaseAIAgent<ScenarioAgentInput, RoleplayScenario> {
+class ScenarioAgent extends BaseAIAgent<ScenarioAgentInput, RoleplayScenario> {
   public readonly role: AgentRole = 'scenarios'
   public readonly name = 'Guest Dilemma & Roleplay Scenario Specialist Agent'
   public readonly nameAr = 'أخصائي سيناريوهات معضلات النزلاء والمحاكاة'
@@ -74,5 +74,3 @@ Output JSON matching this exact structure:
     })
   }
 }
-
-export const scenarioAgent = new ScenarioAgent()

@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers';
 
-export interface ForgotPasswordViewProps {
+interface ForgotPasswordViewProps {
   isRTL?: boolean;
   initialEmail?: string;
   onBackToLogin: () => void;

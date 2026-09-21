@@ -125,7 +125,7 @@ export function ManageAssigneesDialog() {
                           <TableHead>{t('status')}</TableHead>
                           <TableHead>{t('due')}</TableHead>
                           <TableHead>{t('score')}</TableHead>
-                          <TableHead className="text-right">{t('actions')}</TableHead>
+                          <TableHead className="text-end">{t('actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -182,7 +182,7 @@ export function ManageAssigneesDialog() {
                               <TableCell>
                                 {entry.score_percentage !== null && entry.score_percentage !== undefined ? `${entry.score_percentage}%` : '-'}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-end">
                                 <div className="flex flex-wrap justify-end gap-2">
                                   <Button type="button" size="sm" variant="outline" onClick={() => openReassignDialog(entry)}>
                                     {t('reassign', 'Reassign')}
@@ -241,7 +241,7 @@ export function ManageAssigneesDialog() {
                           <TableHead>{t('reason', 'Reason')}</TableHead>
                           <TableHead>{t('source', 'Source')}</TableHead>
                           <TableHead>{t('updated', 'Updated')}</TableHead>
-                          <TableHead className="text-right">{t('actions')}</TableHead>
+                          <TableHead className="text-end">{t('actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -271,7 +271,7 @@ export function ManageAssigneesDialog() {
                                 </div>
                               </TableCell>
                               <TableCell>{entry.exemption?.updated_at ? formatDate(entry.exemption.updated_at) : '-'}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-end">
                                 <div className="flex justify-end gap-2">
                                   <Button
                                     type="button" size="sm" variant="outline"

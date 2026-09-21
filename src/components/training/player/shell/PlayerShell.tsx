@@ -2,7 +2,6 @@ import { type ReactNode } from 'react'
 import { LazyMotion, MotionConfig, domAnimation } from 'framer-motion'
 
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { cn } from '@/lib/utils'
 import { useIsDesktop, usePrefersReducedMotion } from '@/hooks/useMediaQuery'
 import { PlayerShellProvider } from './PlayerShellContext'
 import { PlayerContentRegion } from './PlayerContentRegion'

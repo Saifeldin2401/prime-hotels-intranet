@@ -1,5 +1,3 @@
-const BLOCK_FRAGMENT_PATTERN = /[\s\S]*?(?:<\/(?:p|div|section|article|header|footer|aside|main|li|ul|ol|h[1-6]|table|thead|tbody|tr|td|th|blockquote|pre)>|$)/gi
-
 function splitPlainText(value: string, maxChars: number) {
     const safeMax = Math.max(500, Math.floor(maxChars))
     const chunks: string[] = []
@@ -27,42 +25,6 @@ function splitPlainText(value: string, maxChars: number) {
     }
 
     return chunks
-}
-
-export function splitRichTextForTranslation(content: string, maxChars = 2200) {
-    const trimmed = content.trim()
-    if (!trimmed) return []
-    if (trimmed.length <= maxChars) return [trimmed]
-
-    const rawFragments = trimmed.match(BLOCK_FRAGMENT_PATTERN)?.map(fragment => fragment.trim()).filter(Boolean) || [trimmed]
-    const chunks: string[] = []
-    let current = ''
-
-    for (const fragment of rawFragments) {
-        if (fragment.length > maxChars) {
-            if (current) {
-                chunks.push(current)
-                current = ''
-            }
-            const fragmentPieces = splitPlainText(fragment, maxChars)
-            chunks.push(...fragmentPieces)
-            continue
-        }
-
-        const next = current ? `${current}\n${fragment}` : fragment
-        if (next.length > maxChars && current) {
-            chunks.push(current)
-            current = fragment
-        } else {
-            current = next
-        }
-    }
-
-    if (current) {
-        chunks.push(current)
-    }
-
-    return chunks.length > 0 ? chunks : [trimmed]
 }
 
 export function normalizeTranslationErrorMessage(message: string) {

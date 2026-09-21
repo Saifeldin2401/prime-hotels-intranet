@@ -116,7 +116,7 @@ export default function TrainingAssignmentRules() {
     }
 
     return (
-        <div className={`space-y-6 animate-fade-in ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div className={`space-y-6 animate-fade-in ${isRTL ? 'text-end' : 'text-start'}`}>
             <div className="flex items-center justify-between">
                 <PageHeader
                     title={t('rules.title')}

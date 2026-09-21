@@ -9,7 +9,7 @@ import { audioSynthesisEngine, type AudioLanguage } from '@/lib/ai/audio/audioSy
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface AudioAgentInput {
+interface AudioAgentInput {
   lessonTitle: string
   lessonContentHtml: string
   language?: AudioLanguage
@@ -24,7 +24,7 @@ export interface AudioNarrationResult {
   briefingScript: string
 }
 
-export class AudioAgent extends BaseAIAgent<AudioAgentInput, AudioNarrationResult> {
+class AudioAgent extends BaseAIAgent<AudioAgentInput, AudioNarrationResult> {
   public readonly role: AgentRole = 'audio_ai'
   public readonly name = 'Bilingual Audio Briefing & Narration Agent'
   public readonly nameAr = 'وكيل السرد الصوتي والملخصات الصوتية الذكية'

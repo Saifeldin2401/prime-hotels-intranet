@@ -8,18 +8,9 @@ import { escapeSearchQuery } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
-export interface SearchSuggestion {
-  id: string
-  text: string
-  type: 'recent' | 'popular' | 'document' | 'page' | 'action' | 'navigation' | 'help'
-  url?: string
-  count?: number
-  category?: string
-}
-
 interface SearchResult {
   id: string
-  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'task' | 'ticket' | 'referral' | 'page'
+  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'task' | 'page'
   title: string
   description?: string
   category?: string
@@ -35,16 +26,9 @@ interface UseSearchOptions {
   includeAnnouncements?: boolean
   includeSOPs?: boolean
   includeTasks?: boolean
-  includeTickets?: boolean
-  includeReferrals?: boolean
   limit?: number
   propertyId?: string
   departmentId?: string
-}
-
-const isQuotaExceededError = (error: unknown): boolean => {
-  if (!(error instanceof DOMException)) return false
-  return error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
 }
 
 const uniqueStrings = (values: Array<string | null | undefined>) =>
@@ -99,17 +83,6 @@ const ALL_TASKS_ROLES = new Set([
   'department_head'
 ])
 
-const ALL_REFERRALS_ROLES = new Set([
-  'administrator',
-  'super_admin',
-  'corporate_admin',
-  'training_manager',
-  'regional_admin',
-  'regional_hr',
-  'property_hr',
-  'property_manager'
-])
-
 export function useSearch(query: string, options: UseSearchOptions = {}) {
   const { user, primaryRole, roles, departments, properties } = useAuth()
   const { currentProperty, propertyIds } = useProperty()
@@ -124,8 +97,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     includeAnnouncements = true,
     includeSOPs = true,
     includeTasks = true,
-    includeTickets = true,
-    includeReferrals = true,
     limit = 20,
     propertyId: explicitPropertyId,
     departmentId: explicitDepartmentId
@@ -136,7 +107,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')
   const canViewAllTasks = ALL_TASKS_ROLES.has(primaryRole || '')
-  const canViewAllReferrals = ALL_REFERRALS_ROLES.has(primaryRole || '')
 
   const userPropertyIds = uniqueStrings((properties || []).map((p) => p?.id))
   const userDepartmentIds = uniqueStrings((departments || []).map((d) => d?.id))
@@ -543,95 +513,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           }
         }
 
-        if (includeTickets && currentOrganization?.id && !isPlatformScope) {
-          try {
-            let ticketsQuery = supabase
-              .from('maintenance_tickets')
-              .select('id, title, description, status, priority, room_number')
-              .eq('is_deleted', false)
-              .eq('organization_id', currentOrganization.id)
-              .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,room_number.ilike.%${escapedQuery}%`)
-
-            ticketsQuery = applyIdsScope(ticketsQuery, 'property_id', scopedPropertyIds)
-
-            const ticketDepartmentIds =
-              explicitDepartmentId
-                ? [explicitDepartmentId]
-                : (primaryRole === 'department_head' || primaryRole === 'author')
-                  ? userDepartmentIds
-                  : []
-            ticketsQuery = applyIdsScope(ticketsQuery, 'department_id', ticketDepartmentIds)
-
-            const { data: tickets } = await ticketsQuery.limit(Math.ceil(limit / 3))
-
-            if (tickets) {
-              results.push(...tickets.map((ticket) => ({
-                id: ticket.id,
-                type: 'ticket' as const,
-                title: ticket.title || 'Maintenance Ticket',
-                description: ticket.description || undefined,
-                category: 'Maintenance',
-                url: `/maintenance/tickets/${ticket.id}`,
-                metadata: {
-                  status: ticket.status,
-                  priority: ticket.priority,
-                  room_number: ticket.room_number
-                },
-                relevance_score: calculateRelevanceScore(
-                  query,
-                  ticket.title || '',
-                  ticket.description || ticket.room_number || ''
-                )
-              })))
-            }
-          } catch (searchError) {
-            console.error('Error searching maintenance tickets:', searchError)
-          }
-        }
-
-        if (includeReferrals && currentOrganization?.id && !isPlatformScope) {
-          try {
-            if (!canViewAllReferrals && !user?.id) {
-              return dedupeById(results)
-                .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
-                .slice(0, limit)
-            }
-
-            let referralsQuery = supabase
-              .from('job_applications')
-              .select('id, applicant_name, applicant_email, applicant_phone, status, referred_by')
-              .eq('organization_id', currentOrganization.id)
-              .not('referred_by', 'is', null)
-              .or(`applicant_name.ilike.%${escapedQuery}%,applicant_email.ilike.%${escapedQuery}%,applicant_phone.ilike.%${escapedQuery}%`)
-              .limit(Math.ceil(limit / 4))
-
-            if (!canViewAllReferrals && user?.id) {
-              referralsQuery = referralsQuery.eq('referred_by', user.id)
-            }
-
-            const { data: referrals } = await referralsQuery
-
-            if (referrals) {
-              results.push(...referrals.map((referral) => ({
-                id: referral.id,
-                type: 'referral' as const,
-                title: referral.applicant_name || 'Referral',
-                description: referral.applicant_email || referral.applicant_phone || undefined,
-                category: 'Referral',
-                url: '/jobs/referrals',
-                metadata: { status: referral.status },
-                relevance_score: calculateRelevanceScore(
-                  query,
-                  referral.applicant_name || '',
-                  [referral.applicant_email, referral.applicant_phone].filter(Boolean).join(' ')
-                )
-              })))
-            }
-          } catch (searchError) {
-            console.error('Error searching referrals:', searchError)
-          }
-        }
-
         return dedupeById(results)
           .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
           .slice(0, limit)
@@ -679,229 +560,4 @@ function calculateRelevanceScore(query: string, title: string, description?: str
   })
 
   return score
-}
-
-export function useSearchSuggestions(query: string) {
-  const { user, roles, departments, properties } = useAuth()
-  const { currentProperty, propertyIds } = useProperty()
-
-  const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
-  const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
-
-  const scopedPropertyIds = (() => {
-    if (isRealPropertyId(currentProperty?.id)) return [currentProperty.id]
-    if (propertyIds.length > 0) return propertyIds
-    return uniqueStrings((properties || []).map((property) => property?.id))
-  })()
-
-  const scopedDepartmentIds = uniqueStrings((departments || []).map((department) => department?.id))
-
-  const { data: suggestions = [], isLoading } = useQuery({
-    queryKey: ['search-suggestions', query, user?.id, scopedPropertyIds, scopedDepartmentIds, roleValues],
-    queryFn: async () => {
-      if (!query.trim()) return []
-
-      const suggestions: SearchSuggestion[] = []
-      const queryLower = query.toLowerCase()
-      const escapedQuery = escapeSearchQuery(query)
-
-      if (queryLower.startsWith('add') || queryLower.startsWith('create') || queryLower.startsWith('new')) {
-        const actionMap = [
-          { keywords: ['user', 'staff', 'employee'], text: 'Add New Staff Member', url: '/admin/users' },
-          { keywords: ['task', 'todo'], text: 'Create New Task', url: '/tasks' },
-          { keywords: ['announcement', 'news'], text: 'Post Announcement', url: '/announcements' },
-          { keywords: ['ticket', 'maintenance'], text: 'Raise Maintenance Ticket', url: '/maintenance' },
-          { keywords: ['job', 'posting'], text: 'Create Job Posting', url: '/jobs/new' }
-        ]
-
-        actionMap.forEach((action) => {
-          if (action.keywords.some((keyword) => queryLower.includes(keyword)) || queryLower.length < 5) {
-            suggestions.push({
-              id: `action-${action.text}`,
-              text: action.text,
-              type: 'action',
-              url: action.url
-            })
-          }
-        })
-      }
-
-      if (queryLower.startsWith('go') || queryLower.startsWith('open') || queryLower.includes('page')) {
-        SYSTEM_PAGES.forEach((page) => {
-          if (
-            page.keywords.some((keyword) => queryLower.includes(keyword)) ||
-            page.title.toLowerCase().includes(queryLower)
-          ) {
-            suggestions.push({
-              id: `nav-${page.id}`,
-              text: `Go to ${page.title}`,
-              type: 'navigation',
-              url: page.url
-            })
-          }
-        })
-      }
-
-      if (queryLower.includes('how') || queryLower.includes('help')) {
-        suggestions.push({
-          id: 'help-sop',
-          text: 'Search Standard Operating Procedures',
-          type: 'help',
-          url: '/knowledge'
-        })
-        suggestions.push({
-          id: 'help-manual',
-          text: 'Open User Manual',
-          type: 'help',
-          url: '/documents'
-        })
-      }
-
-      if (suggestions.length < 5) {
-        try {
-          const docSuggestionLimit = 3
-          const docQueryResults: Array<{ data: any }> = []
-
-          const runDocumentSuggestionQuery = async (mutate) => {
-            let q = supabase
-              .from('documents')
-              .select('id, title, status, visibility')
-              .ilike('title', `%${escapedQuery}%`)
-              .eq('is_deleted', false)
-              .limit(docSuggestionLimit)
-
-            if (!canSearchDraftContent) q = q.eq('status', 'PUBLISHED')
-            if (currentOrganization?.id && !isPlatformScope) {
-              q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
-            } else {
-              q = q.eq('is_master_template', true)
-            }
-            const result = await mutate(q)
-            docQueryResults.push({ data: result.data || [] })
-          }
-
-          await runDocumentSuggestionQuery((q) => q.eq('visibility', 'all_properties'))
-          if (scopedPropertyIds.length > 0) {
-            await runDocumentSuggestionQuery((q) => applyIdsScope(q.eq('visibility', 'property'), 'property_id', scopedPropertyIds))
-          }
-          if (scopedDepartmentIds.length > 0) {
-            await runDocumentSuggestionQuery((q) => applyIdsScope(q.eq('visibility', 'department'), 'department_id', scopedDepartmentIds))
-            await runDocumentSuggestionQuery((q) => applyIdsScope(q.eq('visibility', 'group_department'), 'department_id', scopedDepartmentIds))
-          }
-          if (roleValues.length > 0) {
-            await runDocumentSuggestionQuery((q) => applyIdsScope(q.eq('visibility', 'role'), 'role', roleValues))
-          }
-
-          const visibleDocuments = dedupeById(docQueryResults.flatMap((result) => result.data || [])).slice(0, 3)
-          suggestions.push(...visibleDocuments.map((doc) => ({
-            id: doc.id,
-            text: doc.title,
-            type: 'document' as const,
-            url: `/documents/${doc.id}`
-          })))
-
-          if (suggestions.length < 8) {
-            // sop_documents consolidated into documents (content_type='sop').
-            const sopQueries: Array<PromiseLike<{ data: any }>> = []
-
-            const buildSopSuggestionQuery = () => {
-              let q = supabase
-                .from('documents')
-                .select('id, title, status')
-                .eq('content_type', 'sop')
-                .ilike('title', `%${escapedQuery}%`)
-                .limit(3)
-
-              if (!canSearchDraftContent) q = q.eq('status', 'PUBLISHED')
-              if (currentOrganization?.id && !isPlatformScope) {
-                q = q.or(`organization_id.eq.${currentOrganization.id},is_master_template.eq.true`)
-              } else {
-                q = q.eq('is_master_template', true)
-              }
-              return q
-            }
-
-            sopQueries.push(toPromise(buildSopSuggestionQuery().is('property_id', null).is('department_id', null)))
-            if (scopedPropertyIds.length > 0) {
-              sopQueries.push(toPromise(applyIdsScope(buildSopSuggestionQuery(), 'property_id', scopedPropertyIds)))
-            }
-            if (scopedDepartmentIds.length > 0) {
-              sopQueries.push(toPromise(applyIdsScope(buildSopSuggestionQuery(), 'department_id', scopedDepartmentIds)))
-            }
-
-            const sopResults = await Promise.all(sopQueries)
-            const sops = dedupeById(sopResults.flatMap((result) => result.data || [])).slice(0, 3)
-
-            suggestions.push(...sops.map((sop: { id: string; title: string }) => ({
-              id: sop.id,
-              text: sop.title,
-              type: 'document' as const,
-              url: `/knowledge/${sop.id}`,
-              category: 'SOP'
-            })))
-          }
-        } catch (suggestionError) {
-          console.warn('Suggestion fetch failed', suggestionError)
-        }
-      }
-
-      return dedupeById(suggestions).slice(0, 8)
-    },
-    enabled: query.trim().length > 0,
-    staleTime: 60 * 1000,
-  })
-
-  return {
-    suggestions,
-    isLoading
-  }
-}
-
-export function useRecentSearches() {
-  const saveSearch = (query: string) => {
-    if (!query.trim()) return
-
-    let recentSearches: string[] = []
-    try {
-      recentSearches = JSON.parse(localStorage.getItem('recentSearches') || '[]')
-    } catch {
-      console.warn('Failed to parse recent searches')
-      recentSearches = []
-    }
-
-    const updatedSearches = [query, ...recentSearches.filter((savedQuery) => savedQuery !== query)].slice(0, 10)
-
-    try {
-      localStorage.setItem('recentSearches', JSON.stringify(updatedSearches))
-    } catch (error) {
-      if (isQuotaExceededError(error)) {
-        const fallback = updatedSearches.slice(0, 5)
-        try {
-          localStorage.setItem('recentSearches', JSON.stringify(fallback))
-          return
-        } catch {
-          // Ignore fallback write failures.
-        }
-      }
-      console.warn('Failed to persist recent searches', error)
-    }
-  }
-
-  const getRecentSearches = (): string[] => {
-    try {
-      return JSON.parse(localStorage.getItem('recentSearches') || '[]')
-    } catch {
-      return []
-    }
-  }
-
-  const clearRecentSearches = () => {
-    localStorage.removeItem('recentSearches')
-  }
-
-  return {
-    saveSearch,
-    getRecentSearches,
-    clearRecentSearches
-  }
 }

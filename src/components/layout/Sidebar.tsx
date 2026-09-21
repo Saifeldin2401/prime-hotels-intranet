@@ -10,7 +10,6 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems } from '@/hooks/useNavigation'
 import { useNavigation } from '@/hooks/useNavigation'
-import { DURATION, EASING } from '@/lib/motion'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -24,7 +23,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTenant } from '@/contexts/TenantContext'
 import { useWizard } from '@/hooks/useWizard'
 import { Badge } from '@/components/ui/badge'
-import { Building2, Globe, Crown, Building } from 'lucide-react'
+import { Building2, Crown, Building } from 'lucide-react'
 import { CONSOLIDATED_PROPERTY_ID } from '@/lib/propertyScope'
 
 interface SidebarProps {

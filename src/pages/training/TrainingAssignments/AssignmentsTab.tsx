@@ -148,7 +148,7 @@ export function AssignmentsTab() {
               onChange={(e) => setSearch(e.target.value)}
               className={cn(
                 "h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-hotel-gold/50 focus:ring-2 focus:ring-hotel-gold/20 transition-all",
-                isRTL ? "pe-11 text-right" : "ps-11"
+                isRTL ? "pe-11 text-end" : "ps-11"
               )}
             />
             {search && (

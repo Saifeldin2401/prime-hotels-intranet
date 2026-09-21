@@ -1,5 +1,3 @@
-import type { Database } from '@/lib/database.types';
-
 export type MediaType = 'video' | 'image' | 'document' | 'audio';
 export type MediaCategory = 'training' | 'knowledgebase' | 'announcement' | 'general' | 'compliance' | 'onboarding' | 'marketing' | 'other';
 export type VirusScanStatus = 'pending' | 'clean' | 'suspicious' | 'infected' | 'error';
@@ -46,7 +44,7 @@ export interface MediaAsset {
   updated_at: string;
 }
 
-export interface MediaAssetWithUploader extends MediaAsset {
+interface MediaAssetWithUploader extends MediaAsset {
   uploader_name: string | null;
   property_name: string | null;
 }
@@ -76,10 +74,6 @@ export interface MediaCollection {
   item_count?: number;
 }
 
-export interface MediaCollectionWithItems extends MediaCollection {
-  items: MediaAsset[];
-}
-
 export interface MediaUploadOptions {
   title?: string;
   description?: string;
@@ -104,17 +98,6 @@ export interface MediaFilterOptions {
   scanStatus?: VirusScanStatus | 'all';
 }
 
-export interface MediaStats {
-  totalAssets: number;
-  totalSizeBytes: number;
-  byType: Record<MediaType, number>;
-  byCategory: Record<MediaCategory, number>;
-  byScanStatus: Record<VirusScanStatus, number>;
-  mostUsed: MediaAsset[];
-  recentlyUploaded: MediaAsset[];
-  quarantinedCount: number;
-}
-
 // Picker types for integration
 export interface MediaPickerConfig {
   allowedTypes?: MediaType[];
@@ -123,11 +106,6 @@ export interface MediaPickerConfig {
   category?: MediaCategory;
   title?: string;
   requireCleanScan?: boolean; // Only allow files that passed virus scan
-}
-
-export interface MediaPickerResult {
-  assets: MediaAsset[];
-  cancelled: boolean;
 }
 
 // Form data for creating/updating media
@@ -140,56 +118,12 @@ export interface MediaAssetFormData {
 }
 
 // Upload progress
-export interface UploadProgress {
+interface UploadProgress {
   loaded: number;
   total: number;
   percentage: number;
 }
 
 // Upload result with security info
-export interface SecureUploadResult {
-  asset: MediaAsset | null;
-  error: string | null;
-  scanResult?: {
-    safe: boolean;
-    status: VirusScanStatus;
-    riskScore?: number;
-    reasons?: string[];
-  };
-  progress?: UploadProgress;
-}
-
 // Access log entry
-export interface MediaAccessLog {
-  id: string;
-  media_asset_id: string;
-  accessed_by: string | null;
-  accessed_at: string;
-  access_type: 'view' | 'download' | 'share';
-  ip_address?: string;
-  user_agent?: string;
-  request_id?: string;
-  metadata?: Record<string, unknown>;
-}
-
 // Security validation result
-export interface FileValidationResult {
-  isValid: boolean;
-  detectedMimeType: string | null;
-  errors: string[];
-  warnings: string[];
-  secureInfo?: {
-    secureFilename: string;
-    extension: string;
-    storagePath: string;
-    originalFilename: string;
-    mimeType: string;
-    sizeBytes: number;
-    metadata: {
-      hasExif?: boolean;
-      width?: number;
-      height?: number;
-      duration?: number;
-    };
-  };
-}

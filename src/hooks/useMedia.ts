@@ -6,9 +6,7 @@ import {
   validateFile,
   createSecureStoragePath,
   calculateFileHash,
-  sanitizeSvgContent,
-  type SecureFileInfo,
-  ALLOWED_FILE_TYPES,
+  type SecureFileInfo
 } from '@/lib/file-security';
 import { toast } from 'sonner';
 
@@ -549,6 +547,7 @@ export function useMedia(options: UseMediaOptions = {}) {
         // the signed URL got baked into media_assets.public_url forever, so every video
         // silently stopped playing exactly one hour after upload (existing rows fixed
         // via a one-off backfill; see git history for this comment).
+        // eslint-disable-next-line no-restricted-properties -- 'media' is a public bucket (verified live); a durable public URL is intended here.
         const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(storagePath);
         const secureUrl = publicUrlData?.publicUrl || '';
 
@@ -885,52 +884,3 @@ export function useMedia(options: UseMediaOptions = {}) {
 }
 
 // Hook for media picker
-export function useMediaPicker(propertyId?: string) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedAssets, setSelectedAssets] = useState<MediaAsset[]>([]);
-  const { assets, loading, fetchAssets, filters, setFilters } = useMedia({
-    propertyId,
-    autoFetch: false,
-  });
-
-  const openPicker = useCallback(() => {
-    setIsOpen(true);
-    fetchAssets();
-  }, [fetchAssets]);
-
-  const closePicker = useCallback(() => {
-    setIsOpen(false);
-    setSelectedAssets([]);
-  }, []);
-
-  const toggleAssetSelection = useCallback((asset: MediaAsset) => {
-    setSelectedAssets((prev) => {
-      const exists = prev.find((a) => a.id === asset.id);
-      if (exists) {
-        return prev.filter((a) => a.id !== asset.id);
-      }
-      return [...prev, asset];
-    });
-  }, []);
-
-  const confirmSelection = useCallback(() => {
-    const result = [...selectedAssets];
-    closePicker();
-    return result;
-  }, [selectedAssets, closePicker]);
-
-  return {
-    isOpen,
-    setIsOpen,
-    selectedAssets,
-    assets,
-    loading,
-    filters,
-    setFilters,
-    openPicker,
-    closePicker,
-    toggleAssetSelection,
-    confirmSelection,
-    fetchAssets,
-  };
-}

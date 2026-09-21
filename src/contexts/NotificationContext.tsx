@@ -4,7 +4,7 @@ import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
 import { supabase } from '@/lib/supabase'
 import type { Notification } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import React, { createContext, useContext, useEffect, useRef } from 'react'
+import React, { createContext, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 
 interface NotificationContextType {
@@ -154,12 +154,4 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             <BrowserNotificationPrompt />
         </NotificationContext.Provider>
     )
-}
-
-export function useNotificationsContext() {
-    const context = useContext(NotificationContext)
-    if (context === undefined) {
-        throw new Error('useNotificationsContext must be used within a NotificationProvider')
-    }
-    return context
 }

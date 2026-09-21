@@ -5,8 +5,6 @@ import { validateEnvironment } from './env-validation'
 
 // Validate environment variables on startup
 const env = validateEnvironment()
-const isDevMode = import.meta.env.DEV || env.VITE_DEV_MODE === 'true'
-
 type StorageLike = {
   getItem: (key: string) => string | null
   setItem: (key: string, value: string) => void

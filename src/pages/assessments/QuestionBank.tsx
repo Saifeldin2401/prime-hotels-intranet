@@ -22,7 +22,6 @@ import {
 import {
     Sheet,
     SheetContent,
-    SheetDescription,
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
@@ -56,8 +55,6 @@ import {
     AlertCircle,
     AlertTriangle,
     Archive,
-    Award,
-    BookOpen,
     Brain,
     Check,
     CheckCircle,
@@ -74,11 +71,8 @@ import {
     MoreVertical,
     Plus,
     Search,
-    ShieldAlert,
-    ShieldCheck,
     Sparkles,
-    Target,
-    X,
+    Target
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

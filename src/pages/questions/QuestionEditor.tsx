@@ -97,7 +97,8 @@ export function QuestionEditor() {
         if (question) {
             form.reset({
                 question_text: question.question_text,
-                question_type: question.question_type,
+                // The editor supports the 7 authorable types (all stored questions use them today).
+                question_type: question.question_type as QuestionFormValues['question_type'],
                 difficulty_level: question.difficulty_level,
                 status: question.status as any,
                 points: question.points,

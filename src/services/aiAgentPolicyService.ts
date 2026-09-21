@@ -38,7 +38,7 @@ export interface AIAgentPolicy {
   notes: string | null
 }
 
-export function defaultAgentPolicy(role: string): AIAgentPolicy {
+function defaultAgentPolicy(role: string): AIAgentPolicy {
   return {
     agentRole: role,
     enabled: true,

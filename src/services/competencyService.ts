@@ -23,7 +23,7 @@ export const competencyService = {
 
     const { data, error } = await query
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as Competency[]
   },
 
   async getUserCompetencies(userId: string): Promise<UserCompetency[]> {
@@ -34,7 +34,7 @@ export const competencyService = {
       .order('current_level', { ascending: false })
 
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as UserCompetency[]
   },
 
   /**
@@ -74,7 +74,6 @@ export const competencyService = {
         .from('organization_memberships')
         .select('user_id')
         .eq('is_active', true)
-        .eq('is_deleted', false)
 
       if (departmentId) memberQuery = memberQuery.eq('department_id', departmentId)
       if (hotelId) memberQuery = memberQuery.eq('hotel_id', hotelId)

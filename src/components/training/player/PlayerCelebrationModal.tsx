@@ -1,13 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import {
     Award,
     Sparkles,
-    CheckCircle2,
     Flame,
-    Share2,
-    Download,
     ArrowRight,
     Trophy,
     Star
@@ -182,10 +178,10 @@ export function PlayerCelebrationModal({
                     className="cursor-pointer mb-6 rounded-2xl bg-gradient-to-br from-[#0B1528] via-[#111C33] to-[#0B1528] border-2 border-amber-500/60 p-6 text-slate-100 shadow-2xl relative group overflow-hidden"
                 >
                     {/* Gold Foil Corner Accents */}
-                    <div className="absolute top-0 start-0 w-8 h-8 border-t-2 border-s-2 border-amber-400 rounded-tl-xl m-2" />
-                    <div className="absolute top-0 end-0 w-8 h-8 border-t-2 border-e-2 border-amber-400 rounded-tr-xl m-2" />
-                    <div className="absolute bottom-0 start-0 w-8 h-8 border-b-2 border-s-2 border-amber-400 rounded-bl-xl m-2" />
-                    <div className="absolute bottom-0 end-0 w-8 h-8 border-b-2 border-e-2 border-amber-400 rounded-br-xl m-2" />
+                    <div className="absolute top-0 start-0 w-8 h-8 border-t-2 border-s-2 border-amber-400 rounded-ss-xl m-2" />
+                    <div className="absolute top-0 end-0 w-8 h-8 border-t-2 border-e-2 border-amber-400 rounded-se-xl m-2" />
+                    <div className="absolute bottom-0 start-0 w-8 h-8 border-b-2 border-s-2 border-amber-400 rounded-es-xl m-2" />
+                    <div className="absolute bottom-0 end-0 w-8 h-8 border-b-2 border-e-2 border-amber-400 rounded-ee-xl m-2" />
 
                     <div className="text-center space-y-2 py-2">
                         <div className="flex items-center justify-center gap-1.5 text-amber-400 text-xs font-semibold uppercase tracking-widest">

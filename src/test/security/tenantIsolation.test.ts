@@ -1,7 +1,4 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { platformService } from '@/services/platformService'
-import { learningService } from '@/services/learningService'
-import { knowledgeService } from '@/services/knowledgeService'
 import { supabase } from '@/lib/supabase'
 
 vi.mock('@/lib/supabase', () => ({

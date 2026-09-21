@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTenant } from '@/contexts/TenantContext'
@@ -11,13 +10,11 @@ import {
   Building2,
   Building,
   Layers,
-  Users,
   ShieldCheck,
   TrendingUp,
   ArrowRight,
   BookOpen,
   GraduationCap,
-  Sparkles,
   Settings,
   FileCheck,
   ExternalLink,

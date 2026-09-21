@@ -1,23 +1,19 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useToast } from '@/components/ui/use-toast'
 import { platformService } from '@/services/platformService'
 import { useNavigate } from 'react-router-dom'
 import {
-  Activity,
   Cpu,
   RefreshCw,
   RotateCcw,
   Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Play,
   Bot
 } from 'lucide-react'
 import { format } from 'date-fns'

@@ -118,8 +118,8 @@
             "required_fields": "يرجى ملء جميع الحقول المطلوبة",
             "validation_failed": "فشل التحقق من صحة البيانات"
         },
-        "staff_id_auto": "Staff ID Auto",
-        "staff_id": "Staff ID",
+        "staff_id_auto": "رقم وظيفي تلقائي",
+        "staff_id": "الرقم الوظيفي",
         "manager_auto_selected": "تم اختيار المدير تلقائياً",
         "manager_auto_selected_desc": "تم اختيار {{name}} ({{jobTitle}}) كمدير مباشر تلقائياً بناءً على القسم."
     },

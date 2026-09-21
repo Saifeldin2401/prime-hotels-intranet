@@ -252,8 +252,8 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                                                 <div
                                                     key={emp.id}
                                                     className={cn(
-                                                        "flex items-center gap-3 px-10 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-l-4 border-transparent",
-                                                        onEmployeeClick && "hover:border-l-primary"
+                                                        "flex items-center gap-3 px-10 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-s-4 border-transparent",
+                                                        onEmployeeClick && "hover:border-s-primary"
                                                     )}
                                                     onClick={() => onEmployeeClick?.(emp)}
                                                 >

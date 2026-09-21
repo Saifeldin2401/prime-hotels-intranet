@@ -6,7 +6,7 @@
  * routing, network requests, HTTP status codes, edge functions, and fallback cascades.
  */
 
-export interface ImageDebugParams {
+interface ImageDebugParams {
   title?: string
   prompt?: string
   negativePrompt?: string
@@ -18,7 +18,7 @@ export interface ImageDebugParams {
   assetId?: string
 }
 
-export interface StageAttemptInfo {
+interface StageAttemptInfo {
   stage: string
   model: string
   provider: string
@@ -26,7 +26,7 @@ export interface StageAttemptInfo {
   payload?: Record<string, unknown>
 }
 
-export interface StageErrorInfo {
+interface StageErrorInfo {
   stage: string
   model: string
   provider: string

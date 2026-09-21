@@ -1,6 +1,6 @@
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
@@ -9,7 +9,7 @@ import { useMessagingStats } from '@/hooks/useMessaging'
 import { useTaskStats } from '@/hooks/useTasks'
 import { downloadCSV } from '@/lib/exportUtils'
 import { format } from 'date-fns'
-import { Award, BookOpen, CheckSquare, Download, FileText, MessageSquare } from 'lucide-react'
+import { BookOpen, CheckSquare, Download, FileText, MessageSquare } from 'lucide-react'
 
 export default function ReportsDashboard() {
     const { user } = useAuth()

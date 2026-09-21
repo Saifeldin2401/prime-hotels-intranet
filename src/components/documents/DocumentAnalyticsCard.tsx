@@ -34,7 +34,7 @@ import {
     YAxis,
 } from "recharts";
 
-export interface DocumentAnalytics {
+interface DocumentAnalytics {
   documentId: string;
   documentTitle: string;
   totalViews: number;
@@ -359,7 +359,7 @@ export function DocumentAnalyticsCard({
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="text-sm font-semibold">{user.views}</p>
                       <p className="text-xs text-muted-foreground">views</p>
                     </div>
@@ -423,19 +423,4 @@ interface DocumentAnalyticsMiniProps {
   views: number;
   downloads: number;
   className?: string;
-}
-
-export function DocumentAnalyticsMini({ views, downloads, className }: DocumentAnalyticsMiniProps) {
-  return (
-    <div className={cn("flex items-center gap-3 text-xs text-muted-foreground", className)}>
-      <span className="flex items-center gap-1">
-        <Eye className="w-3.5 h-3.5" />
-        {views.toLocaleString()}
-      </span>
-      <span className="flex items-center gap-1">
-        <Download className="w-3.5 h-3.5" />
-        {downloads.toLocaleString()}
-      </span>
-    </div>
-  );
 }

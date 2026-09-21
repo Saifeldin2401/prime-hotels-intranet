@@ -2,7 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Play, FileQuestion, BookOpen, Clock, AlertCircle, CheckCircle2 } from 'lucide-react'
+import { Play, FileQuestion, BookOpen, AlertCircle, CheckCircle2 } from 'lucide-react'
 import type { CurriculumItem } from './CurriculumCard'
 import { cn } from '@/lib/utils'
 

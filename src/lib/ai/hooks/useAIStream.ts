@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { altusAI } from '../client'
 import type { AIRequestOptions } from '../types'
 
-export interface UseAIStreamResult {
+interface UseAIStreamResult {
   streamedText: string
   isStreaming: boolean
   error: string | null

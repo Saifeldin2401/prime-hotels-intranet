@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Clock, ArrowRight, BookOpen, Compass, Sparkles } from 'lucide-react'
+import { Play, Clock, ArrowRight, BookOpen, Compass } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'

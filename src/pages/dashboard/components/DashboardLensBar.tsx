@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useLens, type SystemLens } from '@/contexts/LensContext'
@@ -9,8 +8,7 @@ import {
   Building2,
   Building,
   GraduationCap,
-  Sparkles,
-  Check,
+  Sparkles
 } from 'lucide-react'
 
 export function DashboardLensBar() {

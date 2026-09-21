@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -9,19 +9,16 @@ import {
     Award,
     BookOpen,
     CheckCircle2,
-    ChevronRight,
     Clock,
     Lock,
     Play,
     Sparkles,
-    Trophy,
-    Unlock,
-    Users,
+    Trophy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TrainingPath, TrainingPathModule, TrainingModule } from '@/lib/types'
 
-export interface PathWithModules extends TrainingPath {
+interface PathWithModules extends TrainingPath {
     training_path_modules: (TrainingPathModule & {
         training_modules: TrainingModule
     })[]
@@ -232,7 +229,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
                     <div
                         className={cn(
                             "absolute top-6 bottom-6 w-0.5 bg-slate-200 dark:bg-slate-800",
-                            isRTL ? "right-5 sm:right-6" : "left-5 sm:left-6"
+                            isRTL ? "end-5 sm:end-6" : "start-5 sm:start-6"
                         )}
                     />
 

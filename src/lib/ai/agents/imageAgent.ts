@@ -9,14 +9,14 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import type { CourseVisualAsset, LessonBlueprint, VisualOpportunity } from '@/types/aiCourseEngine'
+import type { CourseVisualAsset, LessonBlueprint } from '@/types/aiCourseEngine'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import { routeImageModel } from './imageOrchestrator'
 import { logAIRequest } from '@/lib/ai/observability'
 import { imageDebugLogger, type ImageDebugSession } from '@/lib/ai/imageDebugLogger'
 import type { AgentExecutionResult, AgentRole, VisualAssetDecision } from './types'
 
-export interface ImageAgentInput {
+interface ImageAgentInput {
   courseId?: string
   moduleId?: string
   lesson: LessonBlueprint
@@ -420,7 +420,7 @@ async function generateDirectAiImage(
   return null;
 }
 
-export class ImageAgent extends BaseAIAgent<ImageAgentInput, CourseVisualAsset | null> {
+class ImageAgent extends BaseAIAgent<ImageAgentInput, CourseVisualAsset | null> {
   public readonly role: AgentRole = 'image_ai'
   public readonly name = 'Visual Asset & Recraft Vector AI Agent'
   public readonly nameAr = 'وكيل الوسائط البصرية والرسوم التوضيحية الذكية'

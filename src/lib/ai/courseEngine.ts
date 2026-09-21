@@ -5,38 +5,23 @@
 
 import {
   callHuggingFace,
-  resolveModelChain,
-  safeParseJson,
+  resolveModelChain
 } from '@/lib/gemini'
 import type {
-  AIEngineControls,
   BloomDistribution,
-  BloomLevel,
   BloomPreset,
   CourseBlueprint,
-  CourseDifficulty,
-  CourseGenerationMode,
   CourseQAQualityReport,
-  CourseType,
   CourseTypeConfig,
-  DistractorQuality,
   FullCourseGenerationConfig,
   GeneratedUnifiedQuestion,
-  GranularDepthConfig,
   InstructionalStrategy,
   LessonBlueprint,
-  LessonComponentKey,
   LessonTemplateType,
   ModuleBlueprint,
-  OverallContentDepth,
-  QuizBlueprint,
-  QuizPlacement,
-  TargetAudience,
   VisualOpportunity,
   ImageGenerationConfig,
-  VisualStyle,
-  VisualPlacement,
-  CourseVisualAsset,
+  VisualStyle
 } from '@/types/aiCourseEngine'
 import type { QuestionDifficulty, QuestionType } from '@/types/questions'
 
@@ -360,137 +345,6 @@ export const BLOOM_PRESETS: Record<BloomPreset, BloomDistribution> = {
 // ============================================================================
 // STAGE 1: COURSE BLUEPRINT GENERATOR
 // ============================================================================
-
-export async function generateCourseBlueprint(
-  config: FullCourseGenerationConfig,
-  onProgress?: (msg: string) => void
-): Promise<CourseBlueprint> {
-  onProgress?.('Synthesizing pedagogical blueprint and learning outcomes...')
-
-  const isArabic = (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar') || (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('arabic')
-  const lang = config?.aiControls?.targetLanguage || 'English'
-  const moduleTarget = config.granularity.moduleCount === 'auto' ? 4 : typeof config.granularity.moduleCount === 'number' ? config.granularity.moduleCount : (config.granularity.customModuleCount || 4)
-  const lessonsPerModule = config.granularity.lessonsPerModule === 'auto' ? 3 : config.granularity.lessonsPerModule
-
-  const sanitizedSource = (config.sourceContent || '').replace(/<[^>]*>/g, ' ').substring(0, 6000)
-
-  const prompt = isArabic
-    ? `أنت كبير مهندسي المناهج الفندقية لمجموعة فنادق فاخرة.
-قم بإنشاء مخطط هيكلي تعليمي (Course Blueprint) بصيغة JSON نظيفة وسريعة للدورة:
-- النمط: ${config.courseType}
-- الاستراتيجية: ${config.instructionalStrategy}
-- الجمهور: ${config.targetAudience}
-- الصعوبة: ${config.difficulty} (${config.difficultyProgression})
-- الهيكل المستهدف: ${moduleTarget} وحدات، بكل وحدة ${lessonsPerModule} دروس.
-${sanitizedSource ? `- المادة المرجعية:\n${sanitizedSource.substring(0, 2500)}` : ''}
-
-أخرج JSON فقط بدون نصوص خارجية:
-{
-  "title": "عنوان الدورة باللغة العربية",
-  "title_ar": "عنوان الدورة بالعربية",
-  "subtitle": "عنوان فرعي احترافي",
-  "subtitle_ar": "عنوان فرعي",
-  "description": "وصف تشغيلي موجز ومركز للدورة",
-  "description_ar": "وصف تشغيلي موجز ومركز",
-  "terminalObjectives": ["3 أهداف نهائية"],
-  "enablingObjectives": ["4 أهداف تمكينية"],
-  "prerequisites": ["المتطلبات"],
-  "estimatedDurationMinutes": ${moduleTarget * lessonsPerModule * config.granularity.lessonDuration},
-  "modules": [
-    {
-      "id": "mod-1",
-      "title": "عنوان الوحدة الأولى",
-      "title_ar": "عنوان الوحدة الأولى",
-      "description": "وصف الوحدة",
-      "durationMinutes": ${lessonsPerModule * config.granularity.lessonDuration},
-      "difficultyLevel": "${config.difficulty}",
-      "lessons": [
-        {
-          "id": "les-1-1",
-          "title": "عنوان الدرس الأول",
-          "title_ar": "عنوان الدرس الأول",
-          "description": "وصف الدرس",
-          "templateType": "${config.defaultLessonTemplate}",
-          "durationMinutes": ${config.granularity.lessonDuration},
-          "learningOutcomes": ["مخرج تعليمي 1", "مخرج تعليمي 2"]
-        }
-      ]
-    }
-  ],
-  "summaryTakeaways": ["3 خلاصات ختامية"]
-}`
-    : `You are a Senior Luxury Hospitality Curriculum Architect at a five-star hotel group.
-Generate a high-speed, publication-grade Course Blueprint JSON:
-- Course Type: ${config.courseType}
-- Strategy: ${config.instructionalStrategy}
-- Audience: ${config.targetAudience}
-- Difficulty: ${config.difficulty} (${config.difficultyProgression})
-- Structure: Exactly ${moduleTarget} modules with ${lessonsPerModule} lessons each.
-${sanitizedSource ? `- Source Reference:\n${sanitizedSource.substring(0, 2500)}` : ''}
-
-Output VALID JSON ONLY matching this structure:
-{
-  "title": "Professional Course Title in English",
-  "title_ar": "Arabic translation of title",
-  "subtitle": "Executive Subtitle",
-  "subtitle_ar": "Arabic subtitle",
-  "description": "Concise operational course overview",
-  "description_ar": "Arabic description",
-  "terminalObjectives": ["Objective 1", "Objective 2", "Objective 3"],
-  "enablingObjectives": ["Skill 1", "Skill 2", "Skill 3", "Skill 4"],
-  "prerequisites": ["General operational awareness"],
-  "estimatedDurationMinutes": ${moduleTarget * lessonsPerModule * config.granularity.lessonDuration},
-  "modules": [
-    {
-      "id": "mod-1",
-      "title": "Module 1 Title",
-      "title_ar": "Module 1 Arabic Title",
-      "description": "Module overview",
-      "durationMinutes": ${lessonsPerModule * config.granularity.lessonDuration},
-      "difficultyLevel": "${config.difficulty}",
-      "lessons": [
-        {
-          "id": "les-1-1",
-          "title": "Lesson 1.1 Title",
-          "title_ar": "Lesson 1.1 Arabic Title",
-          "description": "Lesson description",
-          "templateType": "${config.defaultLessonTemplate}",
-          "durationMinutes": ${config.granularity.lessonDuration},
-          "learningOutcomes": ["Outcome 1", "Outcome 2"]
-        }
-      ]
-    }
-  ],
-  "summaryTakeaways": ["Takeaway 1", "Takeaway 2", "Takeaway 3"]
-}`
-
-  const modelChain = resolveModelChain(config?.aiControls?.preferredModel)
-  for (const model of modelChain) {
-    try {
-      const generated = await callHuggingFace(model, prompt, 1800)
-      const parsed = safeParseJson<CourseBlueprint>(generated, false)
-      if (parsed && parsed.title && Array.isArray(parsed.modules) && parsed.modules.length > 0) {
-        return {
-          ...parsed,
-          courseType: config.courseType,
-          instructionalStrategy: config.instructionalStrategy,
-          targetAudience: config.targetAudience,
-          experienceLevel: config.experienceLevel,
-          priorKnowledge: config.priorKnowledge,
-          difficulty: config.difficulty,
-          difficultyProgression: config.difficultyProgression,
-          estimatedDurationMinutes: parsed.estimatedDurationMinutes || (moduleTarget * lessonsPerModule * config.granularity.lessonDuration)
-        }
-      }
-    } catch (e) {
-      console.warn(`Blueprint generation model ${model} failed, cascading:`, e)
-    }
-  }
-
-  // Local fallback blueprint if AI models fail
-  return generateLocalBlueprintFallback(config, moduleTarget, lessonsPerModule, isArabic)
-}
-
 // ============================================================================
 // STAGE 2: BLUEPRINT VALIDATION & GAP ANALYSIS
 // ============================================================================
@@ -544,134 +398,6 @@ export function validateCourseBlueprint(
 // ============================================================================
 // STAGE 3: TEMPLATED LESSON SYNTHESIS
 // ============================================================================
-
-export async function generateTemplatedLessonContent(
-  param1:
-    | string
-    | {
-        courseTitle?: string
-        moduleTitle?: string
-        lesson: LessonBlueprint
-        config?: Partial<FullCourseGenerationConfig>
-        components?: any[]
-        depthConfig?: any
-        language?: string
-        preferredModel?: string
-        hotelContext?: string
-      },
-  param2?: string,
-  param3?: LessonBlueprint,
-  param4?: FullCourseGenerationConfig,
-  param5?: (msg: string) => void
-): Promise<string> {
-  let courseTitle = ''
-  let moduleTitle = ''
-  let lesson: LessonBlueprint | undefined
-  let config: Partial<FullCourseGenerationConfig> | undefined
-  let onProgress: ((msg: string) => void) | undefined
-
-  if (typeof param1 === 'string') {
-    courseTitle = param1
-    moduleTitle = param2 || ''
-    lesson = param3
-    config = param4
-    onProgress = param5
-  } else if (param1 && typeof param1 === 'object') {
-    courseTitle = param1.courseTitle || ''
-    moduleTitle = param1.moduleTitle || ''
-    lesson = param1.lesson
-    config =
-      param1.config ||
-      ({
-        lessonComponents: param1.components,
-        depthConfig: param1.depthConfig,
-        sourceContent: param1.hotelContext,
-        aiControls: {
-          targetLanguage: (param1.language as any) || 'English',
-          preferredModel: param1.preferredModel || 'auto',
-          creativity: 'balanced',
-          strictness: 'balanced',
-          sourceMode: 'source_enhanced',
-          hallucinationProtection: true,
-        },
-      } as any)
-  }
-
-  if (!lesson) {
-    return '<p>No lesson content available.</p>'
-  }
-
-  onProgress?.(`Generating lesson: "${lesson.title || 'Untitled'}"...`)
-
-  const isArabic =
-    (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar') ||
-    (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('arabic')
-  const lang = config?.aiControls?.targetLanguage || 'en'
-  const componentsList = (config?.lessonComponents || []).join(', ')
-
-  const prompt = isArabic
-    ? `أنت خبير التدريب الفندقي الفاخر لمجموعة فنادق فاخرة.
-قم بكتابة محتوى تدريبي كامل وعالي الجودة بصيغة HTML دلالية نظيفة للدرس التالي:
-- الدورة: "${courseTitle}"
-- الوحدة: "${moduleTitle}"
-- عنوان الدرس: "${lesson.title}"
-- القالب التعليمي: ${lesson.templateType}
-- المخرجات التعليمية المستهدفة: ${(lesson.learningOutcomes || []).join(' | ') || 'إتقان المعايير الفندقية والخدمة الممتازة'}
-- المكونات الإلزامية لتضمينها: [${componentsList}]
-- عمق المحتوى: ${config?.overallDepth || 'comprehensive'}
-
-الهيكل الإلزامي لكود HTML:
-1. <h3>1. المعايير والأهداف التشغيلية (Operational Standards & Objectives)</h3>
-2. <h3>2. خطوات الإجراءات بالتفصيل خطوة بخطوة (Step-by-Step Execution Workflow)</h3>
-   قائمة مرتبة <ol> تحتوي على خطوات إجرائية محددة بالدقائق ومعايير الخدمة العالمية.
-3. <h3>3. نصوص المحادثة والحوار مع النزلاء (Verbatim Dialogue Scripts)</h3>
-   نصوص حوار واقعية بالعبارات الاحترافية المعتمدة ونبرة الصوت ولغة الجسد.
-4. <h3>4. قائمة تدقيق الجودة الإشرافية (5-Star Quality Inspection Checklist)</h3>
-   قائمة <ul> للنقاط التي يفحصها المشرف قبل اعتماد الخدمة.
-5. <h3>5. بروتوكول التعافي من المشكلات (Service Recovery & LAST Framework)</h3>
-   كيفية معالجة العقبات والشكاوى فوراً بنموذج (Listen, Apologize, Solve, Thank).
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة التميز الذهبية:</strong> توجيه تطبيقي ذكي.</div>
-
-اكتب كود HTML فقط بدون كتل كود markdown وبدون نصوص خارجية.`
-    : `You are a Senior Luxury Hospitality Training Director at a five-star luxury hotel group.
-Write an exhaustive, publication-grade training manual lesson in clean semantic HTML for:
-- Course: "${courseTitle}"
-- Module: "${moduleTitle}"
-- Lesson Title: "${lesson.title}"
-- Lesson Template: ${lesson.templateType}
-- Target Learning Outcomes: ${(lesson.learningOutcomes || []).join(' | ') || '5-Star Operational Mastery & Procedural Compliance'}
-- Mandatory Components to Include: [${componentsList}]
-- Content Depth: ${config?.overallDepth || 'comprehensive'}
-
-Structured HTML Requirements:
-1. <h3>1. Executive Standard & Operational Purpose</h3>
-2. <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
-   Numbered <ol> with 6-8 comprehensive, actionable steps.
-3. <h3>3. Verbatim Dialogue Scripts & Body Language Protocols</h3>
-   Exact quotes to say to guests, tone of voice, proactive phrasing.
-4. <h3>4. 5-Star Quality Inspection Checklist</h3>
-   Bullet points <ul> of mandatory items supervisors inspect.
-5. <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
-   Empowered frontline actions using Listen, Apologize, Solve, Thank.
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Five-Star Pro Tip:</strong> Insider luxury tip.</div>
-
-Output clean HTML only, no markdown codeblocks.`
-
-  const modelChain = resolveModelChain(config?.aiControls?.preferredModel)
-  for (const model of modelChain) {
-    try {
-      const generatedHtml = await callHuggingFace(model, prompt, 2500)
-      if (generatedHtml && generatedHtml.length > 200) {
-        return generatedHtml.replace(/```html\n?|\n?```/g, '').trim()
-      }
-    } catch (e) {
-      console.warn(`Lesson synthesis model ${model} failed, cascading:`, e)
-    }
-  }
-
-  return generateLocalLessonHtmlFallback(lesson.title, isArabic)
-}
-
 // ============================================================================
 // STAGE 3.5: MAIN AI VISUAL OPPORTUNITY DECISION & PROMPT SYNTHESIZER
 // ============================================================================
@@ -822,146 +548,6 @@ export async function analyzeLessonVisualOpportunities(params: {
 // ============================================================================
 // STAGE 4 & 5: MULTI-FORMAT EXPANDED QUIZ GENERATOR (16+ Question Types)
 // ============================================================================
-
-export async function generateExpandedQuiz(request: {
-  contextContent: string
-  title: string
-  count: number
-  questionTypes: QuestionType[]
-  difficulty?: QuestionDifficulty
-  bloomDistribution?: BloomDistribution
-  language?: string
-  distractorQuality?: DistractorQuality
-  includeHints?: boolean
-  includeExplanations?: boolean
-  preferredModel?: string
-}): Promise<GeneratedUnifiedQuestion[]> {
-  const language = request.language || 'English'
-  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
-  const count = request.count || 5
-  const typesList = request.questionTypes.length > 0 ? request.questionTypes : ['mcq', 'scenario', 'ordering', 'matching', 'true_false']
-  const typesStr = typesList.join(', ')
-
-  const sanitized = request.contextContent.replace(/<[^>]*>/g, ' ').substring(0, 4000)
-
-  const prompt = isArabic
-    ? `أنت خبير تقييم وجودة التعليم الفندقي لمجموعة فنادق فاخرة.
-قم بإنشاء EXACTLY ${count} أسئلة اختبار دقيقة وعملية بناءً على المحتوى التدريبي التالي:
-- العنوان: "${request.title}"
-- أنواع الأسئلة المطلوبة حصراً: [${typesStr}]
-- مستوى الصعوبة: ${request.difficulty || 'medium'}
-- جودة الخيارات المضللة: خيارات ذكية واقعية غير بديهية وتتجنب الأخطاء الشائعة.
-- التوزيع المعرفي لبلوم: تذكر، فهم، تطبيق، تحليل.
-
-قواعد تنسيق أنواع الأسئلة:
-- "mcq": سؤال اختيار من متعدد (4 خيارات متباينة).
-- "mcq_multi": اختيار أكثر من إجابة صحيحة (4-5 خيارات، الإجابة الصحيحة مفصولة بفواصل).
-- "true_false": صح أم خطأ (الخيارات ["صحيح", "خطأ"]).
-- "yes_no": نعم أم لا (الخيارات ["نعم", "لا"]).
-- "fill_blank": جملة تحتوي على فراغ "___" وخيارات للكلمة الصحيحة.
-- "short_answer": سؤال يتطلب إجابة قصيرة ومصطلحاً أساسياً.
-- "long_answer": سؤال تحليلي مفتوح مع معايير التصحيح.
-- "scenario": سيناريو معضلة ضيافة مع 4 قرارات ممكنة.
-- "case_based": دراسة حالة مصغرة مع سؤال استنتاجي.
-- "ordering": ترتيب خطوات عملية (4 خطوات، والإجابة مفصولة بـ " -> ").
-- "matching": مطابقة مصطلحات (الخيارات بصيغة "المصطلح:::التعريف"، والإجابة مفصولة بـ " ; ").
-- "ranking": ترتيب الأولويات حسب الأهمية أو السرعة.
-- "numeric": مسألة حسابية فندقية (مثال: ADR / RevPAR / نسب الخصم).
-- "code_technical": سؤال أنظمة فندقية أو منطق تقني.
-- "categorization": تصنيف عناصر في مجموعات.
-- "hotspot_image": تحديد العيوب أو المخاطر البصرية.
-
-أخرج مصفوفة JSON تحتوي على EXACTLY ${count} أسئلة:
-[
-  {
-    "question_text": "نص السؤال بالعربية",
-    "question_text_ar": "نص السؤال بالعربية",
-    "question_type": "${typesList[0]}",
-    "difficulty": "medium",
-    "bloom_level": "apply",
-    "points": 10,
-    "options": [
-      { "text": "الخيار 1", "text_ar": "الخيار 1", "is_correct": true, "feedback": "توضيح الإجابة الصحيحة" },
-      { "text": "الخيار 2", "text_ar": "الخيار 2", "is_correct": false, "feedback": "سبب عدم صحة هذا الخيار" },
-      { "text": "الخيار 3", "text_ar": "الخيار 3", "is_correct": false, "feedback": "توضيح" },
-      { "text": "الخيار 4", "text_ar": "الخيار 4", "is_correct": false, "feedback": "توضيح" }
-    ],
-    "correct_answer": "الخيار 1",
-    "explanation": "شرح تفصيلي للسبب",
-    "hint": "تلميح مساعد"
-  }
-]
-
-المحتوى:\n${sanitized}`
-    : `You are a Senior Hotel Learning Assessment & Psychometrics Director at a five-star luxury hotel group.
-Create EXACTLY ${count} rigorous, high-discrimination assessment questions based on the following training content:
-- Title: "${request.title}"
-- Required Question Types ONLY: [${typesStr}]
-- Difficulty Level: ${request.difficulty || 'medium'}
-- Distractor Quality: High-plausibility, avoids obvious cues, avoids joke answers, uniform length.
-
-Question Type Rules:
-- "mcq": 4 distinct choices, 1 correct.
-- "mcq_multi": 4-5 choices, 2+ correct answers separated by ", ".
-- "true_false": options: ["True", "False"].
-- "yes_no": options: ["Yes", "No"].
-- "fill_blank": sentence with "___" and 4 keyword choices.
-- "short_answer": concise conceptual question with expected key term.
-- "long_answer": situational essay prompt with rubric grading criteria.
-- "scenario": realistic operational dilemma with 4 practical actions.
-- "case_based": mini-incident case with analytical decision question.
-- "ordering": chronological steps (4 steps, correct_answer joined with " -> ").
-- "matching": concept pairings (options in "Term:::Definition" format, correct_answer joined with "; ").
-- "ranking": prioritization question ordered by urgency or importance.
-- "numeric": calculation problem (ADR, RevPAR, food cost %, staffing ratio).
-- "code_technical": PMS/POS syntax or system logic question.
-- "categorization": classify operational items into distinct categories.
-- "hotspot_image": visual hazard or quality defect identification.
-
-Output a single VALID JSON Array containing EXACTLY ${count} questions:
-[
-  {
-    "question_text": "Clear professional question text",
-    "question_text_ar": "Arabic question translation",
-    "question_type": "${typesList[0]}",
-    "difficulty": "medium",
-    "bloom_level": "apply",
-    "points": 10,
-    "options": [
-      { "text": "Choice A", "text_ar": "Choice A Arabic", "is_correct": true, "feedback": "Why correct" },
-      { "text": "Choice B", "text_ar": "Choice B Arabic", "is_correct": false, "feedback": "Why incorrect" },
-      { "text": "Choice C", "text_ar": "Choice C Arabic", "is_correct": false, "feedback": "Why incorrect" },
-      { "text": "Choice D", "text_ar": "Choice D Arabic", "is_correct": false, "feedback": "Why incorrect" }
-    ],
-    "correct_answer": "Choice A",
-    "explanation": "Detailed pedagogical explanation",
-    "hint": "Helpful cognitive hint"
-  }
-]
-
-Content:\n${sanitized}`
-
-  const modelChain = resolveModelChain(request.preferredModel)
-  for (const model of modelChain) {
-    try {
-      const generatedText = await callHuggingFace(model, prompt, 4000)
-      const parsed = safeParseJson<GeneratedUnifiedQuestion[]>(generatedText, true)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map((q) => ({
-          ...q,
-          question_type: typesList.includes(q.question_type) ? q.question_type : typesList[0],
-          difficulty: q.difficulty || request.difficulty || 'medium',
-          points: q.points || 10,
-        }))
-      }
-    } catch (e) {
-      console.warn(`Expanded quiz generation model ${model} failed, cascading:`, e)
-    }
-  }
-
-  return generateLocalQuizFallback(sanitized, isArabic, count, typesList)
-}
-
 // ============================================================================
 // STAGE 6: QUESTION QUALITY & DISTRACTOR QA VALIDATOR
 // ============================================================================
@@ -1199,85 +785,68 @@ export async function remediateCourseQAGap(
   const isArabic = (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar')
   const cloned: CourseBlueprint = JSON.parse(JSON.stringify(blueprint))
 
+  // Every remediation is grounded in this course's own modules/lessons. If the AI is
+  // unavailable a gap is left in place (and stays visible in the QA report) rather than
+  // being papered over with generic boilerplate.
+  const language = isArabic ? 'ar' : 'en'
+  const plainText = (html?: string) => (html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
   if (gapArea.toLowerCase().includes('objective') || gapArea === 'Learning Objectives') {
-    cloned.terminalObjectives = [
-      isArabic
-        ? `إتقان المعايير التشغيلية الفندقية الشاملة لـ ${cloned.title}`
-        : `Master comprehensive 5-star operational standards for ${cloned.title}`,
-      isArabic
-        ? `تطبيق بروتوكولات الخدمة والاستجابة الفورية لطلبات النزلاء بدقة واحترافية`
-        : `Execute frontline service recovery protocols with zero-defect accuracy`,
-      isArabic
-        ? `الالتزام بمتطلبات السلامة واللوائح المهنية المعتمدة في المملكة العربية السعودية`
-        : `Ensure full adherence to Saudi hospitality safety regulations and quality compliance benchmarks`,
-      isArabic
-        ? `تقييم جودة الأداء الميداني وإجراء عمليات التدقيق والتحسين المستمر`
-        : `Evaluate operational service delivery through rigorous self-inspection checklists`,
-    ]
-    cloned.enablingObjectives = [
-      isArabic
-        ? `تحديد الخطوات الإجرائية بدقة وفق معايير الخدمة العالمية العالمية`
-        : `Identify procedural steps according to international luxury service standards`,
-      isArabic
-        ? `استخدام نصوص المحادثة اللبقة في مواقف الخدمة المباشرة`
-        : `Demonstrate active listening and tailored dialogue scripts during guest interactions`,
-      isArabic
-        ? `معالجة المواقف التشغيلية الطارئة باستخدام نموذج LAST للتعافي السريع`
-        : `Resolve operational dilemmas using the LAST service recovery framework`,
-      isArabic
-        ? `إتمام قوائم الفحص والتوثيق اليومي للورديات`
-        : `Complete shift inspection checklists and hand-over logs efficiently`,
-    ]
+    const outline = cloned.modules
+      .map((m) => `- ${m.title}: ${(m.lessons || []).map((l) => l.title).join('; ')}`)
+      .join('\n')
+    let terminal: string[] = []
+    let enabling: string[] = []
+    try {
+      const { aiClient, extractJsonFromText } = await import('./client')
+      const res = await aiClient.executePrompt(
+        `Write measurable learning objectives for the course "${cloned.title}".
+Course outline:
+${outline}
+
+Return JSON only: {"terminal": [3-4 outcome objectives for the whole course], "enabling": [3-6 supporting skill objectives]}.
+Each objective starts with an observable verb (Bloom's taxonomy) and refers only to topics in the outline.${isArabic ? ' Write every objective in Arabic.' : ''}`,
+        { task: 'generation', jsonMode: true, temperature: 0.3 },
+      )
+      const parsed = extractJsonFromText<{ terminal?: unknown; enabling?: unknown }>(res.data)
+      const clean = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim().length > 0) : [])
+      terminal = clean(parsed?.terminal)
+      enabling = clean(parsed?.enabling)
+    } catch (e) {
+      console.warn('[remediateCourseQAGap] objective generation failed; deriving from outline', e)
+    }
+    if (terminal.length === 0) {
+      terminal = cloned.modules.map((m) =>
+        isArabic ? `إتقان محور: ${m.title}` : `Demonstrate competence in ${m.title}`,
+      )
+    }
+    if (enabling.length === 0) {
+      enabling = cloned.modules.flatMap((m) =>
+        (m.lessons || []).map((l) => (isArabic ? `تطبيق: ${l.title}` : `Apply ${l.title}`)),
+      )
+    }
+    cloned.terminalObjectives = terminal
+    cloned.enablingObjectives = enabling
   } else if (gapArea.toLowerCase().includes('depth') || gapArea === 'Content Depth') {
-    cloned.modules.forEach((mod) => {
-      mod.lessons.forEach((les) => {
-        const textLen = les.renderedHtml ? les.renderedHtml.replace(/<[^>]*>/g, '').trim().length : 0
-        if (textLen < 200) {
-          les.renderedHtml = isArabic
-            ? `<div class="space-y-4">
-                <div class="p-4 rounded-xl border border-purple-200 bg-purple-50/50">
-                  <h4 class="font-bold text-sm text-purple-950 mb-1">🎯 الهدف التشغيلي للدرس</h4>
-                  <p class="text-xs text-purple-900 leading-relaxed">${les.description || 'تطبيق أفضل الممارسات الفندقية المعتمدة لتقديم خدمة استثنائية للنزلاء.'}</p>
-                </div>
-                <div class="space-y-2">
-                  <h4 class="font-bold text-sm text-foreground">📋 الإجراء التشغيلي القياسي (SOP)</h4>
-                  <ol class="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
-                    <li><strong>التحضير المسبق:</strong> مراجعة بيانات النزيل والجاهزية التامة وفق معايير الخدمة العالمية 5 نجوم.</li>
-                    <li><strong>التنفيذ الميداني:</strong> تطبيق الخطوات الإجرائية باحترافية وسرعة استجابة فائقة.</li>
-                    <li><strong>التحقق وضمان الجودة:</strong> استخدام قائمة الفحص للتأكد من مطابقة الخدمة لأعلى المعايير.</li>
-                  </ol>
-                </div>
-                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  <strong>💬 نص الحوار الموصى به:</strong> "يسعدنا دائماً تقديم أعلى درجات الراحة لسيادتكم، هل من خدمة إضافية ترغبون بها؟"
-                </div>
-                <div class="p-3 rounded-lg bg-muted/40 border text-xs">
-                  <strong>✅ قائمة تدقيق الجودة:</strong> التأكد من اكتمال كافة متطلبات الورديات، تسجيل الملاحظات في سجل التسليم اليومي.
-                </div>
-              </div>`
-            : `<div class="space-y-4">
-                <div class="p-4 rounded-xl border border-purple-200 bg-purple-50/50">
-                  <h4 class="font-bold text-sm text-purple-950 mb-1">🎯 Operational Objective</h4>
-                  <p class="text-xs text-purple-900 leading-relaxed">${les.description || 'Deliver flawless 5-star hospitality execution aligned with luxury hotel standards.'}</p>
-                </div>
-                <div class="space-y-2">
-                  <h4 class="font-bold text-sm text-foreground">📋 Standard Operating Procedure (SOP)</h4>
-                  <ol class="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
-                    <li><strong>Pre-Service Inspection:</strong> Verify workstation readiness and guest profile preferences.</li>
-                    <li><strong>Frontline Execution:</strong> Carry out procedural steps with active listening and rapid responsiveness.</li>
-                    <li><strong>Quality Verification:</strong> Inspect deliverables against five-star luxury criteria prior to guest handover.</li>
-                  </ol>
-                </div>
-                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  <strong>💬 Recommended five-star Script:</strong> "It is our absolute pleasure to assist you today. Allow me to take care of that right away."
-                </div>
-                <div class="p-3 rounded-lg bg-muted/40 border text-xs">
-                  <strong>✅ Supervisory Inspection Checklist:</strong> Validate timing, presentation, safety protocols, and PMS logging.
-                </div>
-              </div>`
+    const { contentWriterAgent } = await import('./agents/contentWriterAgent')
+    for (const mod of cloned.modules) {
+      for (const les of mod.lessons) {
+        if (plainText(les.renderedHtml).length >= 200) continue
+        try {
+          const res = await contentWriterAgent.process(
+            { courseTitle: cloned.title, moduleTitle: mod.title, lesson: les, config: config || {}, language },
+            { silent: true },
+          )
+          if (typeof res.data === 'string' && plainText(res.data).length > plainText(les.renderedHtml).length) {
+            les.renderedHtml = res.data
+          }
+        } catch (e) {
+          console.warn('[remediateCourseQAGap] lesson expansion failed:', les.id, e)
         }
-      })
-    })
-  } else if (gapArea.toLowerCase().includes('progression') || gapArea === 'Curriculum Progression') {
+      }
+    }
+  }
+  if (gapArea.toLowerCase().includes('progression') || gapArea === 'Curriculum Progression') {
     const titlesSeen = new Set<string>()
     cloned.modules.forEach((mod, mIdx) => {
       let modTitle = mod.title
@@ -1297,52 +866,37 @@ export async function remediateCourseQAGap(
       })
     })
   } else if (gapArea.toLowerCase().includes('assessment') || gapArea === 'Assessment Rigour') {
-    cloned.modules.forEach((mod, mIdx) => {
-      if (!mod.moduleQuiz || !mod.moduleQuiz.questions || mod.moduleQuiz.questions.length === 0) {
-        mod.moduleQuiz = {
-          id: `quiz_${Date.now()}_${mIdx}`,
-          title: isArabic ? `اختبار التحقق: ${mod.title}` : `Knowledge Check: ${mod.title}`,
-          passingScore: 85,
-          timeLimitMinutes: 10,
-          questions: [
-            {
-              id: `q_${Date.now()}_${mIdx}_1`,
-              question_type: 'scenario',
-              prompt: isArabic
-                ? `طلب نزيل VIP خدمة خاصة أثناء وقت الذروة. ما هو الإجراء التشغيلي المعتمد وفق معايير الخدمة العالمية؟`
-                : `A VIP guest requests an expedited service during peak occupancy. What is the approved 5-star protocol?`,
-              options: [
-                { id: 'opt_1', text: isArabic ? 'الاعتذار للنزيل بسبب الازدحام' : 'Decline immediately due to high volume', is_correct: false },
-                { id: 'opt_2', text: isArabic ? 'استقبال الطلب بلباقة، إبلاغ المشرف، وتنفيذه مع الالتزام بالوقت المحدد' : 'Acknowledge graciously, coordinate with team lead, and deliver within promised timeline', is_correct: true },
-                { id: 'opt_3', text: isArabic ? 'تأجيل الطلب حتى نهاية الوردية' : 'Postpone request until shift conclusion', is_correct: false },
-              ],
-              correct_answer: 'opt_2',
-              explanation: isArabic ? 'معايير الخدمة العالمية تلزم بالاستجابة اللبقة وتقديم الحلول الاستباقية فوراً.' : 'international luxury service standards mandate gracious acknowledgment and proactive solution delivery.',
-              difficulty: 'intermediate',
-              bloom_level: 'application',
-              points: 10,
-            },
-            {
-              id: `q_${Date.now()}_${mIdx}_2`,
-              question_type: 'mcq',
-              prompt: isArabic
-                ? `ما هي الركيزة الأساسية في نموذج التعافي من شكاوى النزلاء (LAST)؟`
-                : `What does the 'L' in the LAST Service Recovery framework stand for?`,
-              options: [
-                { id: 'opt_a', text: isArabic ? 'Listen (الاستماع الفعال دون مقاطعة)' : 'Listen (Active listening without interruption)', is_correct: true },
-                { id: 'opt_b', text: isArabic ? 'Leave (ترك النزيل)' : 'Leave (Exit the situation)', is_correct: false },
-                { id: 'opt_c', text: isArabic ? 'Limit (تقليل الخدمة)' : 'Limit (Reduce service offering)', is_correct: false },
-              ],
-              correct_answer: 'opt_a',
-              explanation: isArabic ? 'الاستماع الفعال هو الخطوة الأولى لاحتواء موقف النزيل واستعادة رضاه.' : 'Active listening de-escalates guest frustration and initiates service recovery.',
-              difficulty: 'beginner',
-              bloom_level: 'comprehension',
-              points: 10,
-            },
-          ],
+    const { assessmentAgent } = await import('./agents/assessmentAgent')
+    const questionCount = config?.quizConfig?.questionCount || 3
+    for (const mod of cloned.modules) {
+      if (mod.moduleQuiz?.questions?.length) continue
+      try {
+        const res = await assessmentAgent.process(
+          {
+            title: mod.title,
+            contextContent: (mod.lessons || []).map((l) => l.renderedHtml || l.description || '').join('\n'),
+            count: questionCount,
+            questionTypes: config?.questionTypes,
+            difficulty: mod.difficultyLevel as any,
+            language,
+          },
+          { silent: true },
+        )
+        const questions = Array.isArray(res.data) ? res.data : []
+        if (questions.length > 0) {
+          mod.moduleQuiz = {
+            id: crypto.randomUUID(),
+            title: isArabic ? `${mod.title} — اختبار قصير` : `${mod.title} — Knowledge Check`,
+            placement: 'per_module',
+            questionCount: questions.length,
+            passingScore: config?.quizConfig?.passingScore || 80,
+            questions,
+          }
         }
+      } catch (e) {
+        console.warn('[remediateCourseQAGap] quiz generation failed for module:', mod.id, e)
       }
-    })
+    }
   }
 
   const updatedQAReport = await auditCourseQuality(cloned, config)
@@ -1763,4 +1317,3 @@ function generateLocalQuizFallback(
 }
 
 // Re-export smart preset helpers from courseHarmonizer for convenience
-export { getSmartCourseTypePreset, getSmartModePreset } from '@/lib/ai/courseHarmonizer'

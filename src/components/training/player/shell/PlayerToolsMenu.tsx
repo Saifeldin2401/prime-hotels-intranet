@@ -16,7 +16,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export interface PlayerToolsMenuProps {
+interface PlayerToolsMenuProps {
     fontSize: { value: 'sm' | 'base' | 'lg'; onChange: (v: 'sm' | 'base' | 'lg') => void }
     focusMode: { active: boolean; onToggle: () => void }
     audioNarrator: { active: boolean; onToggle: () => void }

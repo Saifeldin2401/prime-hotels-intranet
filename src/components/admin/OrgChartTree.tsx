@@ -68,11 +68,11 @@ function OrgTreeNodeItem({
 
     const getDepthColor = (depth: number) => {
         const colors = [
-            'border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10',
-            'border-l-hotel-navy bg-hotel-navy/10 dark:bg-hotel-navy/5',
-            'border-l-green-500 bg-green-50/50 dark:bg-green-900/10',
-            'border-l-orange-500 bg-orange-50/50 dark:bg-orange-900/10',
-            'border-l-pink-500 bg-pink-50/50 dark:bg-pink-900/10',
+            'border-s-purple-500 bg-purple-50/50 dark:bg-purple-900/10',
+            'border-s-hotel-navy bg-hotel-navy/10 dark:bg-hotel-navy/5',
+            'border-s-green-500 bg-green-50/50 dark:bg-green-900/10',
+            'border-s-orange-500 bg-orange-50/50 dark:bg-orange-900/10',
+            'border-s-pink-500 bg-pink-50/50 dark:bg-pink-900/10',
         ]
         return colors[depth % colors.length]
     }
@@ -81,7 +81,7 @@ function OrgTreeNodeItem({
         <div className="select-none">
             <div
                 className={cn(
-                    "flex items-center gap-2 p-2 rounded-lg border-l-4 transition-all cursor-pointer hover:shadow-sm",
+                    "flex items-center gap-2 p-2 rounded-lg border-s-4 transition-all cursor-pointer hover:shadow-sm",
                     getDepthColor(node.depth),
                     isSelected && "ring-2 ring-primary ring-offset-1"
                 )}

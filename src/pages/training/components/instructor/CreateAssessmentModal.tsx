@@ -213,7 +213,7 @@ export function CreateAssessmentModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 py-2 pr-1">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-4 py-2 pe-1">
           {/* Titles */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -237,7 +237,7 @@ export function CreateAssessmentModal({
                 placeholder="مثال: قائمة التحقق الميدانية للاستقبال (معايير فوربس)"
                 value={titleAr}
                 onChange={(e) => setTitleAr(e.target.value)}
-                className="text-sm text-right"
+                className="text-sm text-end"
               />
             </div>
           </div>
@@ -315,7 +315,7 @@ export function CreateAssessmentModal({
                 onClick={handleAddCriterion}
                 className="h-7 text-xs border-dashed border-amber-500/50 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
+                <Plus className="h-3.5 w-3.5 me-1" />
                 <span>{isAr ? 'إضافة معيار' : 'Add Criterion'}</span>
               </Button>
             </div>
@@ -365,7 +365,7 @@ export function CreateAssessmentModal({
                       placeholder="المعيار بالعربية (مثال: الترحيب مع التواصل البصري)"
                       value={crit.label_ar || ''}
                       onChange={(e) => handleCriterionChange(crit.id, 'label_ar', e.target.value)}
-                      className="text-xs h-8 text-right"
+                      className="text-xs h-8 text-end"
                       dir="rtl"
                     />
                   </div>

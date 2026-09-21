@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -27,7 +26,7 @@ import { cn } from '@/lib/utils'
 export type QuickThoroughness = 'quick' | 'standard' | 'deep'
 
 /** Department options — kept in sync with StudioStageBasics. */
-export const QUICK_DEPARTMENTS: Array<{ value: string; label: string }> = [
+const QUICK_DEPARTMENTS: Array<{ value: string; label: string }> = [
   { value: 'front_office', label: 'Front Office & Concierge' },
   { value: 'housekeeping', label: 'Housekeeping & Laundry' },
   { value: 'food_beverage', label: 'Food & Beverage (F&B)' },
@@ -40,7 +39,7 @@ export const QUICK_DEPARTMENTS: Array<{ value: string; label: string }> = [
 ]
 
 /** Audience options — values match the TargetAudience union used by the pipeline. */
-export const QUICK_AUDIENCES: Array<{ value: string; label: string }> = [
+const QUICK_AUDIENCES: Array<{ value: string; label: string }> = [
   { value: 'employees', label: 'Frontline associates' },
   { value: 'managers', label: 'Supervisors & managers' },
   { value: 'executives', label: 'Executive leadership' },

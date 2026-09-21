@@ -41,8 +41,6 @@ import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
 import { useMedia } from '@/hooks/useMedia'
 import { useProperties } from '@/hooks/useProperties'
-import { DocumentPicker } from '@/components/documents/DocumentPicker'
-import type { Document } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
@@ -790,7 +788,7 @@ export function ChecklistBuilder({
                                             placeholder="النص باللغة العربية (خطوة التحقق والمطابقة)..."
                                             value={item.text_ar || ''}
                                             onChange={(e) => updateItem(item.id, { text_ar: e.target.value })}
-                                            className="h-7 text-xs text-right font-arabic"
+                                            className="h-7 text-xs text-end font-arabic"
                                         />
                                     </div>
 
@@ -1155,7 +1153,7 @@ export function FAQBuilder({
                                                 placeholder="السؤال باللغة العربية..."
                                                 value={item.question_ar || ''}
                                                 onChange={(e) => updateItem(item.id, { question_ar: e.target.value })}
-                                                className="h-7 text-xs font-arabic text-right"
+                                                className="h-7 text-xs font-arabic text-end"
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -1168,7 +1166,7 @@ export function FAQBuilder({
                                                 value={item.answer_ar || ''}
                                                 onChange={(e) => updateItem(item.id, { answer_ar: e.target.value })}
                                                 rows={2}
-                                                className="text-xs font-arabic text-right"
+                                                className="text-xs font-arabic text-end"
                                             />
                                         </div>
                                     </div>
@@ -1460,7 +1458,7 @@ export function StringListBuilder({
                             <div className="flex flex-col pt-2 text-slate-300 dark:text-slate-600">
                                 <GripVertical className="h-3.5 w-3.5" />
                             </div>
-                            <span className="pt-2 text-[11px] font-mono text-muted-foreground w-5 text-right shrink-0">
+                            <span className="pt-2 text-[11px] font-mono text-muted-foreground w-5 text-end shrink-0">
                                 {index + 1}
                             </span>
                             <Textarea

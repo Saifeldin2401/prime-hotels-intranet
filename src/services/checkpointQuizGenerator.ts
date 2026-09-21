@@ -21,9 +21,9 @@ export const toValidQuestionType = (value: string): QuestionType =>
 export const normalizeAnswerText = (value: string): string =>
     value.trim().toLowerCase().replace(/[.!?]+$/, '')
 
-export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced'
+type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
-export interface CheckpointQuizParams {
+interface CheckpointQuizParams {
     quizId: string
     sectionContent: string
     difficulty: CourseDifficulty

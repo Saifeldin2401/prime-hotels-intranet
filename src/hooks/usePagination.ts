@@ -1,11 +1,5 @@
 import { useMemo, useState } from 'react'
 
-export interface PaginationState {
-    page: number
-    pageSize: number
-    totalCount: number
-}
-
 export interface PaginationControls {
     page: number
     pageSize: number

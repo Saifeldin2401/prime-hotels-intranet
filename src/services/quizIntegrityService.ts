@@ -59,7 +59,7 @@ type RepairPayload = {
   hint?: string | null
 }
 
-export interface QuizIntegrityIssue {
+interface QuizIntegrityIssue {
   code: string
   severity: 'error' | 'warning'
   message: string
@@ -68,7 +68,7 @@ export interface QuizIntegrityIssue {
   fixable: boolean
 }
 
-export interface QuizIntegrityReport {
+interface QuizIntegrityReport {
   quizId: string
   quizTitle: string
   valid: boolean

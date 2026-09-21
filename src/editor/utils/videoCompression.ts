@@ -25,7 +25,7 @@ export type CompressStage =
   | 'skipped'
   | 'failed'
 
-export interface CompressOptions {
+interface CompressOptions {
   /** Above this size the video is transcoded. Default 50 MB. */
   thresholdMB?: number
   /** Longest edge (height) of the output. Default 720. */
@@ -38,7 +38,7 @@ export interface CompressOptions {
   onStage?: (stage: CompressStage) => void
 }
 
-export interface CompressResult {
+interface CompressResult {
   file: File
   compressed: boolean
   originalBytes: number

@@ -3,7 +3,7 @@
  * Decouples image-generation providers from the core AI Course Engine orchestrator.
  */
 
-import { ImageCostTier, ImageProviderType, VisualPlacement, VisualStyle } from '@/types/aiCourseEngine'
+import type { ImageCostTier, ImageProviderType, VisualPlacement, VisualStyle } from '@/types/aiCourseEngine'
 
 export interface ImageModelInfo {
   id: string

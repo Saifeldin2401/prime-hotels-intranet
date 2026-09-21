@@ -7,7 +7,6 @@ import type { Organization, Brand, Hotel, OrganizationMembership, TenantRole } f
 import type { PlatformAccessSession } from '@/lib/types/platform'
 import { platformService } from '@/services/platformService'
 import { safeLocalStorage } from '@/lib/storage'
-import { queryClient as defaultQueryClient } from '@/lib/queryClient'
 
 interface TenantContextType {
   // Active Tenant / Organization

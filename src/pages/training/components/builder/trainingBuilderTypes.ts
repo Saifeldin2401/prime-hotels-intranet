@@ -1,5 +1,5 @@
 export type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical' | 'roleplay'
-export type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
+type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
 export type BuilderStep = 'setup' | 'structure' | 'content' | 'rules' | 'preview' | 'publish'
 export type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'document' | 'video' }
 
@@ -14,15 +14,6 @@ export interface ContentBlockForm {
   duration?: number
   points?: number
   order: number
-}
-
-export interface QuestionForm {
-  question: string
-  type: QuestionType
-  options: string[]
-  correct_answer: string
-  points: number
-  explanation?: string
 }
 
 export interface TrainingSection {

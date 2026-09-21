@@ -1,6 +1,6 @@
 import type { ContentBlockForm, TrainingSection } from './trainingBuilderTypes'
 
-export const deepClone = <T,>(input: T, seen = new WeakMap<object, unknown>()): T => {
+const deepClone = <T,>(input: T, seen = new WeakMap<object, unknown>()): T => {
   if (input === null || typeof input !== 'object') {
     return input
   }
@@ -107,7 +107,7 @@ export const deriveTitleFromUrl = (value: string) => {
   }
 }
 
-export const stripHtml = (value: string) => {
+const stripHtml = (value: string) => {
   let previous: string;
   let result = value;
   do {

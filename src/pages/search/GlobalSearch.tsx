@@ -1,5 +1,5 @@
 ﻿import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
@@ -8,8 +8,8 @@ import { escapeSearchQuery } from '@/lib/utils'
 import { AnalyticsEvents } from '@/types/analytics'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { Award, BookOpen, CheckSquare, FileText, GraduationCap, Loader2, Search, User } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { Award, BookOpen, CheckSquare, GraduationCap, Loader2, Search, User } from 'lucide-react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 
@@ -74,7 +74,7 @@ export default function GlobalSearch() {
             if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('documents')
-                .select('id, title, description, status, created_at, document_type')
+                .select('id, title, description, status, created_at, document_type:content_type')
                 .eq('is_deleted', false)
                 .or(`and(or(organization_id.eq.${organizationId},is_master_template.eq.true),or(title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%))`)
                 .limit(20)
@@ -134,7 +134,7 @@ export default function GlobalSearch() {
             if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('certificates')
-                .select('id, certificate_number, title, recipient_name, issue_date')
+                .select('id, certificate_number, title, recipient_name, issue_date:completion_date')
                 .eq('organization_id', organizationId)
                 .or(`title.ilike.%${escapedQuery}%,recipient_name.ilike.%${escapedQuery}%,certificate_number.ilike.%${escapedQuery}%`)
                 .limit(20)
@@ -154,7 +154,7 @@ export default function GlobalSearch() {
             if (!canSearchTenantContent || !organizationId) return []
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, full_name, email, job_title, role')
+                .select('id, full_name, email, job_title')
                 .eq('organization_id', organizationId)
                 .or(`full_name.ilike.%${escapedQuery}%,email.ilike.%${escapedQuery}%`)
                 .limit(20)
@@ -489,7 +489,7 @@ function ProfileCard({ profile }: { profile: SearchProfileResult }) {
                 </div>
                 <div className="min-w-0 flex-1">
                     <CardTitle className="text-base truncate">{profile.full_name || 'User'}</CardTitle>
-                    <CardDescription className="truncate text-xs">{profile.job_title || profile.role || profile.email}</CardDescription>
+                    <CardDescription className="truncate text-xs">{profile.job_title || profile.email}</CardDescription>
                 </div>
             </CardHeader>
         </Card>

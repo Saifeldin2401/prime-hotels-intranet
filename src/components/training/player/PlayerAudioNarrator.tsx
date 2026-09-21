@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -11,7 +11,6 @@ import {
     Sparkles,
     X,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { sanitizeHtml } from '@/lib/sanitize'
 
 interface PlayerAudioNarratorProps {

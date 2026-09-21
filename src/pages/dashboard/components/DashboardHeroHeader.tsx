@@ -1,5 +1,4 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { 
@@ -11,7 +10,6 @@ import {
   BookOpen, 
   Sparkles,
   ArrowRight,
-  ChevronDown,
   Layers,
   Crown,
   LayoutGrid
@@ -19,9 +17,9 @@ import {
 import { useAuth } from '@/hooks/useAuth'
 import { useTenant } from '@/contexts/TenantContext'
 import { useProperty } from '@/contexts/PropertyContext'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getTimeBasedGreeting } from '@/lib/greetingUtils'
+import { toSimpleT } from '@/lib/simpleT'
 
 export const DashboardHeroHeader: React.FC = () => {
   const { t, i18n } = useTranslation(['dashboard', 'common'])
@@ -31,7 +29,7 @@ export const DashboardHeroHeader: React.FC = () => {
   const navigate = useNavigate()
   const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
 
-  const greeting = getTimeBasedGreeting(t)
+  const greeting = getTimeBasedGreeting(toSimpleT(t))
 
   const today = new Date()
   const gregorianDate = today.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {

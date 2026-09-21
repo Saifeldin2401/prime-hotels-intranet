@@ -1,11 +1,3 @@
-/**
- * Knowledge Base Types
- * 
- * Type definitions for the Knowledge Base system.
- */
-
-import type { AppRole } from '@/lib/constants'
-
 // ============================================================================
 // ENUMS
 // ============================================================================
@@ -179,18 +171,6 @@ export interface KnowledgeTag {
     color: string
 }
 
-export interface KnowledgeCategory {
-    id: string
-    name: string
-    name_ar?: string
-    description?: string
-    description_ar?: string
-    department_id?: string
-    parent_id?: string
-    children?: KnowledgeCategory[]
-    article_count?: number
-}
-
 export interface KnowledgeComment {
     id: string
     document_id: string
@@ -220,47 +200,11 @@ export interface KnowledgeComment {
     user_vote?: 'up' | 'down' | null
 }
 
-export interface KnowledgeAcknowledgment {
-    id: string
-    document_id: string
-    version_id: string
-    user_id: string
-    acknowledged_at: string
-}
-
 export interface KnowledgeBookmark {
     user_id: string
     document_id: string
     created_at: string
     article?: KnowledgeArticle
-}
-
-export interface KnowledgeContextTrigger {
-    id: string
-    document_id: string
-    trigger_type: 'task' | 'checklist' | 'training' | 'page' | 'maintenance' | 'onboarding'
-    trigger_value: string
-    priority: number
-    show_as: 'link' | 'tooltip' | 'modal' | 'inline'
-}
-
-export interface KnowledgeRoleAssignment {
-    id: string
-    document_id: string
-    role: AppRole
-    property_id?: string
-    department_id?: string
-    is_required: boolean
-    due_days_after_assignment?: number
-}
-
-export interface KnowledgeFeedback {
-    id: string
-    document_id: string
-    user_id: string
-    helpful: boolean
-    feedback_text?: string
-    created_at: string
 }
 
 // ============================================================================
@@ -316,7 +260,7 @@ export interface ContextualHelp {
 // UI TYPES
 // ============================================================================
 
-export interface ContentTypeConfig {
+interface ContentTypeConfig {
     type: KnowledgeContentType
     label: string
     icon: string
@@ -346,13 +290,4 @@ export const STATUS_CONFIG = {
     APPROVED: { label: 'Approved', color: 'blue' },
     PUBLISHED: { label: 'Published', color: 'green' },
     REJECTED: { label: 'Rejected', color: 'red' }
-} as const
-
-export const VISIBILITY_CONFIG = {
-    global: { label: 'Organization-Wide (All Hotels)', icon: 'Globe' },
-    property: { label: 'Specific Hotel', icon: 'Building' },
-    department: { label: 'Department Only', icon: 'Users' },
-    role: { label: 'Role Specific', icon: 'Shield' },
-    property_department: { label: 'Hotel + Department', icon: 'Layers' },
-    custom: { label: 'Custom Rules', icon: 'Settings' }
 } as const

@@ -263,21 +263,3 @@ export function useExportPIIAccessLogs() {
     }
   })
 }
-
-export async function logPIIAccess(accessData: {
-  user_id: string
-  resource_type: PIIAccessLog['resource_type']
-  resource_id: string
-  access_type: PIIAccessLog['access_type']
-  pii_fields: string[]
-  justification?: string
-}) {
-  return supabase.rpc('log_pii_access', {
-    p_user_id: accessData.user_id,
-    p_resource_type: accessData.resource_type,
-    p_resource_id: accessData.resource_id,
-    p_access_type: accessData.access_type,
-    p_pii_fields: accessData.pii_fields,
-    p_justification: accessData.justification
-  })
-}

@@ -130,11 +130,11 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
         s => s?.id && !moduleSkills.some(ms => ms.skill_id === s.id)
     )
 
-    if (loading) return <div className={`text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t('skillsManagement.loading')}</div>
+    if (loading) return <div className={`text-sm text-gray-500 ${isRTL ? 'text-end' : 'text-start'}`}>{t('skillsManagement.loading')}</div>
 
     return (
         <TooltipProvider>
-        <div className={`space-y-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div className={`space-y-4 ${isRTL ? 'text-end' : 'text-start'}`}>
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <h3 className={`text-sm font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <Award className="h-4 w-4 text-hotel-gold" />
@@ -148,8 +148,8 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                                 {t('skillsManagement.addSkill')}
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className={isRTL ? 'text-right' : 'text-left'}>
-                            <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
+                        <DialogContent className={isRTL ? 'text-end' : 'text-start'}>
+                            <DialogHeader className={isRTL ? 'text-end' : 'text-start'}>
                                 <DialogTitle>{t('skillsManagement.linkSkill')}</DialogTitle>
                                 <DialogDescription>
                                     {t('skillsManagement.linkDescription')}
@@ -163,7 +163,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                                         <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
                                             <SelectValue placeholder={t('skillsManagement.selectSkillPlaceholder')} />
                                         </SelectTrigger>
-                                        <SelectContent className={isRTL ? 'text-right' : 'text-left'}>
+                                        <SelectContent className={isRTL ? 'text-end' : 'text-start'}>
                                             {unlinkedSkills.length === 0 ? (
                                                 <div className="p-2 text-sm text-gray-500 text-center">
                                                     {t('skillsManagement.noAvailableSkills')}
@@ -186,7 +186,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                                         min={1}
                                         value={points}
                                         onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-                                        className={isRTL ? 'text-right' : 'text-left'}
+                                        className={isRTL ? 'text-end' : 'text-start'}
                                     />
                                     <p className="text-xs text-gray-500">
                                         {t('skillsManagement.pointsHint')}
@@ -214,7 +214,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                                 key={ms.id}
                                 className={`flex items-center justify-between p-2 rounded bg-gray-50 border group ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
                             >
-                                <div className={isRTL ? 'text-right' : 'text-left'}>
+                                <div className={isRTL ? 'text-end' : 'text-start'}>
                                     <div className="font-medium text-sm">{ms.skill?.name || t('skillsManagement.unknownSkill')}</div>
                                     <div className={`text-xs text-gray-500 flex gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <Badge variant="secondary" className="text-[10px] h-5">

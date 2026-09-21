@@ -1,16 +1,14 @@
-import { ArrowLeft, Save, Plus, Trash2, Eye, Code } from 'lucide-react'
+import { Save, Plus, Trash2, Eye, Code } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Link } from 'react-router-dom'
-
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'

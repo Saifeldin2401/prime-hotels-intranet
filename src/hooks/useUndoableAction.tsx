@@ -10,7 +10,7 @@ import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useUndo } from './useUndo';
 
-export interface UseUndoableActionOptions {
+interface UseUndoableActionOptions {
   delay?: number;
   message: string;
   successMessage?: string;
@@ -18,7 +18,7 @@ export interface UseUndoableActionOptions {
   onCancel?: () => void;
 }
 
-export interface UseUndoableActionReturn<T = unknown> {
+interface UseUndoableActionReturn<T = unknown> {
   execute: (data?: T) => void;
   undo: () => void;
   reset: () => void;

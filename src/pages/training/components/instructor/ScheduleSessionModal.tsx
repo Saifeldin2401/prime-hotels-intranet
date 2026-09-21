@@ -210,7 +210,7 @@ export function ScheduleSessionModal({
                 placeholder="مثال: معايير فوربس الخمس نجوم لاستقبال كبار الشخصيات"
                 value={titleAr}
                 onChange={(e) => setTitleAr(e.target.value)}
-                className="text-sm text-right"
+                className="text-sm text-end"
               />
             </div>
           </div>

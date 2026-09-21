@@ -1,33 +1,18 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
-  AlertTriangle,
-  Award,
-  BookOpen,
-  CheckCircle,
-  CheckCircle2,
-  Clock,
-  Compass,
   Cpu,
-  FileCheck,
   FileQuestion,
   FileText,
-  Globe,
-  GraduationCap,
   Image as ImageIcon,
   Layers,
   Rocket,
   Save,
-  ShieldCheck,
   Sparkles,
-  Target,
-  Wand2,
-  Zap,
+  Target
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { StudioStageId } from './StudioWorkflowStepper'
 import type { FullCourseGenerationConfig } from '@/types/aiCourseEngine'
 import { StudioIntelligentAdvisor, type IntelligentRecommendation } from './StudioIntelligentAdvisor'
@@ -58,8 +43,10 @@ export function StudioStagePreflightReview({
 }: StudioStagePreflightReviewProps) {
   const { t } = useTranslation('training')
 
-  const totalLessons = (config.granularity?.moduleCount || 4) * (config.granularity?.lessonsPerModule || 3)
-  const totalDurationMinutes = totalLessons * (config.granularity?.lessonDuration || 15)
+  // moduleCount / lessonsPerModule may be 'auto'; estimate with the defaults in that case.
+  const asCount = (v: unknown, fallback: number) => (typeof v === 'number' && v > 0 ? v : fallback)
+  const totalLessons = asCount(config.granularity?.moduleCount, 4) * asCount(config.granularity?.lessonsPerModule, 3)
+  const totalDurationMinutes = totalLessons * asCount(config.granularity?.lessonDuration, 15)
   const hours = Math.floor(totalDurationMinutes / 60)
   const minutes = totalDurationMinutes % 60
   const durationString = hours > 0 ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}` : `${minutes}m`

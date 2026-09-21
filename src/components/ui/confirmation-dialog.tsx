@@ -11,9 +11,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle, Info, Trash2 } from 'lucide-react'
-import React from 'react'
-
-export type ConfirmationVariant = 'danger' | 'warning' | 'info' | 'success'
+type ConfirmationVariant = 'danger' | 'warning' | 'info' | 'success'
 
 interface ConfirmationDialogProps {
     open: boolean
@@ -90,8 +88,8 @@ export function ConfirmationDialog({
                             <Icon className={cn('h-6 w-6', config.iconColor)} />
                         </div>
                         <div className="flex-1">
-                            <AlertDialogTitle className="text-left">{title}</AlertDialogTitle>
-                            <AlertDialogDescription className="text-left mt-2">
+                            <AlertDialogTitle className="text-start">{title}</AlertDialogTitle>
+                            <AlertDialogDescription className="text-start mt-2">
                                 {description}
                             </AlertDialogDescription>
                         </div>
@@ -120,42 +118,3 @@ export function ConfirmationDialog({
 }
 
 // Convenience hook for using confirmation dialogs
-export function useConfirmation() {
-    const [isOpen, setIsOpen] = React.useState(false)
-    const resolveRef = React.useRef<((value: boolean) => void) | null>(null)
-    const [config, setConfig] = React.useState<Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'>>({
-        onConfirm: () => { },
-        title: '',
-        description: '',
-    })
-
-    const confirm = (options: Omit<ConfirmationDialogProps, 'open' | 'onOpenChange'>) => {
-        return new Promise<boolean>((resolve) => {
-            resolveRef.current = resolve
-            setConfig({
-                ...options,
-                onConfirm: async () => {
-                    await options.onConfirm()
-                    resolve(true)
-                },
-            })
-            setIsOpen(true)
-        })
-    }
-
-    const dialog = (
-        <ConfirmationDialog
-            {...config}
-            open={isOpen}
-            onOpenChange={(open) => {
-                setIsOpen(open)
-                if (!open && resolveRef.current) {
-                    resolveRef.current(false)
-                    resolveRef.current = null
-                }
-            }}
-        />
-    )
-
-    return { confirm, dialog }
-}

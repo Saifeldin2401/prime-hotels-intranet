@@ -27,12 +27,11 @@ import {
     evaluateModuleProgression,
     getNextRequiredLearningItem,
     validateNavigationTarget,
-    type LearnerProgressState,
-    type LearningItemState,
-    type ModuleProgressionResult
+    type LearnerProgressState
 } from '@/lib/trainingProgressionEngine'
 import type { TrainingContentBlock } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import type { TrainingModule } from '@/lib/types/training'
 import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'

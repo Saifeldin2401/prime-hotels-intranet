@@ -11,7 +11,7 @@
  * - Session storage variant included
  */
 
-export interface SafeStorage {
+interface SafeStorage {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
   removeItem: (key: string) => void;
@@ -100,36 +100,4 @@ const sessionStorageInstance = typeof window !== 'undefined' ? window.sessionSto
 export const safeSessionStorage: SafeStorage = createSafeStorage(sessionStorageInstance);
 
 // Utility to check if storage is actually available (not in private mode)
-export function isStorageAvailable(type: 'localStorage' | 'sessionStorage' = 'localStorage'): boolean {
-  if (typeof window === 'undefined') return false;
-  
-  try {
-    const storage = window[type];
-    const testKey = '__storage_test__';
-    storage.setItem(testKey, 'test');
-    storage.removeItem(testKey);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // Utility to get storage quota information
-export async function getStorageQuota(): Promise<{
-  usage: number;
-  quota: number;
-  usageDetails?: Record<string, number>;
-} | null> {
-  if (typeof navigator === 'undefined' || !('storage' in navigator)) return null;
-  
-  try {
-    const estimate = await navigator.storage.estimate();
-    return {
-      usage: estimate.usage || 0,
-      quota: estimate.quota || 0,
-      usageDetails: (estimate as any).usageDetails as Record<string, number> | undefined,
-    };
-  } catch {
-    return null;
-  }
-}

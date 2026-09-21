@@ -7,7 +7,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -41,7 +41,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {
-    AlertTriangle,
     ArrowLeft,
     Briefcase,
     Calendar,
@@ -55,7 +54,6 @@ import {
     Languages,
     Loader2,
     MessageSquare,
-    ShieldAlert,
     ShieldCheck,
     Sparkles,
     ThumbsDown,
@@ -67,8 +65,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-
 type ReviewArticle = KnowledgeArticle & {
     title_ar?: string
     description_ar?: string

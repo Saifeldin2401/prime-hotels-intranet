@@ -1,9 +1,9 @@
-import { ArrowRight, Award, CheckCircle2, ChevronRight, Compass, Quote, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
+import { ArrowRight, ChevronRight, Quote, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBriefing } from './PublicLayout';
-import { CopperDivider, FadeInSection, StaggerChildren } from './publicComponents';
+import { FadeInSection, StaggerChildren } from './publicComponents';
 import { COLOR, cairo, canela, inter, mono, neueHaas, staggerItem } from './publicConstants';
 
 export default function AboutPage() {

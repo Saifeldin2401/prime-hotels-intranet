@@ -164,44 +164,6 @@ function logFailedSearch(query: string, departmentId?: string, propertyId?: stri
         .catch(() => { /* best-effort logging only */ })
 }
 
-export interface FailedSearchSummary {
-    query: string
-    count: number
-    lastSearchedAt: string
-}
-
-export async function getFailedSearches(days = 30, limit = 20): Promise<FailedSearchSummary[]> {
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-
-    const { data, error } = await supabase
-        .from('search_logs')
-        .select('query, created_at')
-        .gte('created_at', since)
-        .order('created_at', { ascending: false })
-        .limit(2000)
-
-    if (error) {
-        console.warn('getFailedSearches error:', error.message)
-        return []
-    }
-
-    const byQuery = new Map<string, FailedSearchSummary>()
-    for (const row of data || []) {
-        const key = row.query.trim().toLowerCase()
-        if (!key) continue
-        const existing = byQuery.get(key)
-        if (existing) {
-            existing.count += 1
-        } else {
-            byQuery.set(key, { query: row.query.trim(), count: 1, lastSearchedAt: row.created_at })
-        }
-    }
-
-    return Array.from(byQuery.values())
-        .sort((a, b) => b.count - a.count)
-        .slice(0, limit)
-}
-
 // Ranked full-text search path (used whenever a query string is present).
 // Delegates ranking + filtering + pagination to search_knowledge_articles (RLS-respecting,
 // SECURITY INVOKER RPC over documents.search_vector, which covers title/tags/folder/
@@ -721,20 +683,7 @@ export async function createComment(documentId: string, userId: string, content:
         user_id: userId
     } as KnowledgeComment
 }
-export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> {
-    const { error } = await supabase
-        .from('sop_comment_votes')
-        .upsert({
-            comment_id: commentId,
-            user_id: userId,
-            vote_type: voteType
-        }, { onConflict: 'comment_id,user_id' })
 
-    if (error) {
-        console.error('Vote comment failed:', toErrorMessage(error))
-        throw error
-    }
-}
 export async function getBookmarks(userId: string): Promise<KnowledgeBookmark[]> {
     const { data, error } = await supabase
         .from('document_bookmarks')
@@ -826,81 +775,6 @@ export async function getFeedbackStats(): Promise<{ helpful: number, unhelpful: 
         unhelpful,
         total: (data || []).length
     }
-}
-
-/**
- * Gets most recent feedback entries with document titles
- */
-export async function getRecentFeedback(limit = 10): Promise<Array<{
-    id: string
-    document_id: string
-    user_id: string
-    helpful: boolean
-    feedback_text?: string | null
-    created_at: string
-    document?: { id: string; title: string } | null
-}>> {
-    const { data, error } = await supabase
-        .from('document_feedback')
-        .select(`
-            *,
-            document:documents(id, title)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(limit)
-
-    if (error) {
-        console.error('getRecentFeedback error:', toErrorMessage(error))
-        return []
-    }
-    return data || []
-}
-
-/**
- * Gets daily feedback trends for charts
- */
-export async function getFeedbackTrends(days = 30): Promise<{ date: string; helpful: number; unhelpful: number }[]> {
-    const fromDate = new Date()
-    fromDate.setDate(fromDate.getDate() - days)
-
-    const { data, error } = await supabase
-        .from('document_feedback')
-        .select('created_at, helpful')
-        .gte('created_at', fromDate.toISOString())
-        .order('created_at', { ascending: true })
-
-    if (error) {
-        console.error('getFeedbackTrends error:', toErrorMessage(error))
-        return []
-    }
-
-    // Process data to group by date
-    const trends = new Map<string, { date: string, helpful: number, unhelpful: number }>()
-
-    // Initialize map with all dates in range to show 0s
-    for (let i = days - 1; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().split('T')[0]
-        trends.set(dateStr, { date: dateStr, helpful: 0, unhelpful: 0 })
-    }
-
-    data?.forEach(item => {
-        const dateStr = new Date(item.created_at).toISOString().split('T')[0]
-        if (trends.has(dateStr)) {
-            const entry = trends.get(dateStr)!
-            if (item.helpful) entry.helpful++
-            else entry.unhelpful++
-        } else {
-            // Handle edge case where timezone might shift date slightly outside init range
-            const entry = { date: dateStr, helpful: 0, unhelpful: 0 }
-            if (item.helpful) entry.helpful++
-            else entry.unhelpful++
-            trends.set(dateStr, entry)
-        }
-    })
-
-    return Array.from(trends.values()).sort((a, b) => a.date.localeCompare(b.date))
 }
 
 export async function getCategories(departmentId?: string) {
@@ -1225,7 +1099,7 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
 // EXPLICIT PUBLICATION & LIFECYCLE CONTROLS
 // ============================================================================
 
-export interface PublishToKBParams {
+interface PublishToKBParams {
     documentId: string
     userId: string
     visibility?: string

@@ -6,32 +6,23 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
   AlertCircle,
-  AlertTriangle,
   Award,
-  BookOpen,
-  BrainCircuit,
-  CheckCircle,
   CheckCircle2,
   Clock,
   Compass,
   Cpu,
-  FileCheck,
   FileQuestion,
   FileText,
   Image as ImageIcon,
   Layers,
   Loader2,
-  RefreshCw,
   RotateCcw,
   Sparkles,
-  Target,
-  Wand2,
-  XCircle,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface GenerationPhase {
+interface GenerationPhase {
   id: string
   title: string
   title_ar: string

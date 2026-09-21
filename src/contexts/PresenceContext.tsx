@@ -1,7 +1,7 @@
 
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useEffect, useState } from 'react'
 
 interface PresenceState {
     onlineUsers: {
@@ -74,12 +74,4 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
             {children}
         </PresenceContext.Provider>
     )
-}
-
-export function usePresence() {
-    const context = useContext(PresenceContext)
-    if (context === undefined) {
-        throw new Error('usePresence must be used within a PresenceProvider')
-    }
-    return context
 }

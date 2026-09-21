@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -7,8 +7,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
-  CommandSeparator,
+  CommandList
 } from '@/components/ui/command'
 import {
   Dialog,
@@ -31,7 +30,6 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import { useTenant } from '@/contexts/TenantContext'
-import { safeLocalStorage } from '@/lib/storage'
 import type { Organization } from '@/lib/types/tenant'
 import {
   Building,
@@ -40,11 +38,7 @@ import {
   Crown,
   Globe,
   Layers,
-  MapPin,
-  Search,
-  ShieldAlert,
-  Sparkles,
-  ArrowRight,
+  ShieldAlert
 } from 'lucide-react'
 
 interface ScopePaletteModalProps {
@@ -279,7 +273,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {org.organization_code} • {org.tier_plan || 'Enterprise'}
+                          {org.slug} • {(org.lifecycle_status || 'active').replace(/^./, (c) => c.toUpperCase())}
                         </p>
                       </div>
                     </div>
@@ -383,7 +377,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
                   <span className="font-semibold text-sm">{selectedOrgForEnter.name}</span>
                 </div>
                 <Badge variant="outline" className="text-hotel-gold border-hotel-gold/30">
-                  {selectedOrgForEnter.tier_plan || 'Enterprise'}
+                  {(selectedOrgForEnter.lifecycle_status || 'active').replace(/^./, (c) => c.toUpperCase())}
                 </Badge>
               </div>
 

@@ -40,7 +40,7 @@ import {
   Wallet,
   X,
 } from 'lucide-react'
-import type { ComponentType, SVGProps } from 'react'
+import type { SVGProps } from 'react'
 
 // Explicitly import only the icons used across the app for optimal tree-shaking.
 // If you need additional icons dynamically, add them here.
@@ -107,19 +107,4 @@ export const Icons = {
 }
 
 // Type for icon names
-export type IconName = keyof typeof Icons
-
 // Icon component that renders the appropriate icon by name
-export function Icon({
-  name,
-  ...props
-}: {
-  name: IconName
-} & SVGProps<SVGSVGElement>) {
-  const IconComponent = Icons[name] as ComponentType<SVGProps<SVGSVGElement>>
-  if (!IconComponent) {
-    console.warn(`Icon "${name}" not found`)
-    return null
-  }
-  return <IconComponent {...props} />
-}

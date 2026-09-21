@@ -12,16 +12,13 @@ import {
   AlertCircle,
   BookOpen,
   Building2,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   FileCheck,
   FileCode,
   FileQuestion,
-  FileSpreadsheet,
   FileText,
   FileUp,
-  Flame,
   FolderOpen,
   Globe,
   GraduationCap,
@@ -32,14 +29,12 @@ import {
   Search,
   Sparkles,
   Target,
-  UploadCloud,
-  Wand2,
-  X,
+  UploadCloud
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CourseDifficulty, CourseGenerationMode, SourceDocumentRef, TargetAudience } from '@/types/aiCourseEngine'
 
-export interface UploadedDocumentInfo {
+interface UploadedDocumentInfo {
   name: string
   size: number
   type: string
@@ -193,7 +188,7 @@ export function StudioStageBasics({
       color: 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-600',
     },
     {
-      id: 'single_module',
+      id: 'module_generation',
       title: 'Single Module Expansion',
       title_ar: 'وحدة تدريبية واحدة',
       desc: 'Generate a focused multi-lesson module ready to attach to an existing course.',
@@ -202,7 +197,7 @@ export function StudioStageBasics({
       color: 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-600',
     },
     {
-      id: 'single_lesson',
+      id: 'lesson_generation',
       title: 'Individual Lesson',
       title_ar: 'درس تدريبي فردي',
       desc: 'Create an in-depth lesson with step procedures, scripts, and checkpoints.',
@@ -211,7 +206,7 @@ export function StudioStageBasics({
       color: 'border-cyan-500 bg-cyan-50/50 dark:bg-cyan-950/20 text-cyan-600',
     },
     {
-      id: 'assessment_only',
+      id: 'assessment_generation',
       title: 'Certification Exam Studio',
       title_ar: 'اختبارات وشهادات معتمدة',
       desc: 'Standalone quiz pools, scenario dilemmas, and final exams with scoring rubrics.',

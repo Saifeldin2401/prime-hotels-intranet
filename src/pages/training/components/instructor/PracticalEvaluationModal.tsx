@@ -24,7 +24,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useSubmitPracticalEvaluation } from '@/hooks/usePracticalAssessments'
 import { supabase } from '@/lib/supabase'
 import type { PracticalAssessment } from '@/types/enterpriseOperatingModel'
-import { ClipboardCheck, CheckCircle, XCircle, Award, User, AlertCircle } from 'lucide-react'
+import { ClipboardCheck, CheckCircle, XCircle, User } from 'lucide-react'
 
 interface PracticalEvaluationModalProps {
   open: boolean
@@ -203,7 +203,7 @@ export function PracticalEvaluationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-5 py-3 pr-1">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto space-y-5 py-3 pe-1">
           {/* Select Learner */}
           <div className="space-y-1.5 bg-muted/20 p-3 rounded-xl border border-border/50">
             <Label className="text-xs font-bold flex items-center gap-1.5 text-foreground">

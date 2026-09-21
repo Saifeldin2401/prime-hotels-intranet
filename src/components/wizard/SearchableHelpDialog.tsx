@@ -106,14 +106,15 @@ export const SearchableHelpDialog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   // Resilient translation helper
-  const tKey = (key?: string, fallback?: string, options?: any) => {
+  const tKey = (key?: string, fallback?: string, options?: any): string => {
     if (!key) return fallback || ''
-    const val = t(key, options)
-    if (val && val !== key) return val
+    // t() returns an object when a key names a nested block; never render that.
+    const val: unknown = t(key, options)
+    if (typeof val === 'string' && val && val !== key) return val
     if (key.startsWith('wizard.')) {
       const stripped = key.substring(7)
-      const strippedVal = t(stripped, options)
-      if (strippedVal && strippedVal !== stripped) return strippedVal
+      const strippedVal: unknown = t(stripped, options)
+      if (typeof strippedVal === 'string' && strippedVal && strippedVal !== stripped) return strippedVal
     }
     return fallback || key
   }

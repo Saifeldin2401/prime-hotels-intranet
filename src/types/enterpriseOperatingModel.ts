@@ -1,4 +1,4 @@
-﻿export type TenantLifecycleStatus =
+﻿type TenantLifecycleStatus =
   | 'prospect'
   | 'trial'
   | 'onboarding'
@@ -6,17 +6,6 @@
   | 'suspended'
   | 'renewal'
   | 'archived'
-
-export interface TenantEntitlements {
-  max_hotels: number
-  max_learners: number
-  max_storage_gb: number
-  max_ai_credits_monthly: number
-  ai_credits_used_this_month: number
-  trial_ends_at?: string | null
-  lifecycle_status: TenantLifecycleStatus
-}
-
 export type CompetencyCategory =
   | 'hospitality_core'
   | 'guest_service'
@@ -48,15 +37,6 @@ export interface CompetencyLevel {
   title: string
   title_ar?: string | null
   behavioral_indicators?: string[]
-}
-
-export interface CourseCompetency {
-  id: string
-  course_id: string
-  competency_id: string
-  target_level: number
-  weight: number
-  competency?: Competency
 }
 
 export interface UserCompetency {
@@ -130,7 +110,8 @@ export interface TrainingSessionAttendee {
 
 export interface RubricCriterion {
   id: string
-  title: string
+  label: string
+  label_ar?: string
   description?: string
   max_points: number
   weight?: number
@@ -171,23 +152,4 @@ export interface PracticalSubmission {
   learner?: { id: string; full_name: string; email: string; avatar_url?: string }
   evaluator?: { id: string; full_name: string; email: string }
   assessment?: PracticalAssessment
-}
-
-export interface EmployeeTransferLog {
-  id: string
-  organization_id: string
-  user_id: string
-  previous_hotel_id?: string | null
-  new_hotel_id?: string | null
-  previous_department_id?: string | null
-  new_department_id?: string | null
-  previous_role?: string | null
-  new_role?: string | null
-  transferred_by?: string | null
-  transfer_effective_date: string
-  retained_certificates_count: number
-  assigned_delta_courses_count: number
-  waived_obsolete_courses_count: number
-  notes?: string | null
-  created_at: string
 }

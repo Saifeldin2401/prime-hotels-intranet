@@ -35,7 +35,7 @@ const EMPTY: AccountContextShape = {
   recommended_destination: '/home/learner',
 }
 
-export interface AccountContextValue {
+interface AccountContextValue {
   /** true until the first resolve completes for the current user */
   loading: boolean
   /**
@@ -176,5 +176,3 @@ export function useAccountContext(): AccountContextValue {
   const c = useContext(AccountContext)
   return c ?? FALLBACK_ACCOUNT_VALUE
 }
-
-export { AccountContext }

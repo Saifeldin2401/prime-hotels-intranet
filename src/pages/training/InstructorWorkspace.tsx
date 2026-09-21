@@ -29,7 +29,6 @@ import {
   UserCheck,
   Plus,
   UserPlus,
-  Award,
   History,
   Trash2,
   Edit3
@@ -191,7 +190,7 @@ export default function InstructorWorkspace() {
                     onClick={() => setIsScheduleModalOpen(true)}
                     className="mt-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <Plus className="h-3.5 w-3.5 me-1" />
                     <span>{isAr ? 'جدولة الجلسة الأولى الآن' : 'Schedule First Session Now'}</span>
                   </Button>
                 </Card>
@@ -213,7 +212,7 @@ export default function InstructorWorkspace() {
                       )}
                     >
                       {isSelected && (
-                        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600" />
+                        <div className="absolute top-0 start-0 end-0 h-0.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600" />
                       )}
 
                       <CardContent className="p-5 space-y-3">
@@ -263,8 +262,8 @@ export default function InstructorWorkspace() {
                             )}
                           </div>
 
-                          <div className="text-right text-xs text-muted-foreground shrink-0 bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/40">
-                            <Users className="h-3.5 w-3.5 inline mr-1 text-amber-500" />
+                          <div className="text-end text-xs text-muted-foreground shrink-0 bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/40">
+                            <Users className="h-3.5 w-3.5 inline me-1 text-amber-500" />
                             <span className="font-semibold text-foreground">{s.attendees_count}</span>
                             <span className="text-muted-foreground"> / {s.max_capacity} {isAr ? 'مقعد' : 'seats'}</span>
                           </div>
@@ -332,7 +331,7 @@ export default function InstructorWorkspace() {
                         onClick={() => setIsRegisterModalOpen(true)}
                         className="w-full bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold h-8"
                       >
-                        <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                        <UserPlus className="h-3.5 w-3.5 me-1.5" />
                         <span>{isAr ? 'تسجيل متدرب في هذه الجلسة' : 'Enroll Staff Member'}</span>
                       </Button>
                     </div>
@@ -432,7 +431,7 @@ export default function InstructorWorkspace() {
                                 })
                               }
                             >
-                              <CheckCircle className="h-3 w-3 mr-1" />
+                              <CheckCircle className="h-3 w-3 me-1" />
                               {isAr ? 'حاضر' : 'Attended'}
                             </Button>
 
@@ -450,7 +449,7 @@ export default function InstructorWorkspace() {
                                 })
                               }
                             >
-                              <XCircle className="h-3 w-3 mr-1" />
+                              <XCircle className="h-3 w-3 me-1" />
                               {isAr ? 'غائب' : 'No Show'}
                             </Button>
 
@@ -460,7 +459,7 @@ export default function InstructorWorkspace() {
                               className="h-7 px-2 text-[11px] text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
                               onClick={() => setScoringAttendee(att)}
                             >
-                              <Edit3 className="h-3 w-3 mr-1" />
+                              <Edit3 className="h-3 w-3 me-1" />
                               {isAr ? 'رصد' : 'Grade'}
                             </Button>
                           </div>
@@ -485,7 +484,7 @@ export default function InstructorWorkspace() {
                 onClick={() => setPracticalSubTab('rubrics')}
                 className="text-xs h-8"
               >
-                <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />
+                <ClipboardCheck className="h-3.5 w-3.5 me-1.5" />
                 <span>{isAr ? 'قوائم التحقق الميدانية' : 'Active Checklists'}</span>
                 <Badge variant="outline" className="ms-1.5 text-[10px] px-1 h-4">
                   {practicalAssessments.length}
@@ -498,7 +497,7 @@ export default function InstructorWorkspace() {
                 onClick={() => setPracticalSubTab('history')}
                 className="text-xs h-8"
               >
-                <History className="h-3.5 w-3.5 mr-1.5" />
+                <History className="h-3.5 w-3.5 me-1.5" />
                 <span>{isAr ? 'سجل التقييمات المنجزة' : 'Evaluation Submissions'}</span>
                 <Badge variant="outline" className="ms-1.5 text-[10px] px-1 h-4">
                   {submissions.length}
@@ -511,7 +510,7 @@ export default function InstructorWorkspace() {
               onClick={() => setIsCreateAssessmentModalOpen(true)}
               className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold h-8"
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              <Plus className="h-3.5 w-3.5 me-1.5" />
               <span>{isAr ? 'قائمة جديدة' : 'New Checklist'}</span>
             </Button>
           </div>
@@ -533,7 +532,7 @@ export default function InstructorWorkspace() {
                     onClick={() => setIsCreateAssessmentModalOpen(true)}
                     className="mt-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    <Plus className="h-3.5 w-3.5 me-1" />
                     <span>{isAr ? 'إنشاء أول قائمة تقييم' : 'Create First Checklist'}</span>
                   </Button>
                 </Card>
@@ -572,7 +571,7 @@ export default function InstructorWorkspace() {
                         onClick={() => setEvaluatingAssessment(pa)}
                         className="w-full text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white shadow-sm"
                       >
-                        <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" />
+                        <ClipboardCheck className="h-3.5 w-3.5 me-1.5" />
                         <span>{isAr ? 'بدء تقييم متدرب الآن' : 'Evaluate Staff Member'}</span>
                       </Button>
                     </CardContent>
@@ -635,7 +634,7 @@ export default function InstructorWorkspace() {
                       </div>
                     </div>
 
-                    <div className="text-right shrink-0">
+                    <div className="text-end shrink-0">
                       <div className="text-lg font-bold font-mono text-foreground">
                         {sub.score_achieved}%
                       </div>

@@ -21,7 +21,7 @@ let autoTableFn: any = null;
 
 // ========== TYPES ==========
 
-export interface PrintConfig {
+interface PrintConfig {
     reportType: 'flash_report' | 'occupancy' | 'revenue' | 'import_summary' | 'knowledge_article' | 'custom'
     title: string
     hotelName: string
@@ -33,7 +33,7 @@ export interface PrintConfig {
     confidentialFooter?: boolean
 }
 
-export interface TableSection {
+interface TableSection {
     title?: string
     headers: string[]
     rows: (string | number)[][]
@@ -41,18 +41,18 @@ export interface TableSection {
     columnWidths?: number[] // Percentage widths
 }
 
-export interface KPISection {
+interface KPISection {
     title: string
     items: { label: string; value: string | number; unit?: string }[]
 }
 
-export interface ContentSection {
+interface ContentSection {
     title?: string
     content?: string // Supports text wrapping and basic layout
     blocks?: ContentBlock[]
 }
 
-export type ContentBlock =
+type ContentBlock =
     | { type: 'text'; text: string }
     | { type: 'image'; dataUrl: string; caption?: string }
     | { type: 'checklist'; items: { text: string; is_required?: boolean }[] }
@@ -60,7 +60,7 @@ export type ContentBlock =
 
 type RichTextRun = { text: string; bold?: boolean; italic?: boolean }
 
-export interface ReportData {
+interface ReportData {
     kpis?: KPISection[]
     tables?: TableSection[]
     content?: ContentSection[]
@@ -98,7 +98,7 @@ const MARGINS = {
 /**
  * Generate a corporate PDF report
  */
-export async function generateReport(
+async function generateReport(
     config: PrintConfig,
     data: ReportData,
     logoDataUrl?: string

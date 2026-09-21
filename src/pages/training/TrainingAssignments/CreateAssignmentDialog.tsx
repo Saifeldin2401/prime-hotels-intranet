@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -23,10 +22,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import {
   trainingAssignmentEngineService,
-  type AssignmentScopeType,
-  type AssignableLearner,
-  type CallerAssignmentScopes,
-  type AssignableRecipientsSummary
+  type AssignmentScopeType
 } from '@/services/trainingAssignmentEngineService'
 import type { TrainingModule } from '@/lib/types'
 import {

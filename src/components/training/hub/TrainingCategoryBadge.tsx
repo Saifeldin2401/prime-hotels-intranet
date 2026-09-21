@@ -2,25 +2,17 @@ import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import {
   Award,
-  BookOpen,
-  Briefcase,
-  Building,
-  Coffee,
   Crown,
-  FileCheck,
   HeartHandshake,
-  KeyRound,
-  Layers,
   type LucideIcon,
   ShieldCheck,
   Sparkles,
   Tag,
-  Users,
   Utensils,
   Wrench
 } from 'lucide-react'
 
-export interface CategoryTheme {
+interface CategoryTheme {
   label: string
   bg: string
   text: string
@@ -29,7 +21,7 @@ export interface CategoryTheme {
   icon: LucideIcon
 }
 
-export function getCategoryTheme(categoryName?: string | null): CategoryTheme {
+function getCategoryTheme(categoryName?: string | null): CategoryTheme {
   const cat = (categoryName || '').toLowerCase().trim()
 
   if (cat.includes('front') || cat.includes('reception') || cat.includes('hafawa') || cat.includes('concierge') || cat.includes('guest')) {

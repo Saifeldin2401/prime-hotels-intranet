@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
 import { OrgChartStats, OrgChartTree } from '@/components/admin/OrgChartTree'
 import { ReportingLineEditor } from '@/components/admin/ReportingLineEditor'
-import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -33,7 +32,6 @@ import { OrgStructureTree } from '@/components/org/OrgStructureTree'
 import {
     Building,
     Building2,
-    Clock,
     Crown,
     GitBranch,
     History,
@@ -42,33 +40,11 @@ import {
     Shield,
     Users,
     Briefcase,
-    CreditCard,
     FolderTree
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-type NamedRelation = { name?: string | null }
 type PersonRelation = { full_name?: string | null }
-type PromotionRow = {
-    id: string
-    from_role: string | null
-    to_role: string | null
-    from_title: string | null
-    to_title: string | null
-    effective_date: string
-    employee: PersonRelation | PersonRelation[] | null
-}
-type TransferRow = {
-    id: string
-    effective_date: string
-    employee: PersonRelation | PersonRelation[] | null
-    from_property: NamedRelation | NamedRelation[] | null
-    to_property: NamedRelation | NamedRelation[] | null
-}
-type PendingOrgChanges = {
-    promotions: PromotionRow[]
-    transfers: TransferRow[]
-}
 type OrgChangeHistoryRow = {
     id: string
     entity_type: string
@@ -87,10 +63,6 @@ function getFirstRelation<T>(relation: T | T[] | null | undefined): T | null {
         return relation[0] ?? null
     }
     return relation ?? null
-}
-
-function getRelationName(relation: NamedRelation | NamedRelation[] | null | undefined, fallback: string) {
-    return getFirstRelation(relation)?.name || fallback
 }
 
 function getPersonName(relation: PersonRelation | PersonRelation[] | null | undefined, fallback: string) {
@@ -263,12 +235,6 @@ export default function OrganizationalControlCenter() {
                         <span>{t('admin:organization.tab_assignments', 'Assignments')}</span>
                     </TabsTrigger>
 
-                    {/* 9. Pending Changes */}
-                    <TabsTrigger value="pending" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{t('admin:organization.tab_pending', 'Pending')}</span>
-                    </TabsTrigger>
-
                     {/* 10. Audit History */}
                     <TabsTrigger value="history" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
                         <History className="h-3.5 w-3.5" />
@@ -419,11 +385,6 @@ export default function OrganizationalControlCenter() {
                         searchTerm={searchTerm}
                         onEditEmployee={handleEditNode}
                     />
-                </TabsContent>
-
-                {/* Tab 9: Pending Changes */}
-                <TabsContent value="pending" className="mt-6">
-                    <PendingChangesTable />
                 </TabsContent>
 
                 {/* Tab 10: Audit History */}
@@ -675,142 +636,6 @@ function AssignmentsTable({
                         </TableBody>
                     </Table>
                 </div>
-            </div>
-        </div>
-    )
-}
-
-// Pending Changes Table
-function PendingChangesTable() {
-    const { t } = useTranslation('admin')
-    const { data: pendingChanges, isLoading } = useQuery<PendingOrgChanges>({
-        queryKey: ['pending-org-changes'],
-        queryFn: async () => {
-            const today = new Date().toISOString().split('T')[0]
-
-            const { data: promotions } = await supabase
-                .from('employee_promotions')
-                .select(`
-                    id, employee_id, from_role, to_role, from_title, to_title, effective_date, notes,
-                    employee:profiles!employee_promotions_employee_id_fkey(full_name)
-                `)
-                .gt('effective_date', today)
-                .order('effective_date')
-
-            const { data: transfers } = await supabase
-                .from('employee_transfers')
-                .select(`
-                    id, employee_id, from_property_id, to_property_id, effective_date, reason,
-                    employee:profiles!employee_transfers_employee_id_fkey(full_name),
-                    from_property:properties!employee_transfers_from_property_id_fkey(name),
-                    to_property:properties!employee_transfers_to_property_id_fkey(name)
-                `)
-                .gt('effective_date', today)
-                .order('effective_date')
-
-            return {
-                promotions: promotions || [],
-                transfers: transfers || []
-            } as PendingOrgChanges
-        }
-    })
-
-    if (isLoading) {
-        return (
-            <div className="rounded-3xl border border-border/60 bg-card/60 p-8 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 animate-spin text-amber-500 me-2" />
-                <span className="text-xs font-semibold">{t('common:loading', 'Loading...')}</span>
-            </div>
-        )
-    }
-
-    const totalPending = (pendingChanges?.promotions?.length || 0) + (pendingChanges?.transfers?.length || 0)
-
-    return (
-        <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-6 shadow-md backdrop-blur-2xl">
-            <div className="pb-4 border-b border-border/40 flex items-center justify-between">
-                <div>
-                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-amber-500" />
-                        <span>{t('organization.pending_changes', 'Pending Organizational Changes')}</span>
-                        {totalPending > 0 && (
-                            <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 text-xs font-bold">{totalPending}</Badge>
-                        )}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                        {t('organization.pending_desc', 'Future-dated promotions and transfers scheduled for automated activation')}
-                    </p>
-                </div>
-            </div>
-            <div className="mt-4">
-                {totalPending === 0 ? (
-                    <div className="text-center py-10 text-muted-foreground">
-                        <Clock className="h-10 w-10 mx-auto mb-3 opacity-40 text-amber-500" />
-                        <p className="text-xs font-semibold">{t('organization.no_pending', 'No pending changes scheduled')}</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        {pendingChanges?.promotions && pendingChanges.promotions.length > 0 && (
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5">{t('organization.pending_promotions', 'Pending Promotions')}</h4>
-                                <div className="rounded-2xl border border-border/60 overflow-hidden bg-background/40">
-                                    <Table>
-                                        <TableHeader className="bg-muted/40">
-                                            <TableRow className="border-border/40">
-                                                <TableHead className="text-xs font-bold">{t('organization.employee', 'Employee')}</TableHead>
-                                                <TableHead className="text-xs font-bold">{t('organization.change', 'Change')}</TableHead>
-                                                <TableHead className="text-xs font-bold">{t('organization.effective_date', 'Effective Date')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {pendingChanges.promotions.map((p) => (
-                                                <TableRow key={p.id} className="border-border/40">
-                                                    <TableCell className="font-semibold text-xs text-foreground">{(Array.isArray(p.employee) ? p.employee[0]?.full_name : p.employee?.full_name) || '—'}</TableCell>
-                                                    <TableCell className="text-xs">
-                                                        <span className="text-muted-foreground">{p.from_title || p.from_role}</span>
-                                                        <span className="mx-2 text-amber-500">→</span>
-                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.to_title || p.to_role}</span>
-                                                    </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(p.effective_date)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        )}
-
-                        {pendingChanges?.transfers && pendingChanges.transfers.length > 0 && (
-                            <div>
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5">{t('organization.pending_transfers', 'Pending Transfers')}</h4>
-                                <div className="rounded-2xl border border-border/60 overflow-hidden bg-background/40">
-                                    <Table>
-                                        <TableHeader className="bg-muted/40">
-                                            <TableRow className="border-border/40">
-                                                <TableHead className="text-xs font-bold">{t('organization.employee', 'Employee')}</TableHead>
-                                                <TableHead className="text-xs font-bold">{t('organization.transfer', 'Transfer')}</TableHead>
-                                                <TableHead className="text-xs font-bold">{t('organization.effective_date', 'Effective Date')}</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {pendingChanges.transfers.map((tr) => (
-                                                <TableRow key={tr.id} className="border-border/40">
-                                                    <TableCell className="font-semibold text-xs text-foreground">{(Array.isArray(tr.employee) ? tr.employee[0]?.full_name : tr.employee?.full_name) || '—'}</TableCell>
-                                                    <TableCell className="text-xs">
-                                                        <span className="text-muted-foreground">{(Array.isArray(tr.from_property) ? tr.from_property[0]?.name : tr.from_property?.name) || 'N/A'}</span>
-                                                        <span className="mx-2 text-amber-500">→</span>
-                                                        <span className="font-bold text-blue-600 dark:text-blue-400">{Array.isArray(tr.to_property) ? tr.to_property[0]?.name : tr.to_property?.name}</span>
-                                                    </TableCell>
-                                                    <TableCell className="text-xs text-muted-foreground">{formatDateTime(tr.effective_date)}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     )

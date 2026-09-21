@@ -40,13 +40,6 @@ function contrastRatio(l1: number, l2: number): number {
 
 const WHITE_LUMINANCE = 1
 
-/** Contrast ratio of white text (#fff) against the given background hex. Returns null for an unparseable color. */
-export function contrastWithWhite(hex: string): number | null {
-  const rgb = hexToRgb(hex)
-  if (!rgb) return null
-  return contrastRatio(WHITE_LUMINANCE, relativeLuminance(rgb))
-}
-
 /**
  * Returns `hex` unchanged if white text on it already meets `minRatio` (WCAG AA for
  * normal text is 4.5:1). Otherwise progressively darkens it (reducing HSL lightness,

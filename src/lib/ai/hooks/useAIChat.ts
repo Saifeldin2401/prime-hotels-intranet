@@ -4,7 +4,7 @@ import type { AIMessage, AIRequestOptions } from '../types'
 import { altusAI } from '../client'
 import { useAIStream } from './useAIStream'
 
-export interface UseAIChatOptions {
+interface UseAIChatOptions {
   property?: string
   department?: string
   role?: string

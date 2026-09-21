@@ -1,18 +1,18 @@
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
-export interface AnalyticsSummary {
+interface AnalyticsSummary {
     active_now: number
     active_today: number
     sessions_today: number
 }
 
-export interface DailyActiveUser {
+interface DailyActiveUser {
     date: string
     active_users: number
 }
 
-export interface AdminAnalyticsStats {
+interface AdminAnalyticsStats {
     summary: AnalyticsSummary
     dau: DailyActiveUser[]
     topEvents: { event_name: string, count: number }[]

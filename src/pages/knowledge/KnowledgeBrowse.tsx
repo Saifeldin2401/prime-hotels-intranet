@@ -19,7 +19,6 @@ import {
     FileSearch,
     FileText,
     FilterX,
-    FolderOpen,
     Grid3X3,
     HelpCircle,
     Image,
@@ -45,7 +44,6 @@ import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import { KnowledgeSidebar, AIArticleStudioModal } from '@/components/knowledge'
 import { MasterVersionSyncModal } from '@/components/platform/MasterVersionSyncModal'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
     Select,
@@ -70,7 +68,7 @@ import {
 import { platformService } from '@/services/platformService'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import type { KnowledgeArticle, KnowledgeContentType } from '@/types/knowledge'
+import type { KnowledgeArticle } from '@/types/knowledge'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 
 const ICON_MAP = {
@@ -860,7 +858,7 @@ export default function KnowledgeBrowse() {
             {/* Mobile Filter Sheet */}
             <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
                 <SheetContent side={isRTL ? 'right' : 'left'} className="w-[88vw] max-w-sm p-0">
-                    <KnowledgeSidebar className="h-full w-full border-r-0" />
+                    <KnowledgeSidebar className="h-full w-full border-e-0" />
                 </SheetContent>
             </Sheet>
 

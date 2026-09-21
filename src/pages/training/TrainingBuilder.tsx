@@ -24,7 +24,6 @@ import { StepRules } from './components/builder/StepRules'
 import { StepSetup } from './components/builder/StepSetup'
 import { StepStructure } from './components/builder/StepStructure'
 import { TemplateApplyConfirmDialog, TemplatePreviewDialog } from './components/builder/TemplateDialogs'
-import type { BuilderStep } from './components/builder/trainingBuilderTypes'
 import { TrainingBuilderProvider, useTrainingBuilderContext } from './contexts/TrainingBuilderContext'
 import { useBuilderKeyboardShortcuts } from './hooks/useBuilderKeyboardShortcuts'
 
@@ -222,7 +221,7 @@ function TrainingBuilderInner() {
   }
 
   return (
-    <div className={`h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] flex flex-col w-full max-w-full overflow-hidden bg-background ${ctx.isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] flex flex-col w-full max-w-full overflow-hidden bg-background ${ctx.isRTL ? 'text-end' : 'text-start'}`}>
 
       {/* Draft restore banner */}
       {ctx.showRestorePrompt && (
@@ -444,8 +443,9 @@ function TrainingBuilderInner() {
                   const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
                     quizId: createdQuiz.id,
                     sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
-                    difficulty: generated.difficulty,
-                    language: generated.language,
+                    difficulty: generated.difficulty ?? 'intermediate',
+                    // Checkpoint quizzes are single-language; bilingual courses get English questions.
+                    language: generated.language === 'Arabic' ? 'Arabic' : 'English',
                     trainingModuleId: ctx.moduleId,
                     createdBy: profile?.id
                   })

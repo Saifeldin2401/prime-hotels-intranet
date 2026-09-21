@@ -25,7 +25,7 @@ import { FillBlankQuestion } from './FillBlankQuestion'
 import { MCQQuestion } from './MCQQuestion'
 import { TrueFalseQuestion } from './TrueFalseQuestion'
 
-export interface QuestionRendererProps {
+interface QuestionRendererProps {
     question: KnowledgeQuestion
     onAnswer: (answer: string | string[]) => void
     showFeedback?: boolean

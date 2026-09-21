@@ -11,8 +11,7 @@ import {
   ChevronRight, 
   ChevronLeft, 
   X, 
-  Check, 
-  ArrowUpRight 
+  Check 
 } from 'lucide-react'
 
 interface SpotlightRect {

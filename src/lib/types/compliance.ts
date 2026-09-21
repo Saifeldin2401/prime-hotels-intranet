@@ -1,4 +1,3 @@
-import type { AppRole } from '../constants'
 import type { Profile } from './profile'
 
 export interface PIIAccessLog {
@@ -33,24 +32,6 @@ export interface PIIAccessSummary {
   high_risk_accesses: PIIAccessLog[]
 }
 
-export interface PIIAccessPolicy {
-  id: string
-  name: string
-  description: string
-  resource_types: string[]
-  requires_approval: boolean
-  auto_approve_roles: AppRole[]
-  retention_days: number
-  notification_enabled: boolean
-  is_active: boolean
-  created_by: string
-  created_at: string
-  updated_at: string
-
-  // Relations
-  created_by_profile?: Profile
-}
-
 export interface AuditLog {
   id: string
   user_id: string | null
@@ -64,25 +45,4 @@ export interface AuditLog {
   ip_address: string | null
   user_agent: string | null
   created_at: string
-}
-
-export interface TemporaryApprover {
-  id: string
-  delegator_id: string
-  delegate_id: string
-  scope_type: 'property' | 'department' | 'all'
-  scope_id: string | null
-  start_at: string
-  end_at: string
-  created_at: string
-}
-
-export interface EscalationRule {
-  id: string
-  action_type: string
-  threshold_hours: number
-  next_role: AppRole
-  is_active: boolean
-  created_at: string
-  updated_at: string | null
 }

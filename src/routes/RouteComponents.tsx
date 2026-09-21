@@ -1,5 +1,4 @@
 import { PageTracker } from '@/components/analytics/PageTracker'
-import { RouteErrorBoundary } from '@/components/common'
 import { MaintenanceGuard } from '@/components/common/MaintenanceGuard'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -127,7 +126,7 @@ export const RootIndex = () => {
 /**
  * AuthenticatedNotFound - NotFound page wrapped in AppLayout for authenticated users
  */
-export const AuthenticatedNotFound = () => {
+const AuthenticatedNotFound = () => {
     const [AppLayoutComponent, setAppLayoutComponent] = useState<React.ComponentType<{ children: React.ReactNode }> | null>(null)
 
     useEffect(() => {

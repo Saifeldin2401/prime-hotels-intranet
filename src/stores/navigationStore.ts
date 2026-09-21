@@ -1,13 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export interface RecentPage {
+interface RecentPage {
     path: string
     title: string
     visitedAt: number
 }
 
-export interface NavigationState {
+interface NavigationState {
     /** Sidebar collapsed/slim mode */
     isSidebarCollapsed: boolean
     /** List of expanded navigation group IDs */

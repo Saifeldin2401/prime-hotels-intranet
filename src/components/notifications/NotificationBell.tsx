@@ -100,7 +100,7 @@ export function NotificationBell() {
               {notifications.map((notification) => (
                 <button
                   key={notification.id}
-                  className={`flex flex-col items-start gap-1 p-4 text-left hover:bg-muted/50 transition-colors border-b last:border-0 ${!notification.is_read ? 'bg-blue-50/50' : ''
+                  className={`flex flex-col items-start gap-1 p-4 text-start hover:bg-muted/50 transition-colors border-b last:border-0 ${!notification.is_read ? 'bg-blue-50/50' : ''
                     }`}
                   onClick={() => handleNotificationClick(notification)}
                 >

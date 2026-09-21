@@ -1,11 +1,12 @@
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/lib/database.types'
 import type {
   PlatformAccessSession,
   MasterContentDeployment,
   PlatformAuditLog,
   PlatformStats
 } from '@/lib/types/platform'
-import type { Organization, Subscription, SubscriptionPlan } from '@/lib/types/tenant'
+import type { Organization, Subscription, SubscriptionPlan, TenantEmailContext } from '@/lib/types/tenant'
 
 export interface MasterDeploymentProgress {
   orgId: string
@@ -26,6 +27,8 @@ export interface MasterContentDiff {
   targetTitleAr?: string
   masterDescription?: string
   targetDescription?: string
+  masterDescriptionAr?: string
+  targetDescriptionAr?: string
   masterContent?: string
   targetContent?: string
   masterContentAr?: string
@@ -50,6 +53,21 @@ export interface MasterContentDiff {
     category?: string
     difficultyLevel?: string
   }
+}
+
+/** Shape returned by the get_platform_global_search RPC (every key is always present). */
+type SearchRow = { id: string; [key: string]: unknown }
+export interface PlatformGlobalSearchResult {
+  organizations: Array<{ id: string; name: string; slug: string; is_active: boolean; hotel_count: number }>
+  hotels: Array<{ id: string; name: string; city: string; organization_id: string; organization_name: string }>
+  users: Array<{ id: string; full_name: string; email: string; primary_org?: string }>
+  departments: SearchRow[]
+  master_sops: Array<{ id: string; title: string; category: string; version: number }>
+  master_courses: Array<{ id: string; title: string; category: string; difficulty_level: string }>
+  tenant_sops: SearchRow[]
+  tenant_courses: SearchRow[]
+  assessments: SearchRow[]
+  question_banks: SearchRow[]
 }
 
 export const platformService = {
@@ -137,6 +155,14 @@ export const platformService = {
         .select('id', { count: 'exact', head: true })
         .or(`account_status.eq.locked,locked_until.gt.${new Date().toISOString()},failed_login_attempts.gt.0`)
 
+      // Live support/break-glass sessions (ended_at unset and not yet expired).
+      const { count: activeBreakGlassSessions } = await supabase
+        .from('platform_access_sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .is('ended_at', null)
+        .gt('expires_at', new Date().toISOString())
+
       return {
         totalOrganizations,
         activeOrganizations,
@@ -151,6 +177,7 @@ export const platformService = {
         totalPlatformUsers: totalPlatformUsers || 0,
         suspendedPlatformUsers: suspendedPlatformUsers || 0,
         lockedPlatformUsers: lockedPlatformUsers || 0,
+        activeBreakGlassSessions: activeBreakGlassSessions || 0,
       }
     } catch (err) {
       console.error('Error in getPlatformStats:', err)
@@ -170,6 +197,7 @@ export const platformService = {
         totalPlatformUsers: 0,
         suspendedPlatformUsers: 0,
         lockedPlatformUsers: 0,
+        activeBreakGlassSessions: 0,
       }
     }
   },
@@ -332,7 +360,7 @@ export const platformService = {
       }
     })
 
-    return org
+    return org as unknown as Organization
   },
 
   async updateOrganizationEntitlements(orgId: string, params: {
@@ -497,7 +525,7 @@ export const platformService = {
 
     if (fetchErr) throw fetchErr
 
-    return session as PlatformAccessSession
+    return session as unknown as PlatformAccessSession
   },
 
   async endPlatformAccessSession(sessionId: string, _actorId?: string): Promise<void> {
@@ -975,6 +1003,8 @@ export const platformService = {
           targetTitleAr: targetDoc.title_ar,
           masterDescription: masterDoc.description,
           targetDescription: targetDoc.description,
+          masterDescriptionAr: masterDoc.description_ar ?? undefined,
+          targetDescriptionAr: targetDoc.description_ar ?? undefined,
           masterContent: masterDoc.content || '',
           targetContent: targetDoc.content || '',
           masterContentAr: masterDoc.content_ar || '',
@@ -1360,25 +1390,25 @@ export const platformService = {
         target_organization_id: params.targetOrgId || null,
         session_id: params.sessionId || null,
         actor_id: params.actorId || null,
-        metadata: params.metadata || {}
+        metadata: (params.metadata || {}) as Json
       })
     } catch (err) {
       console.warn('Failed to write platform audit log:', err)
     }
   },
 
+  /** Most recent `limit` audit rows (preview widgets). */
+  async getPlatformAuditLogs(limit = 100): Promise<PlatformAuditLog[]> {
+    return (await this.getPlatformAuditLogsPage({ limit })).logs
+  },
+
   /**
-   * `limit` alone (legacy call shape, still used by preview widgets) returns just the
-   * array. Passing an options object also returns `totalCount` (via a `count: 'exact'`
-   * head-count on the same filtered query) so the full Audit Logs page can paginate
-   * instead of only ever being able to see the most recent `limit` rows platform-wide.
+   * One page of audit rows plus `totalCount` (a `count: 'exact'` head-count on the
+   * same query) so the Audit Logs page can paginate through the full history.
    */
-  async getPlatformAuditLogs(
-    arg?: number | { limit?: number; offset?: number }
-  ): Promise<PlatformAuditLog[] | { logs: PlatformAuditLog[]; totalCount: number }> {
-    const isOptionsForm = typeof arg === 'object' && arg !== null
-    const limit = (isOptionsForm ? arg.limit : arg) ?? 100
-    const offset = isOptionsForm ? (arg.offset ?? 0) : 0
+  async getPlatformAuditLogsPage(
+    { limit = 100, offset = 0 }: { limit?: number; offset?: number } = {}
+  ): Promise<{ logs: PlatformAuditLog[]; totalCount: number }> {
 
     const { data, error, count } = await supabase
       .from('platform_audit_logs')
@@ -1395,7 +1425,7 @@ export const platformService = {
 
     if (error) {
       console.error('Error fetching platform audit logs:', error)
-      return isOptionsForm ? { logs: [], totalCount: 0 } : []
+      return { logs: [], totalCount: 0 }
     }
 
     const logs = (data || []).map((row: any) => ({
@@ -1412,7 +1442,7 @@ export const platformService = {
       created_at: row.created_at
     }))
 
-    return isOptionsForm ? { logs, totalCount: count ?? logs.length } : logs
+    return { logs, totalCount: count ?? logs.length }
   },
 
   // ============================================================================
@@ -2002,16 +2032,13 @@ export const platformService = {
   // ============================================================================
   // 8. GLOBAL SEARCH ACROSS ALL TENANTS
   // ============================================================================
-  async getPlatformGlobalSearch(query: string): Promise<{
-    organizations: Array<{ id: string; name: string; slug: string; is_active: boolean; hotel_count: number }>
-    hotels: Array<{ id: string; name: string; city: string; organization_id: string; organization_name: string }>
-    users: Array<{ id: string; full_name: string; email: string; primary_org?: string }>
-    master_sops: Array<{ id: string; title: string; category: string; version: number }>
-    master_courses: Array<{ id: string; title: string; category: string; difficulty_level: string }>
-  }> {
-    if (!query || query.trim().length === 0) {
-      return { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+  async getPlatformGlobalSearch(query: string): Promise<PlatformGlobalSearchResult> {
+    const empty: PlatformGlobalSearchResult = {
+      organizations: [], hotels: [], users: [], departments: [],
+      master_sops: [], master_courses: [], tenant_sops: [], tenant_courses: [],
+      assessments: [], question_banks: [],
     }
+    if (!query || query.trim().length === 0) return empty
 
     const { data, error } = await (supabase.rpc as any)('get_platform_global_search', {
       p_query: query.trim()
@@ -2019,10 +2046,10 @@ export const platformService = {
 
     if (error) {
       console.error('Error in getPlatformGlobalSearch:', error)
-      return { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+      return empty
     }
 
-    return data || { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+    return { ...empty, ...(data || {}) }
   },
 
   // ============================================================================

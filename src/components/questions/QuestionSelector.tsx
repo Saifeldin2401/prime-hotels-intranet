@@ -96,7 +96,7 @@ export function QuestionSelector({
                                 <TableHead>{t('common:status')}</TableHead>
                                 <TableHead>{t('common:type')}</TableHead>
                                 <TableHead>Difficulty</TableHead>
-                                <TableHead className="text-right">Points</TableHead>
+                                <TableHead className="text-end">Points</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -146,7 +146,7 @@ export function QuestionSelector({
                                                 {q.difficulty_level}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">{q.points}</TableCell>
+                                        <TableCell className="text-end">{q.points}</TableCell>
                                     </TableRow>
                                 ))
                             )}

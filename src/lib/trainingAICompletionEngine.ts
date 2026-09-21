@@ -7,7 +7,7 @@
  */
 
 import { aiService } from '@/lib/gemini'
-import type { ContentBlockForm, TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
+import type { TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +25,7 @@ export type MissingFieldType =
 
 export type AIConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW'
 
-export interface HierarchyContext {
+interface HierarchyContext {
   courseTitle?: string
   courseDescription?: string
   department?: string

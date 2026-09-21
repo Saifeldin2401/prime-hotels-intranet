@@ -6,10 +6,8 @@
  */
 
 import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
-import type { KnowledgeArticle } from '@/types/knowledge'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 const STORAGE_KEY = 'kb_recently_viewed'
 const MAX_ITEMS = 10
@@ -75,72 +73,4 @@ export function useTrackView(documentId: string | undefined) {
             KnowledgeService.incrementViewCount(documentId)
         }
     }, [user?.id, documentId])
-}
-
-/**
- * Hook to get recently viewed documents
- */
-export function useRecentlyViewed(limit = 5) {
-    const { user } = useAuth()
-    const [documents, setDocuments] = useState<KnowledgeArticle[]>([])
-    const [isLoading, setIsLoading] = useState(true)
-
-    const refresh = useCallback(async () => {
-        if (!user?.id) {
-            setDocuments([])
-            setIsLoading(false)
-            return
-        }
-
-        setIsLoading(true)
-        try {
-            const recentItems = getStoredViews(user.id).slice(0, limit)
-            if (recentItems.length === 0) {
-                setDocuments([])
-                setIsLoading(false)
-                return
-            }
-
-            // Filter out any invalid UUIDs that may have been stored previously
-            const ids = recentItems
-                .map(item => item.id)
-                .filter(id => isValidUUID(id))
-
-            if (ids.length === 0) {
-                setDocuments([])
-                setIsLoading(false)
-                return
-            }
-
-            const { data, error } = await supabase
-                .from('documents')
-                .select('id, title, description, content_type, updated_at')
-                .in('id', ids)
-                .eq('is_deleted', false)
-
-            if (error) {
-                console.warn('Failed to fetch recently viewed:', error)
-                setDocuments([])
-                return
-            }
-
-            // Sort by view order
-            const orderedDocs = ids
-                .map(id => data?.find(d => d.id === id))
-                .filter(Boolean) as KnowledgeArticle[]
-
-            setDocuments(orderedDocs)
-        } catch (e) {
-            console.error('useRecentlyViewed error:', e)
-            setDocuments([])
-        } finally {
-            setIsLoading(false)
-        }
-    }, [user?.id, limit])
-
-    useEffect(() => {
-        refresh()
-    }, [refresh])
-
-    return { documents, isLoading, refresh }
 }

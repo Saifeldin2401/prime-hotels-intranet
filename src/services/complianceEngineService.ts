@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 
-export interface ComplianceMetrics {
+interface ComplianceMetrics {
   totalRequired: number
   totalCompleted: number
   totalOverdue: number
@@ -23,7 +23,7 @@ export interface EmployeeTransferResult {
   assigned_count: number
 }
 
-export interface EmployeeTransferParams {
+interface EmployeeTransferParams {
   userId: string
   targetHotelId: string
   targetDeptId: string
@@ -31,7 +31,7 @@ export interface EmployeeTransferParams {
   reason: string
 }
 
-export interface TransferPreviewDetails {
+interface TransferPreviewDetails {
   currentHotelName?: string
   currentDepartmentName?: string
   currentRole?: string
@@ -65,7 +65,6 @@ export const complianceEngineService = {
         .from('organization_memberships')
         .select('user_id')
         .eq('is_active', true)
-        .eq('is_deleted', false)
 
       if (filters.hotelId) memberQuery = memberQuery.eq('hotel_id', filters.hotelId)
       if (filters.departmentId) memberQuery = memberQuery.eq('department_id', filters.departmentId)

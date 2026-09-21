@@ -27,7 +27,7 @@ export type AIProvider =
   | 'together'
   | 'recraft'
 
-export type ProviderHealthStatus =
+type ProviderHealthStatus =
   | 'healthy'
   | 'degraded'
   | 'rate_limited'
@@ -43,7 +43,7 @@ export type ProviderHealthStatus =
  */
 export type RecordableErrorType = AIErrorType | 'network_error' | 'content_policy'
 
-export interface ProviderHealthState {
+interface ProviderHealthState {
   status: ProviderHealthStatus
   cooldownUntil: number | null
   failureStreak: number
@@ -54,7 +54,7 @@ export interface ProviderHealthState {
   updatedAt: number
 }
 
-export interface RecordFailureOptions {
+interface RecordFailureOptions {
   /** Raw error message, stored as `lastError` for the admin panel. */
   errorMessage?: string
 }

@@ -30,8 +30,7 @@ import {
   useAuthIdentity,
   useAuthSecurity,
   useUserData,
-  useAuthActions,
-  useAccountContext,
+  useAuthActions
 } from './auth'
 
 // ─── Backward-compatible Context Type ────────────────────────────────────────
@@ -119,10 +118,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // Re-export individual hooks for direct access
-export { useAuthIdentity, useAuthSecurity, useUserData, useAuthActions, useAccountContext }
-
 // Re-export context types
-export type { AuthIdentityContextType } from './auth/AuthIdentityContext'
-export type { AuthSecurityContextType, SecurityRequirements } from './auth/AuthSecurityContext'
-export type { UserDataContextType } from './auth/UserDataContext'
-export type { AuthActionsContextType, SignInResult } from './auth/AuthActionsContext'

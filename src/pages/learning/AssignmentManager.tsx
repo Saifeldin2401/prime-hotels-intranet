@@ -80,10 +80,10 @@ function AssignmentProgressDialog({
                             <table className="w-full text-sm">
                                 <thead className="bg-slate-50 border-b">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-medium">{t('common:user')}</th>
-                                        <th className="px-4 py-3 text-left font-medium">{t('common:status')}</th>
-                                        <th className="px-4 py-3 text-left font-medium">Score</th>
-                                        <th className="px-4 py-3 text-left font-medium">Last Active</th>
+                                        <th className="px-4 py-3 text-start font-medium">{t('common:user')}</th>
+                                        <th className="px-4 py-3 text-start font-medium">{t('common:status')}</th>
+                                        <th className="px-4 py-3 text-start font-medium">Score</th>
+                                        <th className="px-4 py-3 text-start font-medium">Last Active</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
@@ -732,7 +732,7 @@ export default function AssignmentManager() {
 
             <div className="border rounded-lg bg-white overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
+                    <table className="w-full text-sm text-start">
                         <thead className="bg-slate-50 border-b">
                             <tr>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('content')}</th>
@@ -741,7 +741,7 @@ export default function AssignmentManager() {
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('dueDate')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('priority_label')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('dateAssigned')}</th>
-                                <th className="px-6 py-3 font-medium text-muted-foreground text-right">{t('actions')}</th>
+                                <th className="px-6 py-3 font-medium text-muted-foreground text-end">{t('actions')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y">
@@ -778,7 +778,7 @@ export default function AssignmentManager() {
                                     <td className="px-6 py-4 text-muted-foreground">
                                         {format(new Date(a.created_at), 'MMM d, yyyy')}
                                     </td>
-                                    <td className="px-6 py-4 text-right">
+                                    <td className="px-6 py-4 text-end">
                                         <Button
                                             variant="ghost"
                                             size="sm"

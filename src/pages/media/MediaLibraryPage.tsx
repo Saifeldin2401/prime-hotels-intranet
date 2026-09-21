@@ -170,7 +170,6 @@ export default function MediaLibraryPage() {
     const result = await uploadFile(selectedFile, {
       category: uploadCategory,
       tags: tagsArray,
-      isPublic: true,
     })
 
     if (result.asset) {
@@ -968,7 +967,7 @@ export default function MediaLibraryPage() {
       <AIMediaGeneratorModal
         open={isAiModalOpen}
         onOpenChange={setIsAiModalOpen}
-        onAssetGenerated={() => {
+        onAssetSaved={() => {
           fetchAssets()
         }}
       />

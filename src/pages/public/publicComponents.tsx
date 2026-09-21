@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { toast } from 'sonner';
-import { EASE_OUT, canela, inter, neueHaas, playfair, COLOR } from './publicConstants';
+import { EASE_OUT, canela, inter, neueHaas } from './publicConstants';
 
 /* ──────────────────────────── ANIMATION HELPERS ──────────────────────────── */
 
@@ -120,8 +120,6 @@ export function CopperDivider({ className = '' }: { className?: string }) {
     </div>
   );
 }
-
-export const GoldDivider = CopperDivider;
 
 /* ──────────────────────────── BRIEFING DIALOG ──────────────────────────── */
 

@@ -5,24 +5,24 @@
  * to elevate course quality to production-ready benchmarks.
  */
 
-import type { CourseBlueprint, LessonBlueprint } from '@/types/aiCourseEngine'
+import type { CourseBlueprint } from '@/types/aiCourseEngine'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
-import type { AgentExecutionResult, AgentRole, ComprehensiveQAReport, QAFindingItem } from './types'
+import type { AgentExecutionResult, AgentRole, ComprehensiveQAReport } from './types'
 
-export interface RevisionAgentInput {
+interface RevisionAgentInput {
   blueprint: CourseBlueprint
   qaReport: ComprehensiveQAReport
   targetLanguage?: string
 }
 
-export interface RevisionResult {
+interface RevisionResult {
   revisedBlueprint: CourseBlueprint
   fixesAppliedCount: number
   remediatedFindingIds: string[]
   revisionLog: string[]
 }
 
-export class RevisionAgent extends BaseAIAgent<RevisionAgentInput, RevisionResult> {
+class RevisionAgent extends BaseAIAgent<RevisionAgentInput, RevisionResult> {
   public readonly role: AgentRole = 'revision'
   public readonly name = 'Surgical Revision & Auto-Remediation Agent'
   public readonly nameAr = 'وكيل المراجعة والتصحيح التلقائي'

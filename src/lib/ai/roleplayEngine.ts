@@ -135,7 +135,7 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
 
 export const HOTEL_ROLEPLAY_SCENARIOS = ROLEPLAY_SCENARIOS
 
-export interface EvaluateTraineeTurnOptions {
+interface EvaluateTraineeTurnOptions {
   scenario: RoleplayScenario
   conversationHistory?: RoleplayMessage[]
   history?: RoleplayMessage[]
@@ -144,7 +144,7 @@ export interface EvaluateTraineeTurnOptions {
   language?: 'en' | 'ar'
 }
 
-export interface GenerateGuestTurnOptions {
+interface GenerateGuestTurnOptions {
   scenario: RoleplayScenario
   conversationHistory?: RoleplayMessage[]
   history?: RoleplayMessage[]
@@ -153,7 +153,7 @@ export interface GenerateGuestTurnOptions {
   language?: 'en' | 'ar'
 }
 
-export class RoleplayEngine {
+class RoleplayEngine {
   private static instance: RoleplayEngine
 
   private constructor() {}

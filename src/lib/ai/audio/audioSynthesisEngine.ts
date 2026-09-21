@@ -10,7 +10,7 @@
 
 export type AudioLanguage = 'ar-SA' | 'en-US' | 'en-GB'
 
-export interface AudioSynthesisOptions {
+interface AudioSynthesisOptions {
   text: string
   language?: AudioLanguage
   rate?: number // 0.8 to 1.3
@@ -18,14 +18,14 @@ export interface AudioSynthesisOptions {
   onProgress?: (progress: number) => void
 }
 
-export interface AudioSynthesisResult {
+interface AudioSynthesisResult {
   audioUrl?: string
   isNativeSpeech: boolean
   durationSeconds: number
   language: AudioLanguage
 }
 
-export class AudioSynthesisEngine {
+class AudioSynthesisEngine {
   private static instance: AudioSynthesisEngine
 
   private constructor() {}

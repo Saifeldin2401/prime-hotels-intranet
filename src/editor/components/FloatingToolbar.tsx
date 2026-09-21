@@ -29,7 +29,7 @@ function parseWidth(width?: string): number {
   return Math.min(Math.max(numeric, 20), 100)
 }
 
-export function FloatingToolbar({ editor, disabled = false, onOpenAiPanel }: FloatingToolbarProps) {
+function FloatingToolbar({ editor, disabled = false, onOpenAiPanel }: FloatingToolbarProps) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) =>

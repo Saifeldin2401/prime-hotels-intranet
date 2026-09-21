@@ -8,7 +8,7 @@ interface LoadingSkeletonProps {
   height?: string
 }
 
-export function LoadingSkeleton({ 
+function LoadingSkeleton({ 
   className, 
   variant = 'text', 
   lines = 1, 
@@ -91,23 +91,11 @@ export function LoadingSkeleton({
   return renderSkeleton()
 }
 
-export function CardSkeleton({ className }: { className?: string }) {
+function CardSkeleton({ className }: { className?: string }) {
   return <LoadingSkeleton variant="card" className={className} />
 }
 
-export function TextSkeleton({ lines = 3, className }: { lines?: number; className?: string }) {
-  return <LoadingSkeleton variant="text" lines={lines} className={className} />
-}
-
-export function AvatarSkeleton({ className }: { className?: string }) {
-  return <LoadingSkeleton variant="avatar" className={className} />
-}
-
-export function ButtonSkeleton({ className }: { className?: string }) {
-  return <LoadingSkeleton variant="button" className={className} />
-}
-
-export function TableSkeleton({ className }: { className?: string }) {
+function TableSkeleton({ className }: { className?: string }) {
   return <LoadingSkeleton variant="table" className={className} />
 }
 

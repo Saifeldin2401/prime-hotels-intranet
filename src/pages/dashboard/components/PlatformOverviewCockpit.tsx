@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -37,8 +37,6 @@ import {
   ArrowRight,
   RefreshCw,
   Crown,
-  Layers,
-  Sparkles,
   ExternalLink,
 } from 'lucide-react'
 
@@ -67,6 +65,7 @@ export function PlatformOverviewCockpit() {
     queryFn: () => platformService.getPlatformOperationsSummary(),
     staleTime: 1000 * 15,
   })
+  const failedJobs = (operations?.recent_jobs || []).filter((job) => job.status === 'failed')
 
   const { data: recentAudit = [], isLoading: isLoadingAudit } = useQuery({
     queryKey: ['platform-dashboard-recent-audit'],
@@ -198,7 +197,7 @@ export function PlatformOverviewCockpit() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="text-2xl font-bold font-serif text-foreground">
-                {stats?.totalUsers?.toLocaleString() ?? '—'}
+                {stats?.totalLearners?.toLocaleString() ?? '—'}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">Across all enterprise tenants</p>
@@ -217,11 +216,11 @@ export function PlatformOverviewCockpit() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="text-2xl font-bold font-serif text-foreground">
-                {operations?.totalJobs ?? 0}
+                {operations?.total_jobs ?? 0}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">
-              {operations?.failedJobs ? `${operations.failedJobs} failed jobs require attention` : 'All background workers healthy'}
+              {operations?.failed_jobs ? `${operations.failed_jobs} failed jobs require attention` : 'All background workers healthy'}
             </p>
           </CardContent>
         </Card>
@@ -238,7 +237,7 @@ export function PlatformOverviewCockpit() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <div className="text-2xl font-bold font-serif text-foreground">
-                {stats?.activeSessions ?? 0}
+                {stats?.activeBreakGlassSessions ?? 0}
               </div>
             )}
             <p className="text-[11px] text-muted-foreground mt-1">Active break-glass sessions</p>
@@ -279,14 +278,14 @@ export function PlatformOverviewCockpit() {
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm text-foreground">{org.name}</span>
                     <Badge variant="outline" className="text-[10px] text-hotel-gold border-hotel-gold/30">
-                      {org.tier_plan || 'Enterprise'}
+                      {(org.lifecycle_status || 'active').replace(/^./, (c) => c.toUpperCase())}
                     </Badge>
                   </div>
                   {org.name_ar && (
                     <p className="text-xs text-muted-foreground font-sans">{org.name_ar}</p>
                   )}
                   <p className="text-[11px] text-muted-foreground font-mono">
-                    ID: {org.organization_code}
+                    ID: {org.slug}
                   </p>
                 </div>
 
@@ -349,7 +348,7 @@ export function PlatformOverviewCockpit() {
                     <div>
                       <div className="font-medium text-foreground">{log.action}</div>
                       <div className="text-[10px] text-muted-foreground">
-                        {log.admin_user?.email || 'Platform Operator'} • {log.target_organization?.name || 'Global'}
+                        {log.actor_name || 'Platform Operator'} • {log.target_organization_name || 'Global'}
                       </div>
                     </div>
                   </div>
@@ -385,19 +384,19 @@ export function PlatformOverviewCockpit() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
               </div>
-            ) : (operations?.failedJobDetails?.length ?? 0) === 0 ? (
+            ) : failedJobs.length === 0 ? (
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2.5">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
                 <span>Zero queue failures. All background automation jobs completed successfully.</span>
               </div>
             ) : (
-              operations?.failedJobDetails?.map((job) => (
+              failedJobs.map((job) => (
                 <div
                   key={job.id}
                   className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-between text-xs"
                 >
                   <div>
-                    <div className="font-semibold text-red-600 dark:text-red-400">{job.job_type}</div>
+                    <div className="font-semibold text-red-600 dark:text-red-400">{job.mode}</div>
                     <div className="text-[10px] text-muted-foreground truncate max-w-[280px]">
                       {job.error_message || 'Unexpected worker error'}
                     </div>
@@ -440,7 +439,7 @@ export function PlatformOverviewCockpit() {
                   <span className="font-semibold text-sm">{selectedOrgForEnter.name}</span>
                 </div>
                 <Badge variant="outline" className="text-hotel-gold border-hotel-gold/30">
-                  {selectedOrgForEnter.tier_plan || 'Enterprise'}
+                  {(selectedOrgForEnter.lifecycle_status || 'active').replace(/^./, (c) => c.toUpperCase())}
                 </Badge>
               </div>
 

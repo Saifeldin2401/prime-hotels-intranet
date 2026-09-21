@@ -6,7 +6,7 @@ import { PreserveQueryNavigate } from './utils/QueryPreserveRedirect'
  * cut down to a Training + Knowledge Base + Quiz platform. Any old deep link
  * lands the user back on the home page.
  */
-export const REMOVED_DOMAIN_PREFIXES = [
+const REMOVED_DOMAIN_PREFIXES = [
     'hr',
     'finance',
     'operations',

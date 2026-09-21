@@ -21,7 +21,6 @@ import {
     ArrowRight,
     Award,
     BarChart3,
-    Bell,
     BookOpen,
     Brain,
     CheckCircle2,
@@ -29,34 +28,23 @@ import {
     Download,
     Eye,
     Filter,
-    HelpCircle,
-    Layers,
     LineChart,
     Loader2,
-    Printer,
     RefreshCw,
     Search,
     Shield,
-    ShieldAlert,
     ShieldCheck,
     Sparkles,
-    Target,
-    TrendingDown,
-    TrendingUp,
-    Users,
-    XCircle
+    Users
 } from 'lucide-react'
 import {
     AreaChart,
     Area,
-    BarChart,
-    Bar,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
-    ResponsiveContainer,
-    Cell
+    ResponsiveContainer
 } from 'recharts'
 
 type TrackSubTab = 'overview' | 'roster' | 'modules' | 'certifications'
@@ -841,7 +829,7 @@ export function TrainingTrackCommandCenter({
                 <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                         {/* 1. Compliance Rate */}
-                        <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 shadow-sm hover:shadow-md transition-shadow">
+                        <Card className="border-s-4 border-s-emerald-500 bg-gradient-to-br from-white to-emerald-50/30 shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'معدل الامتثال' : 'Compliance Rate'}</span>
@@ -860,7 +848,7 @@ export function TrainingTrackCommandCenter({
                         </Card>
 
                         {/* 2. Assessment Mastery Score */}
-                        <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-white to-indigo-50/30 shadow-sm hover:shadow-md transition-shadow">
+                        <Card className="border-s-4 border-s-indigo-500 bg-gradient-to-br from-white to-indigo-50/30 shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'متوسط الدرجات' : 'Average Score'}</span>
@@ -879,7 +867,7 @@ export function TrainingTrackCommandCenter({
                         </Card>
 
                         {/* 3. Total Enrollments */}
-                        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-md transition-shadow">
+                        <Card className="border-s-4 border-s-blue-500 bg-gradient-to-br from-white to-blue-50/30 shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'إجمالي التكليفات' : 'Total Assignments'}</span>
@@ -896,7 +884,7 @@ export function TrainingTrackCommandCenter({
                         </Card>
 
                         {/* 4. Active Learners */}
-                        <Card className="border-l-4 border-l-amber-500 bg-gradient-to-br from-white to-amber-50/30 shadow-sm hover:shadow-md transition-shadow">
+                        <Card className="border-s-4 border-s-amber-500 bg-gradient-to-br from-white to-amber-50/30 shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'المتدربون النشطون' : 'Active Learners'}</span>
@@ -914,8 +902,8 @@ export function TrainingTrackCommandCenter({
 
                         {/* 5. Overdue Compliance Risk */}
                         <Card className={cn(
-                            "border-l-4 shadow-sm hover:shadow-md transition-shadow",
-                            metrics.overdueCount > 0 ? "border-l-red-500 bg-gradient-to-br from-white to-red-50/40" : "border-l-slate-300 bg-white"
+                            "border-s-4 shadow-sm hover:shadow-md transition-shadow",
+                            metrics.overdueCount > 0 ? "border-s-red-500 bg-gradient-to-br from-white to-red-50/40" : "border-s-slate-300 bg-white"
                         )}>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -943,7 +931,7 @@ export function TrainingTrackCommandCenter({
                         </Card>
 
                         {/* 6. Recertifications Due */}
-                        <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-white to-purple-50/30 shadow-sm hover:shadow-md transition-shadow">
+                        <Card className="border-s-4 border-s-purple-500 bg-gradient-to-br from-white to-purple-50/30 shadow-sm hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'إعادة التأهيل (30 يوم)' : 'Recert. Due'}</span>
@@ -1159,7 +1147,7 @@ export function TrainingTrackCommandCenter({
                                 </Select>
 
                                 <div className="relative w-44">
-                                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                                    <Search className="absolute start-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                                     <Input
                                         value={moduleSearch}
                                         onChange={(e) => setModuleSearch(e.target.value)}
@@ -1171,7 +1159,7 @@ export function TrainingTrackCommandCenter({
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
+                                <table className="w-full text-start text-xs">
                                     <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-y border-slate-200">
                                         <tr>
                                             <th className="py-3 px-4">{isRTL ? 'عنوان المقرر' : 'Course Title'}</th>
@@ -1270,7 +1258,7 @@ export function TrainingTrackCommandCenter({
                 {/* ─── TAB 4: CERTIFICATIONS & AUDIT READINESS ─── */}
                 <TabsContent value="certifications" className="space-y-6 animate-in fade-in duration-300">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                        <Card className="border-l-4 border-l-purple-500 bg-white shadow-sm">
+                        <Card className="border-s-4 border-s-purple-500 bg-white shadow-sm">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'إجمالي الشهادات المعتمدة' : 'Issued Credentials'}</span>
@@ -1285,7 +1273,7 @@ export function TrainingTrackCommandCenter({
                             </CardContent>
                         </Card>
 
-                        <Card className="border-l-4 border-l-emerald-500 bg-white shadow-sm">
+                        <Card className="border-s-4 border-s-emerald-500 bg-white shadow-sm">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'شهادات سارية المفعول' : 'Active & Compliant'}</span>
@@ -1300,7 +1288,7 @@ export function TrainingTrackCommandCenter({
                             </CardContent>
                         </Card>
 
-                        <Card className="border-l-4 border-l-amber-500 bg-white shadow-sm">
+                        <Card className="border-s-4 border-s-amber-500 bg-white shadow-sm">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'تنتهي خلال 30 يوماً' : 'Expiring in 30 Days'}</span>
@@ -1315,7 +1303,7 @@ export function TrainingTrackCommandCenter({
                             </CardContent>
                         </Card>
 
-                        <Card className="border-l-4 border-l-hotel-gold bg-white shadow-sm">
+                        <Card className="border-s-4 border-s-hotel-gold bg-white shadow-sm">
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <span className="text-xs font-semibold text-slate-500">{isRTL ? 'جاهزية وزارة السياحة' : 'Ministry Audit Ready'}</span>
@@ -1357,7 +1345,7 @@ export function TrainingTrackCommandCenter({
                                 </Select>
 
                                 <div className="relative w-52">
-                                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                                    <Search className="absolute start-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
                                     <Input
                                         value={certSearch}
                                         onChange={(e) => setCertSearch(e.target.value)}
@@ -1369,7 +1357,7 @@ export function TrainingTrackCommandCenter({
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left text-xs">
+                                <table className="w-full text-start text-xs">
                                     <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-y border-slate-200">
                                         <tr>
                                             <th className="py-3 px-4">{isRTL ? 'رقم الشهادة' : 'Certificate No.'}</th>

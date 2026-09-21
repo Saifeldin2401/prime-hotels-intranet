@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { documentIngestionEngine } from './documentIngestionEngine'
+import { multiProviderRouter } from './providers/multiProviderRouter'
 
 vi.mock('./providers/multiProviderRouter', () => ({
   multiProviderRouter: {
@@ -61,5 +62,17 @@ describe('DocumentIngestionEngine', () => {
     expect(result.extractedTopics.length).toBeGreaterThan(0)
     expect(result.wordCount).toBeGreaterThan(10)
     expect(result.blueprint.sections.length).toBeGreaterThan(0)
+  })
+
+  it('fails loudly instead of fabricating a course when the AI returns nothing usable', async () => {
+    vi.mocked(multiProviderRouter.execute).mockRejectedValueOnce(new Error('provider down'))
+    await expect(
+      documentIngestionEngine.ingestDocument({ documentText: 'Some SOP text '.repeat(20), fileName: 'Pool_Safety.pdf' }),
+    ).rejects.toThrow(/Could not generate a course/)
+
+    vi.mocked(multiProviderRouter.execute).mockResolvedValueOnce({ data: { blueprint: {} }, rawText: '' } as never)
+    await expect(
+      documentIngestionEngine.ingestDocument({ documentText: 'Some SOP text '.repeat(20), fileName: 'Pool_Safety.pdf' }),
+    ).rejects.toThrow(/Could not generate a course/)
   })
 })

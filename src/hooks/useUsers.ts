@@ -1,11 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { secureSearchUsers } from '@/lib/secureSearch'
-import { sanitizeSearchInput, sanitizeUUID } from '@/lib/utils'
+import { sanitizeSearchInput } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
-
-
-
-export { useProfiles as useUsers }
 
 export function useProfiles(filters?: {
     search?: string

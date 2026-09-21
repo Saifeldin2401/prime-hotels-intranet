@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
@@ -36,7 +36,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 
-export interface TransferTargetUser {
+interface TransferTargetUser {
   id: string
   full_name: string | null
   email: string

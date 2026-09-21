@@ -25,25 +25,6 @@ export type PlatformPermission =
   | 'tenant.enter'
   | 'tenant.read'
 
-export interface PlatformUser {
-  user_id: string
-  is_active: boolean
-  employment_type: 'employee' | 'contractor' | 'service_account'
-  notes: string | null
-  created_at: string
-  deactivated_at: string | null
-}
-
-export interface PlatformRoleAssignment {
-  id: string
-  platform_user_id: string
-  platform_role: PlatformRole
-  scope_type: 'global' | 'org_list'
-  scope_org_ids: string[]
-  granted_at: string
-  revoked_at: string | null
-}
-
 export interface PlatformAccessSession {
   id: string
   admin_user_id: string
@@ -130,4 +111,5 @@ export interface PlatformStats {
   totalPlatformUsers: number
   suspendedPlatformUsers: number
   lockedPlatformUsers: number
+  activeBreakGlassSessions: number
 }

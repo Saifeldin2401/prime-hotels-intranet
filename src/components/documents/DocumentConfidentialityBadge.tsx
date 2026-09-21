@@ -3,15 +3,14 @@ import { cn } from "@/lib/utils";
 import {
     Building2,
     Globe,
-    Info,
     Lock,
     ShieldAlert,
 } from "lucide-react";
 import * as React from "react";
 
-export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
+type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
 
-export interface ConfidentialityConfig {
+interface ConfidentialityConfig {
   level: ConfidentialityLevel;
   label: string;
   description: string;
@@ -233,7 +232,7 @@ export function DocumentConfidentialityBadge({
         sizeClasses[size][variant],
         onClick && "cursor-pointer",
         variant === "pill" && "rounded-full",
-        variant === "card" && "block w-full text-left h-auto",
+        variant === "card" && "block w-full text-start h-auto",
         className
       )}
       onClick={onClick}
@@ -256,114 +255,9 @@ interface ConfidentialitySelectorProps {
   className?: string;
 }
 
-export function ConfidentialitySelector({
-  value,
-  onChange,
-  className,
-}: ConfidentialitySelectorProps) {
-  return (
-    <div className={cn("space-y-3", className)}>
-      {(Object.keys(CONFIDENTIALITY_CONFIGS) as ConfidentialityLevel[]).map(
-        (level) => {
-          const config = CONFIDENTIALITY_CONFIGS[level];
-          const isSelected = value === level;
-
-          return (
-            <button
-              key={level}
-              type="button"
-              onClick={() => onChange(level)}
-              className={cn(
-                "w-full flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all",
-                isSelected
-                  ? "border-[#0B1C3E] bg-[#0B1C3E]/5"
-                  : "border-border hover:border-muted-foreground/50"
-              )}
-            >
-              <div
-                className={cn(
-                  "p-2 rounded-lg shrink-0",
-                  config.color.bg,
-                  config.color.text
-                )}
-              >
-                {React.cloneElement(config.icon, {
-                  className: "w-4 h-4",
-                })}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{config.label}</span>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] border-0",
-                      config.color.bg,
-                      config.color.text
-                    )}
-                  >
-                    {config.accessDescription}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  {config.description}
-                </p>
-              </div>
-              <div
-                className={cn(
-                  "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5",
-                  isSelected
-                    ? "border-[#0B1C3E] bg-[#0B1C3E]"
-                    : "border-muted-foreground/30"
-                )}
-              >
-                {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-              </div>
-            </button>
-          );
-        }
-      )}
-    </div>
-  );
-}
-
 // Legend component for displaying all levels
 interface ConfidentialityLegendProps {
   className?: string;
-}
-
-export function ConfidentialityLegend({ className }: ConfidentialityLegendProps) {
-  return (
-    <div className={cn("space-y-2 p-4 bg-muted/30 rounded-lg", className)}>
-      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-        <Info className="w-4 h-4" />
-        Confidentiality Levels
-      </h4>
-      <div className="space-y-2">
-        {(Object.keys(CONFIDENTIALITY_CONFIGS) as ConfidentialityLevel[]).map(
-          (level) => {
-            const config = CONFIDENTIALITY_CONFIGS[level];
-            return (
-              <div key={level} className="flex items-center gap-2">
-                <div
-                  className={cn(
-                    "px-2 py-0.5 rounded text-xs font-medium",
-                    config.color.bg,
-                    config.color.text
-                  )}
-                >
-                  {config.label}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {config.description}
-                </span>
-              </div>
-            );
-          }
-        )}
-      </div>
-    </div>
-  );
 }
 
 // Compact indicator for lists
@@ -371,33 +265,6 @@ interface ConfidentialityIndicatorProps {
   level: ConfidentialityLevel;
   showLabel?: boolean;
   className?: string;
-}
-
-export function ConfidentialityIndicator({
-  level,
-  showLabel = false,
-  className,
-}: ConfidentialityIndicatorProps) {
-  const config = CONFIDENTIALITY_CONFIGS[level];
-
-  return (
-    <div className={cn("flex items-center gap-1.5", className)}>
-      <div
-        className={cn(
-          "rounded-full",
-          level === "public" && "bg-gray-400",
-          level === "internal" && "bg-blue-500",
-          level === "confidential" && "bg-amber-500",
-          level === "restricted" && "bg-red-500",
-          showLabel ? "w-2 h-2" : "w-2.5 h-2.5"
-        )}
-        title={`${config.label}: ${config.description}`}
-      />
-      {showLabel && (
-        <span className="text-xs text-muted-foreground">{config.label}</span>
-      )}
-    </div>
-  );
 }
 
 export default DocumentConfidentialityBadge;

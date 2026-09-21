@@ -1,7 +1,6 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { createNotification } from '@/services/notificationService'
-import type { Document, DocumentApproval } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -134,96 +133,6 @@ export function useDocumentVersions(documentId: string) {
 
       if (error) throw error
       return data as (import('@/lib/types').DocumentVersion & { creator: VersionCreator | null })[]
-    },
-  })
-}
-
-export function usePendingApprovals() {
-  const { user } = useAuth()
-
-  return useQuery({
-    queryKey: ['pending-approvals', user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('document_approvals')
-        .select(`
-          *,
-          document:documents!document_approvals_document_id_fkey(
-            *,
-            profiles:profiles!documents_created_by_fkey(full_name)
-          )
-        `)
-        .eq('status', 'pending')
-        .eq('approver_id', user?.id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return data as unknown as (DocumentApproval & {
-        document: Document & { profiles?: { full_name: string } }
-      })[]
-    },
-  })
-}
-
-export function useApproveDocument() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-
-  return useMutation({
-    mutationFn: async ({ approvalId, feedback }: { approvalId: string, feedback?: string }) => {
-      if (!user) throw new Error('User must be authenticated')
-
-      const { data, error } = await supabase.rpc('approve_document_atomic', {
-        p_approval_id: approvalId,
-        p_approver_id: user.id,
-        p_feedback: feedback || null
-      })
-
-      if (error) {
-        console.error('Document approval failed:', error)
-        throw error
-      }
-
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
-      queryClient.invalidateQueries({ queryKey: ['document-stats'] })
-      queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
-    },
-  })
-}
-
-export function useRejectDocument() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-
-  return useMutation({
-    mutationFn: async ({ approvalId, reason }: { approvalId: string, reason: string }) => {
-      if (!user) throw new Error('User must be authenticated')
-
-      const { data, error } = await supabase.rpc('reject_document_atomic', {
-        p_approval_id: approvalId,
-        p_approver_id: user.id,
-        p_reason: reason
-      })
-
-      if (error) {
-        console.error('Document rejection failed:', error)
-        throw error
-      }
-
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
-      queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
-      queryClient.invalidateQueries({ queryKey: ['document-stats'] })
     },
   })
 }

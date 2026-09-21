@@ -1,5 +1,5 @@
 
-export interface SearchablePage {
+interface SearchablePage {
     id: string
     title: string
     description: string

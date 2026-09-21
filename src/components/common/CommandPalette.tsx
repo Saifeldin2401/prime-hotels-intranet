@@ -12,7 +12,6 @@ import {
 import {
   Award,
   BookOpen,
-  Briefcase,
   Compass,
   FileText,
   GraduationCap,
@@ -20,8 +19,7 @@ import {
   Loader2,
   Megaphone,
   Settings,
-  User,
-  Wrench
+  User
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'

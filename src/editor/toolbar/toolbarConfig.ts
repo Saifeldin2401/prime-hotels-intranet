@@ -1,6 +1,6 @@
 import type { RichEditorToolbarConfig } from '@/editor/types'
 
-export const DEFAULT_TOOLBAR_CONFIG: RichEditorToolbarConfig = {
+const DEFAULT_TOOLBAR_CONFIG: RichEditorToolbarConfig = {
   features: {
     history: true,
     headings: true,

@@ -2,7 +2,6 @@ import { AIAvatar } from '@/components/ai/AIAvatar'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { motion } from 'framer-motion'
-import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface AltusCopilotTriggerProps {

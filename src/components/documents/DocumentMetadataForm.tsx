@@ -512,7 +512,7 @@ export function DocumentMetadataForm({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-start text-left font-normal"
+                className="w-full justify-start text-start font-normal"
                 disabled={readOnly}
               >
                 <Calendar className="me-2 h-4 w-4" />
@@ -588,7 +588,7 @@ export function DocumentMetadataForm({
               onClick={() => updateMetadata("confidentiality", level.value)}
               disabled={readOnly}
               className={cn(
-                "flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all",
+                "flex items-start gap-3 p-3 rounded-lg border-2 text-start transition-all",
                 metadata.confidentiality === level.value
                   ? "border-[#0B1C3E] bg-[#0B1C3E]/5"
                   : "border-border hover:border-muted-foreground/50",
@@ -701,7 +701,7 @@ export function DocumentMetadataForm({
                       <PopoverTrigger asChild>
                         <Button
                           variant="outline"
-                          className="w-full justify-start text-left font-normal h-9"
+                          className="w-full justify-start text-start font-normal h-9"
                           disabled={readOnly}
                         >
                           {field.value ? format(new Date(field.value), "PP") : "Select date"}

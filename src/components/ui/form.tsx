@@ -438,9 +438,9 @@ const FormSummary = forwardRef<HTMLDivElement, FormSummaryProps>(
 FormSummary.displayName = 'FormSummary'
 
 export {
-    Form, FormActions, FormContext, FormControl,
-    FormDescription, FormError,
+    Form, FormContext, FormControl,
+    FormDescription,
     FormField,
-    FormFieldContext, FormFieldset, FormItem,
-    FormLabel, FormMessage, FormProgress, FormSection, FormSubmitButton, FormSuccess, FormSummary
+    FormFieldContext, FormItem,
+    FormLabel, FormMessage
 }

@@ -30,6 +30,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { CurriculumCard, type CurriculumItem } from '@/components/learner/CurriculumCard'
 import { CurriculumTable } from '@/components/learner/CurriculumTable'
+import { toSimpleT } from '@/lib/simpleT'
 
 interface CatalogModule {
     id: string
@@ -421,7 +422,7 @@ export default function CourseCatalog() {
 
                             return (
                                 <div key={item.id} className="relative group">
-                                    <CurriculumCard item={item} />
+                                    <CurriculumCard item={item} isRTL={isRTL} t={toSimpleT(_t)} />
                                     
                                     {/* Overlay Quick Preview Button */}
                                     <div className="mt-2 flex items-center justify-between px-1">
@@ -445,7 +446,7 @@ export default function CourseCatalog() {
                         })}
                     </div>
                 ) : (
-                    <CurriculumTable items={curriculumItems} />
+                    <CurriculumTable items={curriculumItems} isRTL={isRTL} t={toSimpleT(_t)} />
                 )}
 
                 {/* Course Preview Dialog */}

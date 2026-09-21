@@ -8,7 +8,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface ActivitiesAgentInput {
+interface ActivitiesAgentInput {
   lessonTitle: string
   moduleTitle: string
   lessonContentHtml: string
@@ -32,7 +32,7 @@ export interface OperationalActivity {
   supervisorNotesAr?: string
 }
 
-export class ActivitiesAgent extends BaseAIAgent<ActivitiesAgentInput, OperationalActivity> {
+class ActivitiesAgent extends BaseAIAgent<ActivitiesAgentInput, OperationalActivity> {
   public readonly role: AgentRole = 'activities'
   public readonly name = 'Interactive Activities & Drills Agent'
   public readonly nameAr = 'وكيل الأنشطة التفاعلية والتدريبات الميدانية'

@@ -35,7 +35,6 @@ import {
     Brain,
     CheckCircle,
     ListFilter,
-    Target,
     TrendingDown,
     TrendingUp,
     Users
@@ -54,7 +53,6 @@ interface AnalyticsSummary {
     averageScore: number
     totalModules: number
     totalQuizzes: number
-    onboardingAssignments: number
 }
 
 interface ModulePerformance {
@@ -254,11 +252,6 @@ export default function TrainingAnalytics() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'published')
 
-            const { data: onboardingTasks } = await supabase
-                .from('onboarding_tasks')
-                .select('link_id, process_id')
-                .eq('link_type', 'training')
-
             return {
                 totalAssignees: row?.total_assignees || 0,
                 completedAssignments: row?.completed_count || 0,
@@ -268,8 +261,7 @@ export default function TrainingAnalytics() {
                 completionRate: row?.completion_rate ? Math.round(Number(row.completion_rate)) : 0,
                 averageScore: row?.average_score ? Math.round(Number(row.average_score)) : 0,
                 totalModules: moduleCount || 0,
-                totalQuizzes: quizCount || 0,
-                onboardingAssignments: onboardingTasks?.length || 0
+                totalQuizzes: quizCount || 0
             }
         }
     })
@@ -402,7 +394,7 @@ export default function TrainingAnalytics() {
     })
 
     return (
-        <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
             <PageHeader
                 title={t('analytics.title')}
                 description={t('analytics.description')}
@@ -473,13 +465,6 @@ export default function TrainingAnalytics() {
                     value={summary?.overdueAssignments || 0}
                     icon={AlertTriangle}
                     color="red"
-                />
-                <StatCard
-                    title={t('analytics.onboarding_sourced', 'Onboarding Sourced')}
-                    value={summary?.onboardingAssignments || 0}
-                    icon={Target}
-                    color="orange"
-                    trend="Automated"
                 />
             </div>
 
@@ -727,7 +712,7 @@ export default function TrainingAnalytics() {
                                                     <h4 className="font-medium text-slate-900">{cert.recipientName}</h4>
                                                     <p className="text-sm text-muted-foreground">{cert.title}</p>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="text-end">
                                                     <Badge variant={urgent ? 'destructive' : 'outline'}>
                                                         {t('analytics.expiresInDays', { count: cert.daysUntilExpiry, defaultValue: '{{count}} days left' })}
                                                     </Badge>

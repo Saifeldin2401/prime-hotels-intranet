@@ -11,7 +11,7 @@ export interface OnPageTourStep {
   actionRoute?: string
 }
 
-export interface TourSequenceContext {
+interface TourSequenceContext {
   role: string
   isPlatformOperator: boolean
   organizationName?: string

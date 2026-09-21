@@ -1,13 +1,11 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle
 } from '@/components/ui/sheet'
 import { supabase } from '@/lib/supabase'
@@ -17,10 +15,7 @@ import {
   Award,
   BookOpen,
   Building2,
-  Calendar,
-  CheckCircle2,
   Clock,
-  ExternalLink,
   Eye,
   FileCheck,
   FileQuestion,
@@ -28,11 +23,9 @@ import {
   Film,
   GraduationCap,
   Headphones,
-  HelpCircle,
   ImageIcon,
   Layers,
   Loader2,
-  Sparkles,
   Users,
   Wand2
 } from 'lucide-react'

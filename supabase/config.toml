@@ -92,20 +92,10 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/ai-model-verifier/index.ts"
 
-[functions.approval-escalation]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/approval-escalation/index.ts"
-
 [functions.auto-analyze-feedback]
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/auto-analyze-feedback/index.ts"
-
-[functions.auto-triage-ticket]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/auto-triage-ticket/index.ts"
 
 [functions.bulk-notification-processor]
 enabled = true
@@ -132,12 +122,6 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/encrypt-field/index.ts"
 
-[functions.fetch-news]
-enabled = true
-verify_jwt = true
-import_map = "./functions/fetch-news/deno.json"
-entrypoint = "./functions/fetch-news/index.ts"
-
 [functions.image-proxy]
 enabled = true
 verify_jwt = true
@@ -147,11 +131,6 @@ entrypoint = "./functions/image-proxy/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/process-ai-request/index.ts"
-
-[functions.process-event]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/process-event/index.ts"
 
 [functions.public-forgot-password]
 enabled = true
@@ -195,32 +174,8 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/send-email/index.ts"
 
-[functions.slack-commands]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/slack-commands/index.ts"
-
-[functions.slack-events]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/slack-events/index.ts"
-
-[functions.slack-interactive]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/slack-interactive/index.ts"
-
-[functions.slack-training]
-enabled = true
-verify_jwt = false
-entrypoint = "./functions/slack-training/index.ts"
-
 [functions.weather-proxy]
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/weather-proxy/index.ts"
 
-[functions.workflow-engine]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/workflow-engine/index.ts"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -8,28 +8,20 @@ import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import {
   BrainCircuit,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Cpu,
   FileCheck,
-  Globe,
-  HelpCircle,
   ImageIcon,
-  Layers,
   ListOrdered,
-  Lock,
   MessageSquare,
   Mic,
   RotateCcw,
-  Scale,
   ShieldAlert,
   ShieldCheck,
   Sparkles,
   Users,
-  Wand2,
-  Workflow,
-  Zap,
+  Workflow
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AVAILABLE_COURSE_AI_MODELS } from '@/lib/gemini'

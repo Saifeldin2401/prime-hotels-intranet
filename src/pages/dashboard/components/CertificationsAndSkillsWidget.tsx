@@ -1,5 +1,4 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
@@ -7,10 +6,8 @@ import {
   Award, 
   ShieldCheck, 
   ArrowRight, 
-  CheckCircle, 
   ExternalLink,
   Flame,
-  Star,
   Sparkles
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'

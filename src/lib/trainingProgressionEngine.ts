@@ -13,7 +13,7 @@ import type { TrainingContentBlock, TrainingModule } from '@/lib/types/training'
 // Types & Enums
 // ----------------------------------------------------------------------
 
-export type LearningItemState =
+type LearningItemState =
   | 'LOCKED'
   | 'AVAILABLE'
   | 'IN_PROGRESS'
@@ -24,7 +24,7 @@ export type LearningItemState =
   | 'EXEMPTED'
   | 'SKIPPED'
 
-export type ProgressionMode = 'sequential' | 'flexible'
+type ProgressionMode = 'sequential' | 'flexible'
 
 export type QuizCompletionResult = {
   quizId?: string
@@ -46,7 +46,7 @@ export type QuizCompletionResult = {
   }>
 }
 
-export type ProgressionBlockerReason =
+type ProgressionBlockerReason =
   | 'unmet_prerequisite'
   | 'incomplete_content'
   | 'quiz_not_attempted'
@@ -67,7 +67,7 @@ export interface PracticalAssignmentResult {
   attemptNumber?: number
 }
 
-export interface ProgressionBlocker {
+interface ProgressionBlocker {
   blockId: string
   title: string
   reason: ProgressionBlockerReason
@@ -87,7 +87,7 @@ export interface LearnerProgressState {
   activeBlockId?: string | null
 }
 
-export interface ModuleProgressionResult {
+interface ModuleProgressionResult {
   blockStates: Record<string, LearningItemState>
   nextRequiredItem: TrainingContentBlock | null
   nextRequiredIndex: number
@@ -110,20 +110,14 @@ export interface ModuleProgressionResult {
 // ----------------------------------------------------------------------
 // Helper Functions
 // ----------------------------------------------------------------------
-
-export const getQuizIdForBlock = (block: TrainingContentBlock): string | null => {
-  const contentData = block.content_data as Record<string, unknown> | null
-  return typeof contentData?.quiz_id === 'string' ? contentData.quiz_id : null
-}
-
-export const requiresQuizPassing = (block: TrainingContentBlock): boolean => {
+const requiresQuizPassing = (block: TrainingContentBlock): boolean => {
   const contentData = block.content_data as Record<string, unknown> | null
   if (contentData?.completion_requirement === 'submitted') return false
   if (contentData?.require_passing === false) return false
   return true
 }
 
-export const getBlockPassingScore = (
+const getBlockPassingScore = (
   block: TrainingContentBlock,
   modulePassingScore?: number | null
 ): number => {
@@ -140,7 +134,7 @@ export const getBlockPassingScore = (
   return 80 // Standard 5-star hotel benchmark
 }
 
-export const getBlockMaxAttempts = (block: TrainingContentBlock): number | null => {
+const getBlockMaxAttempts = (block: TrainingContentBlock): number | null => {
   const contentData = block.content_data as Record<string, unknown> | null
   if (typeof contentData?.max_attempts === 'number' && contentData.max_attempts > 0) {
     return contentData.max_attempts
@@ -148,7 +142,7 @@ export const getBlockMaxAttempts = (block: TrainingContentBlock): number | null 
   return null
 }
 
-export const getBlockPrerequisites = (block: TrainingContentBlock): string[] => {
+const getBlockPrerequisites = (block: TrainingContentBlock): string[] => {
   const contentData = block.content_data as Record<string, unknown> | null
   if (Array.isArray(contentData?.prerequisites)) {
     return contentData.prerequisites.filter((id): id is string => typeof id === 'string' && id.length > 0)
@@ -163,7 +157,7 @@ export const getBlockPrerequisites = (block: TrainingContentBlock): string[] => 
 /**
  * Evaluates the discrete learning state of a single content block.
  */
-export function evaluateSingleBlockState({
+function evaluateSingleBlockState({
   block,
   index,
   learnerState,

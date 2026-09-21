@@ -1,13 +1,12 @@
-import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAccountContext } from '@/hooks/useAccountContext'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
-import { Building2, Crown, Check, ArrowRight, ArrowLeft, Shield } from 'lucide-react'
+import { Building2, Crown, Check, ArrowRight, ArrowLeft } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 export default function SelectTenant() {
   const { 

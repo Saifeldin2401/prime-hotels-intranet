@@ -1,18 +1,15 @@
 import { RouteErrorBoundary } from '@/components/common'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { PreserveQueryNavigate } from './utils/QueryPreserveRedirect'
 import { lazy } from 'react'
 import {
     createBrowserRouter,
     createRoutesFromElements,
-    Navigate,
     Outlet,
     Route,
 } from 'react-router-dom'
 
 import {
-    AuthenticatedNotFound,
     LearnerHomeRoute,
     LegacyAnalyticsRedirect,
     LegacyScheduleRedirect,

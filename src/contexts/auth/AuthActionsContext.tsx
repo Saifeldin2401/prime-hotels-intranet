@@ -11,7 +11,7 @@
  */
 
 import type { ReactNode } from 'react'
-import { createContext, useCallback, useContext, useMemo, useRef } from 'react'
+import { createContext, useCallback, useContext, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { analytics } from '@/services/analyticsService'
 import { auditLog } from '@/lib/auditLog'
@@ -49,18 +49,18 @@ const log = {
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-export interface SignInResult {
+interface SignInResult {
   error: Error | null
   requiresCaptcha?: boolean
 }
 
-export interface AuthActionsContextType {
+interface AuthActionsContextType {
   signIn: (email: string, password: string, captchaToken?: string) => Promise<SignInResult>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
 }
 
-export const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
+const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
 
 const FALLBACK_AUTH_ACTIONS: AuthActionsContextType = {
   signIn: async () => ({ error: new Error('Auth not initialized') }),

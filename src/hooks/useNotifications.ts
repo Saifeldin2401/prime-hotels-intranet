@@ -100,27 +100,3 @@ export function useNotifications() {
     isMarkingRead: markAsRead.isPending || markAllAsRead.isPending
   }
 }
-
-export function useUnreadNotificationsCount() {
-  const { user } = useAuth()
-
-  return useQuery({
-    queryKey: ['notifications-count', user?.id],
-    queryFn: async () => {
-      if (!user) return 0
-
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .is('read_at', null)
-
-      if (error) throw error
-      return count || 0
-    },
-    enabled: !!user,
-    refetchInterval: 180000, // 3 min (sidebar Realtime handles badge counts)
-    refetchOnWindowFocus: false,
-    staleTime: 60000, // Fresh for 1 minute
-  })
-}

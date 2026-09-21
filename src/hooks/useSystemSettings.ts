@@ -219,7 +219,7 @@ export function useSystemSettings(category?: string, explicitOrgId?: string | nu
 /**
  * Hook to retrieve a single system setting value reactively via get_setting RPC
  */
-export function useSetting<T = unknown>(key: string, defaultValue?: T, explicitOrgId?: string | null) {
+function useSetting<T = unknown>(key: string, defaultValue?: T, explicitOrgId?: string | null) {
     const { currentOrganization } = useTenant()
     const targetOrgId = explicitOrgId !== undefined ? explicitOrgId : (currentOrganization?.id ?? null)
 
@@ -296,20 +296,6 @@ export function useSecuritySettings() {
         passwordExpiryDays: Number(settings.find(s => s.key === 'password_expiry_days')?.value ?? 90),
         passwordMinLength: Number(settings.find(s => s.key === 'password_min_length')?.value ?? 8),
         sessionTimeoutMinutes: Number(settings.find(s => s.key === 'session_timeout_minutes')?.value ?? 30),
-        isLoading,
-    }
-}
-
-/**
- * Hook for HR & Compliance Settings
- */
-export function useHRSettings() {
-    const { settings, isLoading } = useSystemSettings('hr')
-
-    return {
-        iqamaExpiryWarningDays: Number(settings.find(s => s.key === 'iqama_expiry_warning_days')?.value ?? 60),
-        probationPeriodDays: Number(settings.find(s => s.key === 'probation_period_days')?.value ?? 90),
-        autoApproveLeave: Boolean(settings.find(s => s.key === 'auto_approve_leave')?.value ?? false),
         isLoading,
     }
 }

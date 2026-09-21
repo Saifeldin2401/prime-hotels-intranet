@@ -196,7 +196,7 @@ export default function ExecutiveGMDashboard() {
                       <Progress value={dept.overall_score} className="h-2 bg-muted" />
                     </div>
 
-                    <div className="w-28 text-right shrink-0 space-y-0.5">
+                    <div className="w-28 text-end shrink-0 space-y-0.5">
                       <Badge variant="outline" className="text-[10px] font-mono">
                         {isAr ? 'تدريب' : 'Train'} {dept.metrics.training_completion_rate}%
                       </Badge>

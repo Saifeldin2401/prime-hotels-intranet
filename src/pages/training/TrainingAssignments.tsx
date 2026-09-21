@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import { BarChart3, Bell, Edit, Settings } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { AssignmentsTab } from './TrainingAssignments/AssignmentsTab'
 import { AssignmentCreateDialog as CreateAssignmentDialog } from './TrainingAssignments/CreateAssignmentDialog'
 import { ManageAssigneesDialog } from './TrainingAssignments/ManageAssigneesDialog'
@@ -30,10 +29,15 @@ function TrainingAssignmentsPanelInner() {
     hideHeaderActions,
     activeTab,
     setActiveTab,
+    showAssignmentDialog,
+    setShowAssignmentDialog,
+    assignableModules,
+    formModuleId,
+    invalidateAssignmentControlQueries,
   } = useTrainingAssignmentsContext()
 
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
       {!embedded && (
         <PageHeader
           title={t('trainingCenter')}
@@ -106,7 +110,13 @@ function TrainingAssignmentsPanelInner() {
       </Tabs>
 
       <ProgressDetailDialog />
-      <CreateAssignmentDialog />
+      <CreateAssignmentDialog
+        open={showAssignmentDialog}
+        onOpenChange={setShowAssignmentDialog}
+        modules={assignableModules}
+        preselectedModuleId={formModuleId || null}
+        onSuccess={invalidateAssignmentControlQueries}
+      />
       <ManageAssigneesDialog />
     </div>
   )

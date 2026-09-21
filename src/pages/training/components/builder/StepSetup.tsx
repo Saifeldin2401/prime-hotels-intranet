@@ -134,13 +134,13 @@ export function StepSetup({
       <div className="max-w-5xl mx-auto space-y-6">
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
-            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-right' : 'text-left')}>{t('builder.courseSetup')}</CardTitle>
+            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-end' : 'text-start')}>{t('builder.courseSetup')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-5">
               <div className="space-y-2">
                 <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('title')}</Label>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('title')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -161,11 +161,11 @@ export function StepSetup({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('builder.untitledModule')}
-                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
                 />
               </div>
               <div className="space-y-2">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('builder.audience')}</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('builder.audience')}</Label>
                 <Select value={audience} onValueChange={setAudience}>
                   <SelectTrigger className={cn("bg-white border-slate-200", isRTL ? "flex-row-reverse" : "")}>
                     <SelectValue placeholder={t('builder.audiencePlaceholder')} />
@@ -185,7 +185,7 @@ export function StepSetup({
 
             <div className="space-y-2">
               <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('description')}</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('description')}</Label>
                 <Button
                   type="button"
                   variant="ghost"
@@ -207,13 +207,13 @@ export function StepSetup({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('builder.descriptionHint')}
                 rows={3}
-                className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
               />
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
               <div className="space-y-2">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('category')}</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('category')}</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className={cn("bg-white border-slate-200", isRTL ? "flex-row-reverse" : "")}>
                     <SelectValue placeholder={t('builder.selectCategory')} />
@@ -227,7 +227,7 @@ export function StepSetup({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('builder.difficulty')}</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('builder.difficulty')}</Label>
                 <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
                   <SelectTrigger className={cn("bg-white border-slate-200", isRTL ? "flex-row-reverse" : "")}>
                     <SelectValue placeholder={t('builder.difficultyPlaceholder')} />
@@ -240,7 +240,7 @@ export function StepSetup({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('builder.contentLanguage')}</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('builder.contentLanguage')}</Label>
                 <Select value={contentLanguage} onValueChange={setContentLanguage}>
                   <SelectTrigger className={cn("bg-white border-slate-200", isRTL ? "flex-row-reverse" : "")}>
                     <SelectValue placeholder={t('wizard.selectLanguage')} />
@@ -257,7 +257,7 @@ export function StepSetup({
             <div className="grid md:grid-cols-2 gap-5">
               <div className="space-y-3">
                 <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('duration')} ({t('min')})</Label>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('duration')} ({t('min')})</Label>
                   <div className={cn("flex items-center gap-2 text-xs text-slate-500", isRTL ? "flex-row-reverse" : "")}>
                     <span>{t('builder.overrideDuration', 'Override')}</span>
                     <Switch checked={useEstimatedDuration} onCheckedChange={setUseEstimatedDuration} />
@@ -275,7 +275,7 @@ export function StepSetup({
                   className={cn(
                     "bg-white border-slate-200 focus:ring-hotel-gold",
                     !useEstimatedDuration && "opacity-60",
-                    isRTL ? "text-right" : ""
+                    isRTL ? "text-end" : ""
                   )}
                 />
                 <div className={cn("flex flex-wrap gap-2", isRTL ? "flex-row-reverse" : "")}>
@@ -299,13 +299,13 @@ export function StepSetup({
                 <p className="text-xs text-slate-500">{t('builder.calculatedDuration', { count: calculatedDuration })}</p>
               </div>
               <div className="space-y-3">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('builder.validity')} ({t('builder.days')})</Label>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-end block" : "")}>{t('builder.validity')} ({t('builder.days')})</Label>
                 <Input
                   type="number"
                   value={validityPeriod}
                   onChange={(e) => setValidityPeriod(e.target.value)}
                   placeholder="365"
-                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
                 />
                 <div className={cn("flex flex-wrap gap-2", isRTL ? "flex-row-reverse" : "")}>
                   {validityPresets.map(preset => (
@@ -328,11 +328,11 @@ export function StepSetup({
 
         <Card className="border-dashed border-2 bg-white/60">
           <CardHeader>
-            <CardTitle className={cn("text-sm font-semibold text-slate-700", isRTL ? 'text-right' : 'text-left')}>{t('builder.smartDefaults')}</CardTitle>
+            <CardTitle className={cn("text-sm font-semibold text-slate-700", isRTL ? 'text-end' : 'text-start')}>{t('builder.smartDefaults')}</CardTitle>
           </CardHeader>
           <CardContent className="grid md:grid-cols-2 gap-4 text-sm text-slate-600">
             <div className="space-y-3">
-              <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>{t('builder.template')}</Label>
+              <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-end block" : "")}>{t('builder.template')}</Label>
               <Select value={templatePreset} onValueChange={handleTemplateSelection}>
                 <SelectTrigger className={cn("bg-white border-slate-200", isRTL ? "flex-row-reverse" : "")}>
                   <SelectValue placeholder={t('builder.templatePlaceholder')} />

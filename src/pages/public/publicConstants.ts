@@ -16,13 +16,7 @@ export const mono = { fontFamily: "'IBM Plex Mono', Consolas, monospace" };
 export const cairo = { fontFamily: "'Cairo', 'Tajawal', 'Plus Jakarta Sans', system-ui, sans-serif" };
 
 // Bilingual font helpers
-export const getHeadingFont = (isRTL: boolean) => isRTL ? cairo : canela;
-export const getSansFont = (isRTL: boolean) => isRTL ? cairo : neueHaas;
-export const getBodyFont = (isRTL: boolean) => isRTL ? cairo : inter;
-
 // Legacy alias for compatibility
-export const playfair = canela;
-
 // ALTUS ADVISORY BRAND COLOR SYSTEM
 export const COLOR = {
   creamyWhite: '#F7F5F1', // Primary light background, open space (60%)
@@ -43,8 +37,6 @@ export const COLOR = {
 
 // Animation easing
 export const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
-export const EASE_IN_OUT: [number, number, number, number] = [0.77, 0, 0.175, 1];
-
 // Framer Motion stagger item variant (sub-300ms responsive UI standard)
 export const staggerItem = {
   hidden: { opacity: 0, transform: 'translateY(8px)' },

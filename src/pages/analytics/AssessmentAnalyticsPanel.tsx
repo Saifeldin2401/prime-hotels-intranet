@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
-import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import {
@@ -13,7 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Target, Search, CheckCircle2, HelpCircle, Award, Sparkles, BarChart2 } from 'lucide-react'
+import { AlertTriangle, Target, Search, CheckCircle2, HelpCircle, Award, BarChart2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -203,12 +202,12 @@ export default function AssessmentAnalyticsPanel() {
                               <TableHeader>
                                   <TableRow className="bg-muted/30">
                                       <TableHead className="font-bold">{isRTL ? 'عنوان الاختبار' : 'Quiz Title'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'الجلسات' : 'Sessions'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'الممتحنين' : 'Learners'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'ناجح' : 'Passed'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'راسب' : 'Failed'}</TableHead>
-                                      <TableHead className="w-36 font-bold text-right">{isRTL ? 'نسبة النجاح' : 'Pass Rate'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'المعدل' : 'Avg Score'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'الجلسات' : 'Sessions'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'الممتحنين' : 'Learners'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'ناجح' : 'Passed'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'راسب' : 'Failed'}</TableHead>
+                                      <TableHead className="w-36 font-bold text-end">{isRTL ? 'نسبة النجاح' : 'Pass Rate'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'المعدل' : 'Avg Score'}</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -218,11 +217,11 @@ export default function AssessmentAnalyticsPanel() {
                                               <div className="font-bold text-foreground text-xs">{row.quiz_title}</div>
                                               <span className="text-[10px] text-muted-foreground uppercase font-mono">{row.quiz_type}</span>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.completed_sessions)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_learners)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.passed)}</TableCell>
-                                          <TableCell className="text-right font-mono text-xs text-rose-600 dark:text-rose-400">{formatNumber(row.failed)}</TableCell>
-                                          <TableCell className="text-right">
+                                          <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.completed_sessions)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-muted-foreground">{formatNumber(row.distinct_learners)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-emerald-600 dark:text-emerald-400 font-bold">{formatNumber(row.passed)}</TableCell>
+                                          <TableCell className="text-end font-mono text-xs text-rose-600 dark:text-rose-400">{formatNumber(row.failed)}</TableCell>
+                                          <TableCell className="text-end">
                                               <Badge
                                                   variant="outline"
                                                   className={`text-[10px] font-bold ${
@@ -236,7 +235,7 @@ export default function AssessmentAnalyticsPanel() {
                                                   {formatPercent(row.pass_rate)}
                                               </Badge>
                                           </TableCell>
-                                          <TableCell className="text-right font-mono text-xs font-bold text-foreground">
+                                          <TableCell className="text-end font-mono text-xs font-bold text-foreground">
                                               {formatPercent(row.avg_score)}
                                           </TableCell>
                                       </TableRow>
@@ -294,10 +293,10 @@ export default function AssessmentAnalyticsPanel() {
                               <TableHeader>
                                   <TableRow className="bg-muted/30">
                                       <TableHead className="font-bold">{isRTL ? 'نص السؤال / الوحدة' : 'Question & Module'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'المحاولات' : 'Attempts'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'المحاولات' : 'Attempts'}</TableHead>
                                       <TableHead className="w-44 font-bold">{isRTL ? 'نسبة الصحة' : '% Correct'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'مستوى الصعوبة' : 'Difficulty'}</TableHead>
-                                      <TableHead className="text-right font-bold">{isRTL ? 'معامل التمييز' : 'Discrimination'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'مستوى الصعوبة' : 'Difficulty'}</TableHead>
+                                      <TableHead className="text-end font-bold">{isRTL ? 'معامل التمييز' : 'Discrimination'}</TableHead>
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -319,7 +318,7 @@ export default function AssessmentAnalyticsPanel() {
                                                       <div className="text-[10px] text-muted-foreground mt-0.5">{row.module_title}</div>
                                                   )}
                                               </TableCell>
-                                              <TableCell className="text-right font-mono text-xs font-semibold">{formatNumber(row.attempts)}</TableCell>
+                                              <TableCell className="text-end font-mono text-xs font-semibold">{formatNumber(row.attempts)}</TableCell>
                                               <TableCell>
                                                   <div className="flex items-center gap-2">
                                                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
@@ -334,17 +333,17 @@ export default function AssessmentAnalyticsPanel() {
                                                               style={{ width: `${Math.min(100, Math.max(0, row.pct_correct ?? 0))}%` }}
                                                           />
                                                       </div>
-                                                      <span className="text-xs font-bold text-muted-foreground w-10 text-right">
+                                                      <span className="text-xs font-bold text-muted-foreground w-10 text-end">
                                                           {formatPercent(row.pct_correct)}
                                                       </span>
                                                   </div>
                                               </TableCell>
-                                              <TableCell className="text-right">
+                                              <TableCell className="text-end">
                                                   <Badge variant="outline" className={`text-[10px] ${diff.badgeClass}`}>
                                                       {diff.label}
                                                   </Badge>
                                               </TableCell>
-                                              <TableCell className="text-right font-mono text-xs">
+                                              <TableCell className="text-end font-mono text-xs">
                                                   <span
                                                       className={
                                                           row.discrimination !== null && row.discrimination < 0

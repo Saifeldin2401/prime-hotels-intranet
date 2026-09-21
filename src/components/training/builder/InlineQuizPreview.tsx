@@ -194,7 +194,7 @@ export function InlineQuizPreview({ quizId, onRegenerate, isRTL, compact = false
   const estimatedMins = Math.max(1, Math.ceil(questions.length * 1.5))
 
   return (
-    <div className={cn('space-y-3', isRTL ? 'text-right' : 'text-left')}>
+    <div className={cn('space-y-3', isRTL ? 'text-end' : 'text-start')}>
       {/* Quiz summary bar */}
       <div className={cn(
         'flex items-center gap-3 px-3 py-2 bg-purple-50/80 dark:bg-purple-950/30 rounded-lg border border-purple-100 dark:border-purple-900/50',
@@ -242,7 +242,7 @@ export function InlineQuizPreview({ quizId, onRegenerate, isRTL, compact = false
                 <span className="shrink-0 w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 flex items-center justify-center text-[11px] font-bold mt-0.5">
                   {qIdx + 1}
                 </span>
-                <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+                <div className={cn('flex-1 min-w-0', isRTL ? 'text-end' : 'text-start')}>
                   <p className="text-sm font-medium text-slate-900 dark:text-white leading-snug">
                     {isRTL && question.question_text_ar ? question.question_text_ar : question.question_text}
                   </p>

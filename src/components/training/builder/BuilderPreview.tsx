@@ -38,14 +38,14 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
         <div className="flex-1 p-6 bg-slate-50/30 overflow-y-auto min-h-[calc(100vh-4rem)]">
             <div className="max-w-4xl mx-auto">
                 <Card className="animate-fade-in border-t-4 border-t-hotel-navy shadow-md">
-                    <CardHeader className={cn("bg-white border-b border-gray-100", isRTL ? 'text-right' : 'text-left')}>
+                    <CardHeader className={cn("bg-white border-b border-gray-100", isRTL ? 'text-end' : 'text-start')}>
                         <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <CardTitle className="text-xl font-bold text-hotel-navy">{t('builder.preview')}</CardTitle>
                             <div className="text-xs text-gray-400 uppercase tracking-wider">{t('builder.draftMode')}</div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-8">
-                        <div className={cn("prose max-w-none dark:prose-invert", isRTL ? 'text-right' : 'text-left')}>
+                        <div className={cn("prose max-w-none dark:prose-invert", isRTL ? 'text-end' : 'text-start')}>
                             <h1 className="text-3xl font-bold text-gray-900 mb-4">{title}</h1>
                             <p className="text-lg text-gray-600 mb-10 leading-relaxed">{description}</p>
 
@@ -71,7 +71,7 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                         {item.type === 'quiz' && <FileQuestion className="w-5 h-5" />}
                                                         {item.type === 'sop_reference' && <BookOpen className="w-5 h-5" />}
                                                     </div>
-                                                    <div className={cn("flex-1 min-w-0", isRTL ? "text-right" : "text-left")}>
+                                                    <div className={cn("flex-1 min-w-0", isRTL ? "text-end" : "text-start")}>
                                                         <h3 className="text-lg font-semibold mb-2 text-gray-900">{item.title}</h3>
                                                         {item.content && (
                                                             <InlineErrorBoundary>
@@ -124,7 +124,7 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                                                                 <div className="p-2 bg-white rounded-full text-blue-600 shadow-sm">
                                                                     <Link className="w-5 h-5" />
                                                                 </div>
-                                                                <div className={isRTL ? 'text-right' : 'text-left'}>
+                                                                <div className={isRTL ? 'text-end' : 'text-start'}>
                                                                     <p className="font-medium text-blue-900">{t('builder.attachedDocument')}</p>
                                                                     <a href={item.content_url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline hover:text-blue-800">
                                                                         {t('builder.openDocument')}

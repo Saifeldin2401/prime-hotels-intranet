@@ -17,6 +17,7 @@
  */
 
 import type { QuestionType } from '@/types/questions'
+import type { TablesInsert } from '@/lib/database.types'
 import type {
   CourseBlueprint,
   CourseVisualAsset,
@@ -28,7 +29,7 @@ import type {
 } from '@/types/aiCourseEngine'
 
 // Builder ContentType (mirrors src/pages/training/components/builder/trainingBuilderTypes.ts)
-export type BuilderContentType =
+type BuilderContentType =
   | 'text'
   | 'image'
   | 'video'
@@ -70,6 +71,10 @@ export const LESSON_COMPONENT_BLOCK_MAP: Record<LessonComponentKey, BuilderConte
   action_points: 'text',
   further_reading: 'text',
   assessment: 'quiz',
+  pro_tips: 'text',
+  scenario_branch: 'roleplay',
+  technical_spec: 'text',
+  equipment: 'text',
 }
 
 export const mapLessonComponentToBlockType = (component: LessonComponentKey): BuilderContentType =>
@@ -127,7 +132,7 @@ const inferComponentFromHeading = (heading: string): LessonComponentKey | null =
   return null
 }
 
-export interface ComponentSection {
+interface ComponentSection {
   component: LessonComponentKey
   heading: string
   html: string
@@ -195,7 +200,7 @@ export const splitRenderedHtmlIntoComponentSections = (
 // Block drafts
 // ---------------------------------------------------------------------------
 
-export interface BlueprintBlockDraft {
+interface BlueprintBlockDraft {
   blockType: BuilderContentType
   title: string
   /** English HTML/markup for the block. */
@@ -522,7 +527,7 @@ const normalizeDifficulty = (value: string | undefined): 'easy' | 'medium' | 'ha
   return 'medium'
 }
 
-export interface QuestionRowContext {
+interface QuestionRowContext {
   trainingModuleId: string
   createdBy?: string | null
   sourceDomain?: string
@@ -531,7 +536,7 @@ export interface QuestionRowContext {
 export const buildUnifiedQuestionRow = (
   q: GeneratedUnifiedQuestion,
   ctx: QuestionRowContext,
-): Record<string, unknown> => ({
+): TablesInsert<'unified_questions'> => ({
   source_domain: ctx.sourceDomain || 'knowledge',
   question_text: q.question_text,
   question_text_ar: q.question_text_ar || null,
@@ -555,7 +560,7 @@ export const buildUnifiedQuestionRow = (
 export const buildUnifiedOptionRows = (
   q: GeneratedUnifiedQuestion,
   questionId: string,
-): Record<string, unknown>[] => {
+): TablesInsert<'unified_question_options'>[] => {
   const opts = q.options || []
   if (!opts.length) return []
   return opts.map((opt, idx) => ({
@@ -580,7 +585,7 @@ export const buildQuizQuestionLinkRow = (
   quizId: string,
   questionId: string,
   index: number,
-): Record<string, unknown> => ({
+): TablesInsert<'unified_quiz_questions'> => ({
   quiz_id: quizId,
   question_id: questionId,
   display_order: index + 1,

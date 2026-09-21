@@ -5,13 +5,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
-    AlertCircle,
     ArrowLeft,
     Briefcase,
     Building,
@@ -23,7 +21,6 @@ import {
     Shield,
     Users
 } from 'lucide-react'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import EmployeeTrainingHistory from './EmployeeTrainingHistory'
 
@@ -68,13 +65,6 @@ interface PublicProfileData {
   is_edited: boolean
 }
 
-interface PrivateProfileData {
-  phone: string | null
-  nationality: string | null
-}
-
-const HR_ADMIN_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']
-
 const isValidUuid = (value?: string | null) =>
   !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
@@ -94,13 +84,7 @@ export default function UserProfile() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation(['profile', 'common'])
-  const { user, primaryRole } = useAuth()
   const isValidProfileId = isValidUuid(id)
-
-  const canViewPrivate = useMemo(() => {
-    if (!id || !user?.id) return false
-    return user.id === id || HR_ADMIN_ROLES.includes((primaryRole || 'staff') as AppRole)
-  }, [id, user?.id, primaryRole])
 
   const { data: profile, isLoading, error, refetch } = useQuery({
     queryKey: ['employee-public-profile', id],
@@ -117,22 +101,6 @@ export default function UserProfile() {
       return row as unknown as PublicProfileData
     },
     enabled: !!id && isValidProfileId
-  })
-
-  const { data: privateProfile } = useQuery({
-    queryKey: ['employee-private-profile', id, canViewPrivate],
-    queryFn: async (): Promise<PrivateProfileData | null> => {
-      if (!id || !canViewPrivate) return null
-      const { data, error } = await supabase.rpc('get_employee_private_profile', {
-        p_profile_id: id,
-        p_reason: 'profile_page_view'
-      })
-
-      if (error) throw error
-      const row = Array.isArray(data) ? data[0] : data
-      return (row || null) as unknown as PrivateProfileData | null
-    },
-    enabled: !!id && isValidProfileId && canViewPrivate
   })
 
   if (id && !isValidProfileId) {
@@ -368,33 +336,6 @@ export default function UserProfile() {
                     </>
                   )}
 
-                  {canViewPrivate && privateProfile && (privateProfile.phone || privateProfile.nationality) && (
-                    <>
-                      <Separator className="bg-hotel-gold/10" />
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <AlertCircle className="h-4 w-4 text-amber-500" />
-                          <h3 className="font-bold text-gray-700 uppercase tracking-wider text-xs">
-                            {t('profile:contact_details', 'Contact Details')}
-                          </h3>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                          {privateProfile.phone && (
-                            <div className="rounded-md border p-3">
-                              <div className="text-xs text-gray-500 mb-1">{t('profile:phone_number', 'Phone Number')}</div>
-                              <div className="font-medium">{privateProfile.phone}</div>
-                            </div>
-                          )}
-                          {privateProfile.nationality && (
-                            <div className="rounded-md border p-3">
-                              <div className="text-xs text-gray-500 mb-1">{t('profile:nationality', 'Nationality')}</div>
-                              <div className="font-medium">{privateProfile.nationality}</div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
               </div>
             </CardContent>

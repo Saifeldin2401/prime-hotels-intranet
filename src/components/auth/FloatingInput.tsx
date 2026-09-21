@@ -3,7 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useState, useCallback, memo } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 
-export interface FloatingInputProps {
+interface FloatingInputProps {
   id: string;
   type: string;
   value: string;
@@ -90,7 +90,7 @@ function FloatingInputComponent({
         aria-invalid={ariaInvalid ?? (valid === false && value.length > 0)}
         className={cn(
           'w-full h-13 pt-3.5 pb-1 bg-slate-50/60 border border-slate-200 rounded-2xl outline-none transition-all duration-300 text-slate-900 font-medium text-sm placeholder:text-slate-400',
-          isRTL ? 'pe-11 text-right' : 'ps-11 text-left',
+          isRTL ? 'pe-11 text-end' : 'ps-11 text-start',
           rightElement ? (isRTL ? 'ps-11' : 'pe-11') : '',
           isFocused
             ? 'border-amber-500 bg-white shadow-sm ring-2 ring-amber-500/20'

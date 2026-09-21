@@ -1,18 +1,13 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { 
   GraduationCap, 
   BookOpen, 
-  Award, 
-  ClipboardCheck, 
   ArrowUpRight,
   TrendingUp,
-  Activity,
   Users,
-  CheckSquare,
-  Sparkles
+  CheckSquare
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'

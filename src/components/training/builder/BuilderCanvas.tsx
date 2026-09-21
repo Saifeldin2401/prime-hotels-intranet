@@ -15,7 +15,6 @@ import {
   ArrowDown,
   ArrowUp,
   BookOpen,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Edit3,
@@ -27,7 +26,6 @@ import {
   GraduationCap,
   GripVertical,
   Headphones,
-  Image,
   Layers,
   Link,
   Loader2,
@@ -43,7 +41,7 @@ import { useTranslation } from 'react-i18next'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical' | 'roleplay'
 
-export interface ContentBlockForm {
+interface ContentBlockForm {
   id: string
   type: ContentType
   content: string
@@ -56,7 +54,7 @@ export interface ContentBlockForm {
   order: number
 }
 
-export interface TrainingSection {
+interface TrainingSection {
   id: string
   title: string
   description?: string
@@ -373,7 +371,7 @@ export const BuilderCanvas = ({
                   placeholder={t('builder.courseTitlePlaceholder', 'e.g., Front Desk Guest Check-In & Service Standards SOP')}
                   className={cn(
                     "text-sm font-bold bg-amber-50/20 dark:bg-amber-950/10 border-slate-200 dark:border-slate-800 focus:border-hotel-gold focus:ring-2 focus:ring-hotel-gold/20 h-9",
-                    isRTL ? "text-right" : "text-left"
+                    isRTL ? "text-end" : "text-start"
                   )}
                 />
                 <p className="text-[11px] text-muted-foreground">
@@ -384,7 +382,7 @@ export const BuilderCanvas = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Department / Category */}
                 <div className="space-y-1.5">
-                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-end block" : "")}>
                     {t('category', 'Department / Category')} <span className="text-amber-600">*</span>
                   </Label>
                   {setCategory && (
@@ -410,7 +408,7 @@ export const BuilderCanvas = ({
 
                 {/* Target Audience */}
                 <div className="space-y-1.5">
-                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-end block" : "")}>
                     {t('builder.audience', 'Target Audience')}
                   </Label>
                   {setAudience && (
@@ -432,7 +430,7 @@ export const BuilderCanvas = ({
                 {/* Difficulty & Language */}
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1.5">
-                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-end block" : "")}>
                       {t('builder.difficulty', 'Difficulty')}
                     </Label>
                     {setDifficultyLevel && (
@@ -450,7 +448,7 @@ export const BuilderCanvas = ({
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-end block" : "")}>
                       {t('builder.contentLanguage', 'Language')}
                     </Label>
                     {setContentLanguage && (
@@ -472,7 +470,7 @@ export const BuilderCanvas = ({
               {/* Course Description */}
               {setDescription && (
                 <div className="space-y-1.5">
-                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-end block" : "")}>
                     {t('description', 'Course Description & Learning Outcomes')}
                   </Label>
                   <Textarea
@@ -480,7 +478,7 @@ export const BuilderCanvas = ({
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder={t('builder.descriptionHint', 'Describe key learning objectives, target standards, and procedures covered...')}
-                    className={cn("text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 resize-none", isRTL ? "text-right" : "")}
+                    className={cn("text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 resize-none", isRTL ? "text-end" : "")}
                   />
                 </div>
               )}
@@ -841,7 +839,7 @@ export const BuilderCanvas = ({
                                     {getContentIcon(item.type)}
                                   </div>
 
-                                  <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+                                  <div className={cn('flex-1 min-w-0', isRTL ? 'text-end' : 'text-start')}>
                                     <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
                                       {item.title || 'Untitled Lesson Block'}
                                     </p>

@@ -6,15 +6,7 @@
 import { aiCourseOrchestrator, CourseGenerationCancelledError } from '@/lib/ai/agents/orchestrator'
 import { imageAgent } from '@/lib/ai/agents/imageAgent'
 import {
-  analyzeLessonVisualOpportunities,
-  auditCourseQuality,
-  DEFAULT_IMAGE_CONFIG,
-  generateCourseBlueprint,
-  generateExpandedQuiz,
-  generateTemplatedLessonContent,
-  refineCourseComponent,
-  validateCourseBlueprint,
-  validateQuizQuestions,
+  refineCourseComponent
 } from '@/lib/ai/courseEngine'
 import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
 import {
@@ -28,12 +20,12 @@ import { getPipelineTelemetry } from '@/lib/ai/observability'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { aiAgentPolicyService } from '@/services/aiAgentPolicyService'
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/lib/database.types'
 import {
   cloudflareProvider,
   DEFAULT_CLOUDFLARE_IMAGE_MODEL,
 } from '@/lib/ai/imageProviders/cloudflareProvider'
 import type {
-  CloudflareImageModel,
   CloudflareUsageStats,
   CourseBlueprint,
   CourseGenerationCheckpoint,
@@ -42,8 +34,6 @@ import type {
   CourseQAQualityReport,
   CourseVisualAsset,
   FullCourseGenerationConfig,
-  GeneratedUnifiedQuestion,
-  LessonBlueprint,
   QuizBlueprint,
   VisualOpportunity,
 } from '@/types/aiCourseEngine'
@@ -483,24 +473,17 @@ export const aiCourseEngineService = {
     let userPropertyId: string | null = null
     let userOrgId: string | null = null
     if (currentUserId) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('property_id, organization_id')
-        .eq('id', currentUserId)
-        .single()
-      userPropertyId = profile?.property_id || null
-      userOrgId = (profile as any)?.organization_id || null
-
-      if (!userOrgId) {
-        const { data: member } = await supabase
-          .from('organization_memberships')
-          .select('organization_id')
-          .eq('user_id', currentUserId)
-          .eq('is_active', true)
-          .limit(1)
-          .maybeSingle()
-        userOrgId = member?.organization_id || null
-      }
+      // Org and hotel both live on the active membership (profiles has no property column).
+      const { data: member } = await supabase
+        .from('organization_memberships')
+        .select('organization_id, hotel_id')
+        .eq('user_id', currentUserId)
+        .eq('is_active', true)
+        .order('is_primary', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      userOrgId = member?.organization_id || null
+      userPropertyId = member?.hotel_id || null
     }
 
     // 2. Insert or update training_module
@@ -693,7 +676,7 @@ export const aiCourseEngineService = {
           is_mandatory: draft.isMandatory,
           duration_seconds: draft.durationSeconds ?? null,
           ai_generated: true,
-          content_data: contentData,
+          content_data: contentData as Json,
         })
         .select('id')
         .single()
@@ -831,7 +814,7 @@ export const aiCourseEngineService = {
       console.warn('Error fetching course generation presets:', error)
       return []
     }
-    return (data || []) as CourseGenerationPreset[]
+    return (data || []) as unknown as CourseGenerationPreset[]
   },
 
   /**
@@ -858,7 +841,7 @@ export const aiCourseEngineService = {
     if (error || !data) {
       throw new Error(`Failed to save preset: ${error?.message || 'Unknown error'}`)
     }
-    return data as CourseGenerationPreset
+    return data as unknown as CourseGenerationPreset
   },
 
   /**
@@ -875,7 +858,7 @@ export const aiCourseEngineService = {
       console.warn('Error fetching course generation jobs:', error)
       return []
     }
-    return (data || []) as CourseGenerationJob[]
+    return (data || []) as unknown as CourseGenerationJob[]
   },
 
   /**

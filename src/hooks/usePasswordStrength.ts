@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-export interface PasswordStrength {
+interface PasswordStrength {
   score: number;
   label: string;
   color: string;

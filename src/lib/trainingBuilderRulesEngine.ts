@@ -6,13 +6,13 @@
  * and dynamically calculates field visibility, mandatory requirements, and scope provenance.
  */
 
-import type { ContentBlockForm, TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
+import type { TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
 
 // ---------------------------------------------------------------------------
 // Types & Interfaces
 // ---------------------------------------------------------------------------
 
-export interface BuilderContentAnalysis {
+interface BuilderContentAnalysis {
   totalSections: number
   totalItems: number
   quizCount: number
@@ -30,16 +30,16 @@ export interface BuilderContentAnalysis {
   contentTypesPresent: Set<string>
 }
 
-export type ConfigScopeProvenance = 'training_default' | 'module_override' | 'section_override' | 'block_override'
+type ConfigScopeProvenance = 'training_default' | 'module_override' | 'section_override' | 'block_override'
 
-export interface ScopeProvenanceInfo {
+interface ScopeProvenanceInfo {
   field: string
   source: ConfigScopeProvenance
   sourceLabel: string
   isOverridden: boolean
 }
 
-export interface BuilderVisibilityRules {
+interface BuilderVisibilityRules {
   // Section visibility flags
   showQuizRules: boolean
   showMediaRules: boolean

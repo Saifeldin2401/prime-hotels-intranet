@@ -102,4 +102,11 @@ export default defineConfig([
       'no-restricted-syntax': 'off',
     },
   },
+  {
+    // Tests capture hook values from throwaway consumer components on purpose.
+    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'react-hooks/globals': 'off',
+    },
+  },
 ])

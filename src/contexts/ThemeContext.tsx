@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
 import type { Theme, ThemeMode } from '../lib/theme'
 import { lightTheme } from '../lib/theme'
 import { safeLocalStorage } from '@/lib/storage'
@@ -43,12 +43,4 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       {children}
     </ThemeContext.Provider>
   )
-}
-
-export function useTheme() {
-  const context = useContext(ThemeContext)
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
 }

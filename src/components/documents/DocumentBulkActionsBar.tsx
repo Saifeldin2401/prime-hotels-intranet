@@ -326,7 +326,7 @@ export function DocumentBulkActionsBar({
                 type="button"
                 onClick={() => setSelectedFolderId(null)}
                 className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors",
+                  "w-full flex items-center gap-3 p-3 rounded-md text-start transition-colors",
                   selectedFolderId === null
                     ? "bg-[#0B1C3E] text-white"
                     : "hover:bg-muted"
@@ -343,7 +343,7 @@ export function DocumentBulkActionsBar({
                   key={folder.id}
                   onClick={() => setSelectedFolderId(folder.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors",
+                    "w-full flex items-center gap-3 p-3 rounded-md text-start transition-colors",
                     selectedFolderId === folder.id
                       ? "bg-[#0B1C3E] text-white"
                       : "hover:bg-muted"
@@ -429,7 +429,7 @@ export function DocumentBulkActionsBar({
                       )
                     }
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors border",
+                      "w-full flex items-center gap-3 p-3 rounded-md text-start transition-colors border",
                       selectedTagIds.includes(tag.id)
                         ? "border-primary bg-primary/5"
                         : "border-transparent hover:bg-muted"

@@ -2,30 +2,23 @@ import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyAssignments } from '@/hooks/useTraining'
 import { calculateStreak } from '@/lib/training/analytics'
 import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 import { cn } from '@/lib/utils'
-import type { LearningAssignment } from '@/types/learning'
 import {
     AlertCircle,
-    Award,
-    BookOpen,
     CheckCircle2,
-    Clock,
     Compass,
-    FileQuestion,
     Filter,
-    Flame,
     LayoutGrid,
     List,
     Loader2,
     Play,
     Search,
-    ShieldCheck,
     Sparkles,
     TrendingUp,
     X,
@@ -35,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { CurriculumCard, type CurriculumItem } from '@/components/learner/CurriculumCard'
 import { CurriculumTable } from '@/components/learner/CurriculumTable'
+import { toSimpleT } from '@/lib/simpleT'
 
 export default function MyLearning() {
     const { t, i18n } = useTranslation(['training', 'common', 'dashboard'])
@@ -560,7 +554,7 @@ export default function MyLearning() {
                                 key={item.id}
                                 item={item}
                                 isRTL={isRTL}
-                                t={t}
+                                t={toSimpleT(t)}
                             />
                         ))}
                     </div>
@@ -593,12 +587,12 @@ export default function MyLearning() {
                     </div>
                 )
             ) : (
-                <CurriculumTable items={displayItems} isRTL={isRTL} t={t} />
+                <CurriculumTable items={displayItems} isRTL={isRTL} t={toSimpleT(t)} />
             )}
 
             {/* 6. Daily Quiz / Microlearning Section */}
             <div className="mt-8 border-t border-border/40 pt-6">
-                <InlineErrorBoundary section="Daily Quiz">
+                <InlineErrorBoundary>
                     <DailyQuizWidget />
                 </InlineErrorBoundary>
             </div>

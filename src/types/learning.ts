@@ -79,6 +79,7 @@ export interface LearningAssignment {
 
     // Meta
     priority: 'normal' | 'high' | 'compliance'
+    is_mandatory?: boolean | null
     assigned_by?: string
     created_at: string
 

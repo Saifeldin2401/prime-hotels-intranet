@@ -36,7 +36,7 @@ export function RouteFallbackUI({
                     </p>
 
                     {import.meta.env.DEV && error && (
-                        <div className="bg-gray-50 p-4 rounded-lg text-left">
+                        <div className="bg-gray-50 p-4 rounded-lg text-start">
                             <p className="font-mono text-sm text-red-600 mb-2">{error.toString()}</p>
                             {errorInfo && (
                                 <pre className="font-mono text-xs text-gray-600 overflow-auto max-h-40">

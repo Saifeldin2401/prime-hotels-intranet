@@ -88,7 +88,7 @@ export function RightPanel({
   // -------------------------------------------------------------------------
   if (builderStep === 'content') {
     return (
-      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-right" : "text-left")}>
+      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-end" : "text-start")}>
         {/* Course Health & Readiness Card */}
         <Card className="w-full shadow-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           <CardHeader className="pb-2 pt-3 px-3">
@@ -265,7 +265,7 @@ export function RightPanel({
   // -------------------------------------------------------------------------
   if (builderStep === 'rules') {
     return (
-      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-right" : "text-left")}>
+      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-end" : "text-start")}>
         <Card className="w-full shadow-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           <CardHeader className="pb-2 pt-3 px-3">
             <CardTitle className={cn("text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5", isRTL ? 'flex-row-reverse' : '')}>
@@ -314,7 +314,7 @@ export function RightPanel({
   // -------------------------------------------------------------------------
   if (builderStep === 'preview' || builderStep === 'publish') {
     return (
-      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-right" : "text-left")}>
+      <div className={cn("p-3 space-y-3 w-full max-w-full box-border", isRTL ? "text-end" : "text-start")}>
         <Card className="w-full shadow-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden">
           <CardHeader className="pb-2 pt-3 px-3">
             <CardTitle className={cn("text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")}>

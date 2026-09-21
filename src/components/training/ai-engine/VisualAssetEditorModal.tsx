@@ -6,7 +6,6 @@
 import DOMPurify from 'dompurify'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -24,19 +23,11 @@ import { useToast } from '@/components/ui/use-toast'
 import { useDeleteVisualAsset, useGenerateVisualAsset, useUpdateVisualAsset } from '@/hooks/useCourseVisualAssets'
 import type { CourseVisualAsset, VisualPlacement, VisualStyle } from '@/types/aiCourseEngine'
 import {
-  Check,
-  Cpu,
-  Eye,
-  FileImage,
   ImageIcon,
-  Layers,
   Loader2,
-  RefreshCw,
   RotateCw,
   Save,
-  Sparkles,
-  Trash2,
-  Wand2,
+  Trash2
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'

@@ -39,8 +39,16 @@ export async function uploadSourceDocument(
 
   let propertyId: string | null = null
   try {
-    const { data: profile } = await supabase.from('profiles').select('property_id').eq('id', uid).single()
-    propertyId = profile?.property_id ?? null
+    // A user's hotel lives on their active membership (profiles has no property column).
+    const { data: membership } = await supabase
+      .from('organization_memberships')
+      .select('hotel_id')
+      .eq('user_id', uid)
+      .eq('is_active', true)
+      .order('is_primary', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    propertyId = membership?.hotel_id ?? null
   } catch { /* property optional */ }
 
   const safeName = file.name.replace(/[^\w.-]+/g, '_').slice(0, 120)
@@ -89,24 +97,6 @@ export async function uploadSourceDocument(
     fileType: file.type || extOf(file.name),
     fileSize: file.size,
     uploaded: true,
-  }
-}
-
-/** Reference an existing Knowledge Base / Document Library file — no upload. */
-export function libraryDocRef(doc: {
-  id: string
-  title?: string | null
-  file_type?: string | null
-  file_extension?: string | null
-  file_size?: number | null
-  content_type?: string | null
-}): SourceDocumentRef {
-  return {
-    documentId: doc.id,
-    originalFilename: doc.title || 'Library document',
-    fileType: doc.file_type || doc.file_extension || doc.content_type || undefined,
-    fileSize: doc.file_size ?? undefined,
-    uploaded: false,
   }
 }
 

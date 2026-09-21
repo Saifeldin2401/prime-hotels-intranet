@@ -610,36 +610,6 @@ export async function logCertificateAction(
 }
 
 /**
- * Revoke a certificate
- */
-export async function revokeCertificate(
-    certificateId: string,
-    reason: string,
-    revokedBy: string
-): Promise<boolean> {
-    const { error } = await supabase
-        .from('certificates')
-        .update({
-            status: 'revoked',
-            revocation_reason: reason,
-            revoked_by: revokedBy,
-            revoked_at: new Date().toISOString()
-        })
-        .eq('id', certificateId)
-
-    if (!error) {
-        await supabase.from('certificate_history').insert({
-            certificate_id: certificateId,
-            action: 'revoked',
-            performed_by: revokedBy,
-            details: { reason }
-        })
-    }
-
-    return !error
-}
-
-/**
  * Map database record to Certificate type
  */
 export function mapCertificateFromDb(record: CertificateRecord): Certificate {

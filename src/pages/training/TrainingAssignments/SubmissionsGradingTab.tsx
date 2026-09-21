@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
 import {
   assignmentSubmissionService,
   type SubmissionStatus,
@@ -32,13 +31,10 @@ import {
   type AssignmentEvaluationResult
 } from '@/lib/gemini'
 import {
-  AlertCircle,
-  Award,
   Check,
   CheckCircle2,
   Clock,
   Download,
-  Eye,
   FileCheck,
   FileText,
   Filter,
@@ -48,9 +44,6 @@ import {
   RotateCcw,
   Search,
   Sparkles,
-  TrendingUp,
-  UserCheck,
-  Users,
   Wand2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -301,7 +294,7 @@ export function SubmissionsGradingTab() {
       {/* Submissions Table */}
       <Card className="border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-start">
             <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-600">
               <tr>
                 <th className="px-4 py-3">{t('learner', 'Learner')}</th>
@@ -309,7 +302,7 @@ export function SubmissionsGradingTab() {
                 <th className="px-4 py-3">{t('submittedDate', 'Submitted')}</th>
                 <th className="px-4 py-3">{t('status', 'Status')}</th>
                 <th className="px-4 py-3">{t('score', 'Score')}</th>
-                <th className="px-4 py-3 text-right">{t('actions', 'Actions')}</th>
+                <th className="px-4 py-3 text-end">{t('actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -368,7 +361,7 @@ export function SubmissionsGradingTab() {
                     <td className="px-4 py-3 font-mono font-semibold text-xs text-slate-700">
                       {sub.score !== null && sub.score !== undefined ? `${sub.score}%` : '-'}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       <Button
                         size="sm"
                         onClick={() => openReviewModal(sub)}

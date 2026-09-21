@@ -8,7 +8,7 @@
  * 4. User selection of official ALTUS executive presets.
  */
 
-export const ALTUS_AVATAR_PRESETS = {
+const ALTUS_AVATAR_PRESETS = {
     male: '/assets/altus/learner-male.jpg',
     female: '/assets/altus/learner-female.jpg',
 } as const
@@ -31,7 +31,7 @@ const KNOWN_FEMALE_FIRST_NAMES = new Set([
     'هاجر', 'غادة', 'غاده', 'لبنى', 'رحاب', 'شذى', 'وفاء', 'مروة', 'مروه', 'زهراء'
 ])
 
-export interface ProfileAvatarInput {
+interface ProfileAvatarInput {
     avatar_url?: string | null
     full_name?: string | null
     gender?: string | null

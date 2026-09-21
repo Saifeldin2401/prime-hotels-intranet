@@ -523,34 +523,3 @@ export function DocumentPicker({
 }
 
 // Hook for managing DocumentPicker dialog state
-export function useDocumentPickerDialog() {
-  const [open, setOpen] = useState(false)
-  const [config, setConfig] = useState<DocumentPickerConfig>({})
-  const [title, setTitle] = useState('Select Documents')
-  const [onSelectCallback, setOnSelectCallback] = useState<((documents: Document[]) => void) | null>(null)
-
-  const openPicker = useCallback((options?: { 
-    config?: DocumentPickerConfig
-    title?: string
-    onSelect?: (documents: Document[]) => void 
-  }) => {
-    if (options?.config) setConfig(options.config)
-    if (options?.title) setTitle(options.title)
-    if (options?.onSelect) setOnSelectCallback(() => options.onSelect!)
-    setOpen(true)
-  }, [])
-
-  const handleSelect = useCallback((documents: Document[]) => {
-    onSelectCallback?.(documents)
-    setOpen(false)
-  }, [onSelectCallback])
-
-  return {
-    open,
-    setOpen,
-    config,
-    title,
-    openPicker,
-    onSelect: handleSelect,
-  }
-}

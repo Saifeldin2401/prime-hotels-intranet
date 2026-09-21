@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Flame, ChevronRight, Award, ShieldCheck, Check } from 'lucide-react'
+import { Flame, ChevronRight, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface LearningStreakBadgesProps {

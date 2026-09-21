@@ -16,13 +16,14 @@ import { checklistArchitectAgent } from './checklistArchitectAgent'
 import { faqArchitectAgent } from './faqArchitectAgent'
 import { quickRefArchitectAgent } from './quickRefArchitectAgent'
 import type { CourseVisualAsset } from '@/types/aiCourseEngine'
+import type { ModelProvider } from '../types'
 import type {
   GeneratedKnowledgeArticle,
   KnowledgeArticleGenerationConfig,
   KnowledgePipelineEventListener,
 } from './types'
 
-export class KnowledgeArticleOrchestrator {
+class KnowledgeArticleOrchestrator {
   private static instance: KnowledgeArticleOrchestrator
 
   private constructor() {}
@@ -149,7 +150,7 @@ export class KnowledgeArticleOrchestrator {
 
     let rawAgentResult: any = null
     let modelUsed = 'gemini-2.5-flash'
-    let providerUsed = 'gemini' as const
+    let providerUsed: ModelProvider | undefined = 'gemini'
 
     switch (config.contentType) {
       case 'policy': {
@@ -182,8 +183,9 @@ export class KnowledgeArticleOrchestrator {
         break
       }
 
-      case 'quick_reference':
-      case 'how_to': {
+      // Reference cards and how-to guides use the quick-reference architect.
+      case 'reference':
+      case 'guide': {
         const res = await quickRefArchitectAgent.process(enrichedConfig, {
           preferredModel: config.preferredModel,
         })
@@ -277,11 +279,13 @@ export class KnowledgeArticleOrchestrator {
       'مطابقة الوثيقة مع لوائح وزارة السياحة والبلدية والدفاع المدني...'
     )
 
-    const complianceMockSection = [
+    // Wrap the generated article in the section shape the compliance shield audits.
+    const articleAuditSection = [
       {
         id: 'sec-1',
         title: normalized.title,
         description: normalized.description,
+        order: 0,
         items: [
           {
             id: 'item-1',
@@ -294,8 +298,8 @@ export class KnowledgeArticleOrchestrator {
       },
     ]
 
-    const complianceReport = complianceShield.auditModule(complianceMockSection)
-    const complianceScore = complianceReport.overallScore ?? 95
+    const complianceReport = complianceShield.auditModule(articleAuditSection)
+    const complianceScore = complianceReport.score
     const complianceNotes = complianceReport.findings.map((f) => `[${f.authorityName}] ${f.title}`)
 
     // ========================================================================

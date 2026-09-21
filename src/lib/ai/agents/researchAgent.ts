@@ -10,7 +10,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import type { AgentExecutionResult, AgentRole } from './types'
 
-export interface ResearchAgentInput {
+interface ResearchAgentInput {
   topic: string
   courseType?: string
   targetAudience?: string
@@ -38,7 +38,7 @@ export interface ResearchFindings {
   }>
 }
 
-export class ResearchAgent extends BaseAIAgent<ResearchAgentInput, ResearchFindings> {
+class ResearchAgent extends BaseAIAgent<ResearchAgentInput, ResearchFindings> {
   public readonly role: AgentRole = 'research'
   public readonly name = 'Research & Industry Intelligence Agent'
   public readonly nameAr = 'وكيل البحث واستخبارات المعايير الفندقية'

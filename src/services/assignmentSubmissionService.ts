@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/lib/database.types'
 
 export type SubmissionStatus =
   | 'draft'
@@ -63,7 +64,7 @@ export interface TrainingAssignmentSubmission {
   } | null
 }
 
-export interface SubmitAssignmentDTO {
+interface SubmitAssignmentDTO {
   moduleId: string
   blockId: string
   assignmentId?: string | null
@@ -72,7 +73,7 @@ export interface SubmitAssignmentDTO {
   status?: SubmissionStatus
 }
 
-export interface ReviewSubmissionDTO {
+interface ReviewSubmissionDTO {
   submissionId: string
   status: 'approved' | 'revision_required' | 'rejected'
   score?: number
@@ -118,7 +119,7 @@ export const assignmentSubmissionService = {
     return {
       ...data,
       attachment_urls: Array.isArray(data.attachment_urls) ? data.attachment_urls : []
-    } as TrainingAssignmentSubmission
+    } as unknown as TrainingAssignmentSubmission
   },
 
   /**
@@ -150,7 +151,7 @@ export const assignmentSubmissionService = {
         byBlockId[item.block_id] = {
           ...item,
           attachment_urls: Array.isArray(item.attachment_urls) ? item.attachment_urls : []
-        } as TrainingAssignmentSubmission
+        } as unknown as TrainingAssignmentSubmission
       }
     }
     return byBlockId
@@ -175,7 +176,7 @@ export const assignmentSubmissionService = {
           .from('training_assignment_submissions')
           .update({
             submission_content: dto.content,
-            attachment_urls: dto.attachments || [],
+            attachment_urls: (dto.attachments || []) as unknown as Json,
             status: dto.status || 'submitted',
             submitted_at: dto.status === 'draft' ? null : new Date().toISOString(),
             assignment_id: dto.assignmentId || existing.assignment_id,
@@ -186,7 +187,7 @@ export const assignmentSubmissionService = {
           .single()
 
         if (error) throw error
-        return data as TrainingAssignmentSubmission
+        return data as unknown as TrainingAssignmentSubmission
       }
 
       if (existing.status === 'revision_required' || existing.status === 'rejected') {
@@ -197,7 +198,7 @@ export const assignmentSubmissionService = {
           .from('training_assignment_submissions')
           .update({
             submission_content: dto.content,
-            attachment_urls: dto.attachments || [],
+            attachment_urls: (dto.attachments || []) as unknown as Json,
             status: dto.status || 'submitted',
             submitted_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -207,7 +208,7 @@ export const assignmentSubmissionService = {
           .single()
 
         if (error) throw error
-        return data as TrainingAssignmentSubmission
+        return data as unknown as TrainingAssignmentSubmission
       }
     }
 
@@ -220,7 +221,7 @@ export const assignmentSubmissionService = {
       assignment_id: dto.assignmentId || null,
       status: isDraft ? 'draft' : 'submitted',
       submission_content: dto.content || '',
-      attachment_urls: dto.attachments || [],
+      attachment_urls: (dto.attachments || []) as unknown as Json,
       attempt_number: nextAttempt,
       submitted_at: isDraft ? null : new Date().toISOString()
     }
@@ -232,7 +233,7 @@ export const assignmentSubmissionService = {
       .single()
 
     if (error) throw error
-    return data as TrainingAssignmentSubmission
+    return data as unknown as TrainingAssignmentSubmission
   },
 
   /**
@@ -319,7 +320,7 @@ export const assignmentSubmissionService = {
     const formatted = (data || []).map((sub) => ({
       ...sub,
       attachment_urls: Array.isArray(sub.attachment_urls) ? sub.attachment_urls : []
-    })) as TrainingAssignmentSubmission[]
+    })) as unknown as TrainingAssignmentSubmission[]
 
     return {
       submissions: formatted,
@@ -375,7 +376,7 @@ export const assignmentSubmissionService = {
       }
     }
 
-    return data as TrainingAssignmentSubmission
+    return data as unknown as TrainingAssignmentSubmission
   },
 
   /**

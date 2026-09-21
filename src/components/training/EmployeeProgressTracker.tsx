@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import type { LearningProgress } from '@/hooks/useLearningProgress'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, BookOpen, CheckCircle2, Clock, Eye, Filter, Loader2, MoreVertical, RotateCcw, Search, Shield, TrendingUp, UserX } from 'lucide-react'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface TrackerStatusMeta {
@@ -478,7 +478,7 @@ export function EmployeeProgressTracker({
                       )}
                     >
                       <AccordionTrigger className="px-4 py-3.5 hover:no-underline [&[data-state=open]]:bg-slate-50/50">
-                        <div className="flex w-full items-center gap-4 text-left">
+                        <div className="flex w-full items-center gap-4 text-start">
                           {/* ── Avatar ── */}
                           <Avatar className="size-10 shrink-0 border border-slate-200 shadow-sm">
                             <AvatarImage src={group.avatarUrl || ''} />
@@ -537,7 +537,7 @@ export function EmployeeProgressTracker({
                                 {group.averageProgress}%
                               </span>
                             </div>
-                            <div className="flex flex-col items-end gap-0.5 text-right">
+                            <div className="flex flex-col items-end gap-0.5 text-end">
                               <span className="text-xs text-muted-foreground">{t('analytics.avgScore', 'Avg Score')}</span>
                               <span className="text-lg font-bold text-slate-800">
                                 {group.averageScore !== null ? `${group.averageScore}%` : '—'}

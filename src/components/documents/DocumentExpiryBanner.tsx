@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import { differenceInDays, format, isPast, isToday } from "date-fns";
 import {
-    AlertCircle,
     AlertTriangle,
     ArrowRight,
     Calendar,
@@ -28,9 +27,9 @@ import {
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
-export type ExpiryWarningLevel = "critical" | "warning" | "notice" | "expired";
+type ExpiryWarningLevel = "critical" | "warning" | "notice" | "expired";
 
-export interface DocumentExpiryInfo {
+interface DocumentExpiryInfo {
   id: string;
   title: string;
   expiryDate: string;
@@ -361,7 +360,7 @@ export function DocumentExpiryBanner({
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-left font-normal"
+                  className="w-full justify-start text-start font-normal"
                 >
                   <Calendar className="me-2 h-4 w-4" />
                   {newExpiryDate ? (
@@ -415,53 +414,4 @@ export function DocumentExpiryBanner({
 interface DocumentExpiryInlineProps {
   expiryDate: string;
   className?: string;
-}
-
-export function DocumentExpiryInline({
-  expiryDate,
-  className,
-}: DocumentExpiryInlineProps) {
-  const expiry = new Date(expiryDate);
-  const now = new Date();
-  const daysRemaining = differenceInDays(expiry, now);
-
-  if (isPast(expiry) && !isToday(expiry)) {
-    return (
-      <Badge variant="destructive" className={cn("gap-1", className)}>
-        <AlertCircle className="w-3 h-3" />
-        Expired
-      </Badge>
-    );
-  }
-
-  if (isToday(expiry)) {
-    return (
-      <Badge
-        variant="outline"
-        className={cn("gap-1 bg-red-100 text-red-700 border-red-200", className)}
-      >
-        <Clock className="w-3 h-3" />
-        Expires today
-      </Badge>
-    );
-  }
-
-  if (daysRemaining <= 7) {
-    return (
-      <Badge
-        variant="outline"
-        className={cn("gap-1 bg-amber-100 text-amber-700 border-amber-200", className)}
-      >
-        <Clock className="w-3 h-3" />
-        {daysRemaining} days left
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="outline" className={cn("gap-1", className)}>
-      <Calendar className="w-3 h-3" />
-      {format(expiry, "MMM d")}
-    </Badge>
-  );
 }

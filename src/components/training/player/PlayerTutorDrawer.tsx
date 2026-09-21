@@ -1,12 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import {
-    Sparkles,
     Send,
     Bot,
     User,
@@ -17,7 +15,6 @@ import {
     HelpCircle,
     ListChecks,
     Lightbulb,
-    Languages,
     Loader2
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -184,7 +181,7 @@ INSTRUCTIONS:
             <div
                 className={cn(
                     "fixed inset-y-0 z-[100] w-full sm:w-[440px] bg-slate-950 text-slate-100 shadow-2xl border-s border-slate-800 flex flex-col transition-transform duration-300 animate-in slide-in-from-right",
-                    isRTL ? "left-0 border-r border-s-0 slide-in-from-left" : "right-0"
+                    isRTL ? "start-0 border-e border-s-0 slide-in-from-left" : "end-0"
                 )}
             >
                 {/* Header */}
@@ -289,8 +286,8 @@ INSTRUCTIONS:
                                 className={cn(
                                     "max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed relative group",
                                     msg.sender === 'user'
-                                        ? "bg-amber-500 text-slate-950 font-medium rounded-tr-xs"
-                                        : "bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-xs shadow-md"
+                                        ? "bg-amber-500 text-slate-950 font-medium rounded-se-xs"
+                                        : "bg-slate-900 border border-slate-800 text-slate-200 rounded-ss-xs shadow-md"
                                 )}
                             >
                                 <p className="whitespace-pre-wrap">{msg.text}</p>

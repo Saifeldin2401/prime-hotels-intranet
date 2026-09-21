@@ -1,4 +1,3 @@
-import React, { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -6,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
-import { Shield, ShieldAlert, ShieldCheck, Users, RefreshCw, KeyRound, Lock } from 'lucide-react'
+import { Shield, Users, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TenantRole } from '@/lib/types/tenant'
 

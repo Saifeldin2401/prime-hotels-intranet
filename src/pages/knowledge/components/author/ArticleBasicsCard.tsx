@@ -3,10 +3,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertTriangle, Clock, Hash, Sparkles, X } from 'lucide-react'
+import { AlertTriangle, Clock, Hash, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
-export interface ContentTypeOption {
+interface ContentTypeOption {
   type: string
   label: string
   icon?: string

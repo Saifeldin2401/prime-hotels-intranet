@@ -9,7 +9,6 @@
 import DOMPurify from 'dompurify'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -29,21 +28,15 @@ import { modelRegistry } from '@/lib/ai/agents/modelRegistry'
 import type { MediaCategory } from '@/lib/types/media'
 import type { VisualStyle } from '@/types/aiCourseEngine'
 import {
-  Check,
-  Cpu,
   ImageIcon,
-  Layers,
   Loader2,
-  Palette,
   Plus,
-  RefreshCw,
-  RotateCw,
   Save,
   Sparkles,
   Wand2,
   X,
 } from 'lucide-react'
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 

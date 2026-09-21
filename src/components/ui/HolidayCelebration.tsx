@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import Confetti from 'react-confetti';
 import { useTranslation } from 'react-i18next';
 
-export type HolidayEvent = 'RAMADAN' | 'EID_FITR' | 'EID_ADHA' | 'SAUDI_NATIONAL' | 'SAUDI_FOUNDING' | null;
+type HolidayEvent = 'RAMADAN' | 'EID_FITR' | 'EID_ADHA' | 'SAUDI_NATIONAL' | 'SAUDI_FOUNDING' | null;
 
 function useWindowSize() {
   const [size, setSize] = useState(() => ({

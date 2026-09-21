@@ -19,7 +19,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
-export interface SidebarCounts {
+interface SidebarCounts {
     unreadNotifications: number
     pendingApprovals: number
     overdueTasks: number
@@ -257,26 +257,3 @@ export function useSidebarCounts() {
         },
     })
 }
-
-/**
- * Helper hook to get total badge count for a specific navigation item
- */
-export function useBadgeCount(navPath: string): number | undefined {
-    const { data: counts } = useSidebarCounts()
-
-    if (!counts) return undefined
-
-    // Map navigation paths to their corresponding counts
-    const pathCountMap: Record<string, number> = {
-        '/approvals': counts.pendingApprovals,
-        '/tasks': counts.overdueTasks,
-        '/messaging': counts.unreadMessages,
-        '/learning/my': counts.pendingTraining,
-        '/knowledge': counts.requiredReading,
-        '/hr/goals': counts.activeGoals,
-    }
-
-    const count = pathCountMap[navPath]
-    return count && count > 0 ? count : undefined
-}
-

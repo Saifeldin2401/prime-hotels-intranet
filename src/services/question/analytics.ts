@@ -1,34 +1,5 @@
 import { supabase } from '@/lib/supabase'
 
-export async function getQuestionAnalytics(questionId: string): Promise<{
-    totalAttempts: number
-    correctAttempts: number
-    accuracyRate: number
-    avgTimeSeconds: number
-    hintUsageRate: number
-}> {
-    const { data, error } = await supabase
-        .from('unified_question_attempts')
-        .select('is_correct, time_spent_seconds, hint_used')
-        .eq('question_id', questionId)
-
-    if (error) throw error
-
-    const attempts = data || []
-    const total = attempts.length
-    const correct = attempts.filter(a => a.is_correct).length
-    const totalTime = attempts.reduce((sum, a) => sum + (a.time_spent_seconds || 0), 0)
-    const hintsUsed = attempts.filter(a => a.hint_used).length
-
-    return {
-        totalAttempts: total,
-        correctAttempts: correct,
-        accuracyRate: total > 0 ? (correct / total) * 100 : 0,
-        avgTimeSeconds: total > 0 ? totalTime / total : 0,
-        hintUsageRate: total > 0 ? (hintsUsed / total) * 100 : 0
-    }
-}
-
 export async function getUserQuestionStats(userId: string): Promise<{
     totalAttempts: number
     correctAnswers: number

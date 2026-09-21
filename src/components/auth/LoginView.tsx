@@ -11,13 +11,9 @@ import {
   Mail,
   Shield,
   WifiOff,
-  Lock,
-  ShieldAlert,
-  Sparkles,
+  ShieldAlert
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FloatingInput } from './FloatingInput';
 import { PasswordField } from './PasswordField';
@@ -29,9 +25,9 @@ import { getRemainingAttempts } from '@/lib/authSecurityService';
 import { safeLocalStorage, safeSessionStorage } from '@/lib/storage';
 import { REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout';
 
-export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout';
+type ErrorType = 'auth' | 'network' | 'rate' | 'lockout';
 
-export interface LoginViewProps {
+interface LoginViewProps {
   isRTL?: boolean;
   onForgotPassword: () => void;
   /** Called with the current email when the user triggers self-service account unlock */

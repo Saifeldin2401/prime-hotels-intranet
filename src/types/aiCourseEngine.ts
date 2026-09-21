@@ -120,6 +120,11 @@ export type OverallContentDepth =
   | 'detailed'       // Deep explanation, context, practice
   | 'comprehensive'  // Extensive exercises, scenarios, and checks
   | 'expert'         // Highly technical / executive rigor
+  // Values the Studio depth picker and harmonizer presets actually emit:
+  | 'concise'
+  | 'balanced'
+  | 'in_depth'
+  | 'focused'
 
 export interface GranularDepthConfig {
   theory: 1 | 2 | 3 | 4 | 5        // 1=Minimal, 5=Deep dive
@@ -155,6 +160,11 @@ export type LessonComponentKey =
   | 'action_points'
   | 'further_reading'
   | 'assessment'
+  // Emitted by harmonizer presets / legacy course engine (passed to the AI as text):
+  | 'pro_tips'
+  | 'scenario_branch'
+  | 'technical_spec'
+  | 'equipment'
 
 export type LessonTemplateType =
   | 'theory'
@@ -163,6 +173,7 @@ export type LessonTemplateType =
   | 'sop_standard'
   | 'scenario_solving'
   | 'micro_action_card'
+  | 'checklist_audit'   // harmonizer/course-engine audit-style template
 
 // ============================================================================
 // 8. INSTRUCTIONAL STRATEGY (14 Strategies)
@@ -216,6 +227,9 @@ export type QuizPlacement =
   | 'final_assessment'
   | 'standalone'
   | 'checkpoints'
+  | 'final_exam'      // Studio: end-of-course certification exam only
+  | 'both'            // Studio: module quizzes plus a final exam
+  | 'none'            // No graded quizzes (harmonizer presets / Studio "inline checks only")
 
 export type DistractorQuality = 'standard' | 'high' | 'expert_plausible'
 
@@ -241,16 +255,17 @@ export type QuestionTypeDistribution = Record<QuestionType, number> // Type -> P
 // ============================================================================
 // 11. AI ENGINE CONTROLS & STRICTNESS
 // ============================================================================
-export type AICreativity = 'conservative' | 'balanced' | 'creative'
-export type ContentStrictness = 'strict_source' | 'source_primary' | 'balanced' | 'allow_external'
-export type SourceGroundingMode = 'source_only' | 'source_enhanced' | 'source_general_knowledge'
+type AICreativity = 'conservative' | 'balanced' | 'creative'
+type ContentStrictness = 'strict_source' | 'source_primary' | 'balanced' | 'allow_external'
+type SourceGroundingMode = 'source_only' | 'source_enhanced' | 'source_general_knowledge'
 
 export interface AIEngineControls {
   preferredModel: string
-  creativity: AICreativity
-  strictness: ContentStrictness
-  sourceMode: SourceGroundingMode
-  hallucinationProtection: boolean
+  // Not collected by the Studio today and not read by any agent; kept optional for presets.
+  creativity?: AICreativity
+  strictness?: ContentStrictness
+  sourceMode?: SourceGroundingMode
+  hallucinationProtection?: boolean
   targetLanguage: 'English' | 'Arabic' | 'Bilingual'
   questionLanguage?: 'English' | 'Arabic' | 'Bilingual'
   answerLanguage?: 'English' | 'Arabic' | 'Bilingual'
@@ -260,7 +275,7 @@ export interface AIEngineControls {
 // ============================================================================
 // 11.5. VISUAL ASSETS & CLOUDFLARE WORKERS AI IMAGE GENERATION
 // ============================================================================
-export type ImageProviderType = 'cloudflare'
+export type ImageProviderType = 'cloudflare' | 'recraft' | 'replicate'
 export type ImageCostTier = 'free_only' | 'standard_paid' | 'flux_studio'
 
 export type CloudflareImageModel =
@@ -539,6 +554,11 @@ export interface CourseQAQualityReport {
 // ============================================================================
 export interface FullCourseGenerationConfig {
   generationMode: CourseGenerationMode
+  /** Subject the author typed in the Studio (research + knowledge-grounding query). */
+  topic?: string
+  title?: string
+  audioConfig?: { enableAudio?: boolean }
+  subsystems?: { activities?: boolean; audio?: boolean; revision?: boolean; compliance?: boolean }
   courseType: CourseType
   instructionalStrategy: InstructionalStrategy
   targetAudience: TargetAudience

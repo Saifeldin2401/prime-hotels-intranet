@@ -322,9 +322,79 @@ describe('AI Course Engine', () => {
     expect(report.overallScore).toBeLessThan(80)
   })
 
-  it('safely auto-remediates quality gaps even without explicit aiControls config', async () => {
+  it('auto-remediates gaps from the course itself (AI-grounded, no canned content)', async () => {
+    vi.resetModules()
+    const executePrompt = vi.fn().mockResolvedValue({
+      data: JSON.stringify({
+        terminal: ['Perform the guest check-in protocol', 'Resolve check-in exceptions', 'Verify guest identity documents'],
+        enabling: ['Greet arriving guests', 'Confirm reservations', 'Issue room keys'],
+      }),
+      rawResponse: '',
+    })
+    const assessmentProcess = vi.fn().mockResolvedValue({
+      data: [
+        { question_text: 'What is the first step of check-in?', question_type: 'mcq', difficulty: 'medium', points: 10 },
+        { question_text: 'Order the check-in steps.', question_type: 'ordering', difficulty: 'medium', points: 10 },
+      ],
+    })
+    const writerProcess = vi.fn().mockResolvedValue({ data: `<p>${'Detailed check-in procedure. '.repeat(20)}</p>` })
+    vi.doMock('@/lib/ai/client', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('@/lib/ai/client')>()),
+      aiClient: { executePrompt },
+    }))
+    vi.doMock('@/lib/ai/agents/assessmentAgent', () => ({ assessmentAgent: { process: assessmentProcess } }))
+    vi.doMock('@/lib/ai/agents/contentWriterAgent', () => ({ contentWriterAgent: { process: writerProcess } }))
+
     const { remediateCourseQAGap, remediateAllCourseQAGaps } = await import('@/lib/ai/courseEngine')
-    const sparseBlueprint: CourseBlueprint = {
+    const sparseBlueprint = buildSparseBlueprint()
+
+    const objectivesFix = await remediateCourseQAGap(sparseBlueprint, 'Learning Objectives', undefined)
+    expect(objectivesFix.updatedBlueprint.terminalObjectives).toContain('Perform the guest check-in protocol')
+    expect(objectivesFix.updatedQAReport.objectiveAlignmentScore).toBeGreaterThanOrEqual(85)
+    // The prompt is built from this course's own outline.
+    expect(executePrompt.mock.calls[0][0]).toContain('Guest Check-in Protocol')
+
+    const fullFix = await remediateAllCourseQAGaps(sparseBlueprint, undefined)
+    expect(fullFix.updatedQAReport.overallScore).toBeGreaterThanOrEqual(90)
+    expect(fullFix.updatedBlueprint.modules[0].moduleQuiz?.questions.map((q) => q.question_text))
+      .toEqual(['What is the first step of check-in?', 'Order the check-in steps.'])
+    expect(assessmentProcess.mock.calls[0][0].title).toBe('Guest Check-in Protocol')
+    expect(fullFix.updatedBlueprint.modules[0].lessons[0].renderedHtml).toContain('Detailed check-in procedure')
+
+    vi.doUnmock('@/lib/ai/client')
+    vi.doUnmock('@/lib/ai/agents/assessmentAgent')
+    vi.doUnmock('@/lib/ai/agents/contentWriterAgent')
+  })
+
+  it('leaves gaps visible instead of inserting boilerplate when the AI is unavailable', async () => {
+    vi.resetModules()
+    vi.doMock('@/lib/ai/client', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('@/lib/ai/client')>()),
+      aiClient: { executePrompt: vi.fn().mockRejectedValue(new Error('AI down')) },
+    }))
+    vi.doMock('@/lib/ai/agents/assessmentAgent', () => ({
+      assessmentAgent: { process: vi.fn().mockRejectedValue(new Error('AI down')) },
+    }))
+
+    const { remediateCourseQAGap } = await import('@/lib/ai/courseEngine')
+    const sparseBlueprint = buildSparseBlueprint()
+
+    // Objectives fall back to the course's own module/lesson titles — never generic text.
+    const objectivesFix = await remediateCourseQAGap(sparseBlueprint, 'Learning Objectives', undefined)
+    expect(objectivesFix.updatedBlueprint.terminalObjectives).toEqual(['Demonstrate competence in Guest Check-in Protocol'])
+    expect(objectivesFix.updatedBlueprint.enablingObjectives).toEqual(['Apply Welcome Procedure'])
+
+    // No questions are fabricated; the assessment gap stays in the report.
+    const quizFix = await remediateCourseQAGap(sparseBlueprint, 'Assessment Rigour', undefined)
+    expect(quizFix.updatedBlueprint.modules[0].moduleQuiz).toBeUndefined()
+    expect(quizFix.updatedQAReport.identifiedGaps.some((g) => g.area === 'Assessment Rigour')).toBe(true)
+
+    vi.doUnmock('@/lib/ai/client')
+    vi.doUnmock('@/lib/ai/agents/assessmentAgent')
+  })
+
+  function buildSparseBlueprint(): CourseBlueprint {
+    return {
       ...mockBlueprint,
       terminalObjectives: [],
       enablingObjectives: [],
@@ -349,18 +419,7 @@ describe('AI Course Engine', () => {
         },
       ],
     }
-
-    // Single gap fix with undefined config (testing null-safety)
-    const singleFix = await remediateCourseQAGap(sparseBlueprint, 'Learning Objectives', undefined)
-    expect(singleFix.updatedBlueprint.terminalObjectives.length).toBeGreaterThan(0)
-    expect(singleFix.updatedQAReport.objectiveAlignmentScore).toBeGreaterThanOrEqual(85)
-
-    // Full auto-remediate all gaps with undefined config
-    const fullFix = await remediateAllCourseQAGaps(sparseBlueprint, undefined)
-    expect(fullFix.updatedQAReport.overallScore).toBeGreaterThanOrEqual(90)
-    expect(fullFix.scoreDelta).toBeGreaterThanOrEqual(0)
-    expect(fullFix.updatedBlueprint.modules[0].moduleQuiz?.questions.length).toBeGreaterThan(0)
-  })
+  }
 })
 
 

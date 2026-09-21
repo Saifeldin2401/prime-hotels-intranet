@@ -10,7 +10,7 @@ import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedChecklistItem, KnowledgeArticleGenerationConfig } from './types'
 import { buildArticleDirectives } from './articleDirectives'
 
-export interface QuickRefWriterOutput {
+interface QuickRefWriterOutput {
   code: string
   title: string
   titleAr: string
@@ -25,7 +25,7 @@ export interface QuickRefWriterOutput {
   checklistItems: GeneratedChecklistItem[]
 }
 
-export class QuickRefArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, QuickRefWriterOutput> {
+class QuickRefArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, QuickRefWriterOutput> {
   public readonly role: AgentRole = 'content_writer'
   public readonly name = 'Quick Reference & Pocket Guide Architect Agent'
   public readonly nameAr = 'مهندس الأدلة المرجعية السريعة وبطاقات الطوارئ'

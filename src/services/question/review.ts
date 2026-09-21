@@ -1,15 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { QuestionStatus } from '@/types/questions'
 
-export async function submitForReview(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('unified_questions')
-        .update({ status: 'pending_review' as QuestionStatus })
-        .eq('id', id)
-
-    if (error) throw error
-}
-
 export async function approveQuestion(
     id: string,
     reviewerId: string,
@@ -41,15 +32,6 @@ export async function rejectQuestion(
             reviewed_at: new Date().toISOString(),
             review_notes: notes
         })
-        .eq('id', id)
-
-    if (error) throw error
-}
-
-export async function archiveQuestion(id: string): Promise<void> {
-    const { error } = await supabase
-        .from('unified_questions')
-        .update({ status: 'archived' as QuestionStatus })
         .eq('id', id)
 
     if (error) throw error

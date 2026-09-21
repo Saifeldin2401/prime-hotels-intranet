@@ -6,7 +6,7 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 // 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, OpenRouter, Groq LPU, HuggingFace & Cloudflare)
-export const DEFAULT_FALLBACK_MODELS = [
+const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
   'google/gemini-2.5-flash-lite',
   'openai/gpt-4o-mini',
@@ -25,7 +25,7 @@ export const DEFAULT_FALLBACK_MODELS = [
 
 const FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
 
-export interface AIModelOption {
+interface AIModelOption {
   id: string
   name: string
   provider: string
@@ -159,7 +159,7 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
   },
 ]
 
-export type CourseArchetype =
+type CourseArchetype =
   | 'sop'
   | 'compliance'
   | 'onboarding'
@@ -167,100 +167,19 @@ export type CourseArchetype =
   | 'leadership'
   | 'microlearning'
 
-export type CourseTone =
+type CourseTone =
   | 'luxury_formal'
   | 'engaging'
   | 'direct_sop'
   | 'strict_compliance'
 
-export interface CourseInclusions {
+interface CourseInclusions {
   includeDialogue?: boolean
   includeChecklists?: boolean
   includeServiceRecovery?: boolean
   includeExecutiveSummary?: boolean
   includeFaqs?: boolean
 }
-
-export interface ArchetypeConfig {
-  id: CourseArchetype
-  title: string
-  title_ar: string
-  description: string
-  description_ar: string
-  icon: string
-  badge: string
-  recommendedSectionCount: number
-  defaultQuizTypes: string[]
-}
-
-export const COURSE_ARCHETYPES: ArchetypeConfig[] = [
-  {
-    id: 'sop',
-    title: '5-Star Standard SOP',
-    title_ar: 'معايير وإجراءات 5 نجوم القياسية',
-    description: 'Comprehensive operational guidelines, Forbes luxury benchmarks, step-by-step phases, and dialogue scripts.',
-    description_ar: 'إجراءات تشغيلية شاملة، معايير فندقية فاخرة، خطوات تفصيلية ونصوص حوار معتمدة.',
-    icon: 'BookOpen',
-    badge: 'Forbes Standard',
-    recommendedSectionCount: 4,
-    defaultQuizTypes: ['mcq', 'scenario', 'true_false'],
-  },
-  {
-    id: 'compliance',
-    title: 'Compliance & Safety',
-    title_ar: 'الامتثال والسلامة المهنية',
-    description: 'KSA labor & municipal regulations, food hygiene, fire emergency protocols, and zero-defect rules.',
-    description_ar: 'اللوائح والأنظمة السعودية، سلامة الغذاء، بروتوكولات الطوارئ ومعايير عدم التساهل.',
-    icon: 'ShieldAlert',
-    badge: 'Mandatory',
-    recommendedSectionCount: 4,
-    defaultQuizTypes: ['mcq', 'true_false', 'fill_blank'],
-  },
-  {
-    id: 'onboarding',
-    title: 'New Hire Onboarding',
-    title_ar: 'التأهيل والترحيب بالموظفين الجدد',
-    description: 'Welcoming cultural orientation, core hospitality mindset, brand history, and team collaboration.',
-    description_ar: 'التوجيه الثقافي والترحيب، قيم الضيافة الأساسية، تاريخ العلامة التجارية والاندماج الجماعي.',
-    icon: 'Sparkles',
-    badge: 'Foundational',
-    recommendedSectionCount: 3,
-    defaultQuizTypes: ['mcq', 'true_false', 'matching'],
-  },
-  {
-    id: 'scenario',
-    title: 'Scenario & Guest Dilemmas',
-    title_ar: 'سيناريوهات وتحديات خدمة النزلاء',
-    description: 'Interactive guest dilemmas, VIP handling, conflict de-escalation, and LAST recovery frameworks.',
-    description_ar: 'تحديات واقعية مع النزلاء، خدمة كبار الشخصيات، معالجة الشكاوى ونموذج التعافي LAST.',
-    icon: 'GitBranch',
-    badge: 'Interactive',
-    recommendedSectionCount: 4,
-    defaultQuizTypes: ['scenario', 'mcq_multi', 'ordering'],
-  },
-  {
-    id: 'leadership',
-    title: 'Supervisory & Leadership',
-    title_ar: 'الإشراف وقيادة الجودة الفندقية',
-    description: 'Shift management, inspection audits, associate coaching, root-cause resolution, and handover rituals.',
-    description_ar: 'إدارة الورديات، تدقيق الجودة، تدريب المشرفين، تحليل الأسباب الجذرية واستلام وتسليم الورديات.',
-    icon: 'Crown',
-    badge: 'Leadership',
-    recommendedSectionCount: 5,
-    defaultQuizTypes: ['scenario', 'mcq_multi', 'ordering'],
-  },
-  {
-    id: 'microlearning',
-    title: 'Microlearning Fast-Track',
-    title_ar: 'التعلم المصغر السريع (3 دقائق)',
-    description: 'Bite-sized high-impact lessons, quick memory checklists, visual tables, and rapid-fire quiz.',
-    description_ar: 'دروس سريعة مركزة وعالية التأثير، قوائم تحقق سريعة، جداول بصرية واختبارات فورية.',
-    icon: 'Zap',
-    badge: 'Quick 3-Min',
-    recommendedSectionCount: 3,
-    defaultQuizTypes: ['mcq', 'true_false', 'fill_blank'],
-  },
-]
 
 export function resolveModelChain(preferredModel?: string): string[] {
   if (!preferredModel || preferredModel === 'auto' || preferredModel === 'free') {
@@ -504,19 +423,19 @@ interface QuizRepairQuestionOutput {
 // This is intentionally NOT full content generation -- it proposes a module
 // title/description plus a list of section headings with a suggested block
 // type and a short summary the author fleshes out inside the builder.
-export interface ModuleOutlineSection {
+interface ModuleOutlineSection {
   heading: string
   suggestedBlockType: 'text' | 'video' | 'document_link' | 'scenario'
   summary: string
   rich_content?: string
 }
 
-export interface ModuleOutlineQuizCheckpoint {
+interface ModuleOutlineQuizCheckpoint {
   afterSectionIndex: number
   topic: string
 }
 
-export interface ModuleOutline {
+interface ModuleOutline {
   title: string
   description: string
   sections: ModuleOutlineSection[]
@@ -529,7 +448,7 @@ export interface ModuleOutline {
   }
 }
 
-export interface AssignmentEvaluationInput {
+interface AssignmentEvaluationInput {
   moduleTitle: string
   blockTitle?: string
   assignmentInstructions?: string
@@ -643,12 +562,6 @@ export async function callHuggingFace(model: string, prompt: string, maxTokens?:
   }
 }
 
-/** Canonical alias for `callHuggingFace` reflecting its real proxy architecture */
-export const invokeEdgeAiGateway = callHuggingFace
-
-
-
-
 // 🛡️ SMART LOCAL INTELLIGENCE (Fallback)
 
 const heuristicAnalysis = (text: string): SOPAnalysis => {
@@ -665,7 +578,7 @@ const heuristicAnalysis = (text: string): SOPAnalysis => {
 
   let formattedHtml = `<h2>1. Procedure Overview</h2><p>Extracted from uploaded document.</p>`
 
-  formattedHtml += `<h2>2. Key Instructions</h2><ul class="list-disc pl-6 space-y-2">`
+  formattedHtml += `<h2>2. Key Instructions</h2><ul class="list-disc ps-6 space-y-2">`
 
   sentences.slice(1, 15).forEach(s => formattedHtml += `<li>${s}.</li>`)
 
@@ -692,182 +605,6 @@ const heuristicAnalysis = (text: string): SOPAnalysis => {
   }
 
 }
-
-
-
-const heuristicQuiz = (): QuizQuestion[] => {
-
-  return [
-
-    {
-
-      question_text: "What is the primary objective of this SOP?",
-
-      question_type: "mcq",
-
-      options: ["Ensure Operational Consistency", "Reduce Costs", "Marketing usage", "Staff Scheduling"],
-
-      correct_answer: "Ensure Operational Consistency",
-
-      points: 10
-
-    }
-
-  ]
-
-}
-
-const heuristicOutline = (text: string, generateFullContent = true): ModuleOutline => {
-  const cleaned = cleanText(text)
-  const sentences = cleaned.split('. ').map(s => s.trim()).filter(s => s.length > 15)
-
-  if (sentences.length === 0) {
-    return {
-      title: 'New Training Masterclass',
-      description: 'Standard operating procedure and training curriculum for hotel operations.',
-      sections: [
-        {
-          heading: 'Executive Overview & Standards',
-          suggestedBlockType: 'text',
-          summary: 'Introduce operational context, quality benchmarks, and core service principles.',
-          rich_content: `<div class="space-y-5"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow border border-slate-800"><span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">ALTUS Operations Standard</span><h3 class="text-xl font-bold text-white mb-2">Standard Operating Procedures</h3><p class="text-slate-300 text-sm leading-relaxed">Adherence to operational excellence, brand benchmarks, and safety compliance across all hotel touchpoints.</p></div></div>`
-        }
-      ],
-      suggestedQuizCheckpoints: []
-    }
-  }
-
-  const title = sentences[0].substring(0, 80)
-  const rawSections = [
-    {
-      heading: 'Executive Overview & Standards',
-      suggestedBlockType: 'text' as const,
-      summary: sentences.slice(0, 2).join('. '),
-      rich_content: `<div class="space-y-5">
-        <div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow-lg border border-slate-800">
-          <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">ALTUS Operations Standard</span>
-          <h3 class="text-xl font-bold tracking-tight text-white mb-2">${title}</h3>
-          <p class="text-slate-300 text-sm leading-relaxed">${sentences.slice(0, 2).join('. ')}.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div class="text-indigo-600 font-bold text-base mb-1">Quality Standard</div>
-            <p class="text-xs text-slate-600">Zero-compromise on brand cleanliness, guest safety, and luxury presentation standards.</p>
-          </div>
-          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div class="text-indigo-600 font-bold text-base mb-1">Operational Benchmark</div>
-            <p class="text-xs text-slate-600">Consistent multi-property adherence with regular supervisor quality audits.</p>
-          </div>
-          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-            <div class="text-indigo-600 font-bold text-base mb-1">Guest Experience</div>
-            <p class="text-xs text-slate-600">Elevating satisfaction through meticulous attention to operational detail.</p>
-          </div>
-        </div>
-      </div>`
-    },
-    {
-      heading: 'Core Objectives & Competency Framework',
-      suggestedBlockType: 'text' as const,
-      summary: 'Detailed competency goals and learning outcomes for staff.',
-      rich_content: `<div class="space-y-4">
-        <h3 class="text-lg font-bold text-slate-900">Core Competencies & Key Takeaways</h3>
-        <ul class="space-y-3 text-sm text-slate-700">
-          <li class="flex items-start gap-3">
-            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">1</span>
-            <span><strong>Master Standard Operating Procedures:</strong> Execute every step in compliance with company protocols.</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">2</span>
-            <span><strong>Safety & Equipment Compliance:</strong> Apply correct safety gear, chemical handling, and machine safety checks.</span>
-          </li>
-          <li class="flex items-start gap-3">
-            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">3</span>
-            <span><strong>Troubleshooting & Escalation:</strong> Rapidly resolve operational bottlenecks and escalate deviations.</span>
-          </li>
-        </ul>
-      </div>`
-    },
-    {
-      heading: 'Step-by-Step SOP Procedures',
-      suggestedBlockType: 'text' as const,
-      summary: sentences.slice(2, 4).join('. ') || 'Step-by-step workflow procedures and standard phases.',
-      rich_content: `<div class="space-y-5">
-        <h3 class="text-lg font-bold text-slate-900">Standard Operating Workflow</h3>
-        <div class="space-y-4">
-          <div class="border-l-4 border-indigo-500 pl-4 py-1">
-            <h4 class="font-bold text-slate-900 text-sm">Phase 1: Preparation & Safety Check</h4>
-            <p class="text-xs text-slate-600">Inspect equipment, verify work area cleanliness, and ensure required PPE is worn.</p>
-          </div>
-          <div class="border-l-4 border-blue-500 pl-4 py-1">
-            <h4 class="font-bold text-slate-900 text-sm">Phase 2: Execution & Core Processing</h4>
-            <p class="text-xs text-slate-600">${sentences.slice(2, 4).join('. ') || 'Follow strict timing, chemical, and temperature parameters.'}</p>
-          </div>
-          <div class="border-l-4 border-emerald-500 pl-4 py-1">
-            <h4 class="font-bold text-slate-900 text-sm">Phase 3: Inspection & Quality Assurance</h4>
-            <p class="text-xs text-slate-600">Perform 100% visual inspection before handover to ensure zero defects.</p>
-          </div>
-        </div>
-        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
-          <strong class="text-amber-900 text-xs uppercase font-bold tracking-wider">Pro-Tip & Safety Alert:</strong>
-          <p class="text-xs text-amber-800 mt-1">Never skip verification checks during high-volume rush periods. Quality consistency protects guest satisfaction.</p>
-        </div>
-      </div>`
-    },
-    {
-      heading: 'Real-World Operational Scenario & Resolution',
-      suggestedBlockType: 'scenario' as const,
-      summary: 'Practical troubleshooting dilemma encountered during hotel operations.',
-      rich_content: `<div class="space-y-4">
-        <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-          <span class="text-xs font-bold text-purple-700 uppercase tracking-wide">Operational Dilemma</span>
-          <h4 class="text-base font-bold text-purple-950 mt-1">High-Occupancy Operational Challenge</h4>
-          <p class="text-xs text-purple-900 mt-2 leading-relaxed">
-            During high occupancy or VIP turnover, a critical operational discrepancy arises requiring immediate resolution without compromising luxury guest standards.
-          </p>
-        </div>
-        <div class="p-4 bg-white border border-slate-200 rounded-lg space-y-2">
-          <h4 class="text-sm font-bold text-slate-900">Recommended Resolution Action:</h4>
-          <ol class="list-decimal list-inside space-y-1.5 text-xs text-slate-700">
-            <li>Isolate the issue immediately and prevent defective items from reaching guest areas.</li>
-            <li>Implement the secondary fallback inventory protocol.</li>
-            <li>Notify the duty supervisor and document the root cause for prevention.</li>
-          </ol>
-        </div>
-      </div>`
-    },
-    {
-      heading: 'Summary & Shift Operations Checklist',
-      suggestedBlockType: 'text' as const,
-      summary: 'Key takeaways and daily operational checklist.',
-      rich_content: `<div class="space-y-5">
-        <div class="p-5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950">
-          <h3 class="text-lg font-bold text-emerald-900 mb-1">Module Summary</h3>
-          <p class="text-xs text-emerald-800">You are now equipped with standard operating techniques and quality benchmarks for daily execution.</p>
-        </div>
-        <div class="border border-slate-200 rounded-lg p-4 bg-white space-y-2">
-          <h4 class="font-bold text-sm text-slate-900">Daily Shift Checklist:</h4>
-          <div class="space-y-1.5 text-xs text-slate-700">
-            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Complete start-of-shift equipment and safety inspections.</span></div>
-            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Verify operational parameters against official SOP specifications.</span></div>
-            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Conduct end-of-shift handover and log book updates.</span></div>
-          </div>
-        </div>
-      </div>`
-    }
-  ]
-
-  return {
-    title,
-    description: 'Executive training curriculum based on standard operating procedures.',
-    sections: rawSections,
-    suggestedQuizCheckpoints: [
-      { afterSectionIndex: 3, topic: 'Comprehensive Knowledge & Scenario Assessment' }
-    ]
-  }
-}
-
-
-
 export const aiService = {
 
   /**
@@ -902,7 +639,7 @@ export const aiService = {
           temperature: request.temperature ?? 0.7,
         }
       })
-      if (!error && data && (data.response || data.result)) {
+      if (!error && data && !isProcessAiErrorResponse(data) && (data.response || data.result)) {
         return ((data.response || data.result) as string).trim()
       }
     } catch (edgeErr) {
@@ -1278,7 +1015,7 @@ ${context}`
    قائمة <ul> للنقاط الإلزامية التي يفحصها المشرف قبل اعتماد الخدمة.
 5. <h3>5. بروتوكول التعافي وحل المشكلات (Service Recovery & LAST Framework)</h3>
    كيفية معالجة العقبات والشكاوى فوراً.
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة ألتوس الذهبية للتميز:</strong> نصيحة احترافية للموظفين.</div>
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة ألتوس الذهبية للتميز:</strong> نصيحة احترافية للموظفين.</div>
 
 اكتب محتوى HTML فقط بدون كتل كود markdown وبدون نصوص توضيحية خارجية.`
       : `You are a Senior Luxury Hospitality Training Director at Altus Luxury Hotels.
@@ -1300,7 +1037,7 @@ Requirements: Write fully developed, professional training content in clean sema
    Bullet points <ul> of mandatory items supervisors inspect.
 5. <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
    Immediate resolution actions frontline staff are empowered to take.
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Altus 5-Star Pro Tip:</strong> Insider luxury service tip.</div>
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Altus 5-Star Pro Tip:</strong> Insider luxury service tip.</div>
 
 Output clean HTML only, no markdown codeblocks.`
 
@@ -2005,7 +1742,7 @@ Do not include any Markdown wrap like \`\`\`json. Return pure JSON object only.`
  * High-Quality Fallback Generator for Hotel Operations
  * Generates 4-6 production-ready, rich HTML Standard Operating Procedures and Checkpoints
  */
-export function generateRichHotelModuleFallback(
+function generateRichHotelModuleFallback(
   context: string,
   language: string = 'English',
   count: number = 4
@@ -2287,7 +2024,7 @@ export function generateRichHotelModuleFallback(
 /**
  * High-Quality Fallback Quiz Generator for Hotel Operations
  */
-export function generateHotelQuizFallback(
+function generateHotelQuizFallback(
   context: string,
   language: string = 'English',
   count: number = 3
@@ -2371,7 +2108,7 @@ export function generateHotelQuizFallback(
 /**
  * Generates an exhaustive 600-word 5-star operational hotel SOP
  */
-export function generateDeepSectionFallback(
+function generateDeepSectionFallback(
   heading: string,
   summary: string,
   language: string = 'English',
@@ -2413,7 +2150,7 @@ export function generateDeepSectionFallback(
         <h3>5. بروتوكول التعافي وحل المشكلات (Service Recovery - LAST)</h3>
         <p>في حال حدوث أي تأخير أو خطأ تشغيلي، يجب تطبيق نموذج <strong>LAST</strong> فوراً: (<strong>L</strong>isten: استمع باهتمام، <strong>A</strong>pologize: اعتذر بصدق، <strong>S</strong>olve: قدّم حلاً وتعويضاً فورياً، <strong>T</strong>hank: اشكر الضيف على تنبيهنا لتطوير خدمتنا).</p>
 
-        <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
+        <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
           <strong>نصيحة ألتوس الذهبية للتميز:</strong> الخدمة الفاخرة الحقيقية ليست مجرد تلبية ما يطلبه الضيف، بل هي استباق احتياجاته وتقديم ما لم يخطر على باله قبل أن يسأل عنه.
         </div>
       </div>
@@ -2453,7 +2190,7 @@ export function generateDeepSectionFallback(
       <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
       <p>If any service disruption occurs, immediately deploy the <strong>LAST</strong> framework: (<strong>L</strong>isten actively without interruption, <strong>A</strong>pologize sincerely on behalf of Altus, <strong>S</strong>olve immediately using frontline empowerment credits, and <strong>T</strong>hank the guest for providing feedback).</p>
 
-      <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
+      <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
         <strong>Altus 5-Star Pro Tip:</strong> True luxury hospitality is not simply reacting to guest requests, but intuitively anticipating needs before the guest even verbalizes them.
       </div>
     </div>
@@ -2463,7 +2200,7 @@ export function generateDeepSectionFallback(
 /**
  * Operational Checklist Fallback Generator for Hotel Operations
  */
-export function generateHotelChecklistFallback(
+function generateHotelChecklistFallback(
   title: string,
   _content: string,
   language: string = 'English',
@@ -2516,7 +2253,7 @@ export function generateHotelChecklistFallback(
 /**
  * Operational FAQ Fallback Generator for Hotel Operations
  */
-export function generateHotelFAQFallback(
+function generateHotelFAQFallback(
   title: string,
   _content: string,
   language: string = 'English',

@@ -1,5 +1,3 @@
-import type { AppRole } from './constants'
-import { ROLES } from './constants'
 import type { Profile } from './types'
 
 /**
@@ -11,7 +9,7 @@ import type { Profile } from './types'
  * Gets the display-friendly job title for a profile
  * Falls back to the system role label if no job title is set
  */
-export function getDisplayJobTitle(profile: Profile | null | undefined): string {
+function getDisplayJobTitle(profile: Profile | null | undefined): string {
     if (!profile) return 'Employee'
 
     // Prefer the actual job title
@@ -22,46 +20,6 @@ export function getDisplayJobTitle(profile: Profile | null | undefined): string 
     // Fallback: show "Employee" for backward compatibility
     // (We don't want to show system roles like "Staff" as job titles)
     return 'Employee'
-}
-
-/**
- * Determines if the current user can view system roles (admin/debug view)
- * Only corporate admin and regional HR should see system role information
- */
-export function canViewSystemRoles(currentUserRole: AppRole | null): boolean {
-    if (!currentUserRole) return false
-    return (
-        currentUserRole === 'administrator' ||
-        currentUserRole === 'super_admin' ||
-        currentUserRole === 'corporate_admin' ||
-        currentUserRole === 'training_manager' ||
-        currentUserRole === 'regional_admin' ||
-        currentUserRole === 'regional_hr'
-    )
-}
-
-/**
- * Gets a formatted display string for a profile including job title and name
- */
-export function getProfileDisplayName(profile: Profile | null | undefined): string {
-    if (!profile) return 'Unknown'
-
-    const name = profile.full_name || profile.email || 'Unknown'
-    const jobTitle = getDisplayJobTitle(profile)
-
-    if (jobTitle && jobTitle !== 'Employee') {
-        return `${name} (${jobTitle})`
-    }
-
-    return name
-}
-
-/**
- * Gets the system role label for display
- * Should only be used in admin interfaces where showing the permission level is appropriate
- */
-export function getSystemRoleLabel(role: AppRole): string {
-    return ROLES[role]?.label || role.replace('_', ' ')
 }
 
 /**

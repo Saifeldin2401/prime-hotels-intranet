@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { supabase } from '@/lib/supabase'
 import { altusAI } from '@/lib/ai'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -18,14 +17,6 @@ interface Message {
     timestamp: Date
 }
 
-const FALLBACK_MODELS = [
-    'google/gemini-2.5-flash-lite',
-    'openai/gpt-4o-mini',
-    'meta-llama/llama-3.3-70b-instruct',
-    'qwen/qwen-2.5-72b-instruct',
-    'openrouter/auto'
-]
-
 const SYSTEM_PROMPT = `You are the Altus Advisory Configuration Assistant, an AI built to guide Corporate Administrators and HR Managers in modifying system variables.
 You understand the following 5 modules deeply:
 1. Hospitality News Publisher: Broadcasts dual-language articles.
@@ -35,7 +26,7 @@ You understand the following 5 modules deeply:
 5. Enterprise Report Builder: Schedules dynamic postgres queries via JSON filters.
 Answer questions directly and professionally about how to configure these systems.`
 
-export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     const { t } = useTranslation()
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
@@ -169,7 +160,7 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                                                 {message.role === 'user' ? <User className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
                                             </div>
                                             <div className={cn("max-w-[85%] flex flex-col", message.role === 'user' ? "items-end" : "items-start")}>
-                                                <div className={cn("px-5 py-3 rounded-2xl text-sm leading-relaxed", message.role === 'user' && "bg-hotel-navy text-white rounded-tr-none", message.role === 'assistant' && "bg-white text-gray-800 rounded-tl-none border shadow-sm", message.role === 'error' && "bg-red-50 text-red-700 rounded-tl-none border")}>
+                                                <div className={cn("px-5 py-3 rounded-2xl text-sm leading-relaxed", message.role === 'user' && "bg-hotel-navy text-white rounded-se-none", message.role === 'assistant' && "bg-white text-gray-800 rounded-ss-none border shadow-sm", message.role === 'error' && "bg-red-50 text-red-700 rounded-ss-none border")}>
                                                     <p className="whitespace-pre-wrap">{message.content}</p>
                                                 </div>
                                             </div>
@@ -180,7 +171,7 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                                             <div className="w-10 h-10 rounded-2xl bg-white shadow-lg flex items-center justify-center">
                                                 <Loader2 className="h-5 w-5 text-hotel-gold animate-spin" />
                                             </div>
-                                            <div className="bg-white border rounded-2xl rounded-tl-none px-6 py-4 shadow-sm w-48 flex items-center gap-2">
+                                            <div className="bg-white border rounded-2xl rounded-ss-none px-6 py-4 shadow-sm w-48 flex items-center gap-2">
                                                 <BrainCircuit className="h-4 w-4 text-hotel-gold animate-pulse" />
                                                 <span className="text-xs text-muted-foreground animate-pulse">Analyzing...</span>
                                             </div>

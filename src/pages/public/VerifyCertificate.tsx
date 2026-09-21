@@ -40,7 +40,7 @@ import { cairo, canela, inter, mono, neueHaas } from './publicConstants';
 
 interface CertificateVerificationResult {
     isValid: boolean;
-    certificate?: Certificate;
+    certificate?: Certificate & { organizationName?: string; organizationLogoUrl?: string };
     verifiedAt?: string;
     message?: string;
 }
@@ -159,7 +159,7 @@ export default function VerifyCertificate() {
             const downloadUrl = URL.createObjectURL(pdfBlob);
             const a = document.createElement('a');
             a.href = downloadUrl;
-            a.download = `ALTUS_Certificate_${result.certificate.certificateNumber || result.certificate.verificationCode}.pdf`;
+            a.download = `Certificate_${result.certificate.certificateNumber || result.certificate.verificationCode}.pdf`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -623,35 +623,35 @@ export default function VerifyCertificate() {
                         <table className="w-full border-collapse border border-slate-300 text-xs">
                             <tbody>
                                 <tr className="border-b border-slate-300 bg-amber-50/50">
-                                    <td className="py-2.5 px-3 font-bold text-slate-700 w-1/3 border-r border-slate-300">Recipient Full Name</td>
+                                    <td className="py-2.5 px-3 font-bold text-slate-700 w-1/3 border-e border-slate-300">Recipient Full Name</td>
                                     <td className="py-2.5 px-3 font-extrabold text-slate-950 text-sm">{result.certificate.recipientName}</td>
                                 </tr>
                                 <tr className="border-b border-slate-300">
-                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-300">Certification / Program Title</td>
+                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-e border-slate-300">Certification / Program Title</td>
                                     <td className="py-2.5 px-3 font-extrabold text-amber-900 text-sm">{result.certificate.title}</td>
                                 </tr>
                                 <tr className="border-b border-slate-300 bg-slate-50">
-                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-300">Certificate Reference Number</td>
+                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-e border-slate-300">Certificate Reference Number</td>
                                     <td className="py-2.5 px-3 font-mono text-slate-900 font-bold">{result.certificate.certificateNumber || result.certificate.verificationCode}</td>
                                 </tr>
                                 <tr className="border-b border-slate-300">
-                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-300">Date of Completion</td>
+                                    <td className="py-2.5 px-3 font-bold text-slate-700 border-e border-slate-300">Date of Completion</td>
                                     <td className="py-2.5 px-3 text-slate-900">{formatDateString(result.certificate.completionDate)}</td>
                                 </tr>
                                 {result.certificate.propertyName && (
                                     <tr className="border-b border-slate-300 bg-slate-50">
-                                        <td className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-300">Property / Establishment</td>
+                                        <td className="py-2.5 px-3 font-bold text-slate-700 border-e border-slate-300">Property / Establishment</td>
                                         <td className="py-2.5 px-3 text-slate-900">{result.certificate.propertyName}</td>
                                     </tr>
                                 )}
                                 {result.certificate.departmentName && (
                                     <tr className="border-b border-slate-300">
-                                        <td className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-300">Department</td>
+                                        <td className="py-2.5 px-3 font-bold text-slate-700 border-e border-slate-300">Department</td>
                                         <td className="py-2.5 px-3 text-slate-900">{result.certificate.departmentName}</td>
                                     </tr>
                                 )}
                                 <tr className="bg-emerald-50">
-                                    <td className="py-2.5 px-3 font-bold text-emerald-900 border-r border-slate-300">Database Registration Status</td>
+                                    <td className="py-2.5 px-3 font-bold text-emerald-900 border-e border-slate-300">Database Registration Status</td>
                                     <td className="py-2.5 px-3 font-bold text-emerald-700 uppercase">VALID &amp; ACTIVE (AUTHENTICATED)</td>
                                 </tr>
                             </tbody>

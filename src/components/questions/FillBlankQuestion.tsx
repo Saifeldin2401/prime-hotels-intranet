@@ -59,7 +59,7 @@ export function FillBlankQuestion({
 
             {/* Character count */}
             {!disabled && (
-                <p className="text-xs text-gray-400 text-right">
+                <p className="text-xs text-gray-400 text-end">
                     {value.length} / {maxLength}
                 </p>
             )}

@@ -157,7 +157,7 @@ function generateUUID(): string {
 }
 
 // File type definitions with magic numbers (file signatures)
-export interface FileTypeDefinition {
+interface FileTypeDefinition {
   mimeType: string;
   extensions: string[];
   magicNumbers: number[][];
@@ -165,7 +165,7 @@ export interface FileTypeDefinition {
 }
 
 // Allowed file types with their magic numbers
-export const ALLOWED_FILE_TYPES: Record<string, FileTypeDefinition> = {
+const ALLOWED_FILE_TYPES: Record<string, FileTypeDefinition> = {
   // Images
   'image/jpeg': {
     mimeType: 'image/jpeg',
@@ -330,13 +330,13 @@ export const ALLOWED_FILE_TYPES: Record<string, FileTypeDefinition> = {
 };
 
 // Blocked extensions (executable files)
-export const BLOCKED_EXTENSIONS = new Set([
+const BLOCKED_EXTENSIONS = new Set([
   'exe', 'dll', 'bat', 'cmd', 'msi', 'ps1', 'vbs', 'js', 'jar', 'scr',
   'com', 'sh', 'php', 'pl', 'py', 'rb', 'app', 'dmg', 'pkg', 'deb', 'rpm'
 ]);
 
 // Suspicious patterns in filenames
-export const SUSPICIOUS_FILENAME_PATTERNS = [
+const SUSPICIOUS_FILENAME_PATTERNS = [
   /\.\./,                    // Path traversal
   /[<>]/,                    // HTML injection
   /[/\\]/,                   // Directory separators
@@ -346,7 +346,7 @@ export const SUSPICIOUS_FILENAME_PATTERNS = [
   /\.[a-z0-9]{1,5}\.(exe|bat|cmd|msi|ps1|vbs|js|jar|scr|com|sh|php|pl)$/i, // Double extension
 ];
 
-export interface FileSecurityResult {
+interface FileSecurityResult {
   isValid: boolean;
   detectedMimeType: string | null;
   errors: string[];
@@ -371,7 +371,7 @@ export interface SecureFileInfo {
  * Validates file by checking magic numbers (file signatures)
  * This prevents MIME type spoofing attacks
  */
-export async function validateFileSignature(
+async function validateFileSignature(
   file: File,
   expectedMimeType?: string
 ): Promise<FileSecurityResult> {
@@ -541,7 +541,7 @@ function checkMagicNumbers(
  * - Validates XML structure
  * - Comprehensive URL scheme validation
  */
-export async function validateSvgContent(file: File): Promise<boolean> {
+async function validateSvgContent(file: File): Promise<boolean> {
   try {
     const text = await file.text();
     const lowerText = text.toLowerCase();
@@ -621,7 +621,7 @@ export async function validateSvgContent(file: File): Promise<boolean> {
  * SECURITY FIX: Uses DOMPurify with SVG-specific config for comprehensive sanitization
  * This prevents XSS bypass attacks that could evade simple DOMParser-based filtering
  */
-export function sanitizeSvgContent(svgContent: string): string {
+function sanitizeSvgContent(svgContent: string): string {
   // SECURITY: Use DOMPurify with SVG-specific config for comprehensive sanitization
   return DOMPurify.sanitize(svgContent, {
     USE_PROFILES: { svg: true },
@@ -636,7 +636,7 @@ export function sanitizeSvgContent(svgContent: string): string {
 /**
  * Validates filename for security issues
  */
-export function validateFilename(filename: string): {
+function validateFilename(filename: string): {
   isValid: boolean;
   errors: string[];
   extension: string | null;
@@ -682,7 +682,7 @@ export function validateFilename(filename: string): {
 /**
  * Generates a cryptographically secure filename
  */
-export function generateSecureFilename(
+function generateSecureFilename(
   originalFilename: string,
   mimeType: string
 ): { filename: string; extension: string } {
@@ -710,7 +710,7 @@ export function generateSecureFilename(
 /**
  * Gets image dimensions for validation
  */
-export function getImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+function getImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
     if (!file.type.startsWith('image/')) {
       resolve(null);
@@ -737,7 +737,7 @@ export function getImageDimensions(file: File): Promise<{ width: number; height:
 /**
  * Validates image dimensions against limits
  */
-export function validateImageDimensions(
+function validateImageDimensions(
   width: number,
   height: number,
   maxWidth = 16384,
@@ -770,7 +770,7 @@ export function validateImageDimensions(
 /**
  * Checks if image has EXIF data
  */
-export async function checkExifData(file: File): Promise<boolean> {
+async function checkExifData(file: File): Promise<boolean> {
   // Only check JPEG files for EXIF
   if (file.type !== 'image/jpeg') {
     return false;

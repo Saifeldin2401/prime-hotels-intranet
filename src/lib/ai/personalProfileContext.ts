@@ -7,7 +7,6 @@ export interface PersonalExecutiveContext {
   tasksSummary: string
   learningSummary: string
   announcementsSummary: string
-  shiftsSummary: string
   rawContextBlock: string
 }
 
@@ -24,7 +23,6 @@ export async function fetchPersonalExecutiveContext(
       tasksSummary: '',
       learningSummary: '',
       announcementsSummary: '',
-      shiftsSummary: '',
       rawContextBlock: '',
     }
   }
@@ -59,37 +57,26 @@ export async function fetchPersonalExecutiveContext(
       .limit(5)
 
     // 3. Fetch Recent Property Announcements
+    // Live = already scheduled (or unscheduled) and not yet expired. RLS scopes to the tenant.
+    const nowIso = new Date().toISOString()
     let announcementsQuery = supabase
       .from('announcements')
-      .select('id, title, priority, published_at, target_type')
-      .eq('status', 'published')
-      .order('published_at', { ascending: false })
+      .select('id, title, priority, scheduled_at, created_at')
+      .or(`scheduled_at.is.null,scheduled_at.lte.${nowIso}`)
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order('created_at', { ascending: false })
       .limit(4)
 
     if (propertyId) {
-      announcementsQuery = announcementsQuery.or(`property_id.eq.${propertyId},target_type.eq.all`)
+      // This property's announcements plus organization-wide ones (no property set).
+      announcementsQuery = announcementsQuery.or(`property_id.eq.${propertyId},property_id.is.null`)
     }
 
-    // 4. Fetch User's Upcoming Shift Assignments
-    const todayStr = format(new Date(), 'yyyy-MM-dd')
-    const shiftsPromise = supabase
-      .from('shift_assignments')
-      .select(`
-        id,
-        shift_date,
-        shift:shifts(id, name, start_time, end_time)
-      `)
-      .eq('user_id', userId)
-      .gte('shift_date', todayStr)
-      .order('shift_date', { ascending: true })
-      .limit(3)
-
     // Execute concurrently with read-only performance
-    const [tasksRes, learningRes, announcementsRes, shiftsRes] = await Promise.allSettled([
+    const [tasksRes, learningRes, announcementsRes] = await Promise.allSettled([
       tasksPromise,
       learningPromise,
       announcementsQuery,
-      shiftsPromise,
     ])
 
     // Format Tasks Summary
@@ -115,30 +102,21 @@ export async function fetchPersonalExecutiveContext(
     const announcements = announcementsRes.status === 'fulfilled' && announcementsRes.value.data ? announcementsRes.value.data : []
     const announcementsSummary = announcements.length > 0
       ? announcements.map((a: any, i: number) => {
-          const pub = a.published_at ? `Published: ${format(new Date(a.published_at), 'yyyy-MM-dd')}` : ''
+          const publishedAt = a.scheduled_at || a.created_at
+          const pub = publishedAt ? `Published: ${format(new Date(publishedAt), 'yyyy-MM-dd')}` : ''
           return `${i + 1}. "${a.title}" [${a.priority || 'Normal'}] (${pub})`
         }).join('\n')
       : 'No recent announcements.'
-
-    // Format Shifts Summary
-    const shifts = shiftsRes.status === 'fulfilled' && shiftsRes.value.data ? shiftsRes.value.data : []
-    const shiftsSummary = shifts.length > 0
-      ? shifts.map((s: any, i: number) => {
-          const shiftName = s.shift?.name || 'Standard Shift'
-          const times = s.shift?.start_time && s.shift?.end_time ? `(${s.shift.start_time} - ${s.shift.end_time})` : ''
-          return `${i + 1}. Date: ${s.shift_date} - ${shiftName} ${times}`
-        }).join('\n')
-      : 'No upcoming scheduled shifts found in the system for this week.'
 
     // Format Profile Info
     const profileSummary = `
 - Employee Name: ${profile?.full_name || 'Staff Member'}
 - Job Title: ${profile?.job_title || 'Hospitality Associate'}
 - Department: ${profile?.departments?.[0]?.name || profile?.department_id || 'Hotel Operations'}
-- Hotel Property: ${profile?.property?.name || 'Altus Advisory Hotel (KSA)'}
-- Staff ID / Code: ${profile?.staff_id || 'ALTUS-EMP'}
+- Hotel Property: ${profile?.property?.name || 'Not assigned'}
+- Staff ID / Code: ${profile?.staff_id || 'Not set'}
 - Role / Permissions: ${profile?.role || 'staff'}
-- Email: ${profile?.email || 'employee@altus-advisory.com'}
+- Email: ${profile?.email || 'Not set'}
 `.trim()
 
     // Build the master context block
@@ -152,16 +130,13 @@ ${tasksSummary}
 === 🎓 ACTIVE LEARNING & TRAINING COURSES (${learning.length} assigned) ===
 ${learningSummary}
 
-=== 📅 UPCOMING SHIFTS & SCHEDULE ===
-${shiftsSummary}
-
 === 📢 RECENT PROPERTY & COMPANY ANNOUNCEMENTS ===
 ${announcementsSummary}
 
 === 🔒 ASSISTANT INSTRUCTIONS ===
 1. You are this employee's dedicated, personal 5-star executive AI assistant.
 2. You have SECURE, READ-ONLY access to their live database workspace above.
-3. When they ask about their tasks, learning, shift, or announcements, reference their real records directly.
+3. When they ask about their tasks, learning, or announcements, reference their real records directly.
 4. Maintain strict confidentiality: Never fabricate database IDs or expose information outside their property/department scope.
 5. Provide actionable, concise, and courteous answers in their preferred language (Arabic or English).
 `.trim()
@@ -171,7 +146,6 @@ ${announcementsSummary}
       tasksSummary,
       learningSummary,
       announcementsSummary,
-      shiftsSummary,
       rawContextBlock,
     }
   } catch (error) {
@@ -181,8 +155,7 @@ ${announcementsSummary}
       tasksSummary: 'Live task data temporarily unavailable.',
       learningSummary: 'Live learning data temporarily unavailable.',
       announcementsSummary: 'Live announcements temporarily unavailable.',
-      shiftsSummary: 'Live shift schedule temporarily unavailable.',
-      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}, Property: ${profile?.property?.name || 'Altus Advisory'}`,
+      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}, Property: ${profile?.property?.name || 'Not assigned'}`,
     }
   }
 }

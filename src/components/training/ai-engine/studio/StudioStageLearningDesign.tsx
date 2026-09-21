@@ -1,25 +1,18 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Slider } from '@/components/ui/slider'
 import {
-  Award,
-  BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
   Compass,
-  FileCode,
-  Flame,
   GraduationCap,
   Layers,
-  Sparkles,
-  Target,
-  Zap,
+  Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { COURSE_TYPES, INSTRUCTIONAL_STRATEGIES } from '@/lib/ai/courseEngine'
@@ -122,7 +115,7 @@ export function StudioStageLearningDesign({
                     {isRTL ? ct.title_ar : ct.title}
                   </p>
                   <p className="text-[10px] text-muted-foreground line-clamp-2 leading-tight">
-                    {isRTL ? ct.desc_ar : ct.desc}
+                    {isRTL ? ct.description_ar : ct.description}
                   </p>
                 </CardContent>
               </Card>
@@ -168,7 +161,7 @@ export function StudioStageLearningDesign({
                     {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {isRTL ? strat.desc_ar : strat.desc}
+                    {isRTL ? strat.description_ar : strat.description}
                   </p>
                 </CardContent>
               </Card>

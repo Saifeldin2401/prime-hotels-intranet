@@ -2,7 +2,7 @@ import { Node, mergeAttributes } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { VideoNodeView } from './VideoNodeView'
 
-export interface VideoOptions {
+interface VideoOptions {
   allowFullscreen: boolean
   controls: boolean
   nocookie: boolean

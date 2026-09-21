@@ -10,7 +10,7 @@ import { aiClient } from './client';
 import { z } from 'zod';
 import type { ConfidentialityLevel } from '@/components/documents/DocumentMetadataForm';
 
-export interface SmartMetadataResult {
+interface SmartMetadataResult {
   title: string;
   description: string;
   documentNumber: string;
@@ -170,7 +170,7 @@ Respond ONLY in valid JSON matching this schema.`;
 
     const res = await aiClient.executeStructured(prompt, SmartMetadataSchema, {
       model: 'gemini-2.5-flash', // Free Tier High-Speed Model
-      task: 'summary',
+      task: 'summarization',
       temperature: 0.2,
       maxTokens: 500,
     });

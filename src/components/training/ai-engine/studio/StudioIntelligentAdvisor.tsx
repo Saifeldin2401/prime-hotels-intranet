@@ -1,8 +1,7 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, CheckCircle, Sparkles, Wand2, ArrowRight } from 'lucide-react'
+import { CheckCircle, Sparkles, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ConsistencyReport } from '@/lib/ai/courseHarmonizer'
 

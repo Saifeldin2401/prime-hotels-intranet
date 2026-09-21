@@ -4,6 +4,7 @@ import type {
   TrainingSessionAttendee,
   SessionAttendanceStatus
 } from '@/types/enterpriseOperatingModel'
+import type { TablesInsert } from '@/lib/database.types'
 
 export const iltService = {
   async getSessions(filters?: {
@@ -22,7 +23,7 @@ export const iltService = {
         hotel:hotels(id, name),
         course:courses(id, title),
         attendees:training_session_attendees(count)
-      `.trim()
+      `
       )
       .order('start_time', { ascending: true })
 
@@ -58,24 +59,24 @@ export const iltService = {
         `
         *,
         user:profiles(id, full_name, email, avatar_url)
-      `.trim()
+      `
       )
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true })
 
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as TrainingSessionAttendee[]
   },
 
   async createSession(session: Partial<TrainingSession>): Promise<TrainingSession> {
     const { data, error } = await supabase
       .from('training_sessions')
-      .insert(session)
+      .insert(session as TablesInsert<'training_sessions'>)
       .select()
       .single()
 
     if (error) throw error
-    return data
+    return data as unknown as TrainingSession
   },
 
   async registerAttendee(sessionId: string, userId: string, organizationId?: string): Promise<void> {

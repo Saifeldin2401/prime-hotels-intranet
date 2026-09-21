@@ -92,7 +92,7 @@ export const BuilderHeader = ({
             <ChevronLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
           </Button>
 
-          <div className={cn("flex items-center gap-1.5 min-w-0 flex-1", isRTL ? "flex-row-reverse text-right" : "text-left")}>
+          <div className={cn("flex items-center gap-1.5 min-w-0 flex-1", isRTL ? "flex-row-reverse text-end" : "text-start")}>
             <div className={cn(
               "relative flex items-center w-full max-w-[260px] xl:max-w-[300px] rounded-lg border transition-all duration-150",
               !title.trim() || title === 'Untitled Module'
@@ -108,7 +108,7 @@ export const BuilderHeader = ({
                 placeholder={t('builder.nameYourCourse', 'Enter Course Title...')}
                 className={cn(
                   "h-8 border-none bg-transparent shadow-none px-1 text-xs font-bold text-slate-900 dark:text-white placeholder:text-amber-700/70 dark:placeholder:text-amber-400/70 focus-visible:ring-0 truncate",
-                  isRTL ? "text-right" : "text-left"
+                  isRTL ? "text-end" : "text-start"
                 )}
                 title={t('builder.clickToRename', 'Click to edit course name')}
               />

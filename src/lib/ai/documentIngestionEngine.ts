@@ -7,9 +7,8 @@
  */
 
 import { multiProviderRouter } from './providers/multiProviderRouter'
-import type { CourseBlueprint } from './courseEngine'
 
-export interface DocumentIngestionOptions {
+interface DocumentIngestionOptions {
   documentText: string
   fileName?: string
   targetLanguage?: 'en' | 'ar' | 'bilingual'
@@ -17,8 +16,41 @@ export interface DocumentIngestionOptions {
   targetLevel?: 'beginner' | 'intermediate' | 'advanced'
 }
 
+/** Draft course outline returned by the ingestion prompt (distinct from the Studio's CourseBlueprint). */
+export interface IngestedCourseDraft {
+  title: string
+  topic?: string
+  courseType?: string
+  instructionalStrategy?: string
+  targetAudience?: string
+  experienceLevel?: string
+  courseLanguage?: string
+  estimatedDurationMinutes?: number
+  learningObjectives?: string[]
+  sections: Array<{
+    id: string
+    title: string
+    description?: string
+    lessons: Array<{
+      id: string
+      title: string
+      durationMinutes?: number
+      content?: string
+      learningPoints?: string[]
+      hasCheckpoint?: boolean
+      quizQuestion?: {
+        id: string
+        question: string
+        options: string[]
+        correctAnswerIndex: number
+        explanation?: string
+      }
+    }>
+  }>
+}
+
 export interface IngestionResult {
-  blueprint: CourseBlueprint
+  blueprint: IngestedCourseDraft
   extractedTopics: string[]
   wordCount: number
   estimatedReadingMinutes: number
@@ -26,7 +58,7 @@ export interface IngestionResult {
   summaryAr: string
 }
 
-export class DocumentIngestionEngine {
+class DocumentIngestionEngine {
   private static instance: DocumentIngestionEngine
 
   private constructor() {}
@@ -116,7 +148,7 @@ Generate a complete structured JSON course curriculum adhering to this exact for
         summary: string
         summaryAr: string
         extractedTopics: string[]
-        blueprint: CourseBlueprint
+        blueprint: IngestedCourseDraft
       }>(prompt, {
         task: 'reasoning',
         jsonMode: true,
@@ -133,65 +165,17 @@ Generate a complete structured JSON course curriculum adhering to this exact for
           summaryAr: response.data.summaryAr || 'تم استخراج الدورة التدريبية من المستند المرفق.',
         }
       }
-    } catch {
-      // Fall through to heuristic blueprint generator
+    } catch (err) {
+      console.warn('[DocumentIngestionEngine] AI generation failed:', err)
     }
 
-    // Heuristic Fallback Course Generator
-    const fallbackTitle = fileName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
-    const fallbackBlueprint: CourseBlueprint = {
-      title: `${fallbackTitle.toUpperCase()} - Operational Mastery`,
-      topic: fallbackTitle,
-      courseType: 'sop',
-      instructionalStrategy: 'Procedural drill and compliance verification',
-      targetAudience: targetDepartment,
-      experienceLevel: targetLevel,
-      courseLanguage: targetLanguage,
-      estimatedDurationMinutes: readingTime,
-      learningObjectives: [
-        'Understand operational standard operating procedures',
-        'Demonstrate compliance with luxury brand guidelines',
-        'Execute daily responsibilities with 5-star precision',
-      ],
-      sections: [
-        {
-          id: `sec-${Date.now()}-1`,
-          title: 'Module 1: Foundations & Core Standards',
-          description: 'Key principles and requirements extracted from operational guidelines',
-          lessons: [
-            {
-              id: `les-${Date.now()}-1`,
-              title: 'Standard Operating Procedures & Checkpoints',
-              durationMinutes: Math.ceil(readingTime / 2),
-              content: `### Operational Guidelines\n\n${documentText.slice(0, 1500)}\n\n> [!TIP] Always adhere to 5-star brand standards and guest privacy.`,
-              learningPoints: ['Master core procedures', 'Verify daily checklist completion'],
-              hasCheckpoint: true,
-              quizQuestion: {
-                id: `q-${Date.now()}-1`,
-                question: 'What is the primary operational objective outlined in this SOP?',
-                options: [
-                  'To deliver consistent, compliant luxury guest service',
-                  'To complete shifts as quickly as possible',
-                  'To bypass supervisor inspections',
-                  'To minimize department communication',
-                ],
-                correctAnswerIndex: 0,
-                explanation: 'Standard operating procedures exist to guarantee consistent luxury quality and guest safety.',
-              },
-            },
-          ],
-        },
-      ],
-    }
-
-    return {
-      blueprint: fallbackBlueprint,
-      extractedTopics: [fallbackTitle, 'Luxury Hotel Standards', 'Operational Procedures'],
-      wordCount: words,
-      estimatedReadingMinutes: readingTime,
-      summary: `Course generated from ${fileName} containing ${words} words.`,
-      summaryAr: `تم توليد الدورة التدريبية من الملف ${fileName} بواقع ${words} كلمة.`,
-    }
+    // Never fabricate a course from the file name: surface the failure so the author knows
+    // nothing was generated and can retry.
+    throw new Error(
+      targetLanguage === 'ar'
+        ? 'تعذر إنشاء دورة من هذا المستند. لم تُرجع خدمة الذكاء الاصطناعي نتيجة صالحة — يرجى المحاولة مرة أخرى.'
+        : 'Could not generate a course from this document. The AI service did not return a usable result — please try again.',
+    )
   }
 }
 

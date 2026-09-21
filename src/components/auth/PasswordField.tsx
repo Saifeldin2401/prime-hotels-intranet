@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import { Lock, LockKeyhole } from 'lucide-react';
 
-export interface PasswordFieldProps {
+interface PasswordFieldProps {
   id?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -117,7 +117,7 @@ function PasswordFieldComponent({
                     aria-hidden="true"
                   />
                 </div>
-                <span className="text-xs text-gray-500 min-w-[60px] text-right font-medium">
+                <span className="text-xs text-gray-500 min-w-[60px] text-end font-medium">
                   {strengthLabel}
                 </span>
               </div>

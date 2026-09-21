@@ -616,7 +616,7 @@ export function AIQuestionGenerator({
                                     key={type}
                                     onClick={() => handleToggleType(type as QuestionType)}
                                     className={cn(
-                                        'flex items-center gap-2 px-3 py-2.5 rounded-md text-xs border transition-all text-left uppercase tracking-tight',
+                                        'flex items-center gap-2 px-3 py-2.5 rounded-md text-xs border transition-all text-start uppercase tracking-tight',
                                         selectedTypes.includes(type as QuestionType)
                                             ? `bg-${config.color}-50 border-${config.color}-300 text-${config.color}-700 shadow-sm ring-1 ring-${config.color}-200`
                                             : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
@@ -893,7 +893,7 @@ export function AIQuestionGenerator({
                                         )}
 
                                         {(question.source_snippet || question.linked_section) && (
-                                            <div className="mt-3 border-l-2 border-slate-200 ps-3 text-xs text-slate-500">
+                                            <div className="mt-3 border-s-2 border-slate-200 ps-3 text-xs text-slate-500">
                                                 <span className="font-medium text-slate-600">Source:</span>{' '}
                                                 {question.source_snippet || question.linked_section}
                                             </div>

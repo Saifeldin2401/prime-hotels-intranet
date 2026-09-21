@@ -96,7 +96,8 @@ import {
     Timer,
     Trash2,
     Type,
-    Zap
+    Zap,
+    Briefcase,
 } from 'lucide-react'
 import { marked } from 'marked'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -1372,7 +1373,7 @@ export default function KnowledgeRead() {
                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                     className={cn(
                                         "text-2xl md:text-4xl font-serif font-bold text-hotel-gold-dark dark:text-hotel-gold leading-snug",
-                                        isRtlTarget ? "font-arabic pe-6 border-r-4 border-hotel-gold/60" : "ps-6 border-l-4 border-hotel-gold/60"
+                                        isRtlTarget ? "font-arabic pe-6 border-e-4 border-hotel-gold/60" : "ps-6 border-s-4 border-hotel-gold/60"
                                     )}
                                 >
                                     {translatedData.title}
@@ -1518,7 +1519,7 @@ export default function KnowledgeRead() {
                                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                                     className={cn(
                                                         "text-altus-copper",
-                                                        isRtlTarget ? "text-right font-arabic" : "text-left"
+                                                        isRtlTarget ? "text-end font-arabic" : "text-start"
                                                     )}
                                                 >
                                                     "{translatedData.summary}"
@@ -1623,8 +1624,8 @@ export default function KnowledgeRead() {
                                                     className={cn(
                                                         "prose max-w-none transition-all duration-300",
                                                         shouldUseRtl
-                                                            ? "border-r-2 border-indigo-100 pe-10 text-right font-arabic"
-                                                            : "border-l-2 border-indigo-100 ps-10",
+                                                            ? "border-e-2 border-indigo-100 pe-10 text-end font-arabic"
+                                                            : "border-s-2 border-indigo-100 ps-10",
                                                         fontSize === 'sm' && "text-kb-sm",
                                                         fontSize === 'base' && "text-kb-base",
                                                         fontSize === 'lg' && "text-kb-lg",
@@ -1641,7 +1642,7 @@ export default function KnowledgeRead() {
                                                     dir={shouldUseRtl ? 'rtl' : 'ltr'}
                                                     className={cn(
                                                         "prose md:prose-lg max-w-none transition-all duration-300",
-                                                        shouldUseRtl ? "text-right font-arabic break-words" : "text-left",
+                                                        shouldUseRtl ? "text-end font-arabic break-words" : "text-start",
                                                         fontSize === 'sm' && "text-kb-sm",
                                                         fontSize === 'base' && "text-kb-base",
                                                         fontSize === 'lg' && "text-kb-lg",
@@ -1717,7 +1718,7 @@ export default function KnowledgeRead() {
                                                             {article.content_data.local_addendum.en}
                                                         </div>
                                                     </div>
-                                                    <div dir="rtl" className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 space-y-2 font-arabic text-right">
+                                                    <div dir="rtl" className="p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 space-y-2 font-arabic text-end">
                                                         <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
                                                             {t('viewer.arabic_version', 'النسخة العربية')}
                                                         </div>
@@ -1739,7 +1740,7 @@ export default function KnowledgeRead() {
                                                     <TabsContent value="en" className="mt-3 p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                                                         {article.content_data.local_addendum.en}
                                                     </TabsContent>
-                                                    <TabsContent value="ar" dir="rtl" className="mt-3 p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-arabic text-right">
+                                                    <TabsContent value="ar" dir="rtl" className="mt-3 p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed font-arabic text-end">
                                                         {article.content_data.local_addendum.ar}
                                                     </TabsContent>
                                                 </Tabs>
@@ -1748,7 +1749,7 @@ export default function KnowledgeRead() {
                                                     dir={article.content_data.local_addendum.ar ? 'rtl' : 'ltr'}
                                                     className={cn(
                                                         "p-4 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-amber-100 dark:border-amber-900/30 text-sm text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed",
-                                                        article.content_data.local_addendum.ar && "font-arabic text-right"
+                                                        article.content_data.local_addendum.ar && "font-arabic text-end"
                                                     )}
                                                 >
                                                     {article.content_data.local_addendum.en || article.content_data.local_addendum.ar}
@@ -1963,7 +1964,7 @@ export default function KnowledgeRead() {
                                                                 {new Date(comment.created_at).toLocaleDateString()}
                                                             </span>
                                                         </div>
-                                                        <div className="text-sm text-foreground/90 leading-relaxed bg-muted/40 p-3.5 rounded-2xl rounded-tl-none border border-border shadow-2xs">
+                                                        <div className="text-sm text-foreground/90 leading-relaxed bg-muted/40 p-3.5 rounded-2xl rounded-ss-none border border-border shadow-2xs">
                                                             {comment.content}
                                                         </div>
                                                     </div>
@@ -2065,7 +2066,7 @@ export default function KnowledgeRead() {
                                 </div>
                             ) : (
                                 /* AI Course & Quiz Generation Quick Actions for Authors/Managers */
-                                (hasPermission('training.create') || hasPermission('knowledge.publish') || profile?.role === 'admin' || profile?.role === 'super_admin' || profile?.role === 'administrator') && (
+                                (hasPermission('training.create') || profile?.role === 'super_admin' || profile?.role === 'administrator') && (
                                     <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-500 via-hotel-gold to-yellow-600">
                                         <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
                                             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">

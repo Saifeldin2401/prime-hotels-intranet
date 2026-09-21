@@ -13,24 +13,9 @@ import DOMPurify from 'dompurify';
 import { generateCsrfToken as generateToken } from './security-middleware';
 
 // Re-export for backward compatibility
-export { generateToken as generateCsrfToken };
-
 // ============================================================================
 // TYPES
 // ============================================================================
-
-export type EncodingContext = 'html' | 'htmlAttribute' | 'js' | 'css' | 'url' | 'urlComponent';
-
-export interface SecurityConfig {
-  maxInputLength: number;
-  allowedProtocols: string[];
-  strictMode: boolean;
-}
-
-export type ValidationResult<T> = 
-  { success: true; data: T } |
-  { success: false; error: string; field?: string };
-
 // ============================================================================
 // SANITIZATION (Uses existing sanitize.ts but provides enhanced versions)
 // ============================================================================
@@ -180,20 +165,6 @@ export const sanitizeHtml = (html: string | null | undefined, options?: {
     KEEP_CONTENT: true,
   });
 };
-
-/**
- * Strict sanitization for plain text only - strips ALL HTML
- */
-export const sanitizePlainText = (text: string | null | undefined): string => {
-  if (!text) return '';
-  
-  return DOMPurify.sanitize(text, {
-    ALLOWED_TAGS: [],
-    ALLOWED_ATTR: [],
-    KEEP_CONTENT: true,
-  });
-};
-
 /**
  * Sanitization for SVG content (Mermaid diagrams)
  */
@@ -271,120 +242,6 @@ export const sanitizeUrl = (url: string | null | undefined): string | null => {
 // ============================================================================
 // OUTPUT ENCODING
 // ============================================================================
-
-/**
- * HTML entity encoding - for text content in HTML
- */
-export const encodeHtml = (text: string | null | undefined): string => {
-  if (!text) return '';
-  
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#x27;',
-    '/': '&#x2F;',
-    '`': '&#x60;',
-    '=': '&#x3D;',
-  };
-
-  return text.replace(/[&<>"'`=/]/g, (char) => htmlEntities[char] || char);
-};
-
-/**
- * HTML attribute encoding - for attribute values
- */
-export const encodeHtmlAttribute = (value: string | null | undefined): string => {
-  if (!value) return '';
-  
-  // More restrictive encoding for attributes
-  return encodeHtml(value).replace(/\s/g, '&#32;');
-};
-
-/**
- * JavaScript string encoding - for use in JS strings
- */
-export const encodeJs = (text: string | null | undefined): string => {
-  if (!text) return '';
-  
-  const jsEscapes: Record<string, string> = {
-    '\\': '\\\\',
-    '"': '\\"',
-    "'": "\\'",
-    '\n': '\\n',
-    '\r': '\\r',
-    '\t': '\\t',
-    '<': '\\u003c',
-    '>': '\\u003e',
-    '&': '\\u0026',
-    '=': '\\u003d',
-    '`': '\\`',
-    '$': '\\$',
-  };
-
-  return text.replace(/[\\"'\n\r\t<>&=`$]/g, (char) => jsEscapes[char] || char);
-};
-
-/**
- * CSS string encoding - for use in CSS
- */
-export const encodeCss = (value: string | null | undefined): string => {
-  if (!value) return '';
-  
-  // Remove potentially dangerous CSS characters/sequences
-  return value
-    .replace(/[<>'"]/g, '')
-    .replace(/expression\s*\(/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/behavior\s*:/gi, '');
-};
-
-/**
- * URL encoding - for use in URLs
- */
-export const encodeUrl = (url: string | null | undefined): string => {
-  if (!url) return '';
-  
-  try {
-    // Use built-in encodeURIComponent for query parameters
-    return encodeURI(url);
-  } catch {
-    return '';
-  }
-};
-
-/**
- * URL component encoding - for query parameters
- */
-export const encodeUrlComponent = (component: string | null | undefined): string => {
-  if (!component) return '';
-  
-  return encodeURIComponent(component);
-};
-
-/**
- * Universal encoding function
- */
-export const encode = (text: string | null | undefined, context: EncodingContext): string => {
-  switch (context) {
-    case 'html':
-      return encodeHtml(text);
-    case 'htmlAttribute':
-      return encodeHtmlAttribute(text);
-    case 'js':
-      return encodeJs(text);
-    case 'css':
-      return encodeCss(text);
-    case 'url':
-      return encodeUrl(text);
-    case 'urlComponent':
-      return encodeUrlComponent(text);
-    default:
-      return encodeHtml(text);
-  }
-};
-
 // ============================================================================
 // CSRF PROTECTION
 // ============================================================================
@@ -392,7 +249,7 @@ export const encode = (text: string | null | undefined, context: EncodingContext
 const CSRF_TOKEN_KEY = 'csrf_token';
 const CSRF_TOKEN_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
-export interface CsrfToken {
+interface CsrfToken {
   token: string;
   timestamp: number;
 }
@@ -427,291 +284,18 @@ export const getCsrfToken = (): string => {
   }
   return token;
 };
-
-/**
- * Validate CSRF token
- */
-export const validateCsrfToken = (token: string): boolean => {
-  try {
-    const stored = sessionStorage.getItem(CSRF_TOKEN_KEY);
-    if (!stored) return false;
-    
-    const data: CsrfToken = JSON.parse(stored);
-    const now = Date.now();
-    
-    // Check expiry and match
-    return (now - data.timestamp < CSRF_TOKEN_EXPIRY) && data.token === token;
-  } catch {
-    return false;
-  }
-};
-
-/**
- * Clear CSRF token
- */
-export const clearCsrfToken = (): void => {
-  try {
-    sessionStorage.removeItem(CSRF_TOKEN_KEY);
-  } catch {
-    // Ignore
-  }
-};
-
-/**
- * Get headers with CSRF token for API requests
- */
-export const getSecureHeaders = (): Record<string, string> => {
-  return {
-    'X-CSRF-Token': getCsrfToken(),
-    'X-Requested-With': 'XMLHttpRequest',
-  };
-};
-
 // ============================================================================
 // SAFE ERROR HANDLING
 // ============================================================================
-
-/**
- * Generic error messages to prevent information disclosure
- */
-export const SAFE_ERROR_MESSAGES = {
-  generic: 'An error occurred. Please try again later.',
-  network: 'Network error. Please check your connection and try again.',
-  validation: 'Invalid input. Please check your data and try again.',
-  authentication: 'Authentication failed. Please sign in again.',
-  authorization: 'You do not have permission to perform this action.',
-  notFound: 'The requested resource was not found.',
-  server: 'Server error. Please try again later.',
-  timeout: 'Request timed out. Please try again.',
-};
-
-/**
- * Sanitize error message for user display
- * - Returns generic message in production
- * - Returns detailed message in development (if safe)
- */
-export const sanitizeErrorMessage = (
-  error: unknown, 
-  context?: string,
-  options?: { allowDetailedInDev?: boolean }
-): string => {
-  // In production, always return generic messages
-  const isDev = import.meta.env?.DEV || process.env.NODE_ENV === 'development';
-  
-  if (!isDev || options?.allowDetailedInDev === false) {
-    return SAFE_ERROR_MESSAGES.generic;
-  }
-
-  // In development, provide more context for debugging
-  if (error instanceof Error) {
-    // Sanitize the error message to prevent XSS
-    const sanitized = sanitizePlainText(error.message);
-    return `[${context || 'Error'}] ${sanitized}`;
-  }
-
-  if (typeof error === 'string') {
-    return `[${context || 'Error'}] ${sanitizePlainText(error)}`;
-  }
-
-  return SAFE_ERROR_MESSAGES.generic;
-};
-
-/**
- * Get user-friendly error message based on error type
- */
-export const getUserFriendlyError = (error: unknown): { message: string; shouldRetry: boolean } => {
-  // Log full error for debugging (in dev)
-  if (import.meta.env?.DEV) {
-    console.error('Error details:', error);
-  }
-
-  // Check for specific error types
-  if (error instanceof TypeError && error.message.includes('fetch')) {
-    return { message: SAFE_ERROR_MESSAGES.network, shouldRetry: true };
-  }
-
-  if (error instanceof Error) {
-    if (error.message.includes('timeout') || error.message.includes('Timeout')) {
-      return { message: SAFE_ERROR_MESSAGES.timeout, shouldRetry: true };
-    }
-    
-    if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-      return { message: SAFE_ERROR_MESSAGES.authentication, shouldRetry: false };
-    }
-    
-    if (error.message.includes('403') || error.message.includes('Forbidden')) {
-      return { message: SAFE_ERROR_MESSAGES.authorization, shouldRetry: false };
-    }
-    
-    if (error.message.includes('404') || error.message.includes('Not Found')) {
-      return { message: SAFE_ERROR_MESSAGES.notFound, shouldRetry: false };
-    }
-    
-    if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
-      return { message: SAFE_ERROR_MESSAGES.server, shouldRetry: true };
-    }
-  }
-
-  // Default to generic message
-  return { message: SAFE_ERROR_MESSAGES.generic, shouldRetry: true };
-};
-
 // ============================================================================
 // INPUT VALIDATION HELPERS
 // ============================================================================
-
-/**
- * Validate and sanitize input length
- */
-export const validateLength = (
-  value: string, 
-  options: { min?: number; max?: number; fieldName?: string }
-): ValidationResult<string> => {
-  const { min = 0, max = Infinity, fieldName = 'Field' } = options;
-  
-  const trimmed = value.trim();
-  
-  if (trimmed.length < min) {
-    return {
-      success: false,
-      error: `${fieldName} must be at least ${min} characters`,
-      field: fieldName,
-    };
-  }
-  
-  if (trimmed.length > max) {
-    return {
-      success: false,
-      error: `${fieldName} must be no more than ${max} characters`,
-      field: fieldName,
-    };
-  }
-  
-  return { success: true, data: trimmed };
-};
-
-/**
- * Validate that input doesn't contain HTML/script tags
- * Uses simple pattern detection - DOMPurify is used for actual sanitization when needed
- */
-export const validateNoHtml = (value: string, fieldName = 'Field'): ValidationResult<string> => {
-  // Simple pattern to detect potential HTML tags
-  const htmlPattern = /<[^>]+>/;
-  // Check for script tag patterns (case-insensitive, various forms)
-  const scriptPattern = /<\s*script\b/i;
-  
-  if (scriptPattern.test(value)) {
-    return {
-      success: false,
-      error: `${fieldName} contains unsafe content`,
-      field: fieldName,
-    };
-  }
-  
-  if (htmlPattern.test(value)) {
-    // Allow if it's just for formatting, but warn
-    const sanitized = sanitizePlainText(value);
-    // Use recursive sanitization to prevent bypass attempts
-    let previous;
-    let stripped = value;
-    do {
-      previous = stripped;
-      stripped = previous.replace(/<[^>]*>/g, '');
-    } while (stripped !== previous);
-    
-    if (sanitized !== stripped) {
-      return {
-        success: false,
-        error: `${fieldName} contains invalid characters`,
-        field: fieldName,
-      };
-    }
-  }
-  
-  return { success: true, data: value };
-};
-
-/**
- * Safe JSON parse with error handling
- */
-export const safeJsonParse = <T>(json: string, fallback: T): T => {
-  try {
-    return JSON.parse(json) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-/**
- * Safe JSON stringify with circular reference handling
- */
-export const safeJsonStringify = (obj: unknown, space?: number): string => {
-  const seen = new WeakSet();
-  return JSON.stringify(obj, (key, value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (seen.has(value)) {
-        return '[Circular]';
-      }
-      seen.add(value);
-    }
-    return value;
-  }, space);
-};
-
 // ============================================================================
 // SECURE STORAGE HELPERS
 // ============================================================================
-
-/**
- * Safely store data in localStorage/sessionStorage with serialization
- */
-export const secureStorage = {
-  set: (key: string, value: unknown, storage: Storage = localStorage): boolean => {
-    try {
-      const serialized = safeJsonStringify(value);
-      storage.setItem(key, serialized);
-      return true;
-    } catch (error) {
-      console.error('Storage error:', error);
-      return false;
-    }
-  },
-  
-  get: <T>(key: string, fallback: T, storage: Storage = localStorage): T => {
-    try {
-      const item = storage.getItem(key);
-      if (!item) return fallback;
-      return JSON.parse(item) as T;
-    } catch {
-      return fallback;
-    }
-  },
-  
-  remove: (key: string, storage: Storage = localStorage): boolean => {
-    try {
-      storage.removeItem(key);
-      return true;
-    } catch {
-      return false;
-    }
-  },
-};
-
 // ============================================================================
 // REACT-SPECIFIC HELPERS
 // ============================================================================
-
-/**
- * Create safe innerHTML object for dangerouslySetInnerHTML
- * This is a convenience wrapper that ensures sanitization
- */
-export const createSafeHtml = (html: string | null | undefined, options?: {
-  allowIframes?: boolean;
-  allowImages?: boolean;
-}): { __html: string } => ({
-  __html: sanitizeHtml(html, options),
-});
-
 /**
  * Check if content contains potentially dangerous patterns
  */

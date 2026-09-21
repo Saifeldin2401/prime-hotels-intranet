@@ -1,12 +1,11 @@
 import {
   ROLES,
-  PLATFORM_ROLES,
   toPlatformRole,
   type AppRole,
   type PlatformRole,
 } from '@/lib/constants'
 
-export type RouteId = string
+type RouteId = string
 
 export type Permission =
   | 'training.view'
@@ -46,16 +45,7 @@ export type Permission =
   | 'system.export_data'
 
 export type AllowedRoles = readonly (AppRole | 'all')[] | 'all'
-export type AccessScope = 'global' | 'property' | 'department'
-
-export interface RoutePolicy {
-  id: RouteId
-  path: string
-  allowedRoles: AllowedRoles
-  requiredPermission?: Permission
-  scope?: AccessScope
-  hideFromNav?: boolean
-}
+type AccessScope = 'global' | 'property' | 'department'
 
 export function canRoleAccess(role: AppRole | null, allowedRoles: AllowedRoles): boolean {
   if (allowedRoles === 'all') return true
@@ -142,6 +132,3 @@ export function isAtLeastPlatformRole(role: AppRole | null, minRole: PlatformRol
   if (!platform) return false
   return PLATFORM_ROLE_RANK[platform] >= PLATFORM_ROLE_RANK[minRole]
 }
-
-export { PLATFORM_ROLES }
-

@@ -15,7 +15,7 @@ import type { TrainingSection } from '@/pages/training/components/builder/traini
 export type ComplianceAuthority = 'MINISTRY_OF_TOURISM' | 'BALADY_FOOD_SAFETY' | 'CIVIL_DEFENSE' | 'SAUDI_LABOR_LAW' | 'ZATCA'
 export type ComplianceSeverity = 'CRITICAL' | 'WARNING' | 'RECOMMENDATION'
 
-export interface ComplianceRule {
+interface ComplianceRule {
   id: string
   authority: ComplianceAuthority
   authorityName: string
@@ -50,6 +50,14 @@ export interface ComplianceFinding {
   descriptionAr?: string
   remediationCategory?: string
   targetSectionId?: string
+}
+
+/** Minimal content shape the audit reads (builder sections and generated articles both fit). */
+export interface ComplianceAuditSection {
+  id?: string
+  title: string
+  description?: string
+  items?: Array<{ title?: string; content?: string | null }>
 }
 
 export interface ComplianceAuditReport {
@@ -151,7 +159,7 @@ export const KSA_COMPLIANCE_RULES: ComplianceRule[] = [
   },
 ]
 
-export class ComplianceShieldEngine {
+class ComplianceShieldEngine {
   private static instance: ComplianceShieldEngine
 
   private constructor() {}
@@ -166,7 +174,7 @@ export class ComplianceShieldEngine {
   /**
    * Run comprehensive audit on course sections
    */
-  public auditModule(sections: TrainingSection[]): ComplianceAuditReport {
+  public auditModule(sections: ComplianceAuditSection[]): ComplianceAuditReport {
     const findings: ComplianceFinding[] = []
     let totalChecks = 0
     let passedChecks = 0

@@ -19,7 +19,6 @@ import {
   Image as ImageIcon,
   Link,
   MessageSquare,
-  Sparkles,
   Video
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -58,7 +57,7 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
           isRTL ? 'flex-row-reverse' : ''
         )}>
           <BookOpen className="w-4 h-4 text-emerald-600 shrink-0" />
-          <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+          <div className={cn('flex-1 min-w-0', isRTL ? 'text-end' : 'text-start')}>
             <p className="text-sm font-medium text-emerald-900 dark:text-emerald-200 truncate">
               {sopTitle || block.title || t('builder.inlinePreview.sopReference', 'Knowledge Base SOP')}
             </p>
@@ -99,7 +98,7 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
             '[&_.callout]:text-xs [&_.callout]:p-2 [&_.callout]:rounded-md [&_.callout]:my-2',
             '[&_.callout-info]:bg-blue-50 [&_.callout-info]:dark:bg-blue-950/30 [&_.callout-info]:border [&_.callout-info]:border-blue-200',
             '[&_.callout-warning]:bg-amber-50 [&_.callout-warning]:dark:bg-amber-950/30 [&_.callout-warning]:border [&_.callout-warning]:border-amber-200',
-            isRTL ? 'text-right' : 'text-left'
+            isRTL ? 'text-end' : 'text-start'
           )}
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content) }}
         />
@@ -213,7 +212,7 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
         <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-700 flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-amber-600" />
         </div>
-        <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+        <div className={cn('flex-1 min-w-0', isRTL ? 'text-end' : 'text-start')}>
           <p className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate">
             {block.title || t('builder.inlinePreview.document', 'Document')}
           </p>
@@ -242,7 +241,7 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
     return (
       <div className={cn(
         'p-3.5 bg-amber-50/60 dark:bg-amber-950/20 rounded-xl border border-amber-200/80 dark:border-amber-900/50 space-y-2.5',
-        isRTL ? 'text-right' : 'text-left'
+        isRTL ? 'text-end' : 'text-start'
       )}>
         <div className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
           <div className="flex items-center gap-2">
@@ -286,7 +285,7 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
     return (
       <div className={cn(
         'p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-2.5',
-        isRTL ? 'text-right' : 'text-left'
+        isRTL ? 'text-end' : 'text-start'
       )}>
         <div className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
           <div className="flex items-center gap-2">

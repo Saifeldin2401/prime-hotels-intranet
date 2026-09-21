@@ -105,7 +105,7 @@ function configToRow(patch: Partial<AIPlatformConfig>): Record<string, unknown> 
 }
 
 /** Push the config into the in-memory registry so routing honours it now. */
-export function applyPlatformConfig(cfg: AIPlatformConfig): void {
+function applyPlatformConfig(cfg: AIPlatformConfig): void {
   setRoutingMode(cfg.routingMode)
   const disabledProviders = ALL_PROVIDERS.filter((p) => !cfg.enabledProviders.includes(p))
   setModelOverrides({

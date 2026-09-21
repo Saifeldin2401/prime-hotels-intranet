@@ -65,7 +65,7 @@ const stripUnsupportedColumns = (assignment: LearningAssignmentMutationPayload):
   return legacyAssignment
 }
 
-export const isLearningAssignmentSchemaColumnMismatchError = (error: PostgrestLikeError | null | undefined) => {
+const isLearningAssignmentSchemaColumnMismatchError = (error: PostgrestLikeError | null | undefined) => {
   if (!error) return false
   const details = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase()
   return (

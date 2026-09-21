@@ -145,7 +145,6 @@ export default defineConfig({
           if (id.includes('/node_modules/html2pdf.js') || id.includes('/node_modules/html2canvas') || id.includes('/node_modules/canvg')) {
             return 'vendor-html2pdf'
           }
-          if (id.includes('/node_modules/exceljs')) return 'vendor-excel'
           if (id.includes('/node_modules/@tiptap/')) return 'vendor-editor'
 
           // Let Vite/Rollup handle the rest automatically to prevent circular dependencies

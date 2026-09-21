@@ -16,9 +16,9 @@
  * a page that doesn't extract a document.
  */
 
-export type ExtractableKind = 'pdf' | 'docx' | 'text' | 'unsupported'
+type ExtractableKind = 'pdf' | 'docx' | 'text' | 'unsupported'
 
-export interface ExtractedDocument {
+interface ExtractedDocument {
   text: string
   wordCount: number
   kind: ExtractableKind
@@ -27,7 +27,7 @@ export interface ExtractedDocument {
 
 const TEXT_EXTENSIONS = ['txt', 'md', 'markdown', 'csv', 'tsv', 'json', 'log', 'html', 'htm', 'xml', 'rtf']
 
-export function classifyFile(nameOrType: string): ExtractableKind {
+function classifyFile(nameOrType: string): ExtractableKind {
   const s = nameOrType.toLowerCase()
   if (s.endsWith('.pdf') || s === 'application/pdf' || s === 'pdf') return 'pdf'
   if (

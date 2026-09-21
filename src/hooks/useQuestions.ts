@@ -12,8 +12,7 @@ import * as QuestionService from '@/services/questionService'
 import type {
     AIQuestionGenerationRequest,
     AnswerSubmission,
-    QuestionFormData,
-    QuestionUsageType
+    QuestionFormData
 } from '@/types/questions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -39,26 +38,6 @@ export function useQuestion(id: string | undefined) {
         queryKey: ['question', id],
         queryFn: () => QuestionService.getQuestionById(id!),
         enabled: !!id
-    })
-}
-
-export function useQuestionsForContext(usageType: QuestionUsageType, entityId: string | undefined) {
-    return useQuery({
-        queryKey: ['questions-context', usageType, entityId],
-        queryFn: () => QuestionService.getQuestionsForContext(usageType, entityId!),
-        enabled: !!entityId
-    })
-}
-
-export function usePublishedQuestions(sopId?: string) {
-    const { currentOrganization } = useTenant()
-    return useQuery({
-        queryKey: ['questions-published', sopId, currentOrganization?.id],
-        queryFn: () => QuestionService.getQuestions({
-            status: 'published',
-            sop_id: sopId,
-            organization_id: currentOrganization?.id
-        }, 1, 100)
     })
 }
 
@@ -139,22 +118,6 @@ export function useDeleteQuestion() {
 // REVIEW WORKFLOW
 // ============================================================================
 
-export function useSubmitForReview() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: (id: string) => QuestionService.submitForReview(id),
-        onSuccess: (_, id) => {
-            queryClient.invalidateQueries({ queryKey: ['questions'] })
-            queryClient.invalidateQueries({ queryKey: ['question', id] })
-            crudToasts.submit.success('Question')
-        },
-        onError: () => {
-            crudToasts.submit.error('question')
-        }
-    })
-}
-
 export function useApproveQuestion() {
     const queryClient = useQueryClient()
     const { user } = useAuth()
@@ -193,73 +156,9 @@ export function useRejectQuestion() {
     })
 }
 
-export function useArchiveQuestion() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: (id: string) => QuestionService.archiveQuestion(id),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['questions'] })
-            crudToasts.update.success('Question archived')
-        },
-        onError: () => {
-            crudToasts.update.error('archive question')
-        }
-    })
-}
-
 // ============================================================================
 // QUESTION LINKING
 // ============================================================================
-
-export function useLinkQuestion() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: ({
-            questionId,
-            usageType,
-            entityId,
-            options
-        }: {
-            questionId: string
-            usageType: QuestionUsageType
-            entityId: string
-            options?: { displayOrder?: number; isRequired?: boolean; weight?: number }
-        }) => QuestionService.linkQuestionToContext(questionId, usageType, entityId, options),
-        onSuccess: (_, { usageType, entityId }) => {
-            queryClient.invalidateQueries({ queryKey: ['questions-context', usageType, entityId] })
-            crudToasts.create.success('Question link')
-        },
-        onError: () => {
-            crudToasts.create.error('link question')
-        }
-    })
-}
-
-export function useUnlinkQuestion() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: ({
-            questionId,
-            usageType,
-            entityId
-        }: {
-            questionId: string
-            usageType: QuestionUsageType
-            entityId: string
-        }) => QuestionService.unlinkQuestionFromContext(questionId, usageType, entityId),
-        onSuccess: (_, { usageType, entityId }) => {
-            queryClient.invalidateQueries({ queryKey: ['questions-context', usageType, entityId] })
-            crudToasts.delete.success('Question link')
-        },
-        onError: () => {
-            crudToasts.delete.error('unlink question')
-        }
-    })
-}
-
 // ============================================================================
 // ATTEMPTS & SCORING
 // ============================================================================
@@ -278,67 +177,9 @@ export function useRecordAttempt() {
     })
 }
 
-export function useUserAttempts(questionId?: string, limit = 50) {
-    const { user } = useAuth()
-
-    return useQuery({
-        queryKey: ['user-attempts', user?.id, questionId, limit],
-        queryFn: () => QuestionService.getUserAttempts(user!.id, questionId, limit),
-        enabled: !!user?.id
-    })
-}
-
 // ============================================================================
 // QUIZ SESSIONS
 // ============================================================================
-
-export function useStartQuizSession() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
-    return useMutation({
-        mutationFn: ({
-            quizType,
-            entityId,
-            settings
-        }: {
-            quizType: QuestionUsageType
-            entityId?: string
-            settings?: { timeLimit?: number; passingScore?: number }
-        }) => QuestionService.startQuizSession(user!.id, quizType, entityId, settings),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['quiz-sessions'] })
-        }
-    })
-}
-
-export function useCompleteQuizSession() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: ({
-            sessionId,
-            results
-        }: {
-            sessionId: string
-            results: {
-                totalQuestions: number
-                correctAnswers: number
-                totalPoints: number
-                earnedPoints: number
-            }
-        }) => QuestionService.completeQuizSession(sessionId, results),
-        onSuccess: (session) => {
-            queryClient.invalidateQueries({ queryKey: ['quiz-sessions'] })
-            if (session.passed) {
-                toast.success(`Quiz completed! Score: ${session.score_percentage?.toFixed(0)}%`)
-            } else {
-                toast.info(`Quiz completed. Score: ${session.score_percentage?.toFixed(0)}%. Keep practicing!`)
-            }
-        }
-    })
-}
-
 // ============================================================================
 // AI GENERATION
 // ============================================================================
@@ -360,14 +201,6 @@ export function useGenerateQuestions() {
 // ============================================================================
 // ANALYTICS
 // ============================================================================
-
-export function useQuestionAnalytics(questionId: string | undefined) {
-    return useQuery({
-        queryKey: ['question-analytics', questionId],
-        queryFn: () => QuestionService.getQuestionAnalytics(questionId!),
-        enabled: !!questionId
-    })
-}
 
 export function useQuestionsPassRates(questionIds: string[]) {
     const sortedIds = [...questionIds].sort()

@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-export interface UseFormPersistenceOptions<T> {
+interface UseFormPersistenceOptions<T> {
   /** Unique key for this form instance */
   key: string
   /** 
@@ -72,7 +72,7 @@ export interface UseFormPersistenceOptions<T> {
   onSave?: (data: T) => void
 }
 
-export interface FormPersistenceState<T> {
+interface FormPersistenceState<T> {
   /** Whether the form has been hydrated from storage */
   isHydrated: boolean
   /** Whether there are unsaved changes */

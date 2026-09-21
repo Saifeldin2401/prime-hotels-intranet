@@ -38,7 +38,6 @@ import {
   Check,
   Edit,
   Mail,
-  Palette,
   Crown,
   Building,
   Globe,
@@ -261,7 +260,7 @@ export default function OrganizationProfile() {
       industry?: string
       logoUrl?: string
       faviconUrl?: string
-      brandColors?: { primary?: string; secondary?: string; accent?: string }
+      brandColors?: { primary: string; secondary: string; accent?: string }
       emailSenderName?: string
       emailReplyTo?: string
       supportEmail?: string
@@ -298,6 +297,7 @@ export default function OrganizationProfile() {
         .upload(filePath, file, { cacheControl: '3600', upsert: false })
       if (uploadError) throw uploadError
 
+      // eslint-disable-next-line no-restricted-properties -- 'media' is a public bucket (verified live); a durable public URL is intended here.
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath)
       setUrl(urlData.publicUrl)
       toast({ title: kind === 'logo' ? 'Logo uploaded' : 'Favicon uploaded' })

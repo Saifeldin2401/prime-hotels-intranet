@@ -371,7 +371,7 @@ export default function MyProfile() {
                                                 rows={3}
                                                 maxLength={500}
                                             />
-                                            <p className="text-xs text-gray-400 text-right">{bio.length}/500</p>
+                                            <p className="text-xs text-gray-400 text-end">{bio.length}/500</p>
                                         </div>
                                     </div>
 

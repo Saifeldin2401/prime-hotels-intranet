@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 
-export interface Department {
+interface Department {
   id: string;
   name: string;
   name_ar?: string;

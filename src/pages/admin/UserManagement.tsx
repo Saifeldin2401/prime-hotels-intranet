@@ -1,6 +1,5 @@
 import { UserBulkActionsBar } from '@/components/admin/UserBulkActionsBar'
 import { UserForm } from '@/components/admin/UserForm'
-import { PageHeader } from '@/components/layout/PageHeader'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -30,12 +29,9 @@ import { PendingUserApprovals } from '@/components/admin/PendingUserApprovals'
 import { EmployeeTransferModal } from '@/components/directory/EmployeeTransferModal'
 import {
     Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
+    SheetContent
 } from '@/components/ui/sheet'
-import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, GraduationCap, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, GraduationCap, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Building, Briefcase, Shield, ExternalLink } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'

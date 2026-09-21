@@ -48,7 +48,6 @@ import {
     BookOpen,
     Building2,
     CheckSquare,
-    ChevronRight,
     ClipboardCheck,
     Eye,
     FileCheck,
@@ -362,7 +361,7 @@ export function KnowledgeBaseSidebar({
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 className={cn(
                                     "h-9 text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 shadow-sm focus-visible:ring-hotel-navy",
-                                    isRTL ? "pe-9 ps-8 text-right" : "ps-9 pe-8 text-left"
+                                    isRTL ? "pe-9 ps-8 text-end" : "ps-9 pe-8 text-start"
                                 )}
                             />
                             {searchInput && (
@@ -516,7 +515,7 @@ export function KnowledgeBaseSidebar({
                                         key={doc.id}
                                         className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-hotel-gold hover:shadow-xs transition-all space-y-2.5"
                                     >
-                                        <div className={cn("flex items-start gap-2.5", isRTL ? "flex-row-reverse text-right" : "flex-row text-left")}>
+                                        <div className={cn("flex items-start gap-2.5", isRTL ? "flex-row-reverse text-end" : "flex-row text-start")}>
                                             <div className="flex-1 min-w-0">
                                                 {/* Badge Row */}
                                                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -603,7 +602,7 @@ export function KnowledgeBaseSidebar({
                                         key={quiz.id}
                                         className="p-3.5 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-hotel-gold/60 transition-all flex items-center justify-between gap-3"
                                     >
-                                        <div className={cn("flex-1 min-w-0", isRTL ? "text-right" : "text-left")}>
+                                        <div className={cn("flex-1 min-w-0", isRTL ? "text-end" : "text-start")}>
                                             <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
                                                 {quiz.title}
                                             </h4>
@@ -662,7 +661,7 @@ export function KnowledgeBaseSidebar({
                                             key={q.id}
                                             className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-hotel-gold/60 transition-all flex items-start justify-between gap-3"
                                         >
-                                            <div className={cn("flex-1 min-w-0", isRTL ? "text-right" : "text-left")}>
+                                            <div className={cn("flex-1 min-w-0", isRTL ? "text-end" : "text-start")}>
                                                 <p className="text-xs font-medium text-slate-900 dark:text-slate-100 line-clamp-2 leading-relaxed">
                                                     {q.question_text}
                                                 </p>

@@ -3,7 +3,7 @@ import { z } from 'zod'
 /**
  * Module Outline Zod Schema for Structured Course Creation
  */
-export const ModuleOutlineSectionSchema = z.object({
+const ModuleOutlineSectionSchema = z.object({
   heading: z.string().min(2, 'Heading is required'),
   suggestedBlockType: z.enum(['text', 'video', 'document_link', 'scenario']).default('text'),
   summary: z.string().default(''),
@@ -20,7 +20,7 @@ export const ModuleOutlineSchema = z.object({
 /**
  * Quiz Question Zod Schema
  */
-export const AIQuizQuestionSchema = z.object({
+const AIQuizQuestionSchema = z.object({
   question_text: z.string().min(5, 'Question text is required'),
   question_type: z.enum(['mcq', 'true_false', 'multi_select', 'open_ended']).default('mcq'),
   options: z.array(z.string()).optional().default([]),
@@ -37,7 +37,7 @@ export const AIQuizGenerationSchema = z.array(AIQuizQuestionSchema)
 /**
  * Operational Checklist Item Schema
  */
-export const AIHotelChecklistItemSchema = z.object({
+const AIHotelChecklistItemSchema = z.object({
   id: z.string().default(() => crypto.randomUUID()),
   text: z.string().min(2),
   text_ar: z.string().optional(),
@@ -46,17 +46,3 @@ export const AIHotelChecklistItemSchema = z.object({
 })
 
 export const AIHotelChecklistSchema = z.array(AIHotelChecklistItemSchema)
-
-/**
- * Operational FAQ Item Schema
- */
-export const AIHotelFAQItemSchema = z.object({
-  id: z.string().default(() => crypto.randomUUID()),
-  question: z.string().min(2),
-  question_ar: z.string().optional(),
-  answer: z.string().min(2),
-  answer_ar: z.string().optional(),
-  order: z.number().default(0),
-})
-
-export const AIHotelFAQSchema = z.array(AIHotelFAQItemSchema)

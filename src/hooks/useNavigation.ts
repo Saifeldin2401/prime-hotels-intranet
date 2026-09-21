@@ -38,7 +38,7 @@ export interface NavigationGroupWithItems {
     isExpanded: boolean
 }
 
-export interface UseNavigationReturn {
+interface UseNavigationReturn {
     /** Grouped navigation for sidebar */
     groupedNavigation: NavigationGroupWithItems[]
     /** Flat list for mobile */
@@ -320,17 +320,4 @@ export function useNavigation(): UseNavigationReturn {
         canAccess,
         getRoute
     }
-}
-
-/**
- * Hook to get just the active navigation group
- */
-export function useActiveGroup(): NavigationGroup | null {
-    const location = useLocation()
-
-    const route = ROUTES.find(r =>
-        location.pathname === r.path || location.pathname.startsWith(r.path + '/')
-    )
-
-    return route?.group ?? null
 }

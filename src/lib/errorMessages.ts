@@ -5,7 +5,7 @@
 
 import i18n from '@/i18n/i18n'
 
-export interface ErrorDetails {
+interface ErrorDetails {
   message: string
   code?: string
   retryable?: boolean
@@ -240,19 +240,3 @@ function mapErrorToUserMessage(message: string, _name?: string): ErrorDetails {
 export function getErrorMessage(error: unknown): string {
   return getUserFriendlyError(error).message
 }
-
-/**
- * Checks if an error is retryable
- */
-export function isRetryableError(error: unknown): boolean {
-  return getUserFriendlyError(error).retryable ?? true
-}
-
-/**
- * Gets suggested action for an error
- */
-export function getErrorAction(error: unknown): string | undefined {
-  return getUserFriendlyError(error).action
-}
-
-

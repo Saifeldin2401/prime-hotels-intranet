@@ -46,8 +46,8 @@ const LEGACY_CLASS_NAMES = [
   'emphasis-italic',
   'list-disc',
   'list-decimal',
-  'pl-6',
-  'pl-4',
+  'ps-6',
+  'ps-4',
   'space-y-2',
   'space-y-1',
   'text-xs',
@@ -64,9 +64,6 @@ const LEGACY_CLASS_NAMES = [
 
 const ALLOWED_CLASS_SET = new Set<string>([...AI_CLASS_NAMES, ...LEGACY_CLASS_NAMES])
 const ALLOWED_CLASS_PREFIXES = ['ai-', 'editor-', 'alert-', 'language-']
-
-export const AI_PREDEFINED_CLASSES = AI_CLASS_NAMES
-
 export const AI_HTML_SYSTEM_PROMPT =
   'You are a professional content designer and editor. Generate structured, beautifully formatted HTML content using semantic tags and predefined CSS classes. Do not return plain text. Do not include explanations. Return only clean HTML.'
 

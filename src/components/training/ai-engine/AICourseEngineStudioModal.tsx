@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import DOMPurify from 'dompurify'
@@ -11,47 +11,26 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import {
-  AlertCircle,
   ArrowLeft,
   ArrowRight,
   Award,
-  BookOpen,
   BrainCircuit,
-  CheckCircle2,
-  ChevronRight,
   Code,
-  Compass,
-  Copy,
-  Download,
-  Eye,
-  FileCheck,
-  FileCode,
-  FileQuestion,
-  FileText,
-  Flame,
-  Globe,
   History,
   Image as ImageIcon,
   Layers,
-  MessageSquare,
-  PanelRight,
   PanelRightClose,
   PanelRightOpen,
-  RefreshCw,
   Rocket,
-  RotateCcw,
   Save,
   ShieldCheck,
   Sparkles,
-  Target,
   UploadCloud,
   Wand2,
   Zap,
@@ -80,10 +59,14 @@ import type {
   SourceDocumentRef,
   TargetAudience,
   VisualStyle,
+  GranularDepthConfig,
+  ModuleCountOption,
 } from '@/types/aiCourseEngine'
 import { type QuestionType } from '@/types/questions'
 import {
   BLOOM_PRESETS,
+  remediateAllCourseQAGaps,
+  remediateCourseQAGap,
 } from '@/lib/ai/courseEngine'
 import {
   checkCourseConfigConsistency,
@@ -123,7 +106,6 @@ import { StudioQuickStart, type QuickThoroughness, type QuickSourceKind } from '
 import { GenerationHistoryDialog } from './GenerationHistoryDialog'
 import { CourseQAInspectorSheet } from './CourseQAInspectorSheet'
 import { VisualAssetEditorModal } from './VisualAssetEditorModal'
-import { GuestRoleplaySimulatorModal } from './roleplay/GuestRoleplaySimulatorModal'
 import { ComplianceShieldDialog } from './compliance/ComplianceShieldDialog'
 import { DocumentCourseIngestionModal } from './ingestion/DocumentCourseIngestionModal'
 import { extractTextFromFile } from '@/lib/documentText'
@@ -154,8 +136,8 @@ interface AICourseEngineStudioModalProps {
       questions?: any[]
       passingScore?: number
     }>
-    difficulty?: string
-    language?: string
+    difficulty?: 'beginner' | 'intermediate' | 'advanced'
+    language?: 'English' | 'Arabic' | 'Bilingual'
   }) => Promise<void>
 }
 
@@ -576,7 +558,7 @@ export function AICourseEngineStudioModal({
     }
 
     // 3. Procedural / SOP Grounded Course Missing Ordering Questions
-    if ((generationMode === 'document_based' || courseType === 'operational') && !selectedQuestionTypes.includes('ordering')) {
+    if (generationMode === 'document_based' && !selectedQuestionTypes.includes('ordering')) {
       recs.push({
         id: 'sop-ordering-missing',
         category: 'assessment',
@@ -606,6 +588,7 @@ export function AICourseEngineStudioModal({
         onApply: () => setQuizPlacement('per_module'),
       })
     }
+
 
     return recs
   }, [difficulty, overallDepth, moduleCount, lessonsPerModule, quizQuestionCount, generationMode, courseType, selectedQuestionTypes, quizPlacement])
@@ -711,17 +694,18 @@ export function AICourseEngineStudioModal({
       overallDepth,
       defaultLessonTemplate,
       granularity: {
-        moduleCount: typeof moduleCount === 'number' ? moduleCount : customModuleCount,
+        moduleCount: (typeof moduleCount === 'number' ? moduleCount : customModuleCount) as ModuleCountOption,
         lessonsPerModule: typeof lessonsPerModule === 'number' ? lessonsPerModule : 3,
         lessonDuration,
       },
+      // Depth sliders are bounded to 1-5.
       depthConfig: {
         theory: theoryDepth,
         examples: examplesDepth,
         practical: practicalDepth,
         caseStudies: caseStudiesDepth,
         assessments: assessmentsDepth,
-      },
+      } as GranularDepthConfig,
       lessonComponents: selectedComponents,
       quizConfig: {
         placement: quizPlacement,
@@ -995,7 +979,7 @@ export function AICourseEngineStudioModal({
         sections,
         checkpoints,
         difficulty: mappedDiff,
-        language: config.aiControls?.targetLanguage === 'ar' ? 'Arabic' : 'English',
+        language: config.aiControls?.targetLanguage || 'English',
       })
 
       toast({
@@ -1832,7 +1816,8 @@ export function AICourseEngineStudioModal({
 
                                 const draftAsset: CourseVisualAsset = {
                                   id: `lesson-visual-${Date.now()}`,
-                                  course_id: generatedBlueprint?.id || 'course-draft',
+                                  // The blueprint isn't persisted yet, so there is no course id to attach to.
+                                  course_id: 'course-draft',
                                   module_id: 'mod-draft',
                                   lesson_id: activeLesson.id,
                                   title: activeLesson.title,
@@ -1849,6 +1834,7 @@ export function AICourseEngineStudioModal({
                                   status: 'pending',
                                   order_index: 0,
                                   image_url: '',
+                                  storage_bucket: 'content-media',
                                   draft: true,
                                 }
                                 setSelectedAssetForEditor(draftAsset)
@@ -2013,8 +1999,16 @@ export function AICourseEngineStudioModal({
         <CourseQAInspectorSheet
           open={qaInspectorOpen}
           onOpenChange={setQaInspectorOpen}
-          blueprint={generatedBlueprint}
-          onBlueprintUpdated={setGeneratedBlueprint}
+          qaReport={generatedBlueprint.qaReport ?? null}
+          courseTitle={generatedBlueprint.title}
+          onRegenerateArea={async (area) => {
+            const { updatedBlueprint } = await remediateCourseQAGap(generatedBlueprint, area, buildCurrentConfig())
+            setGeneratedBlueprint(updatedBlueprint)
+          }}
+          onAutoRemediateAll={async () => {
+            const { updatedBlueprint } = await remediateAllCourseQAGaps(generatedBlueprint, buildCurrentConfig())
+            setGeneratedBlueprint(updatedBlueprint)
+          }}
         />
       )}
 
@@ -2105,9 +2099,12 @@ export function AICourseEngineStudioModal({
                 order: mIdx,
                 items: m.lessons.map((l, lIdx) => ({
                   id: l.id || `les-${lIdx}`,
-                  type: 'text',
+                  type: 'text' as const,
                   title: l.title,
                   content: l.renderedHtml || '',
+                  content_url: '',
+                  content_data: {},
+                  is_mandatory: true,
                   order: lIdx,
                 })),
               }))

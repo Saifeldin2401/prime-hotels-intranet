@@ -68,12 +68,14 @@ describe('trainingAICompletionEngine', () => {
         id: 'sec-1',
         title: '', // missing title
         description: '', // missing description
+        order: 0,
         items: [
           {
             id: 'blk-1',
             type: 'text',
             title: 'Guest Greeting & Welcome Script',
             content: '<p>Content</p>',
+            content_data: null,
             content_url: '',
             is_mandatory: true,
             order: 0,

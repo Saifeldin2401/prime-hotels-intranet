@@ -148,7 +148,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
           {fileType === 'article' && (
             <div className="prose prose-sm sm:prose max-w-none p-6 bg-white rounded-lg">
               {document.description && (
-                <p className="text-lg text-gray-600 mb-6 italic border-l-4 border-gray-200 ps-4">
+                <p className="text-lg text-gray-600 mb-6 italic border-s-4 border-gray-200 ps-4">
                   {document.description}
                 </p>
               )}

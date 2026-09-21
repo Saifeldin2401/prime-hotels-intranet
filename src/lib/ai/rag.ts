@@ -9,7 +9,7 @@ export interface ArticleSource {
   similarity?: number
 }
 
-export interface RAGSearchOptions {
+interface RAGSearchOptions {
   limit?: number
   propertyId?: string | null
   departmentId?: string | null

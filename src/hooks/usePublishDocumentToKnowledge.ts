@@ -11,7 +11,6 @@ import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
 import { crudToasts } from '@/lib/toastHelpers';
 import { getArticleById } from '@/services/knowledgeService';
-import type { Database } from '@/types/database.generated';
 import type { Document } from '@/lib/types';
 import type { KnowledgeArticle, KnowledgeVisibility } from '@/types/knowledge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -32,7 +31,7 @@ export interface PublishToKnowledgeInput {
   autoPublish?: boolean;
 }
 
-export interface PublishToKnowledgeResult {
+interface PublishToKnowledgeResult {
   article: KnowledgeArticle | null;
   success: boolean;
   error?: string;
@@ -202,65 +201,4 @@ export function useCanPublishToKnowledge(document?: Document | null): {
   }
 
   return { canPublish: true };
-}
-
-/**
- * Hook to update an existing knowledge base article from its source document
- */
-export function useSyncKnowledgeArticle() {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
-
-  return useMutation({
-    mutationFn: async ({
-      articleId,
-      documentId,
-    }: {
-      articleId: string;
-      documentId: string;
-    }): Promise<boolean> => {
-      if (!user) throw new Error('Not authenticated');
-
-      // Fetch both documents
-      const [{ data: article }, { data: sourceDoc }] = await Promise.all([
-        supabase.from('documents').select('*').eq('id', articleId).single(),
-        supabase.from('documents').select('*').eq('id', documentId).single(),
-      ]);
-
-      if (!article || !sourceDoc) {
-        throw new Error('Article or source document not found');
-      }
-
-      // Update article with latest source document info
-      const { error } = await supabase
-        .from('documents')
-        .update({
-          file_url: sourceDoc.file_url,
-          updated_at: new Date().toISOString(),
-          updated_by: user.id,
-        })
-        .eq('id', articleId);
-
-      if (error) throw error;
-
-      // Create new version record
-      await supabase.from('document_versions').insert({
-        document_id: articleId,
-        version_number: (article.current_version || 0) + 1,
-        file_url: sourceDoc.file_url,
-        change_summary: `Synced from source document (${documentId})`,
-        created_by: user.id,
-      });
-
-      return true;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] });
-      queryClient.invalidateQueries({ queryKey: ['knowledge-article'] });
-      crudToasts.update.success('Knowledge base article synced');
-    },
-    onError: () => {
-      crudToasts.update.error('Failed to sync knowledge base article');
-    },
-  });
 }

@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase'
 import type { Json } from '@/types/database.generated'
 
 // Extended notification types covering all system events
-export type NotificationType =
+type NotificationType =
   // Approval workflow
   | 'approval_required'
   | 'request_approved'
@@ -65,7 +65,7 @@ export type NotificationType =
   // Approvals (Dynamic types)
   | string & {}
 
-export interface CreateNotificationParams {
+interface CreateNotificationParams {
   userId: string
   type: NotificationType
   title: string
@@ -76,7 +76,7 @@ export interface CreateNotificationParams {
   link?: string | null
 }
 
-export interface BulkNotificationParams {
+interface BulkNotificationParams {
   userIds: string[]
   type: NotificationType
   title: string
@@ -194,22 +194,6 @@ async function sendEmailNotification(toUserId: string, payload: EmailNotificatio
     // Email sent successfully
   } catch (err) {
     console.error('Failed to send email notification:', err)
-  }
-}
-
-/**
- * Check if a notification policy key is enabled for a given tenant organization
- */
-export async function isPolicyEnabled(orgId: string, policyKey: string): Promise<boolean> {
-  try {
-    const { data, error } = await (supabase.rpc as any)('notification_policy_enabled', {
-      p_org_id: orgId,
-      p_key: policyKey,
-    })
-    if (error) return true
-    return data ?? true
-  } catch {
-    return true
   }
 }
 
@@ -361,56 +345,6 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
       console.error('Failed to queue bulk email notifications (Network/CORS error):', err)
       // We explicitly DO NOT throw here, so the main mutation (like creating an announcement) succeeds in the UI.
     }
-  }
-}
-
-/**
- * Mark a notification as read
- */
-export async function markNotificationAsRead(notificationId: string): Promise<void> {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('id', notificationId)
-
-  if (error) {
-    console.error('Error marking notification as read:', error)
-    throw error
-  }
-}
-
-/**
- * Mark all notifications as read for a user
- */
-export async function markAllNotificationsAsRead(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('notifications')
-    .update({ read_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .is('read_at', null)
-
-  if (error) {
-    console.error('Error marking all notifications as read:', error)
-    throw error
-  }
-}
-
-/**
- * Delete old notifications (for cleanup)
- */
-export async function deleteOldNotifications(userId: string, olderThanDays: number = 30): Promise<void> {
-  const cutoffDate = new Date()
-  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays)
-
-  const { error } = await supabase
-    .from('notifications')
-    .delete()
-    .eq('user_id', userId)
-    .lt('created_at', cutoffDate.toISOString())
-
-  if (error) {
-    console.error('Error deleting old notifications:', error)
-    throw error
   }
 }
 

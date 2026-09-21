@@ -10,8 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  DialogTitle
 } from '@/components/ui/dialog'
 import {
   AlertDialog,

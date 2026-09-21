@@ -2,22 +2,13 @@
  * Custom React Query hooks for Course Visual Assets Management
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { aiCourseEngineService } from '@/services/aiCourseEngineService'
 import type { CourseVisualAsset, VisualOpportunity } from '@/types/aiCourseEngine'
 
-export const COURSE_VISUAL_KEYS = {
+const COURSE_VISUAL_KEYS = {
   all: ['course-visual-assets'] as const,
   byCourse: (courseId: string) => [...COURSE_VISUAL_KEYS.all, courseId] as const,
-}
-
-export function useCourseVisualAssets(courseId?: string) {
-  return useQuery({
-    queryKey: COURSE_VISUAL_KEYS.byCourse(courseId || ''),
-    queryFn: () => (courseId ? aiCourseEngineService.getCourseVisualAssets(courseId) : []),
-    enabled: Boolean(courseId),
-    staleTime: 5 * 60 * 1000,
-  })
 }
 
 export function useUpdateVisualAsset() {

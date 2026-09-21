@@ -19,7 +19,6 @@ import {
   FolderOpen,
   Gauge,
   Image as ImageIcon,
-  LifeBuoy,
   List,
   Loader2,
   Paperclip,
@@ -29,7 +28,6 @@ import {
   Sparkles,
   Tag,
   Trash2,
-  Upload,
   Video as VideoIcon,
   X,
 } from 'lucide-react'

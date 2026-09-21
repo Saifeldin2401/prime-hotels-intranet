@@ -23,7 +23,7 @@ import type {
 // COMPREHENSIVE MULTI-PROVIDER MODEL CATALOG
 // ============================================================================
 
-export const MODEL_REGISTRY: ModelMetadata[] = [
+const MODEL_REGISTRY: ModelMetadata[] = [
   // ── 1. GOOGLE GEMINI AI STUDIO (Free Tier / High Quota & Reasoning) ──
   {
     id: 'gemini-2.5-flash',
@@ -565,15 +565,6 @@ export function setModelOverrides(opts: {
   if (typeof opts.freeOnly === 'boolean') ADMIN_FREE_ONLY = opts.freeOnly
 }
 
-export function getModelOverrides() {
-  return {
-    disabledModelIds: [...ADMIN_DISABLED_IDS],
-    forceEnabledModelIds: [...ADMIN_FORCE_ENABLED_IDS],
-    disabledProviders: [...ADMIN_DISABLED_PROVIDERS],
-    freeOnly: ADMIN_FREE_ONLY,
-  }
-}
-
 /**
  * Admin "Agent Roles" tab: ordered preference lists. A model that appears here
  * gets a large routing-score bonus (earlier = bigger) and is prepended to every
@@ -584,12 +575,8 @@ export function setModelPriorities(opts: { textModelPriority?: string[]; imageMo
   if (opts.imageModelPriority) ADMIN_IMAGE_PRIORITY = opts.imageModelPriority.filter(Boolean)
 }
 
-export function getModelPriorities() {
-  return { textModelPriority: [...ADMIN_TEXT_PRIORITY], imageModelPriority: [...ADMIN_IMAGE_PRIORITY] }
-}
-
 /** Position-weighted score bonus for an admin-prioritised model (0 if not listed). */
-export function priorityBonus(modelId: string, modality: ModelModality): number {
+function priorityBonus(modelId: string, modality: ModelModality): number {
   const list = modality === 'image' ? ADMIN_IMAGE_PRIORITY : ADMIN_TEXT_PRIORITY
   const idx = list.indexOf(modelId)
   return idx === -1 ? 0 : Math.max(60, 500 - idx * 60)
@@ -621,7 +608,7 @@ function deriveQualityTier(qualityScore: number): QualityTier {
  * Fill in the operational metadata that the raw catalog omits, and resolve the
  * effective enabled/pricing state. Pure — never mutates the source entry.
  */
-export function normalizeModelMeta(m: ModelMetadata): Required<
+function normalizeModelMeta(m: ModelMetadata): Required<
   Pick<ModelMetadata, 'enabled' | 'priority' | 'latencyTier' | 'qualityTier' | 'reliabilityScore' | 'fallbackEligible' | 'unverified'>
 > & ModelMetadata {
   const verified = VERIFIED_MODEL_IDS.has(m.id)
@@ -674,7 +661,7 @@ export function getEnabledModels(): ModelMetadata[] {
 // AGENT DEFAULT CAPABILITY REQUIREMENTS MATRIX
 // ============================================================================
 
-export const AGENT_TASK_REQUIREMENTS: Record<AgentRole, TaskCapabilityRequirement> = {
+const AGENT_TASK_REQUIREMENTS: Record<AgentRole, TaskCapabilityRequirement> = {
   research: {
     primaryCapability: 'deep_reasoning',
     secondaryCapabilities: ['structured_json', 'long_context'],
@@ -763,7 +750,7 @@ export const AGENT_TASK_REQUIREMENTS: Record<AgentRole, TaskCapabilityRequiremen
 // DYNAMIC MODEL INTELLIGENCE ROUTER
 // ============================================================================
 
-export class AIModelRegistry {
+class AIModelRegistry {
   private static instance: AIModelRegistry
 
   private constructor() {}
@@ -1163,7 +1150,7 @@ function isFreeModel(m: ModelMetadata): boolean {
  * Score a (normalized) model for a capability requirement under a routing mode.
  * Higher is better. Also returns the human-readable reasons behind the score.
  */
-export function scoreModelForMode(
+function scoreModelForMode(
   model: ModelMetadata,
   req: TaskCapabilityRequirement,
   mode: RoutingMode = ACTIVE_ROUTING_MODE,

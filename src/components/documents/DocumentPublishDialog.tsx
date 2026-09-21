@@ -39,6 +39,9 @@ import {
 } from '@/hooks/usePublishDocumentToKnowledge';
 import { FileText, BookOpen, Eye, Shield, Users, Building, Globe, Check, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
+import type { KnowledgeVisibility } from '@/types/knowledge';
+import type { Document } from '@/lib/types/documents';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { generateSmartDocumentMetadata, generateSmartMetadataHeuristic } from '@/lib/ai/smartMetadataService';
@@ -316,7 +319,7 @@ export function DocumentPublishDialog({
                       key={option.value}
                       type="button"
                       onClick={() => setVisibility(option.value)}
-                      className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${
+                      className={`flex items-start gap-3 p-3 rounded-lg border-2 text-start transition-all ${
                         isSelected
                           ? 'border-primary bg-primary/5'
                           : 'border-border hover:border-primary/50'

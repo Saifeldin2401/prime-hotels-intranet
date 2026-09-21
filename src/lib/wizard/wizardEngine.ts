@@ -1,14 +1,11 @@
 import type { 
   WizardStep, 
   RoleBlueprint, 
-  WhatCanIDoSummary, 
-  RoleLevel, 
-  CapabilityAccessLevel 
+  WhatCanIDoSummary 
 } from '@/lib/types/wizard'
 import { getRoleBlueprint } from './blueprints'
-import type { AppRole } from '@/lib/constants'
 
-export interface EvaluationContext {
+interface EvaluationContext {
   role: string
   isPlatformOperator: boolean
   organization?: {
@@ -171,7 +168,7 @@ const MASTER_STEPS: WizardStep[] = [
 /**
  * Determines whether the user has approval responsibilities.
  */
-export function hasApprovalResponsibility(role: string, isPlatformOperator: boolean): boolean {
+function hasApprovalResponsibility(role: string, isPlatformOperator: boolean): boolean {
   if (isPlatformOperator) return true
   const approverRoles = [
     'organization_owner',

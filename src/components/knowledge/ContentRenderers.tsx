@@ -601,7 +601,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
                     value={item.id}
                     className="border rounded-lg px-4 bg-white"
                 >
-                    <AccordionTrigger className="text-left hover:no-underline py-4">
+                    <AccordionTrigger className="text-start hover:no-underline py-4">
                         <div className="flex items-start gap-3">
                             <HelpCircle className="h-5 w-5 text-hotel-gold flex-shrink-0 mt-0.5" />
                             <span className="font-medium text-gray-900">{item.question}</span>

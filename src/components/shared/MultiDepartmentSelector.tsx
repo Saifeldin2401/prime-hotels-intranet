@@ -106,7 +106,7 @@ export function MultiDepartmentSelector({
                         role="combobox"
                         aria-controls={id}
                         aria-expanded={open}
-                        className="w-full justify-between h-auto min-h-[40px] px-3 py-2 text-left font-normal"
+                        className="w-full justify-between h-auto min-h-[40px] px-3 py-2 text-start font-normal"
                         disabled={disabled}
                     >
                         <span className="truncate flex-1">

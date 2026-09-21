@@ -34,7 +34,7 @@ export interface TrainingModule {
 export interface TrainingContentBlock {
   id: string
   training_module_id: string
-  type: 'text' | 'image' | 'video' | 'audio' | 'interactive' | 'document_link' | 'quiz' | 'sop_reference' | 'inline_quiz' | 'ai_generated'
+  type: 'text' | 'image' | 'video' | 'audio' | 'interactive' | 'document_link' | 'quiz' | 'sop_reference' | 'inline_quiz' | 'ai_generated' | 'assignment' | 'practical' | 'roleplay'
   title: string | null
   content: string
   /** Persisted Arabic translation of `content` (documents.content_ar). */
@@ -63,22 +63,6 @@ export interface TrainingQuiz {
   created_at: string
 }
 
-export interface TrainingAssignment {
-  id: string
-  training_module_id: string
-  assigned_to_user_id: string | null
-  assigned_to_department_id: string | null
-  assigned_to_property_id: string | null
-  assigned_to_all: boolean
-  deadline: string | null
-  reminder_sent: boolean
-  auto_enroll: boolean
-  recurring_type: 'none' | 'monthly' | 'quarterly'
-  created_by_role: string | null
-  assigned_by: string
-  created_at: string
-}
-
 export interface TrainingProgress {
   id: string
   user_id: string
@@ -93,29 +77,6 @@ export interface TrainingProgress {
   certificate_url?: string | null
   created_at: string
   updated_at: string
-}
-
-export interface TrainingQuizAttempt {
-  id: string
-  user_id: string
-  module_id: string
-  score: number
-  max_score: number
-  passed: boolean
-  attempt_number: number
-  started_at: string
-  completed_at: string | null
-  answers: Record<string, unknown> | null
-}
-
-export interface TrainingCertificate {
-  id: string
-  training_progress_id: string | null
-  certificate_url: string
-  verification_code: string | null
-  attempt_id: string | null
-  issued_at: string
-  expires_at: string | null
 }
 
 export interface TrainingPath {
@@ -140,7 +101,7 @@ export interface TrainingPathModule {
   id: string
   path_id: string
   module_id: string
-  order_index: number
+  sequence: number
   is_mandatory: boolean
 }
 

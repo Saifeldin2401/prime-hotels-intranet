@@ -9,16 +9,12 @@ import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import {
     AIDocumentSummary,
     AIArticleStudioModal,
-    ChecklistBuilder,
     ChecklistRenderer,
     FAQAccordion,
-    FAQBuilder,
     ImageGalleryRenderer,
     RelatedArticlesEditor,
-    StringListBuilder,
     VideoContentBuilder,
-    VideoPlayer,
-    VisualContentBuilder
+    VideoPlayer
 } from '@/components/knowledge'
 import { AuthorTopBar } from './components/author/AuthorTopBar'
 import { ArticleReadinessDrawer, type ReadinessCheckItem } from './components/author/ArticleReadinessDrawer'
@@ -29,22 +25,12 @@ import { AuthorInspector } from './components/author/AuthorInspector'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import RichTextEditor from '@/components/ui/RichTextEditor'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useProperty } from '@/contexts/PropertyContext'
@@ -84,50 +70,25 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import {
     AlertTriangle,
-    ArrowLeft,
-    BookOpen,
     Building,
-    Building2,
-    Check,
-    CheckCircle2,
     CheckSquare,
-    ChevronDown,
     Clock,
     Crown,
-    ExternalLink,
     Eye,
     FileText,
-    FolderOpen,
-    Gauge,
-    Globe,
     HelpCircle,
     Image as ImageIcon,
     Languages,
-    Layers,
-    LifeBuoy,
-    Link as LinkIcon,
-    List,
     Loader2,
     Palette,
-    RefreshCw,
-    Save,
-    Send,
-    ShieldAlert,
-    ShieldCheck,
-    Sparkles,
-    Star,
-    Tag,
-    Trash2,
-    Upload,
-    Video as VideoIcon,
-    Wand2,
-    X
+    Video as VideoIcon
 } from 'lucide-react'
 import { marked } from 'marked'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
+import type { KnowledgeContentType } from '@/types/knowledge'
 
 interface ArticleFormData {
     title: string
@@ -2340,7 +2301,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             <AIArticleStudioModal
                 isOpen={isAiStudioOpen}
                 onClose={() => setIsAiStudioOpen(false)}
-                defaultContentType={formData.content_type}
+                defaultContentType={formData.content_type as KnowledgeContentType}
                 defaultDepartment={departments?.find(d => d.id === formData.department_id)?.name || 'Front Office'}
                 onApplyArticle={(article) => {
                     const patch = generatedArticleToFormPatch(article)

@@ -1,11 +1,9 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { 
   ClipboardCheck, 
-  Clock, 
   ArrowRight,
   CheckCircle,
   FileEdit 
@@ -41,7 +39,8 @@ export const ReviewQueueWidget: React.FC = () => {
       if (error) {
         return []
       }
-      return data || []
+      // content_reviews.content_type is text in the DB; the widget renders the known kinds.
+      return (data || []) as ContentReviewItem[]
     },
     staleTime: 1000 * 60 * 5,
   })

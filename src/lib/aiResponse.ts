@@ -22,7 +22,7 @@ const trimOuterQuotes = (value: string): string => {
   return value.replace(/^['"]|['"]$/g, '').trim()
 }
 
-export const stripCodeFences = (value: string): string => {
+const stripCodeFences = (value: string): string => {
   let output = (value || '').trim()
   if (!output) return ''
 
@@ -101,7 +101,7 @@ const extractBalancedJson = (value: string): string | null => {
   return null
 }
 
-export const parseJsonFromAiResponse = <T = unknown>(raw: string): T | null => {
+const parseJsonFromAiResponse = <T = unknown>(raw: string): T | null => {
   const cleaned = stripCodeFences(raw)
   if (!cleaned) return null
 

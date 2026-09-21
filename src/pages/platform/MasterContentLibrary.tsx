@@ -45,12 +45,9 @@ import {
   RefreshCw,
   Eye,
   Layers,
-  Award,
   Plus,
-  ArrowUpRight,
   CheckCircle2,
   AlertCircle,
-  Clock,
   Search,
   FileText,
   Crown,
@@ -282,9 +279,12 @@ export default function MasterContentLibrary() {
         ...prev,
         {
           orgId: progress.orgId,
-          status: progress.status === 'in_progress' ? 'in_progress' : progress.status,
+          // A queued ('pending') org is shown as in progress — it has not failed.
+          status: progress.status === 'pending' ? 'in_progress' : progress.status,
           message:
-            progress.status === 'in_progress'
+            progress.status === 'pending'
+              ? `Queued: ${orgName}`
+              : progress.status === 'in_progress'
               ? `Deploying to ${orgName}...`
               : progress.status === 'success'
               ? `Successfully deployed to ${orgName}`
@@ -1485,7 +1485,7 @@ export default function MasterContentLibrary() {
                   placeholder="مثال: بروتوكول استقبال كبار الشخصيات"
                   value={newSop.title_ar}
                   onChange={(e) => setNewSop({ ...newSop, title_ar: e.target.value })}
-                  className="h-8 text-xs font-arabic text-right"
+                  className="h-8 text-xs font-arabic text-end"
                   dir="rtl"
                 />
               </div>

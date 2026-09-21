@@ -115,7 +115,7 @@ export default function SkillsMatrix() {
     }, [skillRows])
 
     return (
-        <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
             <PageHeader
                 title={t('skills.matrixTitle', 'Skills Matrix')}
                 description={t('skills.matrixDescription', 'Coverage and gaps across your team, based on skills earned through training completion.')}
@@ -224,7 +224,7 @@ export default function SkillsMatrix() {
                                 >
                                     <AccordionTrigger className="hover:no-underline py-3">
                                         <div className="flex flex-1 items-center justify-between gap-4 pe-2">
-                                            <div className="flex items-center gap-2 text-left">
+                                            <div className="flex items-center gap-2 text-start">
                                                 <span className="font-medium text-slate-900">{skill.skillName}</span>
                                                 <Badge variant="outline" className="text-[10px]">{skill.skillCategory}</Badge>
                                             </div>
@@ -233,7 +233,7 @@ export default function SkillsMatrix() {
                                                     {skill.coveredUsers.length}/{skill.totalUsers}
                                                 </span>
                                                 <Progress value={skill.coverageRate} className="h-2 w-24" />
-                                                <span className="text-sm font-semibold w-10 text-right">{skill.coverageRate}%</span>
+                                                <span className="text-sm font-semibold w-10 text-end">{skill.coverageRate}%</span>
                                             </div>
                                         </div>
                                     </AccordionTrigger>

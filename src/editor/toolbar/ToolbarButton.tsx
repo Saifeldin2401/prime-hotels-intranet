@@ -11,7 +11,7 @@ interface ToolbarButtonProps {
   variant?: 'editor' | 'floating'
 }
 
-export function ToolbarButton({
+function ToolbarButton({
   icon: Icon,
   label,
   active = false,

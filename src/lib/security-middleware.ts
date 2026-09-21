@@ -53,18 +53,6 @@ const ALLOWED_DATA_URI_TYPES = [
   'image/x-icon',
   'image/vnd.microsoft.icon',
 ]
-
-/**
- * Regex to match any dangerous URL scheme at the start of a string or after whitespace/punctuation.
- * Matches schemes like javascript:, data:, vbscript:, etc.
- */
-const DANGEROUS_SCHEME_REGEX = new RegExp(
-  '(?:^|[\\s"\'\(=]+)(' +
-    DANGEROUS_URL_SCHEMES.join('|') +
-  ')',
-  'gi'
-)
-
 /**
  * Regex to match data: URIs that are NOT in the allowed safe list.
  * This blocks data:text/html, data:application/javascript, etc.
@@ -783,7 +771,7 @@ export const rateLimitConfig = {
  * CSRF Protection utilities
  * Provides token generation, validation, and header management
  */
-export class CsrfProtection {
+class CsrfProtection {
   /**
    * Get current CSRF token (generates if needed)
    */
@@ -828,18 +816,6 @@ export class CsrfProtection {
   }
 }
 
-/**
- * Hook for using CSRF protection in components
- */
-export function useCsrfProtection() {
-  return {
-    token: CsrfProtection.getToken(),
-    headers: CsrfProtection.getHeaders(),
-    refresh: () => CsrfProtection.refreshToken(),
-    validate: (token: string) => CsrfProtection.validateToken(token),
-  }
-}
-
 // ============================================================================
 // CSRF TOKEN HELPERS
 // ============================================================================
@@ -861,7 +837,7 @@ const CSRF_TOKEN_KEY = 'csrf_token'
 /**
  * Get current CSRF token from storage (generates if needed)
  */
-export function getCsrfToken(): string {
+function getCsrfToken(): string {
   if (typeof window === 'undefined') return generateCsrfToken()
 
   try {
@@ -880,7 +856,7 @@ export function getCsrfToken(): string {
 /**
  * Validate a CSRF token against stored token
  */
-export function validateCsrfToken(token: string): boolean {
+function validateCsrfToken(token: string): boolean {
   if (typeof window === 'undefined') return false
   try {
     return token === sessionStorage.getItem(CSRF_TOKEN_KEY)
@@ -892,7 +868,7 @@ export function validateCsrfToken(token: string): boolean {
 /**
  * Clear current CSRF token
  */
-export function clearCsrfToken(): void {
+function clearCsrfToken(): void {
   if (typeof window !== 'undefined') {
     sessionStorage.removeItem(CSRF_TOKEN_KEY)
   }
@@ -901,40 +877,9 @@ export function clearCsrfToken(): void {
 /**
  * Get secure headers including CSRF token for API requests
  */
-export function getSecureHeaders(): Record<string, string> {
+function getSecureHeaders(): Record<string, string> {
   return {
     'X-CSRF-Token': getCsrfToken(),
     'X-Requested-With': 'XMLHttpRequest'
-  }
-}
-
-/**
- * Hook for using server-side rate limiting in components
- */
-export function useRateLimiter() {
-  return {
-    checkLimit: async (action: string, maxRequests?: number, windowSeconds?: number) => {
-      return SecurityMiddleware.checkServerRateLimit(action, maxRequests, windowSeconds)
-    },
-    
-    // For API calls with automatic rate limit checking
-    withRateLimit: async <T>(
-      action: string,
-      fn: () => Promise<T>,
-      options?: { maxRequests?: number; windowSeconds?: number; onRateLimited?: () => void }
-    ): Promise<T | null> => {
-      const allowed = await SecurityMiddleware.checkServerRateLimit(
-        action,
-        options?.maxRequests,
-        options?.windowSeconds
-      )
-      
-      if (!allowed) {
-        options?.onRateLimited?.()
-        throw new Error('Rate limit exceeded. Please try again later.')
-      }
-      
-      return fn()
-    }
   }
 }

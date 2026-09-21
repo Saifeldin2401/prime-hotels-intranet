@@ -9,8 +9,6 @@ import { useTranslation } from "react-i18next"
 
 const DialogTrigger = DialogPrimitive.Trigger
 const DialogPortal = DialogPrimitive.Portal
-const DialogClose = DialogPrimitive.Close
-
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
@@ -63,7 +61,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-800 dark:to-slate-800/50 border-b border-slate-200/80 dark:border-slate-700/80 text-center sm:text-left",
+      "flex flex-col space-y-2 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-800 dark:to-slate-800/50 border-b border-slate-200/80 dark:border-slate-700/80 text-center sm:text-start",
       className
     )}
     {...props}
@@ -113,5 +111,5 @@ const DialogDescription = React.forwardRef<
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 export {
-    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger
+    Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
 }

@@ -43,6 +43,7 @@ import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 import { CurriculumProgressRings } from '@/components/learner/CurriculumProgressRings'
 import { DailyKnowledgeBite } from '@/components/learner/DailyKnowledgeBite'
 import { LearningStreakBadges } from '@/components/learner/LearningStreakBadges'
+import { toSimpleT } from '@/lib/simpleT'
 
 function SectionCard({
     title,
@@ -201,7 +202,7 @@ export default function LearnerHome() {
 
     const bookmarks = bookmarksQuery.data ?? []
     const firstName = profile?.full_name?.split(' ')[0] ?? (isRTL ? 'الموظف' : 'Learner')
-    const greeting = getTimeBasedGreeting(t)
+    const greeting = getTimeBasedGreeting(toSimpleT(t))
 
     // Formatted dates
     const today = new Date()
@@ -250,7 +251,7 @@ export default function LearnerHome() {
                     streakDays: streak,
                 }}
                 isRTL={isRTL}
-                t={t}
+                t={toSimpleT(t)}
             />
 
             {/* 2. Spotlight "Continue Learning" MasterClass Stage */}
@@ -258,7 +259,7 @@ export default function LearnerHome() {
                 module={spotlightModule}
                 isLoading={progressQuery.isLoading}
                 isRTL={isRTL}
-                t={t}
+                t={toSimpleT(t)}
             />
 
             {/* 3. Master 2-Column Command Deck */}

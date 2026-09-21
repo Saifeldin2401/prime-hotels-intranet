@@ -5,14 +5,14 @@
  * to make intelligent decisions about session management.
  */
 
-export interface AuthError {
+interface AuthError {
   status?: number
   code?: string | number
   message?: string
   name?: string
 }
 
-export type ErrorType = 
+type ErrorType = 
   | 'auth_expired'      // 401/403 - Session actually expired
   | 'network_error'     // 0/timeout/fetch errors - Temporary network issues
   | 'server_error'      // 5xx - Server issues, session may still be valid
@@ -77,15 +77,6 @@ export function getRetryDelay(attempt: number, baseDelay = 1000, maxDelay = 3000
   // Add jitter (±25%) to prevent thundering herd
   const jitter = exponentialDelay * 0.25 * (Math.random() * 2 - 1)
   return Math.max(0, exponentialDelay + jitter)
-}
-
-/**
- * Check if we should attempt a retry based on error type and attempt count
- */
-export function shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
-  if (attempt >= maxAttempts) return false
-  const classification = classifyAuthError(error)
-  return classification.retryable
 }
 
 /**

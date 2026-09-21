@@ -15,53 +15,30 @@ import { canRoleAccess, type AllowedRoles } from '@/features/access/policy'
 import type { AppRole } from '@/lib/constants'
 import {
     Activity,
-    AlertTriangle,
-    ArrowRightLeft,
     Award,
     BarChart3,
-    BedDouble,
     Bell,
-    BellRing,
     BookOpen,
-    BookText,
     Bot,
-    Boxes,
-    Briefcase,
     Building,
     Building2,
-    Calendar,
     CheckSquare,
     ClipboardCheck,
     ClipboardList,
-    Clock,
     Compass,
     Crown,
-    FileQuestion,
     FileText,
     GraduationCap,
-    History,
     Home,
     Image,
-    Layers,
-    ListTodo,
     Mail,
-    Megaphone,
-    MessageSquare,
-    Package,
-    PackageSearch,
     Search,
     Settings,
     Shield,
     Target,
-    Truck,
     Upload,
     User,
-    UserPlus,
     Users,
-    UsersRound,
-    Wallet,
-    Workflow,
-    Wrench,
     type LucideIcon
 } from 'lucide-react'
 
@@ -655,7 +632,7 @@ export function resolvePathForRole(route: RouteConfig, role: AppRole | null): st
  * NOT the tenant `app_role` list. Platform routes are hidden unless the
  * server-resolved operator identity is explicitly provided by the caller.
  */
-export interface NavAccessOptions {
+interface NavAccessOptions {
     isPlatformOperator?: boolean
 }
 

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export interface FlashcardItem {
+interface FlashcardItem {
     id: string
     front: string
     front_ar?: string

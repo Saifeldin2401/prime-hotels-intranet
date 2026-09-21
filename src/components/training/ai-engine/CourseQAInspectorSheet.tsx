@@ -5,7 +5,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
@@ -228,7 +228,7 @@ export function CourseQAInspectorSheet({
                 {qaReport.identifiedGaps.map((gap, idx) => {
                   const isThisLoading = loadingArea === gap.area
                   return (
-                    <Card key={idx} className="p-3.5 border-l-4 border-l-amber-500">
+                    <Card key={idx} className="p-3.5 border-s-4 border-s-amber-500">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">

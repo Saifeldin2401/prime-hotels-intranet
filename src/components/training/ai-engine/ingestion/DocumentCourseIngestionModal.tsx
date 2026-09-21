@@ -22,7 +22,6 @@ import {
   FileText,
   Sparkles,
   UploadCloud,
-  FileCheck,
   CheckCircle2,
   Layers,
   ArrowRight,
@@ -32,13 +31,12 @@ import {
   documentIngestionEngine,
   type IngestionResult,
 } from '@/lib/ai/documentIngestionEngine'
-import type { CourseBlueprint } from '@/lib/ai/courseEngine'
-import { cn } from '@/lib/utils'
+import type { IngestedCourseDraft } from '@/lib/ai/documentIngestionEngine'
 
 interface DocumentCourseIngestionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onCourseGenerated: (blueprint: CourseBlueprint) => void
+  onCourseGenerated: (blueprint: IngestedCourseDraft) => void
 }
 
 export function DocumentCourseIngestionModal({
@@ -57,6 +55,7 @@ export function DocumentCourseIngestionModal({
   const [ingestionResult, setIngestionResult] = useState<IngestionResult | null>(null)
 
   const [fileExtractError, setFileExtractError] = useState<string | null>(null)
+  const [ingestError, setIngestError] = useState<string | null>(null)
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -76,6 +75,7 @@ export function DocumentCourseIngestionModal({
   const handleIngest = async () => {
     if (!documentText.trim()) return
     setIsProcessing(true)
+    setIngestError(null)
 
     try {
       const result = await documentIngestionEngine.ingestDocument({
@@ -86,6 +86,9 @@ export function DocumentCourseIngestionModal({
         targetLanguage: isRTL ? 'ar' : 'en',
       })
       setIngestionResult(result)
+    } catch (err) {
+      setIngestionResult(null)
+      setIngestError((err as Error).message)
     } finally {
       setIsProcessing(false)
     }
@@ -155,6 +158,9 @@ export function DocumentCourseIngestionModal({
                   </label>
                   {fileExtractError && (
                     <p className="mt-2 text-[11px] text-rose-600 dark:text-rose-400">{fileExtractError}</p>
+                  )}
+                  {ingestError && (
+                    <p role="alert" className="mt-2 text-[11px] text-rose-600 dark:text-rose-400">{ingestError}</p>
                   )}
                   {fileName && !fileExtractError && documentText && (
                     <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">

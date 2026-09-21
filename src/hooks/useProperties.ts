@@ -2,7 +2,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 
-export interface Property {
+interface Property {
     id: string
     name: string
     name_ar?: string | null

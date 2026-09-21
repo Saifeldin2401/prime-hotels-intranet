@@ -5,7 +5,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCourseGenerationHistory } from '@/hooks/useAICourseEngine'
-import { cn } from '@/lib/utils'
-import type { CourseBlueprint, CourseGenerationJob } from '@/types/aiCourseEngine'
+import type { CourseGenerationJob } from '@/types/aiCourseEngine'
 import {
   Clock,
   Cpu,

@@ -1,5 +1,3 @@
-export type ScopeType = 'organization' | 'brand' | 'hotel' | 'department' | 'role' | 'individual'
-
 export type TenantRole = 
   | 'organization_owner'
   | 'organization_admin'
@@ -44,22 +42,6 @@ export interface Organization {
   suspension_reason?: string | null
   created_at: string
   updated_at: string
-}
-
-export interface TenantEmailContext {
-  org_id: string | null
-  org_name: string
-  org_name_ar: string
-  logo_url: string
-  brand_colors: OrganizationBrandColors
-  sender_name: string
-  from_email: string
-  reply_to: string
-  support_email: string
-  website_url: string
-  footer_text: string
-  footer_text_ar: string
-  is_custom_branded: boolean
 }
 
 export interface SubscriptionPlan {
@@ -140,4 +122,20 @@ export interface OrganizationMembership {
   organization?: Organization
   hotel?: Hotel
   brand?: Brand
+}
+
+export interface TenantEmailContext {
+  org_id: string | null
+  org_name: string
+  org_name_ar: string
+  logo_url: string
+  brand_colors: OrganizationBrandColors
+  sender_name: string
+  from_email: string
+  reply_to: string
+  support_email: string
+  website_url: string
+  footer_text: string
+  footer_text_ar: string
+  is_custom_branded: boolean
 }

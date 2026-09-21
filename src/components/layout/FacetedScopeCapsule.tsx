@@ -1,10 +1,9 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -32,7 +31,6 @@ import {
 } from '@/components/ui/select'
 import { useToast } from '@/components/ui/use-toast'
 import { useTenant } from '@/contexts/TenantContext'
-import { safeLocalStorage } from '@/lib/storage'
 import { ScopePaletteModal } from '@/components/common/ScopePaletteModal'
 import type { Organization } from '@/lib/types/tenant'
 import { cn } from '@/lib/utils'
@@ -47,9 +45,7 @@ import {
   Globe,
   Layers,
   Search,
-  ShieldAlert,
-  Sparkles,
-  Command,
+  ShieldAlert
 } from 'lucide-react'
 
 interface FacetedScopeCapsuleProps {
@@ -510,7 +506,7 @@ export function FacetedScopeCapsule({ className }: FacetedScopeCapsuleProps) {
                   <span className="font-semibold text-sm">{selectedOrgForEnter.name}</span>
                 </div>
                 <Badge variant="outline" className="text-hotel-gold border-hotel-gold/30">
-                  {selectedOrgForEnter.tier_plan || 'Enterprise'}
+                  {(selectedOrgForEnter.lifecycle_status || 'active').replace(/^./, (c) => c.toUpperCase())}
                 </Badge>
               </div>
 

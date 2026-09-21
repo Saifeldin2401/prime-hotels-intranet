@@ -23,7 +23,7 @@ import type {
 } from '@/lib/ai/agents/knowledgeBase/types'
 import type { CourseVisualAsset } from '@/types/aiCourseEngine'
 
-export const CONTENT_DATA_META_KEY = 'knowledge_meta'
+const CONTENT_DATA_META_KEY = 'knowledge_meta'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -56,7 +56,7 @@ export interface KnowledgeArticleMeta {
 }
 
 /** Shape of the patch applied to the editor form when an article is generated. */
-export interface GeneratedArticleFormPatch {
+interface GeneratedArticleFormPatch {
     title: string
     title_ar: string
     description: string
@@ -168,7 +168,7 @@ export function decodeVisualAssetMarkup(imageUrl: string, altText: string): stri
     return `<img src="${imageUrl}" alt="${safeAlt}" class="max-h-80 w-full object-contain rounded-lg my-4" />`
 }
 
-export function buildVisualAssetCardHtml(
+function buildVisualAssetCardHtml(
     asset: KnowledgeVisualAssetRef,
     lang: 'en' | 'ar' = 'en',
 ): string {
@@ -260,7 +260,7 @@ export function readKnowledgeMeta(contentData: Json | null | undefined): Knowled
     return meta
 }
 
-export function knowledgeMetaHasContent(meta: KnowledgeArticleMeta): boolean {
+function knowledgeMetaHasContent(meta: KnowledgeArticleMeta): boolean {
     return Boolean(
         toStringList(meta.critical_control_points).length ||
             toStringList(meta.service_benchmarks).length ||

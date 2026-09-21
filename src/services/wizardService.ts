@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { WizardDefinition, WizardUserProgress, WizardStatus } from '@/lib/types/wizard'
+import type { WizardDefinition, WizardUserProgress } from '@/lib/types/wizard'
 
 interface RpcResponse<T> {
   data: T | null
@@ -232,7 +232,7 @@ export class WizardService {
         return []
       }
 
-      return (data || []) as WizardDefinition[]
+      return (data || []) as unknown as WizardDefinition[]
     } catch (err) {
       console.error('[WizardService] Unexpected error in getDefinitions:', err)
       return []

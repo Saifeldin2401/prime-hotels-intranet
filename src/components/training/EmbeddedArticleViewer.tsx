@@ -42,7 +42,6 @@ import {
     Images,
     Loader2,
     ShieldCheck,
-    Video,
     Zap
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -62,7 +61,7 @@ const embeddedContentTranslationRequests = new Map<string, Promise<RichTranslati
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-export interface EmbeddedArticleViewerProps {
+interface EmbeddedArticleViewerProps {
     sopId: string
     fallbackTitle?: string
     fallbackContent?: string
@@ -127,7 +126,7 @@ const EmbeddedHtmlContent = ({
 
             {/* Original View (if Bilingual) */}
             {showBilingual && translationTarget && (
-                <div dir="auto" className="border-l ps-6 border-slate-100 dark:border-slate-800">
+                <div dir="auto" className="border-s ps-6 border-slate-100 dark:border-slate-800">
                     <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 font-bold">
                         {t('original', 'Original')}
                     </div>

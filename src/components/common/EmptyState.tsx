@@ -4,14 +4,12 @@ import {
     AlertCircle,
     FileText,
     Inbox,
-    Plus,
-    RefreshCw,
     Search,
     type LucideIcon,
 } from 'lucide-react'
 import * as React from 'react'
 
-export type EmptyStateVariant = 'no-data' | 'no-results' | 'error' | 'custom'
+type EmptyStateVariant = 'no-data' | 'no-results' | 'error' | 'custom'
 
 interface EmptyStateProps {
     /** The variant determines the default icon and messaging */
@@ -72,7 +70,7 @@ const defaultProps: Record<EmptyStateVariant, {
 
 import { AnimatedState } from '@/components/ui/AnimatedState'
 
-export function EmptyState({
+function EmptyState({
     variant = 'no-data',
     icon,
     iconElement,
@@ -171,74 +169,3 @@ export function EmptyState({
 }
 
 // Pre-configured empty states for common use cases
-export function NoDataEmptyState({
-    entityName = 'items',
-    onCreateNew,
-    ...props
-}: Omit<EmptyStateProps, 'variant'> & {
-    entityName?: string
-    onCreateNew?: () => void
-}) {
-    return (
-        <EmptyState
-            variant="no-data"
-            title={`No ${entityName} yet`}
-            description={`Get started by creating your first ${entityName.toLowerCase().replace(/s$/, '')}.`}
-            action={
-                onCreateNew
-                    ? {
-                        label: `Create ${entityName.replace(/s$/, '')}`,
-                        onClick: onCreateNew,
-                        icon: Plus,
-                    }
-                    : undefined
-            }
-            {...props}
-        />
-    )
-}
-
-export function NoResultsEmptyState({
-    onClearFilters,
-    ...props
-}: Omit<EmptyStateProps, 'variant'> & {
-    onClearFilters?: () => void
-}) {
-    return (
-        <EmptyState
-            variant="no-results"
-            action={
-                onClearFilters
-                    ? {
-                        label: 'Clear filters',
-                        onClick: onClearFilters,
-                    }
-                    : undefined
-            }
-            {...props}
-        />
-    )
-}
-
-export function ErrorEmptyState({
-    onRetry,
-    ...props
-}: Omit<EmptyStateProps, 'variant'> & {
-    onRetry?: () => void
-}) {
-    return (
-        <EmptyState
-            variant="error"
-            action={
-                onRetry
-                    ? {
-                        label: 'Try again',
-                        onClick: onRetry,
-                        icon: RefreshCw,
-                    }
-                    : undefined
-            }
-            {...props}
-        />
-    )
-}

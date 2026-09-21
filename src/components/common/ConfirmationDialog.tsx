@@ -138,29 +138,6 @@ interface LogoutDialogProps {
     onConfirm: () => void | Promise<void>
 }
 
-export function LogoutConfirmationDialog({
-    open,
-    onOpenChange,
-    onConfirm
-}: LogoutDialogProps) {
-    const { t } = useTranslation('common')
-
-    return (
-        <ConfirmationDialog
-            open={open}
-            onOpenChange={onOpenChange}
-            title={t('confirm.logout_title', { defaultValue: 'Log Out?' })}
-            description={t('confirm.logout_message', {
-                defaultValue: 'Are you sure you want to log out? You will need to sign in again to access the system.'
-            })}
-            confirmLabel={t('confirm.logout', { defaultValue: 'Log Out' })}
-            cancelLabel={t('action.cancel', { defaultValue: 'Cancel' })}
-            variant="warning"
-            onConfirm={onConfirm}
-        />
-    )
-}
-
 interface ArchiveDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -169,57 +146,8 @@ interface ArchiveDialogProps {
     isLoading?: boolean
 }
 
-export function ArchiveConfirmationDialog({
-    open,
-    onOpenChange,
-    itemName,
-    onConfirm,
-    isLoading
-}: ArchiveDialogProps) {
-    const { t } = useTranslation('common')
-
-    return (
-        <ConfirmationDialog
-            open={open}
-            onOpenChange={onOpenChange}
-            title={t('confirm.archive_title', { defaultValue: 'Archive {{item}}?', item: itemName })}
-            description={t('confirm.archive_message', {
-                defaultValue: 'This will archive the item and hide it from active views. You can restore it later if needed.'
-            })}
-            confirmLabel={t('confirm.archive', { defaultValue: 'Archive' })}
-            cancelLabel={t('action.cancel', { defaultValue: 'Cancel' })}
-            variant="warning"
-            onConfirm={onConfirm}
-            isLoading={isLoading}
-        />
-    )
-}
-
 interface DiscardChangesDialogProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     onConfirm: () => void
-}
-
-export function DiscardChangesDialog({
-    open,
-    onOpenChange,
-    onConfirm
-}: DiscardChangesDialogProps) {
-    const { t } = useTranslation('common')
-
-    return (
-        <ConfirmationDialog
-            open={open}
-            onOpenChange={onOpenChange}
-            title={t('confirm.discard_title', { defaultValue: 'Discard Changes?' })}
-            description={t('confirm.discard_message', {
-                defaultValue: 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.'
-            })}
-            confirmLabel={t('confirm.discard', { defaultValue: 'Discard' })}
-            cancelLabel={t('confirm.keep_editing', { defaultValue: 'Keep Editing' })}
-            variant="warning"
-            onConfirm={onConfirm}
-        />
-    )
 }

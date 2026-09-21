@@ -1,11 +1,10 @@
 import { PageHeader } from '@/components/layout/PageHeader'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
-import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
 import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
 import { ModuleQuickPreviewSheet } from '@/components/training/hub/ModuleQuickPreviewSheet'
 import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
 import { SmartAICourseCreatorModal } from '@/components/training/hub/SmartAICourseCreatorModal'
-import { TrainingCategoryBadge, getCategoryTheme } from '@/components/training/hub/TrainingCategoryBadge'
+import { TrainingCategoryBadge } from '@/components/training/hub/TrainingCategoryBadge'
 import { TrainingTrackCommandCenter } from '@/components/training/hub/TrainingTrackCommandCenter'
 import { AssignTrainingWizardModal } from '@/components/training/AssignTrainingWizardModal'
 import { Badge } from '@/components/ui/badge'
@@ -18,7 +17,6 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
@@ -39,10 +37,7 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
-    Award,
-    BarChart3,
     BookOpen,
-    Building2,
     Check,
     CheckCircle2,
     ChevronDown,
@@ -50,12 +45,8 @@ import {
     ChevronRight,
     Clock,
     Crown,
-    ExternalLink,
     Eye,
-    FileCheck,
-    FileQuestion,
     FileText,
-    Film,
     FilterX,
     Grid3X3,
     HeartHandshake,
@@ -64,10 +55,7 @@ import {
     Loader2,
     Plus,
     Search,
-    Send,
     Settings,
-    ShieldCheck,
-    SlidersHorizontal,
     Sparkles,
     Tag,
     Trash2,
@@ -77,7 +65,7 @@ import {
     Wand2,
     X
 } from 'lucide-react'
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TrainingAssignmentsPanel } from './TrainingAssignments'
@@ -86,8 +74,6 @@ import { MasterVersionSyncModal } from '@/components/platform/MasterVersionSyncM
 import { platformService } from '@/services/platformService'
 
 // Lazy load heavy chart component
-const TrainingProgressVisualization = lazy(() => import('@/components/training/TrainingProgressVisualization').then(m => ({ default: m.TrainingProgressVisualization })))
-
 type ModuleStatus = 'draft' | 'pending_review' | 'published' | 'archived'
 type ViewMode = 'list' | 'builder' | 'assignments' | 'insights'
 type StatusFilterType = 'all' | 'published' | 'draft' | 'pending_review' | 'archived' | 'assigned'
@@ -916,7 +902,7 @@ export default function TrainingHub() {
   ]
 
   return (
-    <div className={`container mx-auto overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 ${isRTL ? 'text-right' : 'text-left'}`}>
+    <div className={`container mx-auto overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 ${isRTL ? 'text-end' : 'text-start'}`}>
       <PageHeader
         title={t('lmsAdmin')}
         description={t('lmsAdminDesc')}
@@ -934,8 +920,8 @@ export default function TrainingHub() {
                 type="button"
                 onClick={() => setViewMode(step.key, step.key === 'builder' ? { moduleId: moduleId || 'new' } : undefined)}
                 className={cn(
-                  "flex min-h-[4.5rem] items-start gap-3 rounded-xl border p-4 text-left transition-all",
-                  isRTL && "text-right",
+                  "flex min-h-[4.5rem] items-start gap-3 rounded-xl border p-4 text-start transition-all",
+                  isRTL && "text-end",
                   isActive ? "border-hotel-gold bg-hotel-gold/10 shadow-sm" : "border-gray-200 hover:border-hotel-gold/50 hover:bg-white"
                 )}
               >
@@ -1078,7 +1064,7 @@ export default function TrainingHub() {
                         setCurrentPage(1)
                       }}
                       className={cn(
-                        isRTL ? "pe-9 ps-8 text-right" : "ps-9 pe-8",
+                        isRTL ? "pe-9 ps-8 text-end" : "ps-9 pe-8",
                         "h-9 text-sm border-slate-200 bg-slate-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all"
                       )}
                     />
@@ -1375,7 +1361,7 @@ export default function TrainingHub() {
                                 key={starter.title}
                                 type="button"
                                 onClick={() => setShowSmartAIModal(true)}
-                                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white hover:border-hotel-gold hover:bg-amber-50/30 text-left transition-all group"
+                                className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 bg-white hover:border-hotel-gold hover:bg-amber-50/30 text-start transition-all group"
                               >
                                 <div className="h-7 w-7 rounded-md bg-amber-50 text-hotel-gold flex items-center justify-center shrink-0 group-hover:bg-hotel-gold group-hover:text-slate-950 transition-colors">
                                   <StarterIcon className="h-3.5 w-3.5" />
@@ -1512,7 +1498,7 @@ export default function TrainingHub() {
                           >
                             {module.title || t('untitledModule', 'Untitled Module')}
                           </CardTitle>
-                          <p className={cn("text-xs text-slate-500 line-clamp-2 mt-1 min-h-[32px]", isRTL ? "text-right" : "text-left")}>
+                          <p className={cn("text-xs text-slate-500 line-clamp-2 mt-1 min-h-[32px]", isRTL ? "text-end" : "text-start")}>
                             {module.description || t('noDescription', 'No description provided')}
                           </p>
                         </CardHeader>
@@ -1929,7 +1915,7 @@ export default function TrainingHub() {
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder={t('review.rejectReasonPlaceholder')}
             rows={4}
-            className={isRTL ? 'text-right' : 'text-left'}
+            className={isRTL ? 'text-end' : 'text-start'}
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setModuleToReject(null)}>

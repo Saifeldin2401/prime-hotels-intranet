@@ -145,18 +145,6 @@ export function useAcknowledgeArticle() {
 // ============================================================================
 // CONTEXTUAL HELP
 // ============================================================================
-
-export function useContextualHelp(triggerType: string, triggerValue: string) {
-    const { currentProperty } = useProperty()
-
-    return useQuery({
-        queryKey: ['knowledge-contextual', triggerType, triggerValue, currentProperty?.id],
-        queryFn: () => KnowledgeService.getContextualHelp(triggerType, triggerValue, currentProperty?.id),
-        enabled: !!triggerType && !!triggerValue,
-        staleTime: 1000 * 60 * 5 // Cache for 5 minutes
-    })
-}
-
 // ============================================================================
 // COMMENTS
 // ============================================================================
@@ -191,19 +179,6 @@ export function useCreateComment() {
         },
         onError: () => {
             toast.error('Failed to post comment')
-        }
-    })
-}
-
-export function useVoteComment() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
-    return useMutation({
-        mutationFn: ({ commentId, voteType }: { commentId: string; voteType: 'up' | 'down' }) =>
-            KnowledgeService.voteComment(commentId, user!.id, voteType),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['knowledge-comments'] })
         }
     })
 }
@@ -267,27 +242,6 @@ export function useSubmitFeedback() {
     })
 }
 
-export function useFeedbackStats() {
-    return useQuery({
-        queryKey: ['knowledge-feedback-stats'],
-        queryFn: () => KnowledgeService.getFeedbackStats()
-    })
-}
-
-export function useRecentFeedback(limit = 10) {
-    return useQuery({
-        queryKey: ['knowledge-recent-feedback', limit],
-        queryFn: () => KnowledgeService.getRecentFeedback(limit)
-    })
-}
-
-export function useFeedbackTrends(days = 30) {
-    return useQuery({
-        queryKey: ['knowledge-feedback-trends', days],
-        queryFn: () => KnowledgeService.getFeedbackTrends(days)
-    })
-}
-
 // ============================================================================
 // CATEGORIES
 // ============================================================================
@@ -317,15 +271,6 @@ export function useContentTypeCounts() {
 // ============================================================================
 // CONTENT GAP ANALYTICS (failed / zero-result searches)
 // ============================================================================
-
-export function useFailedSearches(days = 30, limit = 20) {
-    return useQuery({
-        queryKey: ['knowledge-failed-searches', days, limit],
-        queryFn: () => KnowledgeService.getFailedSearches(days, limit),
-        staleTime: 1000 * 60 * 5
-    })
-}
-
 // ============================================================================
 // DEPARTMENT-SPECIFIC CONTENT
 // ============================================================================

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,23 +48,17 @@ import {
   Lock,
   Unlock,
   KeyRound,
-  MailPlus,
   Eye,
   MoreVertical,
   AlertTriangle,
   Download,
-  UserX,
   UserCheck,
   FileText,
   Clock,
   Briefcase,
-  Phone,
-  Calendar,
-  Sparkles,
   Edit,
   Ban,
   History,
-  Mail,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
@@ -3345,7 +3339,7 @@ export default function PlatformUserDirectory() {
                                 <span className="text-muted-foreground">{t('admin:platform_user_mgmt.suspend_reason_label', 'Reason')}: </span>
                                 <span className="font-semibold capitalize">
                                   {activeProfile.suspend_reason
-                                    ? t(`admin:platform_user_mgmt.${activeProfile.suspend_reason}`, activeProfile.suspend_reason.replace(/_/g, ' '))
+                                    ? String(t(`admin:platform_user_mgmt.${activeProfile.suspend_reason}`, activeProfile.suspend_reason.replace(/_/g, ' ')))
                                     : t('admin:platform_user_mgmt.not_specified', 'Not specified')}
                                 </span>
                               </div>

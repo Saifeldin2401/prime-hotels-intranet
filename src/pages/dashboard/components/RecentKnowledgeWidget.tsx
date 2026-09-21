@@ -1,20 +1,16 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { 
   BookOpen, 
   FileText, 
   Clock, 
-  ArrowRight, 
-  ExternalLink,
-  Shield,
+  ArrowRight,
   ChevronRight
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 interface DocumentItem {
   id: string

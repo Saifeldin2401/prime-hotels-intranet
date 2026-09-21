@@ -26,7 +26,7 @@ type TrainingModuleThresholdRow = {
   estimated_duration_minutes: number | null
 }
 
-export interface AwardPathCertificatesInput {
+interface AwardPathCertificatesInput {
   userId: string
   completedModuleId: string
   recipientName: string
@@ -37,7 +37,7 @@ export interface AwardPathCertificatesInput {
   departmentName?: string
 }
 
-export interface AwardPathCertificatesResult {
+interface AwardPathCertificatesResult {
   awarded: Array<{ pathId: string; title: string; certificateId: string }>
   alreadyIssued: string[]
   skippedIncomplete: string[]

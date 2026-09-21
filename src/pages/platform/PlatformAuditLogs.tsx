@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +53,7 @@ export default function PlatformAuditLogs() {
   const loadLogs = async (targetPage = page) => {
     setIsLoading(true)
     try {
-      const { logs: data, totalCount: count } = await platformService.getPlatformAuditLogs({
+      const { logs: data, totalCount: count } = await platformService.getPlatformAuditLogsPage({
         limit: PAGE_SIZE,
         offset: targetPage * PAGE_SIZE,
       })

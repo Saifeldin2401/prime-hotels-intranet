@@ -13,7 +13,6 @@ import type {
   CloudflareImageModel,
   CloudflareUsageStats,
   ImageCostTier,
-  VisualPlacement,
   VisualStyle,
 } from '@/types/aiCourseEngine'
 import type {
@@ -23,17 +22,9 @@ import type {
   ImageProvider,
   ProviderStatus,
 } from './types'
-
-export const FLUX_CLOUDFLARE_IMAGE_MODEL: CloudflareImageModel =
-  '@cf/black-forest-labs/flux-1-schnell'
 export const DEFAULT_CLOUDFLARE_IMAGE_MODEL: CloudflareImageModel =
   '@cf/bytedance/stable-diffusion-xl-lightning'
-export const FALLBACK_CLOUDFLARE_IMAGE_MODEL: CloudflareImageModel =
-  '@cf/stabilityai/stable-diffusion-xl-base-1.0'
-export const DREAMSHAPER_CLOUDFLARE_IMAGE_MODEL: CloudflareImageModel =
-  '@cf/lykon/dreamshaper-8-lcm'
-
-export const APPROVED_CLOUDFLARE_MODELS: Record<CloudflareImageModel, ImageModelInfo> = {
+const APPROVED_CLOUDFLARE_MODELS: Record<CloudflareImageModel, ImageModelInfo> = {
   '@cf/black-forest-labs/flux-1-schnell': {
     id: '@cf/black-forest-labs/flux-1-schnell',
     name: 'FLUX.1 Schnell (Cloudflare Ultra HD)',
@@ -112,7 +103,7 @@ export const APPROVED_CLOUDFLARE_MODELS: Record<CloudflareImageModel, ImageModel
 const USAGE_STORAGE_KEY = 'cloudflare_ai_usage_stats_v1'
 const DAILY_FREE_NEURONS_LIMIT = 10000
 
-export class CloudflareWorkersAIProvider implements ImageProvider {
+class CloudflareWorkersAIProvider implements ImageProvider {
   readonly id = 'cloudflare' as const
   readonly name = 'Cloudflare Workers AI'
 

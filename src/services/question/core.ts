@@ -66,7 +66,7 @@ export async function getQuestions(
 // Row shape returned by the get_questions_for_attempt RPC: render-safe fields
 // only - no correct_answer/accepted_answers/explanation/is_correct. Those are
 // revealed exclusively by grade_question_attempt, after grading.
-export interface AttemptQuestionRow {
+interface AttemptQuestionRow {
     id: string
     question_text: string
     question_text_ar?: string | null
@@ -91,7 +91,7 @@ export interface AttemptQuestionRow {
 // (QuestionRenderer et al.) already expects. is_correct on each option is a
 // placeholder (false) - it is never populated here and must come from a
 // grading RPC response after the learner answers.
-export function mapAttemptRowToKnowledgeQuestion(row: AttemptQuestionRow): KnowledgeQuestion {
+function mapAttemptRowToKnowledgeQuestion(row: AttemptQuestionRow): KnowledgeQuestion {
     return {
         id: row.id,
         question_text: row.question_text,

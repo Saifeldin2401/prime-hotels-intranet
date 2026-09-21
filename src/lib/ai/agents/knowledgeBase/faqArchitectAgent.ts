@@ -10,7 +10,7 @@ import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedFAQItem, KnowledgeArticleGenerationConfig } from './types'
 import { buildArticleDirectives } from './articleDirectives'
 
-export interface FAQWriterOutput {
+interface FAQWriterOutput {
   code: string
   title: string
   titleAr: string
@@ -24,7 +24,7 @@ export interface FAQWriterOutput {
   suggestedTags: string[]
 }
 
-export class FAQArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, FAQWriterOutput> {
+class FAQArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, FAQWriterOutput> {
   public readonly role: AgentRole = 'content_writer'
   public readonly name = 'Knowledge Base FAQ Architect Agent'
   public readonly nameAr = 'وكيل صياغة الأسئلة الشائعة وقواعد المعرفة'

@@ -23,7 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
 import { useMedia } from '@/hooks/useMedia';
 import { useProperties } from '@/hooks/useProperties';
 import { useSecureDownload } from '@/hooks/useSecureDownload';
@@ -40,7 +39,6 @@ import {
   Check,
   FileAudio,
   FileText,
-  FileVideo,
   ImageIcon,
   Link2,
   RefreshCw,
@@ -52,7 +50,7 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 // Media type configuration
@@ -362,7 +360,7 @@ function UploadTab({
 }
 
 // MediaPicker Props
-export interface MediaPickerProps {
+interface MediaPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (assets: MediaAsset[]) => void;
@@ -635,49 +633,3 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
 }
 
 // Hook for using MediaPicker
-export function useMediaPickerDialog(config: MediaPickerConfig = {}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [resolveRef, setResolveRef] = useState<{
-    resolve: (assets: MediaAsset[]) => void;
-    reject: () => void;
-  } | null>(null);
-
-  const openPicker = useCallback((): Promise<MediaAsset[]> => {
-    return new Promise((resolve, reject) => {
-      setResolveRef({ resolve, reject });
-      setIsOpen(true);
-    });
-  }, []);
-
-  const handleSelect = useCallback(
-    (assets: MediaAsset[]) => {
-      resolveRef?.resolve(assets);
-      setIsOpen(false);
-      setResolveRef(null);
-    },
-    [resolveRef]
-  );
-
-  const handleClose = useCallback(() => {
-    resolveRef?.reject();
-    setIsOpen(false);
-    setResolveRef(null);
-  }, [resolveRef]);
-
-  const pickerElement = (
-    <MediaPicker
-      open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) handleClose();
-      }}
-      onSelect={handleSelect}
-      config={config}
-    />
-  );
-
-  return {
-    openPicker,
-    pickerElement,
-    isOpen,
-  };
-}

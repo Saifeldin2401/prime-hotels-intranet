@@ -35,40 +35,6 @@ export function showErrorToast(
     })
 }
 
-/** Warning toast */
-export function showWarningToast(
-    message: string,
-    description?: string,
-    opts?: { duration?: number }
-) {
-    toast.warning(message, {
-        description,
-        duration: opts?.duration ?? DURATION.long,
-    })
-}
-
-/** Info toast */
-export function showInfoToast(
-    message: string,
-    description?: string,
-    opts?: { duration?: number }
-) {
-    toast.info(message, {
-        description,
-        duration: opts?.duration ?? DURATION.normal,
-    })
-}
-
-/** Loading toast — returns an ID you can later dismiss or update */
-export function showLoadingToast(message: string) {
-    return toast.loading(message)
-}
-
-/** Dismiss a toast by id */
-export function dismissToast(toastId: string | number) {
-    toast.dismiss(toastId)
-}
-
 // ─── CRUD Toasts ─────────────────────────────────────
 // Consistent one-liner toasts for common CRUD operations.
 
@@ -154,7 +120,7 @@ export const crudToasts = {
 // ─── Async CRUD Toasts ───────────────────────────────
 // Promise-based toasts that show loading → success / error.
 
-export async function asyncToast<T>(
+async function asyncToast<T>(
     promise: Promise<T>,
     messages: {
         loading: string
@@ -180,54 +146,6 @@ export async function asyncToast<T>(
     }
 }
 
-export const asyncCrudToasts = {
-    create: <T>(promise: Promise<T>, item: string) =>
-        asyncToast(promise, {
-            loading: `Creating ${item}...`,
-            success: `${item} created successfully`,
-            error: `Failed to create ${item}`,
-        }),
-    update: <T>(promise: Promise<T>, item: string) =>
-        asyncToast(promise, {
-            loading: `Updating ${item}...`,
-            success: `${item} updated successfully`,
-            error: `Failed to update ${item}`,
-        }),
-    delete: <T>(promise: Promise<T>, item: string) =>
-        asyncToast(promise, {
-            loading: `Deleting ${item}...`,
-            success: `${item} deleted successfully`,
-            error: `Failed to delete ${item}`,
-        }),
-    submit: <T>(promise: Promise<T>, item: string) =>
-        asyncToast(promise, {
-            loading: `Submitting ${item}...`,
-            success: `${item} submitted successfully`,
-            error: `Failed to submit ${item}`,
-        }),
-}
-
 // ─── Clipboard Toast ─────────────────────────────────
 // For copy-to-clipboard actions.
-
-export function showCopyToast(label = 'Link') {
-    toast.success(`${label} copied to clipboard`, { duration: DURATION.brief })
-}
-
 // ─── Network / Offline Toast ─────────────────────────
-
-export function showOfflineToast() {
-    toast.warning('You are offline', {
-        description: 'Some features may be unavailable until you reconnect.',
-        duration: DURATION.persistent,
-        id: 'network-status',
-    })
-}
-
-export function showOnlineToast() {
-    toast.success('Back online', {
-        description: 'Your connection has been restored.',
-        duration: DURATION.brief,
-        id: 'network-status',
-    })
-}

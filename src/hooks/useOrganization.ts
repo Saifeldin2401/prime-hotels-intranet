@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 // Types for organization data
-export interface OrgNode {
+interface OrgNode {
     id: string
     full_name: string
     job_title: string | null
@@ -16,14 +16,7 @@ export interface OrgNode {
     path_names: string[]
 }
 
-export interface DirectReport {
-    id: string
-    full_name: string
-    job_title: string | null
-    email: string
-}
-
-export interface ReportingChainNode {
+interface ReportingChainNode {
     id: string
     full_name: string
     job_title: string | null
@@ -51,38 +44,7 @@ export function useOrgHierarchy(propertyId?: string) {
 }
 
 // Fetch hierarchy starting from a specific user
-export function useOrgSubtree(rootUserId: string) {
-    return useQuery({
-        queryKey: ['org-subtree', rootUserId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .rpc('get_org_hierarchy', {
-                    p_root_user_id: rootUserId,
-                    p_property_id: null
-                })
-
-            if (error) throw error
-            return data as OrgNode[]
-        },
-        enabled: !!rootUserId
-    })
-}
-
 // Fetch direct reports for a manager
-export function useDirectReports(managerId: string) {
-    return useQuery({
-        queryKey: ['direct-reports', managerId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .rpc('get_direct_reports', { p_manager_id: managerId })
-
-            if (error) throw error
-            return data as DirectReport[]
-        },
-        enabled: !!managerId
-    })
-}
-
 // Fetch reporting chain (path to top)
 export function useReportingChain(employeeId: string) {
     return useQuery({
@@ -176,44 +138,6 @@ export function useUpdateReportingLine() {
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to update reporting line')
-        }
-    })
-}
-
-// Bulk update reporting lines
-export function useBulkUpdateReportingLines() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: async (updates: { employeeId: string; newManagerId: string | null }[]) => {
-            // Use atomic RPC function to ensure all updates succeed or none do
-            const updatePayload = updates.map(u => ({
-                employee_id: u.employeeId,
-                new_manager_id: u.newManagerId
-            }))
-
-            const { data, error } = await supabase.rpc('bulk_update_reporting_lines', {
-                p_updates: updatePayload
-            })
-
-            if (error) {
-                // Extract more specific error message from Postgres
-                const circularMatch = error.message.match(/circular reporting chain/i)
-                if (circularMatch) {
-                    throw new Error('Cannot complete update: would create a circular reporting chain.')
-                }
-                throw new Error(`Failed to update reporting lines: ${error.message}`)
-            }
-
-            return data
-        },
-        onSuccess: () => {
-            toast.success('Reporting lines updated successfully')
-            queryClient.invalidateQueries({ queryKey: ['org-hierarchy'] })
-            queryClient.invalidateQueries({ queryKey: ['direct-reports'] })
-        },
-        onError: (error: Error) => {
-            toast.error(error.message)
         }
     })
 }

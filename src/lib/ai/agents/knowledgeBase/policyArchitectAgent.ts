@@ -10,7 +10,7 @@ import type { AgentExecutionResult, AgentRole } from '../types'
 import type { KnowledgeArticleGenerationConfig } from './types'
 import { buildArticleDirectives } from './articleDirectives'
 
-export interface PolicyWriterOutput {
+interface PolicyWriterOutput {
   policyCode: string
   title: string
   titleAr: string
@@ -26,7 +26,7 @@ export interface PolicyWriterOutput {
   enforcementMechanismAr: string
 }
 
-export class PolicyArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, PolicyWriterOutput> {
+class PolicyArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig, PolicyWriterOutput> {
   public readonly role: AgentRole = 'content_writer'
   public readonly name = 'Corporate & Hotel Policy Architect Agent'
   public readonly nameAr = 'مهندس السياسات الفندقية والحوكمة المؤسسية'
