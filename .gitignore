@@ -11,7 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
-scripts/
+# scripts/ directory is tracked - contains build/CI scripts
+# Only ignore generated/temp script files
+scripts/*.local.*
+scripts/tmp_*
 
 
 # Editor directories and files

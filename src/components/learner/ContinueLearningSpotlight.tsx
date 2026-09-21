@@ -1,9 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Play, Clock, ArrowRight, BookOpen, Compass } from 'lucide-react'
+import { Play, Clock, ArrowRight, BookOpen, Compass, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 
 interface InProgressModule {
     content_id: string
@@ -31,36 +31,36 @@ export const ContinueLearningSpotlight: React.FC<ContinueLearningSpotlightProps>
 }) => {
     if (isLoading) {
         return (
-            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-8 animate-pulse h-64">
-                <div className="h-6 w-36 bg-slate-800 rounded-full mb-4" />
-                <div className="h-8 w-3/4 bg-slate-800 rounded-lg mb-2" />
-                <div className="h-4 w-1/2 bg-slate-800 rounded mb-6" />
-                <div className="h-3 w-72 bg-slate-800 rounded-full" />
+            <div className="relative overflow-hidden rounded-3xl border border-border/40 bg-card/60 p-8 animate-pulse h-60">
+                <div className="h-6 w-36 bg-slate-800/80 rounded-full mb-4" />
+                <div className="h-8 w-3/4 bg-slate-800/80 rounded-lg mb-2" />
+                <div className="h-4 w-1/2 bg-slate-800/80 rounded mb-6" />
+                <div className="h-3 w-72 bg-slate-800/80 rounded-full" />
             </div>
         )
     }
 
     if (!module) {
         return (
-            <div className="relative overflow-hidden rounded-3xl border border-dashed border-amber-500/20 bg-card/40 p-8 text-center backdrop-blur-xl">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-3 shadow-inner">
+            <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 border-t-amber-400/30 bg-gradient-to-br from-card/90 via-card/70 to-amber-950/[0.05] p-6 sm:p-8 text-center backdrop-blur-xl shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-3 shadow-inner border border-amber-500/20">
                     <Compass className="h-6 w-6" />
                 </div>
                 <h3 className="font-display text-lg font-bold text-foreground">
-                    {isRTL ? 'جاهز لبدء رحلتك التعليمية التالية؟' : 'Ready to start your next learning journey?'}
+                    {isRTL ? 'جاهز لبدء برنامجك التدريبي القادم؟' : 'Ready to start your next learning journey?'}
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-md mx-auto">
                     {isRTL
-                        ? 'استكشف المناهج المعتمدة من ألتوس وسجل في دورات الضيافة الفاخرة المتاحة لك.'
+                        ? 'استكشف مناهج ألتوس المعتمدة وسجل في دورات الضيافة الفاخرة المتاحة لك.'
                         : 'Explore accredited ALTUS curriculum and enroll in luxury hospitality courses tailored for your career.'}
                 </p>
                 <div className="mt-5">
                     <Link
-                        to="/learning/my"
-                        className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold px-6 py-2.5 text-sm shadow-md hover:shadow-lg transition-all duration-200 active:scale-95 gap-2"
+                        to="/courses"
+                        className="inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-6 py-2.5 text-xs sm:text-sm shadow-md transition-all duration-150 active:scale-[0.97] gap-2"
                     >
                         <BookOpen className="h-4 w-4" />
-                        <span>{isRTL ? 'استعراض دليل الدورات' : 'Explore Course Catalog'}</span>
+                        <span>{isRTL ? 'تصفح كتالوج الدورات' : 'Explore Course Catalog'}</span>
                         <ArrowRight className={cn('h-4 w-4', isRTL && 'rotate-180')} />
                     </Link>
                 </div>
@@ -68,14 +68,19 @@ export const ContinueLearningSpotlight: React.FC<ContinueLearningSpotlightProps>
         )
     }
 
-    // High quality luxury hospitality fallback backdrop
-    const backgroundPhoto = module.thumbnail_url || '/assets/altus/concierge-frontdesk.jpg'
+    // High quality luxury hospitality track artwork
+    const backgroundPhoto = module.thumbnail_url || resolveAssetForTrack({
+        title: module.title,
+        description: module.description,
+        category: module.category,
+        id: module.content_id,
+    })
 
     return (
-        <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 bg-[#0B0F17] shadow-lg group">
+        <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 border-t-amber-400/40 bg-[#0B0F17] shadow-xl group">
             {/* Cinematic Background Image with Dual Scrim Gradients */}
             <div
-                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 opacity-35"
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105 opacity-30"
                 style={{ backgroundImage: `url(${backgroundPhoto})` }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#070A0F] via-[#0B0F17]/85 to-[#0B0F17]/40" />

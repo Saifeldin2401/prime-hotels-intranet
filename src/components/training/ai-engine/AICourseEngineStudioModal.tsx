@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import DOMPurify from 'dompurify'
 import {
   Dialog,
   DialogContent,
@@ -1795,7 +1796,7 @@ export function AICourseEngineStudioModal({
                                       return (
                                         <div
                                           className="w-full flex items-center justify-center p-2 [&>svg]:w-full [&>svg]:max-h-80 [&>svg]:h-auto [&>svg]:rounded-lg shadow-sm"
-                                          dangerouslySetInnerHTML={{ __html: rawSvg }}
+                                          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(rawSvg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
                                         />
                                       )
                                     }
@@ -1869,7 +1870,7 @@ export function AICourseEngineStudioModal({
                         ) : (
                           <div
                             className="prose prose-sm dark:prose-invert max-w-none space-y-4"
-                            dangerouslySetInnerHTML={{ __html: activeLesson.renderedHtml || '<p>No content generated.</p>' }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(activeLesson.renderedHtml || '<p>No content generated.</p>') }}
                           />
                         )}
                       </ScrollArea>

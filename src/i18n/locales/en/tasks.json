@@ -1,0 +1,36 @@
+{
+  "title": "Task Manager",
+  "create_task": "Create Task",
+  "edit_task": "Edit Task",
+  "delete_task": "Delete Task",
+  "task_title": "Title",
+  "task_description": "Description",
+  "assigned_to": "Assigned To",
+  "due_date": "Due Date",
+  "priority": "Priority",
+  "status": "Status",
+  "filter": {
+    "all": "All Tasks",
+    "my_tasks": "My Tasks",
+    "assigned": "Assigned by Me",
+    "overdue": "Overdue"
+  },
+  "status_values": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "priority_values": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "no_tasks": "No tasks found",
+  "comments": "Comments",
+  "add_comment": "Add Comment",
+  "attachments": "Attachments",
+  "created_by": "Created By",
+  "updated_at": "Last Updated"
+}

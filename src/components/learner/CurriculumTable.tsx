@@ -32,7 +32,7 @@ export const CurriculumTable: React.FC<CurriculumTableProps> = ({
     }
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xl shadow-sm">
+        <div className="overflow-hidden rounded-3xl border border-border/60 border-t-amber-400/25 bg-card/60 backdrop-blur-xl shadow-sm">
             <div className="overflow-x-auto">
                 <table className="w-full text-start text-xs border-collapse">
                     <thead>
@@ -123,7 +123,7 @@ export const CurriculumTable: React.FC<CurriculumTableProps> = ({
                                         <Link
                                             to={item.actionUrl}
                                             className={cn(
-                                                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold transition-all duration-150 active:scale-95",
+                                                "inline-flex items-center gap-1.5 rounded-xl px-3 py-1 text-xs font-bold transition-transform duration-150 ease-out active:scale-[0.97]",
                                                 hasStarted && !isCompleted
                                                     ? "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm"
                                                     : isCompleted

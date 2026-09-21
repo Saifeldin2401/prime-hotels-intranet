@@ -208,12 +208,28 @@
         "numeric": "يجب أن يكون رقماً"
     },
     "roles": {
+        "super_admin": "المسؤول العام",
+        "administrator": "مدير النظام",
+        "admin": "مدير",
+        "system_owner": "مالك النظام",
+        "platform_super_admin": "مسؤول المنصة الأعلى",
+        "organization_owner": "مالك المنظمة",
+        "organization_admin": "مدير المنظمة",
+        "brand_admin": "مدير العلامة التجارية",
+        "hotel_admin": "مدير الفندق",
         "corporate_admin": "مدير الشركة",
         "regional_admin": "مدير إقليمي",
+        "regional_hr": "مدير الموارد البشرية الإقليمي",
         "property_manager": "مدير الفندق",
         "property_hr": "مدير موارد الفندق",
         "department_head": "رئيس قسم",
+        "department_manager": "مدير قسم",
         "manager": "مدير",
+        "training_manager": "مدير التدريب",
+        "knowledge_manager": "مدير المعرفة",
+        "author": "مؤلف محتوى",
+        "instructor": "مدرب معتمد",
+        "learner": "متدرب",
         "staff": "موظف"
     },
     "errors": {

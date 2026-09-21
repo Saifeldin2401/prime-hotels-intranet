@@ -25,7 +25,6 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import EmployeeDocuments from './EmployeeDocuments'
 import EmployeeTrainingHistory from './EmployeeTrainingHistory'
 
 type AppRole =
@@ -198,11 +197,10 @@ export default function UserProfile() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
           <TabsTrigger value="overview">{t('profile:overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="skills">{t('profile:skills_and_competencies', 'Skills')}</TabsTrigger>
           <TabsTrigger value="training">{t('profile:training', 'Training')}</TabsTrigger>
-          <TabsTrigger value="documents">{t('profile:documents', 'Documents')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -440,10 +438,6 @@ export default function UserProfile() {
 
         <TabsContent value="training">
           <EmployeeTrainingHistory userId={id} />
-        </TabsContent>
-
-        <TabsContent value="documents">
-          <EmployeeDocuments userId={id} />
         </TabsContent>
       </Tabs>
     </div>

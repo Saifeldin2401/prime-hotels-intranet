@@ -1,0 +1,36 @@
+{
+  "title": "إدارة المهام",
+  "create_task": "إنشاء مهمة",
+  "edit_task": "تعديل المهمة",
+  "delete_task": "حذف المهمة",
+  "task_title": "العنوان",
+  "task_description": "الوصف",
+  "assigned_to": "مسند إلى",
+  "due_date": "تاريخ الاستحقاق",
+  "priority": "الأولوية",
+  "status": "الحالة",
+  "filter": {
+    "all": "جميع المهام",
+    "my_tasks": "مهامي",
+    "assigned": "مهام أسندتها",
+    "overdue": "متأخرة"
+  },
+  "status_values": {
+    "pending": "قيد الانتظار",
+    "in_progress": "قيد التنفيذ",
+    "completed": "مكتملة",
+    "cancelled": "ملغاة"
+  },
+  "priority_values": {
+    "low": "منخفضة",
+    "medium": "متوسطة",
+    "high": "عالية",
+    "urgent": "عاجلة"
+  },
+  "no_tasks": "لم يتم العثور على مهام",
+  "comments": "التعليقات",
+  "add_comment": "إضافة تعليق",
+  "attachments": "المرفقات",
+  "created_by": "أنشأها",
+  "updated_at": "آخر تحديث"
+}

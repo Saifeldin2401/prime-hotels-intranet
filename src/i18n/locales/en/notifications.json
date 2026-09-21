@@ -1,0 +1,23 @@
+{
+  "title": "Notifications",
+  "mark_all_read": "Mark All Read",
+  "clear_all": "Clear All",
+  "no_notifications": "No notifications",
+  "new": "New",
+  "earlier": "Earlier",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "this_week": "This Week",
+  "older": "Older",
+  "view_all": "View All Notifications",
+  "settings": "Notification Settings",
+  "types": {
+    "approval": "Approvals",
+    "training": "Training",
+    "announcement": "Announcements",
+    "task": "Tasks",
+    "system": "System",
+    "maintenance": "Maintenance"
+  },
+  "filter_all": "All"
+}

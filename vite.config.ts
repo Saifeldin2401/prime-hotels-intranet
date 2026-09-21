@@ -110,8 +110,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.info'],
       },
     },
     // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
@@ -120,6 +120,7 @@ export default defineConfig({
     // Raise chunk size warning limit - mermaid/excel/editor are heavy by nature and already split
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      external: ['@mermaid-js/parser'],
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined

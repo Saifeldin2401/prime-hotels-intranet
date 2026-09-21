@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyAssignments } from '@/hooks/useTraining'
 import { calculateStreak } from '@/lib/training/analytics'
+import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 import { cn } from '@/lib/utils'
 import type { LearningAssignment } from '@/types/learning'
 import {
@@ -17,13 +18,16 @@ import {
     Clock,
     Compass,
     FileQuestion,
+    Filter,
     Flame,
     LayoutGrid,
     List,
     Loader2,
+    Play,
     Search,
     ShieldCheck,
     Sparkles,
+    TrendingUp,
     X,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -42,6 +46,7 @@ export default function MyLearning() {
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedTab, setSelectedTab] = useState<'all' | 'in_progress' | 'mandatory' | 'quizzes' | 'completed'>('all')
+    const [selectedCategory, setSelectedCategory] = useState<string>('all')
 
     // Fetch data using MyAssignments hook
     const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useMyAssignments()
@@ -72,7 +77,7 @@ export default function MyLearning() {
             })
     }, [allItems])
 
-    // Filtered items based on search and tab
+    // Filtered items based on search, tab, and category
     const filteredActiveItems = useMemo(() => {
         return activeItems.filter((item) => {
             const matchesSearch =
@@ -82,28 +87,45 @@ export default function MyLearning() {
 
             if (!matchesSearch) return false
 
+            const cat = ((item.content_metadata as Record<string, unknown>)?.category as string || '').toLowerCase()
+            const matchesCategory =
+                selectedCategory === 'all' ||
+                cat.includes(selectedCategory.toLowerCase()) ||
+                (item.content_title || '').toLowerCase().includes(selectedCategory.toLowerCase())
+
+            if (!matchesCategory) return false
+
             if (selectedTab === 'in_progress') {
                 return item.progress?.status === 'in_progress'
             }
             if (selectedTab === 'mandatory') {
-                return item.priority === 'compliance'
+                return item.priority === 'compliance' || item.is_mandatory
             }
             if (selectedTab === 'quizzes') {
                 return item.content_type === 'quiz'
             }
             return true
         })
-    }, [activeItems, searchQuery, selectedTab])
+    }, [activeItems, searchQuery, selectedTab, selectedCategory])
 
     const filteredCompletedItems = useMemo(() => {
         return completedItems.filter((item) => {
-            if (searchQuery.trim() === '') return true
-            return (
+            const matchesSearch =
+                searchQuery.trim() === '' ||
                 (item.content_title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (item.content_metadata?.description || '').toLowerCase().includes(searchQuery.toLowerCase())
-            )
+
+            if (!matchesSearch) return false
+
+            const cat = ((item.content_metadata as Record<string, unknown>)?.category as string || '').toLowerCase()
+            const matchesCategory =
+                selectedCategory === 'all' ||
+                cat.includes(selectedCategory.toLowerCase()) ||
+                (item.content_title || '').toLowerCase().includes(selectedCategory.toLowerCase())
+
+            return matchesCategory
         })
-    }, [completedItems, searchQuery])
+    }, [completedItems, searchQuery, selectedCategory])
 
     // Map to normalized CurriculumItem models
     const mappedActiveCurriculumItems: CurriculumItem[] = useMemo(() => {
@@ -146,26 +168,38 @@ export default function MyLearning() {
 
     const displayItems = selectedTab === 'completed' ? mappedCompletedCurriculumItems : mappedActiveCurriculumItems
 
+    // Find first active item for "Active Focus" banner
+    const activeFocusItem = useMemo(() => {
+        return activeItems.find((i) => i.progress?.status === 'in_progress') || null
+    }, [activeItems])
+
     // Calculated Stats
-    const stats = useMemo(
-        () => ({
-            totalAssigned: allItems.length,
-            inProgress: allItems.filter((i) => i.progress?.status === 'in_progress').length,
-            completed: completedItems.length,
-            overdue: activeItems.filter((a) => a.due_date && new Date(a.due_date) < new Date()).length,
-            streak: calculateStreak(
-                completedItems.map((i) => ({ completed_at: i.progress?.completed_at || null }))
-            ),
-        }),
-        [allItems, completedItems, activeItems]
-    )
+    const stats = useMemo(() => {
+        const total = allItems.length
+        const completed = completedItems.length
+        const inProgress = allItems.filter((i) => i.progress?.status === 'in_progress').length
+        const overdue = activeItems.filter((a) => a.due_date && new Date(a.due_date) < new Date()).length
+        const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
+        const streak = calculateStreak(
+            completedItems.map((i) => ({ completed_at: i.progress?.completed_at || null }))
+        )
+
+        return {
+            totalAssigned: total,
+            inProgress,
+            completed,
+            overdue,
+            completionRate,
+            streak,
+        }
+    }, [allItems, completedItems, activeItems])
 
     if (isLoading) {
         return (
             <div className="flex h-96 flex-col items-center justify-center gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
                 <p className="text-sm font-mono text-muted-foreground">
-                    {isRTL ? 'جارٍ تحميل المناهج والمسارات التدريبية...' : 'Loading ALTUS Curriculum & Courses...'}
+                    {isRTL ? 'جارٍ تحميل المناهج والمسارات التدريبية من ألتوس...' : 'Loading ALTUS Curriculum & Courses...'}
                 </p>
             </div>
         )
@@ -189,29 +223,29 @@ export default function MyLearning() {
     }
 
     return (
-        <div className="space-y-8 animate-fade-in max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <div className="space-y-7 animate-fade-in max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
             {/* 1. Header with Executive ALTUS Context */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 px-2.5 py-0.5 text-xs font-semibold">
-                            <Sparkles className="h-3 w-3 me-1" />
-                            {isRTL ? 'أكاديمية ألتوس للضيافة' : 'ALTUS Hospitality Academy'}
+                    <div className="flex items-center gap-2 mb-1.5">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 text-xs font-semibold shadow-sm">
+                            <Sparkles className="h-3.5 w-3.5 me-1 text-amber-500" />
+                            <span>{isRTL ? 'أكاديمية ألتوس للضيافة الفاخرة' : 'ALTUS Luxury Hospitality Academy'}</span>
                         </Badge>
                     </div>
-                    <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+                    <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
                         {t('myLearning', 'My Learning & Curriculum')}
                     </h1>
-                    <p className="text-muted-foreground text-sm font-sans mt-1">
-                        {t('myLearningDescription', 'Access your assigned modules, track certifications, and elevate your hospitality expertise.')}
+                    <p className="text-muted-foreground text-xs sm:text-sm font-sans mt-1 max-w-2xl">
+                        {t('myLearningDescription', 'Access your assigned modules, track certifications, and elevate your Forbes 5-star hospitality expertise.')}
                     </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3 self-start md:self-auto">
+                <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
                     <Button
                         asChild
                         variant="outline"
-                        className="h-10 px-3.5 gap-2 rounded-2xl font-bold border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 shadow-sm transition-all"
+                        className="h-9 px-3.5 gap-2 rounded-2xl font-bold border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 shadow-sm transition-all duration-150 active:scale-[0.97]"
                     >
                         <Link to="/courses">
                             <Compass className="h-4 w-4" />
@@ -220,110 +254,146 @@ export default function MyLearning() {
                     </Button>
 
                     {/* View Mode Switcher (Grid vs Table) */}
-                    <div className="flex items-center gap-2 bg-card/60 p-1 rounded-2xl border border-border/60 backdrop-blur-md">
+                    <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-2xl border border-border/50 backdrop-blur-md">
                         <Button
                             variant={viewMode === 'grid' ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => setViewMode('grid')}
                             className={cn(
-                                'h-8 px-3 gap-1.5 rounded-xl font-bold transition-all',
-                                viewMode === 'grid' && 'bg-amber-500 text-slate-950 hover:bg-amber-600 shadow-sm'
+                                'h-7 px-2.5 gap-1.5 rounded-xl font-bold text-xs transition-all duration-150',
+                                viewMode === 'grid' && 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-sm'
                             )}
                             title={isRTL ? 'عرض البطاقات' : 'Cards View'}
                         >
-                            <LayoutGrid className="h-4 w-4" />
-                            <span className="text-xs">{isRTL ? 'بطاقات' : 'Cards'}</span>
+                            <LayoutGrid className="h-3.5 w-3.5" />
+                            <span>{isRTL ? 'بطاقات' : 'Cards'}</span>
                         </Button>
                         <Button
                             variant={viewMode === 'table' ? 'default' : 'ghost'}
                             size="sm"
                             onClick={() => setViewMode('table')}
                             className={cn(
-                                'h-8 px-3 gap-1.5 rounded-xl font-bold transition-all',
-                                viewMode === 'table' && 'bg-amber-500 text-slate-950 hover:bg-amber-600 shadow-sm'
+                                'h-7 px-2.5 gap-1.5 rounded-xl font-bold text-xs transition-all duration-150',
+                                viewMode === 'table' && 'bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-sm'
                             )}
                             title={isRTL ? 'عرض الجدول' : 'Table View'}
                         >
-                            <List className="h-4 w-4" />
-                            <span className="text-xs">{isRTL ? 'جدول' : 'Table'}</span>
+                            <List className="h-3.5 w-3.5" />
+                            <span>{isRTL ? 'جدول' : 'Table'}</span>
                         </Button>
                     </div>
                 </div>
             </div>
 
-            {/* 2. Stats Cockpit Deck */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5">
-                        <div className="font-mono text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-                            {stats.totalAssigned}
+            {/* 2. Unified Apple-Style Learning Pulse Bar */}
+            <div className="relative overflow-hidden rounded-3xl border border-amber-500/25 border-t-amber-400/35 bg-gradient-to-br from-card/95 via-card/85 to-amber-950/[0.04] p-5 sm:p-6 backdrop-blur-xl shadow-lg">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    {/* Overall Completion Gauge */}
+                    <div className="flex items-center gap-4">
+                        <div className="relative flex items-center justify-center shrink-0">
+                            <svg width="72" height="72" className="rotate-[-90deg]">
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="28"
+                                    stroke="#332704"
+                                    strokeWidth="5"
+                                    fill="transparent"
+                                    className="opacity-60"
+                                />
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="28"
+                                    stroke="#EAB308"
+                                    strokeWidth="5"
+                                    strokeDasharray={2 * Math.PI * 28}
+                                    strokeDashoffset={(2 * Math.PI * 28) - (stats.completionRate / 100) * (2 * Math.PI * 28)}
+                                    strokeLinecap="round"
+                                    fill="transparent"
+                                    style={{
+                                        filter: 'drop-shadow(0 0 5px rgba(234, 179, 8, 0.4))',
+                                        transition: 'stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
+                                    }}
+                                />
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="font-mono text-sm font-bold text-amber-500">
+                                    {stats.completionRate}%
+                                </span>
+                            </div>
                         </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                            {t('assigned', 'Total Assigned')}
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5">
-                        <div className="font-mono text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">
-                            {stats.inProgress}
+                        <div>
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 uppercase tracking-wider">
+                                <TrendingUp className="h-3.5 w-3.5" />
+                                <span>{isRTL ? 'معدل الإنجاز التراكمي' : 'Curriculum Completion'}</span>
+                            </div>
+                            <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mt-0.5">
+                                {stats.completed} {isRTL ? 'من' : 'of'} {stats.totalAssigned} {isRTL ? 'برامج مكتملة' : 'modules completed'}
+                            </h3>
+                            <p className="text-[11px] text-muted-foreground font-sans">
+                                {isRTL ? 'استمر في التقدم لاجتياز متطلبات الاعتماد الفندقي' : 'Keep progressing to unlock luxury master credentials'}
+                            </p>
                         </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                            {t('inProgress', 'In Progress')}
-                        </div>
-                    </CardContent>
-                </Card>
+                    </div>
 
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5">
-                        <div className="font-mono text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-                            {stats.completed}
+                    {/* Integrated Metric Capsules */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 shrink-0">
+                        <div className="rounded-2xl border border-blue-500/20 bg-background/50 p-3 text-center backdrop-blur-md">
+                            <div className="font-mono text-xl sm:text-2xl font-bold text-blue-500">
+                                {stats.totalAssigned}
+                            </div>
+                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {t('assigned', 'Assigned')}
+                            </div>
                         </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                            {t('completed', 'Completed')}
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5">
-                        <div className="font-mono text-2xl sm:text-3xl font-bold text-destructive">
-                            {stats.overdue}
+                        <div className="rounded-2xl border border-amber-500/20 bg-background/50 p-3 text-center backdrop-blur-md">
+                            <div className="font-mono text-xl sm:text-2xl font-bold text-amber-500">
+                                {stats.inProgress}
+                            </div>
+                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {t('inProgress', 'In Progress')}
+                            </div>
                         </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                            {t('overdue', 'Overdue')}
-                        </div>
-                    </CardContent>
-                </Card>
 
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm col-span-2 sm:col-span-1">
-                    <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-2xl sm:text-3xl font-bold text-orange-500">
-                                {stats.streak}
-                            </span>
-                            <Flame className={cn('h-6 w-6 text-orange-500', stats.streak > 0 && 'animate-pulse')} />
+                        <div className="rounded-2xl border border-emerald-500/20 bg-background/50 p-3 text-center backdrop-blur-md">
+                            <div className="font-mono text-xl sm:text-2xl font-bold text-emerald-500">
+                                {stats.completed}
+                            </div>
+                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {t('completed', 'Completed')}
+                            </div>
                         </div>
-                        <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-1">
-                            {t('streakDays', 'Day Streak')}
+
+                        <div className={cn(
+                            "rounded-2xl border p-3 text-center backdrop-blur-md transition-colors",
+                            stats.overdue > 0 ? "border-destructive/40 bg-destructive/[0.06]" : "border-border/50 bg-background/50"
+                        )}>
+                            <div className={cn("font-mono text-xl sm:text-2xl font-bold", stats.overdue > 0 ? "text-destructive" : "text-muted-foreground")}>
+                                {stats.overdue}
+                            </div>
+                            <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mt-0.5">
+                                {t('overdue', 'Overdue')}
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
 
-            {/* 3. Category Filter Tabs & Instant Search Bar */}
-            <div className="flex flex-col gap-4">
-                {/* Horizontal Scrolling Segmented Tabs */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-border/60 scrollbar-none">
+            {/* 3. Segmented Filter Tabs & Instant Search Bar */}
+            <div className="space-y-3.5">
+                {/* Emil Kowalski Style Sliding Segmented Tab Pill Bar */}
+                <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-muted/50 border border-border/50 backdrop-blur-md overflow-x-auto scrollbar-none">
                     <button
                         type="button"
                         onClick={() => setSelectedTab('all')}
                         className={cn(
-                            'px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap',
+                            'px-4 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-[0.97]',
                             selectedTab === 'all'
-                                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                                ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/60 font-medium'
                         )}
                     >
                         {isRTL ? 'جميع المناهج' : 'All Curriculum'} ({activeItems.length})
@@ -333,10 +403,10 @@ export default function MyLearning() {
                         type="button"
                         onClick={() => setSelectedTab('in_progress')}
                         className={cn(
-                            'px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap',
+                            'px-4 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-[0.97]',
                             selectedTab === 'in_progress'
-                                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                                ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/60 font-medium'
                         )}
                     >
                         {isRTL ? 'قيد المتابعة' : 'In Progress'} ({stats.inProgress})
@@ -346,10 +416,10 @@ export default function MyLearning() {
                         type="button"
                         onClick={() => setSelectedTab('mandatory')}
                         className={cn(
-                            'px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap',
+                            'px-4 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-[0.97]',
                             selectedTab === 'mandatory'
-                                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                                ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/60 font-medium'
                         )}
                     >
                         {isRTL ? 'إلزامي ومعتمد' : 'Mandatory SOPs'} ({activeItems.filter((i) => i.priority === 'compliance').length})
@@ -359,10 +429,10 @@ export default function MyLearning() {
                         type="button"
                         onClick={() => setSelectedTab('quizzes')}
                         className={cn(
-                            'px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap',
+                            'px-4 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-[0.97]',
                             selectedTab === 'quizzes'
-                                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                                ? 'bg-amber-500 text-slate-950 shadow-sm font-bold'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/60 font-medium'
                         )}
                     >
                         {isRTL ? 'التقييمات والاختبارات' : 'Assessments & Quizzes'} ({activeItems.filter((i) => i.content_type === 'quiz').length})
@@ -372,10 +442,10 @@ export default function MyLearning() {
                         type="button"
                         onClick={() => setSelectedTab('completed')}
                         className={cn(
-                            'px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap',
+                            'px-4 py-2 text-xs font-bold rounded-xl transition-all duration-150 whitespace-nowrap active:scale-[0.97]',
                             selectedTab === 'completed'
-                                ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-card'
+                                ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-background/60 font-medium'
                         )}
                     >
                         <CheckCircle2 className="h-3.5 w-3.5 inline me-1" />
@@ -383,15 +453,15 @@ export default function MyLearning() {
                     </button>
                 </div>
 
-                {/* Instant Search Bar */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md">
+                {/* Instant Search Bar with Category Filter */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md">
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder={isRTL ? 'بحث في الدورات ومعايير التشغيل...' : 'Search courses, quizzes, and SOPs...'}
-                            className="ps-9 pe-9 h-10 rounded-xl bg-background/80 border-border/70 text-xs"
+                            className="ps-9 pe-9 h-9 rounded-xl bg-background/80 border-border/70 text-xs"
                         />
                         {searchQuery && (
                             <button
@@ -403,15 +473,85 @@ export default function MyLearning() {
                         )}
                     </div>
 
-                    <div className="text-xs font-mono text-muted-foreground ps-2">
-                        {isRTL
-                            ? `عرض ${displayItems.length} برنامج تدريبي`
-                            : `Displaying ${displayItems.length} learning items`}
+                    {/* Department / Category Filter Pill */}
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="h-9 px-3 rounded-xl bg-background/80 border border-border/70 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        >
+                            <option value="all">{isRTL ? 'جميع الأقسام' : 'All Departments'}</option>
+                            <option value="Front Office">{isRTL ? 'المكاتب الأمامية' : 'Front Office & Guest Services'}</option>
+                            <option value="Culinary">{isRTL ? 'المطبخ وسلامة الغذاء' : 'Culinary & Food Safety'}</option>
+                            <option value="Housekeeping">{isRTL ? 'الإشراف الداخلي' : 'Housekeeping & Rooms'}</option>
+                            <option value="Safety">{isRTL ? 'الأمن والسلامة' : 'Safety & Security'}</option>
+                            <option value="Butler">{isRTL ? 'البتلر وكبار الشخصيات' : 'Butler & VIP Services'}</option>
+                        </select>
+
+                        <div className="text-[11px] font-mono text-muted-foreground ps-2 shrink-0">
+                            {isRTL
+                                ? `${displayItems.length} برنامج`
+                                : `${displayItems.length} items`}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 4. Curriculum Content Rendering: Cards or Table */}
+            {/* 4. Active Focus Shelf (When on All or In Progress and user has active course) */}
+            {(selectedTab === 'all' || selectedTab === 'in_progress') && activeFocusItem && !searchQuery && selectedCategory === 'all' && (
+                <div className="relative overflow-hidden rounded-3xl border border-amber-500/30 border-t-amber-400/40 bg-[#0B0F17] p-5 sm:p-6 shadow-md">
+                    <div
+                        className="absolute inset-0 bg-cover bg-center opacity-25"
+                        style={{
+                            backgroundImage: `url(${resolveAssetForTrack({
+                                title: activeFocusItem.content_title || '',
+                                id: activeFocusItem.content_id,
+                            })})`,
+                        }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#070A0F] via-[#0B0F17]/90 to-transparent" />
+
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="space-y-2 max-w-xl">
+                            <div className="flex items-center gap-2">
+                                <Badge className="bg-amber-500 text-slate-950 font-bold px-2.5 py-0.5 text-[10px]">
+                                    <Play className="h-2.5 w-2.5 fill-current me-1" />
+                                    {isRTL ? 'المقرر قيد الإنجاز حالياً' : 'Active Learning Focus'}
+                                </Badge>
+                                <span className="text-xs font-mono text-amber-400 font-bold">
+                                    {activeFocusItem.progress?.progress_percentage || 0}%
+                                </span>
+                            </div>
+                            <h3 className="font-display text-lg sm:text-xl font-bold text-white tracking-tight">
+                                {activeFocusItem.content_title}
+                            </h3>
+                            <div className="h-1.5 w-48 sm:w-64 bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                    className="h-full bg-gradient-to-r from-amber-500 to-amber-300 rounded-full"
+                                    style={{ width: `${activeFocusItem.progress?.progress_percentage || 0}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <Button
+                            asChild
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl px-5 h-9 text-xs shadow-md transition-all duration-150 active:scale-[0.97]"
+                        >
+                            <Link
+                                to={activeFocusItem.content_type === 'quiz'
+                                    ? `/assessments/${activeFocusItem.content_id}/take?assignment=${activeFocusItem.id}`
+                                    : `/learning/training/${activeFocusItem.content_id}?assignment=${activeFocusItem.id}`}
+                            >
+                                <Play className="h-3.5 w-3.5 fill-current me-1.5" />
+                                <span>{isRTL ? 'متابعة البرنامج' : 'Resume Module'}</span>
+                            </Link>
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. Curriculum Content Rendering: Cards or Table */}
             {viewMode === 'grid' ? (
                 displayItems.length > 0 ? (
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -425,19 +565,25 @@ export default function MyLearning() {
                         ))}
                     </div>
                 ) : (
-                    <div className="py-16 text-center rounded-3xl border border-dashed border-border/60 bg-card/40 p-6">
-                        <BookOpen className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
+                    <div className="py-16 text-center rounded-3xl border border-dashed border-amber-500/25 bg-card/40 p-8 backdrop-blur-md">
+                        <div className="h-16 w-16 mx-auto rounded-2xl overflow-hidden mb-3 border border-amber-500/30 shadow-md">
+                            <img
+                                src="/assets/altus/master-seal.jpg"
+                                alt="ALTUS Seal"
+                                className="h-full w-full object-cover"
+                            />
+                        </div>
                         <h4 className="font-display text-base font-bold text-foreground">
-                            {isRTL ? 'لا توجد برامج تدريبية مطابقة' : 'No courses found'}
+                            {isRTL ? 'لا توجد برامج تدريبية مطابقة' : 'No matching courses found'}
                         </h4>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                        <p className="text-xs text-muted-foreground mt-1.5 max-w-sm mx-auto">
                             {isRTL
-                                ? 'استكشف كتالوج الأكاديمية وسجل في برامج تدريبية جديدة.'
-                                : 'Explore the ALTUS catalog to enroll in new masterclasses and SOP courses.'}
+                                ? 'جرّب تعديل مصطلحات البحث أو استكشف كتالوج الأكاديمية للتسجيل في برامج جديدة.'
+                                : 'Try changing your search keywords or explore the full ALTUS catalog to enroll in accredited courses.'}
                         </p>
                         <Button
                             asChild
-                            className="mt-4 rounded-xl bg-hotel-gold text-slate-950 hover:bg-hotel-gold-dark font-bold shadow-md"
+                            className="mt-5 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold shadow-md transition-all duration-150 active:scale-[0.97]"
                         >
                             <Link to="/courses">
                                 <Compass className="h-4 w-4 me-2" />
@@ -450,8 +596,8 @@ export default function MyLearning() {
                 <CurriculumTable items={displayItems} isRTL={isRTL} t={t} />
             )}
 
-            {/* 5. Daily Quiz / Microlearning Widget Integration */}
-            <div className="mt-8 border-t border-border/40 pt-8">
+            {/* 6. Daily Quiz / Microlearning Section */}
+            <div className="mt-8 border-t border-border/40 pt-6">
                 <InlineErrorBoundary section="Daily Quiz">
                     <DailyQuizWidget />
                 </InlineErrorBoundary>

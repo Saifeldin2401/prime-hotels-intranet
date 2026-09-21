@@ -1,6 +1,7 @@
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useDocuments } from '@/hooks/useDocuments'
@@ -14,9 +15,24 @@ export default function ReportsDashboard() {
     const { user } = useAuth()
 
     // Fetch Data
-    const { data: taskStats } = useTaskStats(user?.id)
-    const { data: messageStats } = useMessagingStats()
-    const { data: documents } = useDocuments()
+    const { data: taskStats, isLoading: isLoadingTasks } = useTaskStats(user?.id)
+    const { data: messageStats, isLoading: isLoadingMessages } = useMessagingStats()
+    const { data: documents, isLoading: isLoadingDocs } = useDocuments()
+
+    if (isLoadingTasks || isLoadingMessages || isLoadingDocs) {
+        return (
+            <div className="space-y-6 p-6">
+                <Skeleton className="h-8 w-64" />
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Skeleton className="h-32" />
+                    <Skeleton className="h-32" />
+                    <Skeleton className="h-32" />
+                    <Skeleton className="h-32" />
+                </div>
+                <Skeleton className="h-64" />
+            </div>
+        )
+    }
 
     // Calculate Document Stats manually since useDocuments returns array
     const docStats = {

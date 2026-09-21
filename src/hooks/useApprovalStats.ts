@@ -110,41 +110,13 @@ export function useApprovalStats() {
             }
 
             // 1) Workflow-based pending approvals assigned to current user
-            const workflowCountQuery = supabase
-                .from('requests')
-                .select('id', { count: 'exact', head: true })
-                .eq('entity_type', 'leave_request')
-                .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
-                .eq('current_assignee_id', user.id)
-
-            const workflowOldestQuery = supabase
-                .from('requests')
-                .select('created_at')
-                .eq('entity_type', 'leave_request')
-                .in('status', ['pending_supervisor_approval', 'pending_hr_review'])
-                .eq('current_assignee_id', user.id)
-                .order('created_at', { ascending: true })
-                .limit(1)
+            // DEPRECATED: requests and leave_requests tables removed
+            const workflowCountQuery = Promise.resolve({ count: 0, error: null })
+            const workflowOldestQuery = { single: () => Promise.resolve({ data: null, error: null }) }
 
             // 2) Legacy pending leave requests without workflow linkage
-            let legacyCountQuery = supabase
-                .from('leave_requests')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending')
-                .eq('is_deleted', false)
-                .is('workflow_request_id', null)
-
-            let legacyOldestQuery = supabase
-                .from('leave_requests')
-                .select('created_at')
-                .eq('status', 'pending')
-                .eq('is_deleted', false)
-                .is('workflow_request_id', null)
-                .order('created_at', { ascending: true })
-                .limit(1)
-
-            legacyCountQuery = applyScope(legacyCountQuery)
-            legacyOldestQuery = applyScope(legacyOldestQuery)
+            let legacyCountQuery: any = Promise.resolve({ count: 0, error: null })
+            let legacyOldestQuery: any = { single: () => Promise.resolve({ data: null, error: null }) }
 
             const approvalSettled = await Promise.allSettled([
                 workflowCountQuery,
@@ -200,9 +172,9 @@ export function usePendingApprovals() {
 
     return useQuery({
         queryKey: ['leave-approvals-pending', user?.id, userRole],
-        enabled: !!user?.id && !!userRole,
+        enabled: false, // DEPRECATED: requests and leave_requests tables removed
         queryFn: async () => {
-            if (!user?.id) return []
+            return [] as PendingLeaveRequest[]
 
             // 1) Workflow-based pending items assigned to current user
             const { data: workflowRows, error: workflowError } = await supabase

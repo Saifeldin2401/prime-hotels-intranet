@@ -84,6 +84,15 @@ export function SidebarNavigation({
     if (isMobile) onClose()
   }, [isMobile, onClose])
 
+  const getRoleDisplayName = useCallback((role?: string | null) => {
+    if (!role) return 'Guest'
+    const translated = t(`common:roles.${role}`, role.replace(/_/g, ' '))
+    if (translated.startsWith('common:roles.') || translated.startsWith('roles.')) {
+      return role.replace(/_/g, ' ')
+    }
+    return translated
+  }, [t])
+
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (!isMobile) return
     const swipeThreshold = 100
@@ -439,7 +448,7 @@ export function SidebarNavigation({
                       {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                     </p>
                     <p className="text-xs text-white/50 uppercase tracking-wider truncate">
-                      {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
+                      {profile?.job_title || getRoleDisplayName(primaryRole)}
                     </p>
                   </div>
                 </div>
@@ -461,7 +470,7 @@ export function SidebarNavigation({
                     </p>
                     <div className="flex flex-col gap-0.5">
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
-                        {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
+                        {profile?.job_title || getRoleDisplayName(primaryRole)}
                       </p>
                       {(currentOrganization || currentProperty) && (
                         <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">

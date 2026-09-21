@@ -14,8 +14,8 @@ Your Supabase CLI is now fully configured and connected to the **prime connect**
 ### Access Token Configuration
 Your personal access token has been saved to `.env.supabase.local`:
 ```
-SBP_ACCESS_TOKEN=sbp_910c77dee6fa0bf9521e020e8b4ff01a440b4e79
-SUPABASE_ACCESS_TOKEN=sbp_910c77dee6fa0bf9521e020e8b4ff01a440b4e79
+SBP_ACCESS_TOKEN=<YOUR_SUPABASE_ACCESS_TOKEN>
+SUPABASE_ACCESS_TOKEN=<YOUR_SUPABASE_ACCESS_TOKEN>
 ```
 
 ### Available API Keys
@@ -120,7 +120,7 @@ $env:PATH = "$env:USERPROFILE\.local\bin;$env:PATH"
 ### Authentication Errors
 ```powershell
 # Re-set the access token
-$env:SUPABASE_ACCESS_TOKEN = "sbp_910c77dee6fa0bf9521e020e8b4ff01a440b4e79"
+$env:SUPABASE_ACCESS_TOKEN = "<YOUR_SUPABASE_ACCESS_TOKEN>"
 supabase projects list
 ```
 

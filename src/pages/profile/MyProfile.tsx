@@ -19,7 +19,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import EmployeeDocuments from './EmployeeDocuments'
 
 // ─── Profile Completion ────────────────────────────────────────────────────────
 function computeCompletion(p: {
@@ -307,15 +306,12 @@ export default function MyProfile() {
             {/* Tabs */}
             <div className={`px-4 relative z-20 ${completion.percent < 100 ? 'pt-2' : '-mt-12'}`}>
                 <Tabs defaultValue="personal" className="space-y-6">
-                    <TabsList className="bg-white shadow-lg rounded-xl border border-gray-100 grid w-full grid-cols-3 lg:w-[500px] p-1 h-auto">
+                    <TabsList className="bg-white shadow-lg rounded-xl border border-gray-100 grid w-full grid-cols-2 lg:w-[360px] p-1 h-auto">
                         <TabsTrigger value="personal" className="py-2.5 text-sm">
                             <UserIcon className="w-4 h-4 me-2" />{t('personal_info')}
                         </TabsTrigger>
                         <TabsTrigger value="skills" className="py-2.5 text-sm">
                             <Star className="w-4 h-4 me-2" />{t('skills', 'Skills')}
-                        </TabsTrigger>
-                        <TabsTrigger value="documents" className="py-2.5 text-sm">
-                            <Briefcase className="w-4 h-4 me-2" />{t('documents')}
                         </TabsTrigger>
                     </TabsList>
 
@@ -456,10 +452,6 @@ export default function MyProfile() {
 
                     <TabsContent value="skills">
                         <UserSkillsDisplay />
-                    </TabsContent>
-
-                    <TabsContent value="documents">
-                        <EmployeeDocuments />
                     </TabsContent>
                 </Tabs>
             </div>

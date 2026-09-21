@@ -6,6 +6,7 @@
  * and educational illustrations, saving them directly to the Media Library.
  */
 
+import DOMPurify from 'dompurify'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -317,9 +318,9 @@ export function AIMediaGeneratorModal({
                   <div
                     className="w-full h-full p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
                     dangerouslySetInnerHTML={{
-                      __html: generatedImageUrl.includes('base64,')
+                      __html: DOMPurify.sanitize(generatedImageUrl.includes('base64,')
                         ? decodeURIComponent(escape(atob(generatedImageUrl.split('base64,')[1])))
-                        : decodeURIComponent(generatedImageUrl.split('charset=utf-8,')[1] || generatedImageUrl.split(',')[1]),
+                        : decodeURIComponent(generatedImageUrl.split('charset=utf-8,')[1] || generatedImageUrl.split(',')[1]), { USE_PROFILES: { svg: true, svgFilters: true } }),
                     }}
                   />
                 ) : (

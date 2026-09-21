@@ -59,6 +59,8 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
                     const endOfDay = new Date(startOfDay)
                     endOfDay.setDate(endOfDay.getDate() + 1)
 
+                    const shifts: any[] = [] // DEPRECATED: shifts table removed
+                    /*
                     const { data: shifts } = await supabase
                         .from('shifts')
                         .select('*')
@@ -66,6 +68,7 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
                         .gte('start_time', startOfDay.toISOString())
                         .lt('start_time', endOfDay.toISOString())
                         .neq('status', 'cancelled')
+                    */
 
                     if (shifts) {
                         staffMembers.forEach(member => {

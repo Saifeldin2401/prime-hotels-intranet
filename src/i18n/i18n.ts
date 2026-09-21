@@ -48,6 +48,15 @@ import enRequests from './locales/en/requests.json';
 import arWizard from './locales/ar/wizard.json';
 import enWizard from './locales/en/wizard.json';
 
+import arDirectory from './locales/ar/directory.json';
+import arMessages from './locales/ar/messages.json';
+import arNotifications from './locales/ar/notifications.json';
+import arTasks from './locales/ar/tasks.json';
+import enDirectory from './locales/en/directory.json';
+import enMessages from './locales/en/messages.json';
+import enNotifications from './locales/en/notifications.json';
+import enTasks from './locales/en/tasks.json';
+
 // Define the resources
 const resources = {
   en: {
@@ -70,6 +79,10 @@ const resources = {
     requests: enRequests,
     extracted: enExtracted,
     media: enMedia,
+    directory: enDirectory,
+    tasks: enTasks,
+    messages: enMessages,
+    notifications: enNotifications,
     wizard: {
       ...enWizard,
       wizard: {
@@ -98,6 +111,10 @@ const resources = {
     requests: arRequests,
     extracted: arExtracted,
     media: arMedia,
+    directory: arDirectory,
+    tasks: arTasks,
+    messages: arMessages,
+    notifications: arNotifications,
     wizard: {
       ...arWizard,
       wizard: {
@@ -120,6 +137,8 @@ i18n
     resources,
     debug: false,
     fallbackLng: 'en',
+    defaultNS: 'common',
+    ns: ['common', 'auth', 'nav', 'dashboard', 'documents', 'users', 'settings', 'training', 'admin', 'profile', 'public', 'knowledge', 'analytics', 'ai_tools', 'errors', 'learning', 'requests', 'extracted', 'media', 'wizard', 'directory', 'tasks', 'messages', 'notifications'],
     supportedLngs: ['en', 'ar'],
 
     // Improved interpolation

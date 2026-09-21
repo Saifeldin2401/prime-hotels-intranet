@@ -1,0 +1,25 @@
+{
+  "title": "الرسائل",
+  "compose": "إنشاء رسالة",
+  "reply": "رد",
+  "forward": "إعادة توجيه",
+  "delete": "حذف",
+  "mark_read": "تعيين كمقروء",
+  "mark_unread": "تعيين كغير مقروء",
+  "search_placeholder": "البحث في الرسائل...",
+  "no_messages": "لا توجد رسائل",
+  "inbox": "البريد الوارد",
+  "sent": "المرسل",
+  "drafts": "المسودات",
+  "to": "إلى",
+  "from": "من",
+  "subject": "الموضوع",
+  "send": "إرسال",
+  "cancel": "إلغاء",
+  "priority": {
+    "normal": "عادي",
+    "high": "عالي",
+    "urgent": "عاجل"
+  },
+  "quick_reply": "رد سريع"
+}

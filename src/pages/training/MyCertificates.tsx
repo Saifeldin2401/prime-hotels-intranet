@@ -660,12 +660,16 @@ export default function MyCertificates() {
                 <TabsContent value="milestones" className="space-y-6 mt-0">
                     <div className="grid gap-6 lg:grid-cols-3">
                         {/* Streak & Habit Card */}
-                        <Card className="border border-orange-500/30 bg-gradient-to-br from-card via-card/95 to-orange-500/[0.05] rounded-3xl p-6 relative overflow-hidden shadow-sm">
+                        <Card className="border border-orange-500/30 bg-gradient-to-br from-card via-card/95 to-orange-500/[0.05] rounded-3xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between">
                             <div className="absolute top-0 end-0 -mt-8 -me-8 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl pointer-events-none" />
                             <div className="space-y-4 relative z-10">
-                                <div className="flex items-center gap-2">
-                                    <div className="h-10 w-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-600">
-                                        <Flame className="h-5 w-5" />
+                                <div className="flex items-center gap-3">
+                                    <div className="h-12 w-12 rounded-2xl overflow-hidden border border-orange-500/30 shrink-0 bg-slate-950 shadow-md">
+                                        <img
+                                            src="/assets/altus/streak-flame.jpg"
+                                            alt="Streak Trophy"
+                                            className="h-full w-full object-cover"
+                                        />
                                     </div>
                                     <div>
                                         <h3 className="font-display text-base font-bold text-foreground">
@@ -704,16 +708,25 @@ export default function MyCertificates() {
 
                         {/* Forbes 5-Star Hospitality Milestones */}
                         <div className="lg:col-span-2 space-y-4">
-                            <div>
-                                <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                                    <Star className="h-5 w-5 text-amber-500" />
-                                    <span>{isRTL ? 'معايير فوربس الخمس نجوم • مؤشرات التميز' : 'Forbes 5-Star Service Milestones'}</span>
-                                </h3>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {isRTL
-                                        ? 'المؤشرات التشغيلية الإلزامية لفرق العمل في فنادق النخبة بالمملكة.'
-                                        : 'Mandatory operational benchmarks for luxury hospitality personnel across Saudi properties.'}
-                                </p>
+                            <div className="flex items-center justify-between gap-4 p-4 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-card to-card">
+                                <div className="space-y-1">
+                                    <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
+                                        <Star className="h-5 w-5 text-amber-500" />
+                                        <span>{isRTL ? 'معايير فوربس الخمس نجوم • مؤشرات التميز' : 'Forbes 5-Star Service Milestones'}</span>
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        {isRTL
+                                            ? 'المؤشرات التشغيلية الإلزامية لفرق العمل في فنادق النخبة بالمملكة.'
+                                            : 'Mandatory operational benchmarks for luxury hospitality personnel across Saudi properties.'}
+                                    </p>
+                                </div>
+                                <div className="h-14 w-14 rounded-2xl overflow-hidden border border-amber-500/40 shrink-0 bg-slate-950 shadow-lg shadow-amber-500/10 hidden sm:block">
+                                    <img
+                                        src="/assets/altus/accreditation-seal.jpg"
+                                        alt="Accreditation Seal"
+                                        className="h-full w-full object-cover"
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-3">

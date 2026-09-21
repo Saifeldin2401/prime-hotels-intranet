@@ -68,7 +68,7 @@ export function useAuthSession() {
           const maxAttempts = 3
           for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             try {
-              await supabase.auth.signOut({ scope: 'local' })
+              await supabase.auth.signOut({ scope: 'global' })
               break
             } catch (error) {
               if (attempt === maxAttempts - 1) {

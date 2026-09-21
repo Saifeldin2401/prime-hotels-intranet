@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 import {
   Dialog,
   DialogContent,
@@ -1048,7 +1049,7 @@ export function AIArticleStudioModal({
                               return (
                                 <div
                                   className="w-full flex items-center justify-center p-2 [&>svg]:w-full [&>svg]:max-h-72 [&>svg]:h-auto [&>svg]:rounded-lg"
-                                  dangerouslySetInnerHTML={{ __html: rawSvg }}
+                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(rawSvg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
                                 />
                               )
                             }
@@ -1083,7 +1084,7 @@ export function AIArticleStudioModal({
 
                     <div
                       className="p-5 rounded-xl border bg-card max-h-[380px] overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-start space-y-4"
-                      dangerouslySetInnerHTML={{ __html: generatedResult.content_html }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedResult.content_html) }}
                     />
                   </TabsContent>
 
@@ -1092,7 +1093,7 @@ export function AIArticleStudioModal({
                     <div
                       className="p-5 rounded-xl border bg-card max-h-[380px] overflow-y-auto prose prose-sm dark:prose-invert max-w-none text-start space-y-4"
                       dir="rtl"
-                      dangerouslySetInnerHTML={{ __html: generatedResult.content_html_ar }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(generatedResult.content_html_ar) }}
                     />
                   </TabsContent>
 
@@ -1129,7 +1130,7 @@ export function AIArticleStudioModal({
                               return (
                                 <div
                                   className="w-full flex items-center justify-center p-2 [&>svg]:w-full [&>svg]:max-h-80 [&>svg]:h-auto [&>svg]:rounded-lg"
-                                  dangerouslySetInnerHTML={{ __html: rawSvg }}
+                                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(rawSvg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
                                 />
                               )
                             }

@@ -3,6 +3,7 @@
  * Management, Prompt Editing, and Regeneration of AI-Generated Course Visuals
  */
 
+import DOMPurify from 'dompurify'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -404,7 +405,7 @@ export function VisualAssetEditorModal({
                   return (
                     <div
                       className="w-full h-full p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
-                      dangerouslySetInnerHTML={{ __html: rawSvg }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(rawSvg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
                     />
                   )
                 }

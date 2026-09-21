@@ -1,8 +1,8 @@
 {
-  "name": "altus-intranet",
+  "name": "prime-hotels-intranet",
   "private": true,
   "version": "1.0.0",
-  "description": "Altus Connect Advisory Platform - A comprehensive hospitality consulting platform with bilingual support (English/Arabic)",
+  "description": "PRIME Hotels Connect Advisory Platform - A comprehensive hospitality consulting platform with bilingual support (English/Arabic)",
   "type": "module",
   "scripts": {
     "dev": "vite",

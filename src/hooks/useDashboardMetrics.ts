@@ -304,17 +304,24 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
         previousWeekAverage: previousWeekResponse
       }
 
-      let attendanceQuery = supabase
-        .from('attendance')
-        .select('status, date')
-        .eq('employee_id', user.id)
+      let attendanceData: any[] = []
+      try {
+        // TABLE PURGED: 'attendance' was dropped in Sep 2026 migration. Feature pending re-architecture.
+        /*
+        let attendanceQuery = supabase
+          .from('attendance')
+          .select('status, date')
+          .eq('employee_id', user.id)
 
-      if (isScoped) attendanceQuery = attendanceQuery.eq('property_id', activePropertyId)
-      else if (propertyIds.length > 0) attendanceQuery = attendanceQuery.in('property_id', propertyIds)
+        if (isScoped) attendanceQuery = attendanceQuery.eq('property_id', activePropertyId)
+        else if (propertyIds.length > 0) attendanceQuery = attendanceQuery.in('property_id', propertyIds)
 
-      const { data: attendanceData, error: attendanceError } = await attendanceQuery
-      if (attendanceError) {
-        console.warn('Dashboard metrics attendance query error:', attendanceError.message)
+        const { data, error } = await attendanceQuery
+        if (error) throw error
+        attendanceData = data || []
+        */
+      } catch (attendanceError: any) {
+        console.warn('Dashboard metrics attendance query error:', attendanceError?.message)
       }
 
       const allAttendance = attendanceData || []

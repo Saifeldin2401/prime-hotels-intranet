@@ -1,0 +1,21 @@
+{
+  "title": "دليل الموظفين",
+  "search_placeholder": "البحث عن موظفين...",
+  "department": "القسم",
+  "position": "المسمى الوظيفي",
+  "email": "البريد الإلكتروني",
+  "phone": "الهاتف",
+  "property": "الفندق",
+  "status": "الحالة",
+  "active": "نشط",
+  "inactive": "غير نشط",
+  "no_results": "لم يتم العثور على موظفين",
+  "filters": "الفلاتر",
+  "all_departments": "جميع الأقسام",
+  "all_properties": "جميع الفنادق",
+  "view_profile": "عرض الملف الشخصي",
+  "contact": "تواصل",
+  "manager": "المدير",
+  "direct_reports": "المرؤوسون المباشرون",
+  "joined": "تاريخ الانضمام"
+}

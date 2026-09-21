@@ -86,6 +86,8 @@ export function useUserSchedule() {
             futureDate.setDate(futureDate.getDate() + 7)
 
             // Fetch shifts
+            const shifts: any[] = [] // DEPRECATED: shifts table removed
+            /*
             const { data: shifts } = await supabase
                 .from('shifts')
                 .select('*')
@@ -93,6 +95,7 @@ export function useUserSchedule() {
                 .gte('start_time', now.toISOString())
                 .lte('start_time', futureDate.toISOString())
                 .order('start_time', { ascending: true })
+            */
 
             // Fetch learning assignments
             const { data: assignments } = await supabase

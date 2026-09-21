@@ -15,9 +15,10 @@ import {
   WizardContext, 
   type WizardContextType 
 } from './wizardContextDef'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 
 export function WizardProvider({ children }: { children: React.ReactNode }) {
-  const { user, profile, primaryRole } = useAuth()
+  const { user, profile, primaryRole, loading: authLoading } = useAuth()
   const account = useAccountContext()
   const tenant = useTenant()
 
@@ -80,10 +81,13 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     })
   }, [effectiveRole, isSimulating, account.isPlatformOperator, tenant.currentOrganization, profile])
 
+  // Guard: wait until auth, account, and tenant resolution have completed
+  const isContextReady = !authLoading && !account.loading && (account.isPlatformOperator || !tenant.isLoading)
+
   // Sync user progress from Supabase
   const loadProgress = useCallback(async () => {
-    if (!user) {
-      setIsLoading(false)
+    if (!user || !isContextReady) {
+      setIsLoading(!user ? false : true)
       return
     }
 
@@ -109,9 +113,47 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           setPreviousRole(progress.role_at_onboarding)
         }
 
-        // Auto-launch interactive on-page spotlight tour if user has not completed or skipped it
-        const sessionDismissed = sessionStorage.getItem(`wizard_dismissed_${user.id}`)
-        if (progress.status === 'not_started' && !sessionDismissed) {
+        // Persistent dismissal keys
+        const dismissedKey = `wizard_dismissed_${user.id}`
+        const dismissedAtKey = `wizard_dismissed_at_${user.id}`
+        const isLocallyDismissed = safeLocalStorage.getItem(dismissedKey) === 'true'
+        const dismissedAtStr = safeLocalStorage.getItem(dismissedAtKey)
+        const dismissedAtTime = dismissedAtStr ? Number(dismissedAtStr) : 0
+
+        // If an admin has explicitly reset the user, progress.reset_at will be newer than dismissedAtTime
+        const isResetByAdmin = Boolean(
+          progress.reset_at && 
+          (!dismissedAtTime || new Date(progress.reset_at).getTime() > dismissedAtTime)
+        )
+
+        if (isResetByAdmin) {
+          // Admin reset: clear local dismissal to allow the fresh onboarding to run
+          safeLocalStorage.removeItem(dismissedKey)
+          safeLocalStorage.removeItem(dismissedAtKey)
+          safeSessionStorage.removeItem(dismissedKey)
+        }
+
+        // Check if user has completed or skipped ANY wizard in the database
+        const hasCompletedOrSkippedAny = await WizardService.hasUserCompletedOrSkipped(user.id)
+
+        const alreadyDismissedOrDone = !isResetByAdmin && (
+          isLocallyDismissed ||
+          hasCompletedOrSkippedAny ||
+          progress.status === 'completed' ||
+          progress.status === 'skipped'
+        )
+
+        if (alreadyDismissedOrDone) {
+          // Keep local storage in sync so subsequent page loads never flash the tour
+          safeLocalStorage.setItem(dismissedKey, 'true')
+          safeSessionStorage.setItem(dismissedKey, 'true')
+          if (!dismissedAtTime) {
+            safeLocalStorage.setItem(dismissedAtKey, String(Date.now()))
+          }
+          // Clean up any remaining orphaned not_started rows
+          await WizardService.dismissAllNotStarted(user.id, progress.status === 'completed' ? 'completed' : 'skipped')
+        } else if (progress.status === 'not_started') {
+          // Auto-launch interactive on-page spotlight tour exactly ONCE
           setIsTourActive(true)
           setActiveTourStepIndex(0)
         }
@@ -121,7 +163,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, evaluated.wizardId, currentOrgId, effectiveRole])
+  }, [user, isContextReady, evaluated.wizardId, currentOrgId, effectiveRole])
 
   useEffect(() => {
     loadProgress()
@@ -172,35 +214,59 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   }, [userProgress, isSimulating, evaluated.wizardId, activeStepIndex, currentOrgId])
 
-  const skipWizard = useCallback(async () => {
+  const closeWizard = useCallback(async () => {
     setIsOpen(false)
     if (user?.id) {
-      sessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
     }
-    if (userProgress && !isSimulating) {
+    if (user?.id && !isSimulating && userProgress?.status === 'not_started') {
       const updated = await WizardService.skipOrComplete(
         evaluated.wizardId,
         'skipped',
         currentOrgId
       )
       if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'skipped')
     }
-  }, [user?.id, evaluated.wizardId, userProgress, isSimulating, currentOrgId])
+  }, [user?.id, isSimulating, userProgress?.status, evaluated.wizardId, currentOrgId])
+
+  const skipWizard = useCallback(async () => {
+    setIsOpen(false)
+    if (user?.id) {
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+    }
+    if (user?.id && !isSimulating) {
+      const updated = await WizardService.skipOrComplete(
+        evaluated.wizardId,
+        'skipped',
+        currentOrgId
+      )
+      if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'skipped')
+    }
+  }, [user?.id, evaluated.wizardId, isSimulating, currentOrgId])
 
   const finishWizard = useCallback(async () => {
     setIsOpen(false)
     if (user?.id) {
-      sessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
     }
-    if (userProgress && !isSimulating) {
+    if (user?.id && !isSimulating) {
       const updated = await WizardService.skipOrComplete(
         evaluated.wizardId,
         'completed',
         currentOrgId
       )
       if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'completed')
     }
-  }, [user?.id, userProgress, isSimulating, evaluated.wizardId, currentOrgId])
+  }, [user?.id, isSimulating, evaluated.wizardId, currentOrgId])
 
   // Interactive Tour Methods
   const startTour = useCallback((overrideSteps?: OnPageTourStep[]) => {
@@ -214,42 +280,62 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setIsOpen(false)
   }, [])
 
-  const endTour = useCallback(() => {
-    setIsTourActive(false)
-    setCustomTourSteps(null)
-  }, [])
-
-  const skipTour = useCallback(async () => {
+  const endTour = useCallback(async () => {
     setIsTourActive(false)
     setCustomTourSteps(null)
     if (user?.id) {
-      sessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
     }
-    if (userProgress && !isSimulating) {
+    if (user?.id && !isSimulating && userProgress?.status === 'not_started') {
       const updated = await WizardService.skipOrComplete(
         evaluated.wizardId,
         'skipped',
         currentOrgId
       )
       if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'skipped')
     }
-  }, [user?.id, evaluated.wizardId, userProgress, isSimulating, currentOrgId])
+  }, [user?.id, isSimulating, userProgress?.status, evaluated.wizardId, currentOrgId])
+
+  const skipTour = useCallback(async () => {
+    setIsTourActive(false)
+    setCustomTourSteps(null)
+    if (user?.id) {
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+    }
+    if (user?.id && !isSimulating) {
+      const updated = await WizardService.skipOrComplete(
+        evaluated.wizardId,
+        'skipped',
+        currentOrgId
+      )
+      if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'skipped')
+    }
+  }, [user?.id, evaluated.wizardId, isSimulating, currentOrgId])
 
   const finishTour = useCallback(async () => {
     setIsTourActive(false)
     setCustomTourSteps(null)
     if (user?.id) {
-      sessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
+      safeLocalStorage.setItem(`wizard_dismissed_at_${user.id}`, String(Date.now()))
+      safeSessionStorage.setItem(`wizard_dismissed_${user.id}`, 'true')
     }
-    if (userProgress && !isSimulating) {
+    if (user?.id && !isSimulating) {
       const updated = await WizardService.skipOrComplete(
         evaluated.wizardId,
         'completed',
         currentOrgId
       )
       if (updated) setUserProgress(updated)
+      await WizardService.dismissAllNotStarted(user.id, 'completed')
     }
-  }, [user?.id, userProgress, isSimulating, evaluated.wizardId, currentOrgId])
+  }, [user?.id, isSimulating, evaluated.wizardId, currentOrgId])
 
   const nextTourStep = useCallback(() => {
     if (activeTourStepIndex < tourSteps.length - 1) {
@@ -271,13 +357,15 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setIsTourActive(true)
     setIsOpen(false)
     if (user?.id) {
-      sessionStorage.removeItem(`wizard_dismissed_${user.id}`)
+      safeLocalStorage.removeItem(`wizard_dismissed_${user.id}`)
+      safeLocalStorage.removeItem(`wizard_dismissed_at_${user.id}`)
+      safeSessionStorage.removeItem(`wizard_dismissed_${user.id}`)
     }
-    if (user?.id && userProgress && !isSimulating) {
+    if (user?.id && !isSimulating) {
       await WizardService.resetProgress(user.id, evaluated.wizardId, currentOrgId)
       await loadProgress()
     }
-  }, [user?.id, userProgress, isSimulating, evaluated.wizardId, currentOrgId, loadProgress])
+  }, [user?.id, isSimulating, evaluated.wizardId, currentOrgId, loadProgress])
 
   // Contextual tips
   const isTipDismissed = useCallback((tipId: string): boolean => {
@@ -370,7 +458,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     startSimulation,
     endSimulation,
     openWizard: () => setIsOpen(true),
-    closeWizard: () => setIsOpen(false),
+    closeWizard,
     openWhatCanIDo: () => setIsWhatCanIDoOpen(true),
     closeWhatCanIDo: () => setIsWhatCanIDoOpen(false),
     openSearchHelp: () => setIsSearchHelpOpen(true),

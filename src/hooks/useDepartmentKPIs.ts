@@ -187,6 +187,8 @@ export function useDepartmentKPIs(propertyId?: string) {
                 const tomorrow = new Date(today)
                 tomorrow.setDate(tomorrow.getDate() + 1)
 
+                const deptShifts: any[] = [] // DEPRECATED: shifts table removed
+                /*
                 const { data: deptShifts } = await supabase
                     .from('shifts')
                     .select('status')
@@ -194,6 +196,7 @@ export function useDepartmentKPIs(propertyId?: string) {
                     .gte('start_time', today.toISOString())
                     .lt('start_time', tomorrow.toISOString())
                     .neq('status', 'cancelled')
+                */
 
                 const scheduledCount = deptShifts?.length || 0
                 const presentCount = deptShifts?.filter(s => ['in_progress', 'completed'].includes(s.status)).length || 0

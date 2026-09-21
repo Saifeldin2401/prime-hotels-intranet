@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Clock, Play, FileQuestion, BookOpen, AlertCircle, ArrowRight, Bookmark } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 
 export interface CurriculumItem {
     id: string
@@ -32,36 +33,12 @@ interface CurriculumCardProps {
 
 function resolveCurriculumThumbnail(item: CurriculumItem): string {
     if (item.thumbnailUrl) return item.thumbnailUrl
-
-    const text = `${item.title} ${item.description || ''} ${item.category || ''}`.toLowerCase()
-
-    if (text.includes('استقبال') || text.includes('كاونتر') || text.includes('reception') || text.includes('front desk') || text.includes('check-in') || text.includes('تسجيل الوصول')) {
-        return '/assets/altus/reception-desk.jpg'
-    }
-    if (text.includes('حقائب') || text.includes('أمتعة') || text.includes('luggage') || text.includes('bellman') || text.includes('طلب') || text.includes('مفقودات') || text.includes('concierge')) {
-        return '/assets/altus/luggage-trolley.jpg'
-    }
-    if (text.includes('طعام') || text.includes('أغذية') || text.includes('مشروبات') || text.includes('culinary') || text.includes('f&b') || text.includes('مطعم') || text.includes('dining')) {
-        return '/assets/altus/culinary-fnb.jpg'
-    }
-    if (text.includes('تدقيق') || text.includes('قائمة') || text.includes('sop') || text.includes('checklist') || text.includes('سلامة') || text.includes('امتثال') || text.includes('معايير')) {
-        return '/assets/altus/sop-checklist.jpg'
-    }
-    if (text.includes('شهادة') || text.includes('اعتماد') || text.includes('quiz') || text.includes('assessment') || text.includes('اختبار') || text.includes('تقييم')) {
-        return '/assets/altus/cert-badge.jpg'
-    }
-    if (text.includes('ترحاب') || text.includes('ترحيب') || text.includes('مرحبا') || text.includes('welcome') || text.includes('etiquette') || text.includes('إتيكيت')) {
-        return '/assets/altus/hospitality-welcome.jpg'
-    }
-
-    const ALTUS_SHOWCASE_GALLERY = [
-        '/assets/altus/concierge-frontdesk.jpg',
-        '/assets/altus/reception-desk.jpg',
-        '/assets/altus/hospitality-welcome.jpg',
-        '/assets/altus/luggage-trolley.jpg',
-        '/assets/altus/culinary-fnb.jpg',
-    ]
-    return ALTUS_SHOWCASE_GALLERY[Math.abs(item.id.charCodeAt(0) || 0) % ALTUS_SHOWCASE_GALLERY.length]
+    return resolveAssetForTrack({
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        id: item.id,
+    })
 }
 
 export const CurriculumCard: React.FC<CurriculumCardProps> = ({
@@ -80,7 +57,7 @@ export const CurriculumCard: React.FC<CurriculumCardProps> = ({
 
     return (
         <Card className={cn(
-            "group relative flex flex-col overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-card to-card/70",
+            "group relative flex flex-col overflow-hidden rounded-3xl border border-border/60 border-t-amber-400/25 bg-gradient-to-b from-card to-card/70",
             "shadow-sm backdrop-blur-xl transition-all duration-300",
             "hover:-translate-y-1.5 hover:border-amber-500/40 hover:shadow-xl hover:shadow-amber-500/5",
             className
@@ -205,7 +182,7 @@ export const CurriculumCard: React.FC<CurriculumCardProps> = ({
                         <Link
                             to={item.actionUrl}
                             className={cn(
-                                "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all duration-150 active:scale-95",
+                                "inline-flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-transform duration-150 ease-out active:scale-[0.97]",
                                 hasStarted && !isCompleted
                                     ? "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm"
                                     : isCompleted

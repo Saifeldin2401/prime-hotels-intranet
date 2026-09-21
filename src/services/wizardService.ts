@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type { WizardDefinition, WizardUserProgress, WizardStatus } from '@/lib/types/wizard'
 
 interface RpcResponse<T> {
@@ -93,13 +93,77 @@ export class WizardService {
 
       if (error) {
         console.error('[WizardService] skipOrComplete error:', error)
-        return null
+        // Direct fallback update
+        const { data: updateData, error: updateErr } = await supabase
+          .from('wizard_user_progress')
+          .update({
+            status,
+            completed_at: status === 'completed' ? new Date().toISOString() : null,
+            last_activity_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('wizard_id', wizardId)
+          .select()
+          .maybeSingle()
+
+        if (updateErr) {
+          console.warn('[WizardService] Direct update fallback error:', updateErr)
+          return null
+        }
+        return updateData as WizardUserProgress | null
       }
 
       return data as WizardUserProgress | null
     } catch (err) {
       console.error('[WizardService] Unexpected error in skipOrComplete:', err)
       return null
+    }
+  }
+
+  /**
+   * Check if the user has already completed or skipped any wizard anywhere.
+   */
+  static async hasUserCompletedOrSkipped(userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('wizard_user_progress')
+        .select('id, status, reset_at')
+        .eq('user_id', userId)
+        .in('status', ['completed', 'skipped'])
+        .limit(1)
+
+      if (error) {
+        console.warn('[WizardService] hasUserCompletedOrSkipped query error:', error)
+        return false
+      }
+
+      return Boolean(data && data.length > 0)
+    } catch (err) {
+      console.warn('[WizardService] Unexpected error in hasUserCompletedOrSkipped:', err)
+      return false
+    }
+  }
+
+  /**
+   * Ensure all remaining not_started rows for a user are dismissed to prevent orphaned re-triggers.
+   */
+  static async dismissAllNotStarted(
+    userId: string,
+    targetStatus: 'skipped' | 'completed' = 'skipped'
+  ): Promise<void> {
+    try {
+      await supabase
+        .from('wizard_user_progress')
+        .update({
+          status: targetStatus,
+          completed_at: targetStatus === 'completed' ? new Date().toISOString() : null,
+          last_activity_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('status', 'not_started')
+    } catch (err) {
+      console.warn('[WizardService] dismissAllNotStarted error:', err)
     }
   }
 

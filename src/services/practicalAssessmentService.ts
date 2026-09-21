@@ -95,5 +95,17 @@ export const practicalAssessmentService = {
 
     if (error) throw error
     return data
+  },
+
+  async createAssessment(assessment: Partial<PracticalAssessment>): Promise<PracticalAssessment> {
+    const { data, error } = await supabase
+      .from('practical_assessments')
+      .insert(assessment)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
   }
 }
+

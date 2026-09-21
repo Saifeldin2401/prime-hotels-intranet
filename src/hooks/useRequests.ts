@@ -172,26 +172,9 @@ function formatSafeIdList(ids: Array<string | null | undefined>): string | null 
 export function useRequest(requestId?: string) {
   return useQuery({
     queryKey: ['request', requestId],
-    enabled: !!requestId,
+    enabled: false, // DEPRECATED: 'requests' table was dropped. Feature pending re-architecture.
     queryFn: async () => {
-      if (!requestId) throw new Error('Missing request id')
-
-      const { data, error } = await supabase
-        .from('requests')
-        .select(
-          `
-          *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
-          supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
-          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
-          property:properties(id, name)
-        `.trim()
-        )
-        .eq('id', requestId)
-        .single()
-
-      if (error) throw error
-      return data as unknown as RequestRow
+      return null as unknown as RequestRow
     },
   })
 }
@@ -358,97 +341,9 @@ export function useRequestsInbox(filters?: {
 
   return useQuery({
     queryKey: ['requests-inbox', filters, primaryRole, currentProperty?.id, properties?.map(p => p.id), departments?.map(d => d.id)],
-    enabled: !!user?.id,
+    enabled: false, // DEPRECATED: 'requests' table was dropped. Feature pending re-architecture.
     queryFn: async () => {
-      if (!user?.id) return []
-
-      // 1. Fetch active delegations for this user
-      const { data: delegations } = await supabase
-        .from('delegations')
-        .select('delegator_id')
-        .eq('delegation_category', 'temporary_approval')
-        .eq('delegate_id', user.id)
-        .eq('is_active', true)
-        .lte('starts_at', new Date().toISOString())
-        .gte('ends_at', new Date().toISOString())
-
-      const delegatorIds = delegations?.map(d => d.delegator_id) || []
-      const idList = [user.id, ...delegatorIds]
-      const formattedIdList = formatSafeIdList(idList)
-
-      if (!isRegionalAccess && !formattedIdList) {
-        return []
-      }
-
-      // 2. Build the main query
-      let query = supabase
-        .from('requests')
-        .select(
-          `
-          *,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email, phone, job_title, hire_date, reporting_to),
-          supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email, phone, job_title),
-          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email, phone, job_title),
-          property:properties(id, name)
-        `.trim()
-        )
-        .order('created_at', { ascending: false })
-
-      // SMART ROUTING based on role and context
-      if (isRegionalAccess) {
-        // Regional admin/hr sees ALL requests
-      } else if (isPropertyLevel || isDepartmentHead) {
-        // Property/Department level sees requests assigned to them OR where they are supervisor
-        // Include delegators in the ID search
-        query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList}),supervisor_id.in.(${formattedIdList})`)
-      } else {
-        // Regular staff: only see requests where they (or their delegators) are requester or assignee
-        query = query.or(`requester_id.in.(${formattedIdList}),current_assignee_id.in.(${formattedIdList})`)
-      }
-
-      // 3. Strict Property Scoping (Global Filter)
-      if (isRealPropertyId(currentProperty?.id)) {
-        query = query.eq('property_id', currentProperty.id)
-      } else if (!isRegionalAccess) {
-        const propIds = properties?.map(p => p.id).filter(isRealPropertyId) || []
-        if (propIds.length > 0) {
-          query = query.in('property_id', propIds)
-        }
-      }
-
-      // 4. Apply additional filters
-      if (filters?.status && filters.status.length > 0) {
-        query = query.in('status', filters.status)
-      }
-
-      if (filters?.priority && filters.priority.length > 0) {
-        query = query.in('priority', filters.priority)
-      }
-
-      if (filters?.search) {
-        const trimmed = filters.search.trim()
-        if (trimmed.length > 0) {
-          const numericValue = Number(trimmed)
-          if (Number.isFinite(numericValue) && /^\d+$/.test(trimmed)) {
-            query = query.eq('request_no', numericValue)
-          }
-        }
-      }
-
-      if (filters?.employee) {
-        query = query.eq('requester_id', filters.employee)
-      }
-
-      if (filters?.dateRange) {
-        query = query
-          .gte('created_at', filters.dateRange.start)
-          .lte('created_at', filters.dateRange.end)
-      }
-
-      const { data, error } = await query
-
-      if (error) throw error
-      return (data || []) as unknown as RequestRow[]
+      return [] as unknown as RequestRow[]
     },
   })
 }

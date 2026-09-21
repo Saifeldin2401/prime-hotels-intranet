@@ -1,0 +1,25 @@
+{
+  "title": "Messages",
+  "compose": "Compose Message",
+  "reply": "Reply",
+  "forward": "Forward",
+  "delete": "Delete",
+  "mark_read": "Mark as Read",
+  "mark_unread": "Mark as Unread",
+  "search_placeholder": "Search messages...",
+  "no_messages": "No messages",
+  "inbox": "Inbox",
+  "sent": "Sent",
+  "drafts": "Drafts",
+  "to": "To",
+  "from": "From",
+  "subject": "Subject",
+  "send": "Send",
+  "cancel": "Cancel",
+  "priority": {
+    "normal": "Normal",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "quick_reply": "Quick Reply"
+}

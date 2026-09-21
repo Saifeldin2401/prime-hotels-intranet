@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { iltService } from '@/services/iltService'
 import type { SessionAttendanceStatus, TrainingSession } from '@/types/enterpriseOperatingModel'
 
@@ -28,6 +28,37 @@ export function useCreateTrainingSession() {
   return useMutation({
     mutationFn: (session: Partial<TrainingSession>) => iltService.createSession(session),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-sessions'] })
+    }
+  })
+}
+
+export function useRegisterAttendee() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      sessionId,
+      userId,
+      organizationId
+    }: {
+      sessionId: string
+      userId: string
+      organizationId?: string
+    }) => iltService.registerAttendee(sessionId, userId, organizationId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['session-attendees', variables.sessionId] })
+      queryClient.invalidateQueries({ queryKey: ['training-sessions'] })
+    }
+  })
+}
+
+export function useRemoveAttendee() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ sessionId, userId }: { sessionId: string; userId: string }) =>
+      iltService.removeAttendee(sessionId, userId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['session-attendees', variables.sessionId] })
       queryClient.invalidateQueries({ queryKey: ['training-sessions'] })
     }
   })

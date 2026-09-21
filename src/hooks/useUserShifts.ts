@@ -55,28 +55,9 @@ export function useNextShift() {
   const { data: shift, isLoading, error } = useQuery({
     queryKey: ['next-shift', user?.id],
     queryFn: async () => {
-      if (!user?.id) return null
-
-      const { data, error } = await supabase
-        .rpc('get_next_shift', { user_uuid: user.id })
-
-      if (error) {
-        console.error('Error fetching next shift:', error)
-        throw error
-      }
-
-      if (!data || data.length === 0) return null
-
-      return {
-        id: data[0].shift_id,
-        date: data[0].shift_date,
-        startTime: data[0].start_time,
-        endTime: data[0].end_time,
-        departmentName: data[0].department_name,
-        propertyName: data[0].property_name
-      }
+      return null
     },
-    enabled: !!user?.id
+    enabled: false // DEPRECATED: 'shifts' table was dropped. Feature pending re-architecture.
   })
 
   return { shift, isLoading, error }
@@ -88,106 +69,18 @@ export function useUserShifts(startDate?: Date, endDate?: Date) {
   const { data: shifts, isLoading, error } = useQuery({
     queryKey: ['user-shifts', user?.id, startDate, endDate],
     queryFn: async (): Promise<UserShift[]> => {
-      if (!user?.id) return []
-
-      const rangeStart = startDate || new Date()
-      let query = supabase
-        .from('shifts')
-        .select(`
-          *,
-          property:properties(name),
-          department:departments(name)
-        `)
-        .eq('user_id', user.id)
-        .gte('start_time', new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).toISOString())
-        .order('start_time', { ascending: true })
-
-      if (endDate) {
-        const rangeEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999)
-        query = query.lte('start_time', rangeEnd.toISOString())
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('Error fetching shifts:', error)
-        throw error
-      }
-
-      return (data || []).map((row) => ({
-        ...row,
-        shift_date: row.start_time ? row.start_time.split('T')[0] : ''
-      })) as UserShift[]
+      return []
     },
-    enabled: !!user?.id
+    enabled: false // DEPRECATED: 'shifts' table was dropped. Feature pending re-architecture.
   })
 
   return { shifts, isLoading, error }
 }
 
 export function useCreateShift() {
-  const queryClient = useQueryClient()
-  const { user } = useAuth()
-
   return useMutation({
     mutationFn: async (shift: Omit<UserShift, 'id' | 'created_at'>) => {
-      const shiftDate = shift.shift_date
-      const newWindow = normalizeShiftWindow(shiftDate, shift.start_time, shift.end_time)
-      const baseDate = new Date(`${shiftDate}T00:00:00`)
-      const prevDate = new Date(baseDate)
-      prevDate.setDate(prevDate.getDate() - 1)
-      const nextDate = new Date(baseDate)
-      nextDate.setDate(nextDate.getDate() + 1)
-
-      const { data: existingShifts, error: existingError } = await supabase
-        .from('shifts')
-        .select('id, start_time, end_time, status')
-        .eq('user_id', shift.user_id)
-        .neq('status', 'cancelled')
-        .gte('start_time', prevDate.toISOString())
-        .lte('start_time', nextDate.toISOString())
-
-      if (existingError) throw existingError
-
-      const conflicts = (existingShifts || []).filter((existing) => {
-        const existingStart = new Date(existing.start_time)
-        const existingEnd = new Date(existing.end_time)
-        const overlaps = newWindow.start < existingEnd && newWindow.end > existingStart
-        if (overlaps) return true
-
-        const gapAfter = (newWindow.start.getTime() - existingEnd.getTime()) / (1000 * 60 * 60)
-        if (gapAfter > 0 && gapAfter < MIN_REST_HOURS) return true
-
-        const gapBefore = (existingStart.getTime() - newWindow.end.getTime()) / (1000 * 60 * 60)
-        if (gapBefore > 0 && gapBefore < MIN_REST_HOURS) return true
-
-        return false
-      })
-
-      if (conflicts.length > 0) {
-        throw new Error('Shift conflicts with an existing assignment or violates the minimum rest period.')
-      }
-
-      const { shift_date: _shiftDate, ...rest } = shift
-      void _shiftDate
-
-      const { data, error } = await supabase
-        .from('shifts')
-        .insert({
-          ...rest,
-          start_time: newWindow.start.toISOString(),
-          end_time: newWindow.end.toISOString(),
-          created_by: user?.id
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-shifts'] })
-      queryClient.invalidateQueries({ queryKey: ['next-shift'] })
+      throw new Error('DEPRECATED: Shifts feature is pending re-architecture.')
     }
   })
 }

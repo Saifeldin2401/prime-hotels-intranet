@@ -1,3 +1,4 @@
+// DEPRECATED: All shift queries reference the dropped 'shifts' table. Feature pending re-architecture.
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
@@ -167,35 +168,9 @@ export function useShifts(userId?: string, dateRange?: { start: Date; end: Date 
     return useQuery({
         queryKey: ['shifts', userId, dateRange, departmentId, currentProperty?.id],
         queryFn: async () => {
-            let query = supabase
-                .from('shifts')
-                .select('*')
-                .order('start_time', { ascending: true })
-
-            if (isRealPropertyId(currentProperty?.id)) {
-                query = query.eq('property_id', currentProperty.id)
-            }
-
-            if (userId) {
-                query = query.eq('user_id', userId)
-            }
-
-            if (departmentId) {
-                query = query.eq('department_id', departmentId)
-            }
-
-            if (dateRange) {
-                query = query
-                    .gte('start_time', dateRange.start.toISOString())
-                    .lte('start_time', dateRange.end.toISOString())
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-            return data as Shift[]
+            return [] as Shift[]
         },
-        enabled: !!userId || !!departmentId || isRealPropertyId(currentProperty?.id)
+        enabled: false // DEPRECATED: All shift queries reference the dropped 'shifts' table. Feature pending re-architecture.
     })
 }
 
@@ -203,34 +178,9 @@ export function useShifts(userId?: string, dateRange?: { start: Date; end: Date 
  * Hook to create a new shift
  */
 export function useCreateShift() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
     return useMutation({
         mutationFn: async (input: CreateShiftInput) => {
-            if (!user) throw new Error('User must be authenticated')
-            // Production safeguard: shifts must always belong to a concrete property.
-            if (!isRealPropertyId(input.property_id)) {
-                throw new Error('A valid property_id is required to create a shift')
-            }
-            await validateShiftBusinessRules(input)
-
-            const { data, error } = await supabase
-                .from('shifts')
-                .insert({
-                    ...input,
-                    property_id: input.property_id,
-                    created_by: user.id
-                })
-                .select()
-                .single()
-
-            if (error) throw error
-            return data
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['shifts'] })
-            queryClient.invalidateQueries({ queryKey: ['user-schedule'] })
+            throw new Error('DEPRECATED: Shifts feature is pending re-architecture.')
         }
     })
 }
@@ -239,50 +189,9 @@ export function useCreateShift() {
  * Hook to update an existing shift
  */
 export function useUpdateShift() {
-    const queryClient = useQueryClient()
-
     return useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<CreateShiftInput> }) => {
-            // Prevent accidental writes that clear property ownership or use consolidated sentinel IDs.
-            if (updates.property_id !== undefined && !isRealPropertyId(updates.property_id)) {
-                throw new Error('A valid property_id is required when updating shift property scope')
-            }
-
-            const { data: existingShift, error: existingShiftError } = await supabase
-                .from('shifts')
-                .select('*')
-                .eq('id', id)
-                .single()
-
-            if (existingShiftError) throw existingShiftError
-            if (!existingShift) throw new Error('Shift not found')
-
-            const mergedShift = {
-                ...existingShift,
-                ...updates,
-            }
-
-            await validateShiftBusinessRules({
-                user_id: mergedShift.user_id,
-                start_time: mergedShift.start_time,
-                end_time: mergedShift.end_time,
-                break_duration_minutes: mergedShift.break_duration_minutes,
-                status: mergedShift.status as Shift['status'],
-            }, id)
-
-            const { data, error } = await supabase
-                .from('shifts')
-                .update(updates)
-                .eq('id', id)
-                .select()
-                .single()
-
-            if (error) throw error
-            return data
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['shifts'] })
-            queryClient.invalidateQueries({ queryKey: ['user-schedule'] })
+            throw new Error('DEPRECATED: Shifts feature is pending re-architecture.')
         }
     })
 }
@@ -291,20 +200,9 @@ export function useUpdateShift() {
  * Hook to delete a shift
  */
 export function useDeleteShift() {
-    const queryClient = useQueryClient()
-
     return useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase
-                .from('shifts')
-                .delete()
-                .eq('id', id)
-
-            if (error) throw error
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['shifts'] })
-            queryClient.invalidateQueries({ queryKey: ['user-schedule'] })
+            throw new Error('DEPRECATED: Shifts feature is pending re-architecture.')
         }
     })
 }
@@ -318,24 +216,8 @@ export function useShiftStats(userId?: string) {
     return useQuery({
         queryKey: ['shift-stats', userId, currentProperty?.id],
         queryFn: async () => {
-            let query = supabase
-                .from('shifts')
-                .select('status, start_time, end_time')
-
-            if (isRealPropertyId(currentProperty?.id)) {
-                query = query.eq('property_id', currentProperty.id)
-            }
-
-            if (userId) {
-                query = query.eq('user_id', userId)
-            }
-
-            const { data, error } = await query
-
-            if (error) throw error
-
-            const stats = {
-                total: data?.length || 0,
+            return {
+                total: 0,
                 scheduled: 0,
                 in_progress: 0,
                 completed: 0,
@@ -343,19 +225,7 @@ export function useShiftStats(userId?: string) {
                 no_show: 0,
                 totalHours: 0
             }
-
-            data?.forEach(shift => {
-                stats[shift.status as keyof typeof stats]++
-
-                // Calculate hours
-                const start = new Date(shift.start_time)
-                const end = new Date(shift.end_time)
-                const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-                stats.totalHours += hours
-            })
-
-            return stats
         },
-        enabled: !!userId || isRealPropertyId(currentProperty?.id)
+        enabled: false // DEPRECATED: All shift queries reference the dropped 'shifts' table. Feature pending re-architecture.
     })
 }

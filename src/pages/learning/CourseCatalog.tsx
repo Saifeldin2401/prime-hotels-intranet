@@ -215,6 +215,12 @@ export default function CourseCatalog() {
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header Cockpit Banner */}
                 <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950/40 p-8 sm:p-10 text-white shadow-2xl border border-amber-500/20">
+                    <img
+                        src="/assets/altus/concierge-frontdesk.jpg"
+                        alt="ALTUS Luxury Academy"
+                        className="absolute inset-0 h-full w-full object-cover opacity-15 mix-blend-luminosity pointer-events-none"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.15),transparent_50%)] pointer-events-none" />
                     
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">

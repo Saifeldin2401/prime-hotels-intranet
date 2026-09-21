@@ -137,6 +137,8 @@ export async function fetchLeaveBalanceSummary({
   const fromDate = toDateOnly(startOfYear(year))
   const toDate = toDateOnly(endOfYear(year))
 
+  const leaveRows: any[] = [] // DEPRECATED: leave_requests table removed
+  /*
   const { data: leaveRows, error: leaveError } = await supabase
     .from('leave_requests')
     .select('start_date, end_date, status, type')
@@ -146,6 +148,7 @@ export async function fetchLeaveBalanceSummary({
     .gte('end_date', fromDate)
 
   if (leaveError) throw leaveError
+  */
 
   let usedDays = 0
   let pendingDays = 0

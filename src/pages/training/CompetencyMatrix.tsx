@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useCompetencies, useDepartmentCompetencyGaps } from '@/hooks/useCompetencies'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useTenant } from '@/contexts/TenantContext'
@@ -26,9 +27,23 @@ export default function CompetencyMatrix() {
   const [selectedDeptId, setSelectedDeptId] = useState<string | undefined>(undefined)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const { data: competencies = [] } = useCompetencies(activeOrgId)
-  const { data: gaps = [] } = useDepartmentCompetencyGaps(selectedDeptId, activeHotelId)
-  const { departments = [] } = useDepartments()
+  const { data: competencies = [], isLoading: isLoadingCompetencies } = useCompetencies(activeOrgId)
+  const { data: gaps = [], isLoading: isLoadingGaps } = useDepartmentCompetencyGaps(selectedDeptId, activeHotelId)
+  const { departments = [], isLoading: isLoadingDepartments } = useDepartments()
+
+  if (isLoadingCompetencies || isLoadingGaps || isLoadingDepartments) {
+    return (
+      <div className="space-y-6 pb-12 p-6">
+        <Skeleton className="h-8 w-64" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+          <Skeleton className="h-32" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
 
   const filteredGaps = gaps.filter((g) => {
     const name = isAr && g.competency_name_ar ? g.competency_name_ar : g.competency_name

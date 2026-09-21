@@ -91,14 +91,14 @@ export const DailyKnowledgeBite: React.FC<DailyKnowledgeBiteProps> = ({
 
     return (
         <Card className={cn(
-            "relative overflow-hidden rounded-3xl border border-amber-500/25 bg-gradient-to-br from-card via-card/90 to-amber-500/[0.04]",
+            "relative overflow-hidden rounded-3xl border border-amber-500/25 border-t-amber-400/35 bg-gradient-to-br from-card/95 via-card/85 to-amber-950/[0.04]",
             "shadow-sm backdrop-blur-xl transition-all duration-300",
             className
         )}>
             {/* Top Accent Stripe */}
             <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600" />
 
-            <CardContent className="p-6">
+            <CardContent className="p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                         <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-2.5 py-0.5 text-xs font-semibold gap-1">
@@ -138,8 +138,8 @@ export const DailyKnowledgeBite: React.FC<DailyKnowledgeBiteProps> = ({
                                 onClick={() => handleSelect(opt.id)}
                                 disabled={isSubmitted}
                                 className={cn(
-                                    "w-full text-start p-3 rounded-xl border text-xs font-medium transition-all duration-150 flex items-center justify-between gap-3",
-                                    !isSubmitted && "border-border/60 bg-background/50 hover:bg-card hover:border-amber-500/40 hover:-translate-y-0.5 active:scale-[0.99]",
+                                    "w-full text-start p-3 rounded-xl border text-xs font-medium transition-transform duration-160 ease-out flex items-center justify-between gap-3",
+                                    !isSubmitted && "border-border/60 bg-background/50 hover:bg-card hover:border-amber-500/40 active:scale-[0.97]",
                                     showSuccess && "border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold shadow-sm",
                                     showDanger && "border-destructive/50 bg-destructive/10 text-destructive font-semibold"
                                 )}

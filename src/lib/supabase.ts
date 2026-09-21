@@ -76,7 +76,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   // Security: Add global request headers with CSRF token
   global: {
     headers: {
-      'X-Client-Info': 'altus-lms/1.0.0',
+      'X-Client-Info': 'prime-connect/1.0.0',
       'X-CSRF-Token': getCsrfToken(),
       'X-Requested-With': 'XMLHttpRequest'
     }

@@ -1,4 +1,4 @@
-﻿import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { practicalAssessmentService } from '@/services/practicalAssessmentService'
 
 export function usePracticalAssessments(filters?: {
@@ -42,3 +42,15 @@ export function useSubmitPracticalEvaluation() {
     }
   })
 }
+
+export function useCreatePracticalAssessment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (assessment: Parameters<typeof practicalAssessmentService.createAssessment>[0]) =>
+      practicalAssessmentService.createAssessment(assessment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['practical-assessments'] })
+    }
+  })
+}
+

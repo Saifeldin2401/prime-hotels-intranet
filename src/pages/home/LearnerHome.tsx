@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { LearnerHeroCockpit } from '@/components/learner/LearnerHeroCockpit'
 import { ContinueLearningSpotlight } from '@/components/learner/ContinueLearningSpotlight'
 import { getAltusAvatar } from '@/lib/avatarHelpers'
+import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 import { CurriculumProgressRings } from '@/components/learner/CurriculumProgressRings'
 import { DailyKnowledgeBite } from '@/components/learner/DailyKnowledgeBite'
 import { LearningStreakBadges } from '@/components/learner/LearningStreakBadges'
@@ -61,7 +62,7 @@ function SectionCard({
     return (
         <Card
             className={cn(
-                'overflow-hidden rounded-3xl border border-border/50 bg-gradient-to-br from-card via-card/90 to-amber-500/[0.02]',
+                'overflow-hidden rounded-3xl border border-border/50 border-t-amber-400/25 bg-gradient-to-br from-card/95 via-card/85 to-amber-950/[0.03]',
                 'shadow-sm backdrop-blur-xl transition-all duration-300',
                 className
             )}
@@ -260,249 +261,286 @@ export default function LearnerHome() {
                 t={t}
             />
 
-            {/* 3. Operational Competency Rings & Daily Knowledge Bite */}
-            <div className="grid gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2">
+            {/* 3. Master 2-Column Command Deck */}
+            <div className="grid gap-6 lg:grid-cols-12 items-start">
+                {/* Primary Column (8 cols): Priority Stream, Competency Matrix, Recommended Horizons */}
+                <div className="lg:col-span-8 space-y-6">
+                    {/* 3A. Mandatory & Assigned Training Deck */}
+                    <SectionCard
+                        title={t('training:assignedTraining', 'Assigned training')}
+                        subtitle={isRTL ? 'البرامج الإلزامية ومواعيد الاستحقاق التشغيلية' : 'Mandatory operational courses & due dates'}
+                        icon={<ClipboardList className="h-4 w-4" />}
+                        action={
+                            <Link
+                                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                                to="/learning/my"
+                            >
+                                <span>{t('common:viewAll', 'View all')}</span>
+                                <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
+                            </Link>
+                        }
+                    >
+                        {assignmentsQuery.isLoading ? (
+                            <SectionSkeleton />
+                        ) : assignments.length > 0 ? (
+                            <ul className="space-y-3" role="list">
+                                {assignments.slice(0, 4).map((a) => {
+                                    const thumb = resolveAssetForTrack({
+                                        title: a.content_title || '',
+                                        category: (a.content_metadata as Record<string, unknown>)?.category as string,
+                                        id: a.content_id,
+                                    })
+
+                                    return (
+                                        <li
+                                            key={a.id}
+                                            role="listitem"
+                                            className="group flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border border-border/50 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all duration-200"
+                                        >
+                                            <div className="flex items-center gap-3.5 min-w-0">
+                                                <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl overflow-hidden shrink-0 border border-amber-500/20 shadow-sm bg-slate-900">
+                                                    <img
+                                                        src={thumb}
+                                                        alt={a.content_title || ''}
+                                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/20" />
+                                                    <div className="absolute inset-0 flex items-center justify-center text-white/90">
+                                                        {a.content_type === 'quiz' ? (
+                                                            <FileQuestion className="h-4 w-4 drop-shadow" />
+                                                        ) : (
+                                                            <BookOpen className="h-4 w-4 drop-shadow" />
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="min-w-0">
+                                                    <p className="text-xs sm:text-sm font-semibold text-foreground truncate group-hover:text-amber-500 transition-colors">
+                                                        {a.content_title ?? t('training:untitledAssignment', 'Untitled item')}
+                                                    </p>
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                                        {a.priority === 'compliance' && (
+                                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold">
+                                                                {t('training:mandatory', 'Mandatory')}
+                                                            </Badge>
+                                                        )}
+                                                        {a.overdue && (
+                                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold animate-pulse">
+                                                                {isRTL ? 'متأخر' : 'Overdue'}
+                                                            </Badge>
+                                                        )}
+                                                        {a.due_date && (
+                                                            <span
+                                                                className={cn(
+                                                                    'text-[11px] font-mono flex items-center gap-1',
+                                                                    a.overdue ? 'text-destructive font-bold' : 'text-muted-foreground'
+                                                                )}
+                                                            >
+                                                                <Clock className="h-3 w-3" />
+                                                                {a.overdue ? (isRTL ? 'مستحق: ' : 'Due: ') : (isRTL ? 'مستحق: ' : 'Due: ')}{' '}
+                                                                {new Date(a.due_date).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+                                                                    month: 'short',
+                                                                    day: 'numeric',
+                                                                })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                size="sm"
+                                                className="h-8 px-3 text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-slate-950 shrink-0 font-bold rounded-xl border border-amber-500/30 transition-all duration-150 active:scale-[0.97]"
+                                                onClick={() => {
+                                                    if (a.content_type === 'quiz') {
+                                                        navigate(`/assessments/${a.content_id}/take?assignment=${a.id}`)
+                                                    } else {
+                                                        navigate(`/learning/training/${a.content_id}?assignment=${a.id}`)
+                                                    }
+                                                }}
+                                            >
+                                                <Play className="h-3 w-3 me-1 fill-current" />
+                                                {isRTL ? 'بدء' : 'Start'}
+                                            </Button>
+                                        </li>
+                                    )
+                                })}
+                            </ul>
+                        ) : (
+                            <div className="py-8 text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 mb-3 border border-emerald-500/20 shadow-inner">
+                                    <CheckCircle2 className="h-6 w-6" />
+                                </div>
+                                <h4 className="font-semibold text-sm text-foreground">
+                                    {isRTL ? 'لا توجد تدريبات معلقة' : 'All assignments complete'}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                                    {isRTL ? 'تمت تلبية جميع معايير التدريب الإلزامية والامتثال الفندقي بنجاح.' : 'All mandatory operational training requirements are satisfied.'}
+                                </p>
+                            </div>
+                        )}
+                    </SectionCard>
+
+                    {/* 3B. Operational Competency Matrix */}
                     <CurriculumProgressRings
                         overallCompletionRate={progressStats.completionRate}
                         isRTL={isRTL}
                     />
-                </div>
-                <div className="lg:col-span-1">
-                    <DailyKnowledgeBite isRTL={isRTL} />
-                </div>
-            </div>
 
-            {/* 4. Main Cockpit Grid: Assigned Training, Gamified Streak, and Recommendations */}
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {/* 4A. Mandatory & Assigned Training Deck */}
-                <SectionCard
-                    title={t('training:assignedTraining', 'Assigned training')}
-                    subtitle={isRTL ? 'البرامج المعينة ومواعيد الاستحقاق' : 'Mandatory courses & due dates'}
-                    icon={<ClipboardList className="h-4 w-4" />}
-                    action={
-                        <Link
-                            className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                            to="/learning/my"
-                        >
-                            <span>{t('common:viewAll', 'View all')}</span>
-                            <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
-                        </Link>
-                    }
-                >
-                    {assignmentsQuery.isLoading ? (
-                        <SectionSkeleton />
-                    ) : assignments.length > 0 ? (
-                        <ul className="space-y-3" role="list">
-                            {assignments.slice(0, 4).map((a) => (
-                                <li
-                                    key={a.id}
-                                    role="listitem"
-                                    className="group flex items-center justify-between gap-3 p-3 rounded-2xl border border-border/50 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all duration-200"
+                    {/* 3C. Recommended Programs Horizon */}
+                    {recommended.length > 0 && (
+                        <SectionCard
+                            title={t('training:recommended', 'Recommended programs')}
+                            subtitle={isRTL ? 'دورات مقترحة لتطوير مسارك المهني في ألتوس' : 'Suggested courses to accelerate your ALTUS career'}
+                            icon={<Sparkles className="h-4 w-4" />}
+                            action={
+                                <Link
+                                    className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                                    to="/courses"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="h-9 w-9 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0 text-amber-600 border border-amber-500/20">
-                                            {a.content_type === 'quiz' ? (
-                                                <FileQuestion className="h-4 w-4" />
-                                            ) : (
-                                                <BookOpen className="h-4 w-4" />
-                                            )}
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-semibold text-foreground truncate group-hover:text-amber-600 transition-colors">
-                                                {a.content_title ?? t('training:untitledAssignment', 'Untitled item')}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                {a.priority === 'compliance' && (
-                                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold">
-                                                        {t('training:mandatory', 'Mandatory')}
-                                                    </Badge>
-                                                )}
-                                                {a.overdue && (
-                                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold animate-pulse">
-                                                        {isRTL ? 'متأخر' : 'Overdue'}
-                                                    </Badge>
-                                                )}
-                                                {a.due_date && (
-                                                    <span
-                                                        className={cn(
-                                                            'text-[11px] font-mono flex items-center gap-1',
-                                                            a.overdue ? 'text-destructive font-bold' : 'text-muted-foreground'
-                                                        )}
+                                    <span>{isRTL ? 'تصفح الكتالوج بالكامل' : 'Explore Full Catalog'}</span>
+                                    <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
+                                </Link>
+                            }
+                        >
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {recommended.slice(0, 4).map((m) => {
+                                    const thumb = resolveAssetForTrack({
+                                        title: m.title,
+                                        description: m.description,
+                                        category: m.category,
+                                        id: m.id,
+                                    })
+
+                                    return (
+                                        <Link
+                                            key={m.id}
+                                            to={`/learning/training/${m.id}`}
+                                            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-border/50 bg-background/50 hover:bg-card hover:border-amber-500/30 hover:shadow-md transition-all duration-200"
+                                        >
+                                            <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900">
+                                                <img
+                                                    src={thumb}
+                                                    alt={m.title}
+                                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    loading="lazy"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+                                                <div className="absolute top-2.5 start-2.5">
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px] bg-black/60 text-white backdrop-blur-md border border-white/10 px-2 py-0.5"
                                                     >
-                                                        <Clock className="h-3 w-3" />
-                                                        {a.overdue ? (isRTL ? 'تاريخ الاستحقاق' : 'Due') : (isRTL ? 'مستحق' : 'Due')}{' '}
-                                                        {new Date(a.due_date).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
-                                                            month: 'short',
-                                                            day: 'numeric',
-                                                        })}
-                                                    </span>
+                                                        {m.category || (isRTL ? 'معيار فندقي' : 'Hospitality')}
+                                                    </Badge>
+                                                </div>
+                                                {m.estimated_duration_minutes && (
+                                                    <div className="absolute bottom-2 end-2 bg-black/60 text-slate-200 text-[10px] font-mono px-2 py-0.5 rounded-full backdrop-blur-md border border-white/10 flex items-center gap-1">
+                                                        <Clock className="h-2.5 w-2.5 text-amber-400" />
+                                                        <span>{m.estimated_duration_minutes} {isRTL ? 'د' : 'min'}</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                        </div>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 px-2.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-500/10 shrink-0 font-medium rounded-xl"
-                                        onClick={() => {
-                                            if (a.content_type === 'quiz') {
-                                                navigate(`/assessments/${a.content_id}/take?assignment=${a.id}`)
-                                            } else {
-                                                navigate(`/learning/training/${a.content_id}?assignment=${a.id}`)
-                                            }
-                                        }}
-                                    >
-                                        <Play className="h-3 w-3 me-1 fill-current" />
-                                        {isRTL ? 'بدء' : 'Start'}
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <div className="py-8 text-center">
-                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 mb-3">
-                                <CheckCircle2 className="h-6 w-6" />
+
+                                            <div className="p-4 space-y-2">
+                                                <h4 className="font-semibold text-sm text-foreground group-hover:text-amber-500 transition-colors line-clamp-1">
+                                                    {m.title}
+                                                </h4>
+                                                {m.description && (
+                                                    <p className="text-xs text-muted-foreground line-clamp-2 font-sans">
+                                                        {m.description}
+                                                    </p>
+                                                )}
+                                                <div className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 pt-2 border-t border-border/30">
+                                                    <span>{isRTL ? 'استعراض' : 'Explore'}</span>
+                                                    <ArrowRight
+                                                        className={cn(
+                                                            'h-3.5 w-3.5 transition-transform group-hover:translate-x-1',
+                                                            isRTL && 'rotate-180 group-hover:-translate-x-1'
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </Link>
+                                    )
+                                })}
                             </div>
-                            <h4 className="font-semibold text-sm text-foreground">
-                                {isRTL ? 'لا توجد تدريبات معلقة' : 'All assignments complete'}
-                            </h4>
-                            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                                {isRTL ? 'تمت تلبية جميع معايير التدريب الإلزامية الخاصة بك.' : 'All mandatory operational training requirements are satisfied.'}
-                            </p>
-                        </div>
+                        </SectionCard>
                     )}
-                </SectionCard>
+                </div>
 
-                {/* 4B. Learning Streak & Badges Locker */}
-                <LearningStreakBadges
-                    streakDays={streak}
-                    certificatesCount={certificates.length}
-                    isRTL={isRTL}
-                />
+                {/* Companion Intelligence Sidebar (4 cols) */}
+                <div className="lg:col-span-4 space-y-6">
+                    {/* 3D. Daily SOP Scenario Challenge */}
+                    <DailyKnowledgeBite isRTL={isRTL} />
 
-                {/* 4C. Saved SOPs & Knowledge Documents */}
-                <SectionCard
-                    title={t('training:savedKnowledge', 'Saved knowledge')}
-                    subtitle={isRTL ? 'الأدلة والمعايير المحفوظة للرجوع السريع' : 'Bookmarked policies & standards'}
-                    icon={<BookMarked className="h-4 w-4" />}
-                    action={
-                        <Link
-                            className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                            to="/knowledge"
-                        >
-                            <span>{t('common:browse', 'Browse')}</span>
-                            <ExternalLink className="h-3 w-3" />
-                        </Link>
-                    }
-                >
-                    {bookmarksQuery.isLoading ? (
-                        <SectionSkeleton />
-                    ) : bookmarks.length > 0 ? (
-                        <div className="space-y-2.5">
-                            {bookmarks.slice(0, 4).map((b) => (
-                                <Link
-                                    key={b.document_id}
-                                    to={`/knowledge/${b.document_id}`}
-                                    className="group flex items-center justify-between gap-2 p-3 rounded-2xl border border-border/40 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all text-xs"
-                                >
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                                            <BookMarked className="h-3.5 w-3.5" />
-                                        </div>
-                                        <span className="font-medium text-foreground truncate group-hover:text-amber-600 transition-colors">
-                                            {b.article?.title ?? t('training:savedArticle', 'Saved SOP Article')}
-                                        </span>
-                                    </div>
-                                    <ChevronRight
-                                        className={cn(
-                                            'h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover:text-amber-600',
-                                            isRTL && 'rotate-180'
-                                        )}
-                                    />
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-8 text-center">
-                            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/40 text-muted-foreground mb-3">
-                                <BookMarked className="h-6 w-6" />
-                            </div>
-                            <h4 className="font-semibold text-sm text-foreground">
-                                {isRTL ? 'لا توجد أدلة محفوظة' : 'No saved knowledge'}
-                            </h4>
-                            <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                                {isRTL
-                                    ? 'احفظ إجراءات التشغيل القياسية المهمة للوصول السريع إليها من هنا.'
-                                    : 'Bookmark hotel SOPs and policies to access them instantly.'}
-                            </p>
-                        </div>
-                    )}
-                </SectionCard>
-            </div>
+                    {/* 3E. Learning Streak & Badges Locker */}
+                    <LearningStreakBadges
+                        streakDays={streak}
+                        certificatesCount={certificates.length}
+                        isRTL={isRTL}
+                    />
 
-            {/* 5. Recommended Programs Horizon */}
-            {recommended.length > 0 && (
-                <SectionCard
-                    title={t('training:recommended', 'Recommended programs')}
-                    subtitle={isRTL ? 'دورات مقترحة لتطوير مسارك المهني في ألتوس' : 'Suggested courses to accelerate your ALTUS career'}
-                    icon={<Sparkles className="h-4 w-4" />}
-                    action={
-                        <Link
-                            className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                            to="/courses"
-                        >
-                            <span>{isRTL ? 'تصفح الكتالوج بالكامل' : 'Explore Full Catalog'}</span>
-                            <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
-                        </Link>
-                    }
-                >
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {recommended.map((m) => (
+                    {/* 3F. Saved SOPs & Knowledge Documents */}
+                    <SectionCard
+                        title={t('training:savedKnowledge', 'Saved knowledge')}
+                        subtitle={isRTL ? 'الأدلة والمعايير المحفوظة للرجوع السريع' : 'Bookmarked policies & standards'}
+                        icon={<BookMarked className="h-4 w-4" />}
+                        action={
                             <Link
-                                key={m.id}
-                                to={`/learning/training/${m.id}`}
-                                className="group flex flex-col justify-between p-4 rounded-2xl border border-border/50 bg-background/40 hover:bg-card hover:border-amber-500/30 hover:shadow-sm transition-all duration-200"
+                                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                                to="/knowledge"
                             >
-                                <div>
-                                    <div className="flex items-center justify-between gap-2 mb-2">
-                                        <Badge
-                                            variant="outline"
-                                            className="text-[10px] border-border text-muted-foreground uppercase font-medium"
-                                        >
-                                            {m.category || (isRTL ? 'معيار فندقي' : 'Hospitality')}
-                                        </Badge>
-                                        {m.estimated_duration_minutes && (
-                                            <span className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
-                                                <Clock className="h-3 w-3" />
-                                                {m.estimated_duration_minutes} {isRTL ? 'د' : 'min'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h4 className="font-semibold text-sm text-foreground group-hover:text-amber-500 transition-colors line-clamp-1">
-                                        {m.title}
-                                    </h4>
-                                    {m.description && (
-                                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1 font-sans">
-                                            {m.description}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 mt-4 pt-2 border-t border-border/30">
-                                    <span>{isRTL ? 'استعراض' : 'Explore'}</span>
-                                    <ArrowRight
-                                        className={cn(
-                                            'h-3.5 w-3.5 transition-transform group-hover:translate-x-1',
-                                            isRTL && 'rotate-180 group-hover:-translate-x-1'
-                                        )}
-                                    />
-                                </div>
+                                <span>{t('common:browse', 'Browse')}</span>
+                                <ExternalLink className="h-3 w-3" />
                             </Link>
-                        ))}
-                    </div>
-                </SectionCard>
-            )}
+                        }
+                    >
+                        {bookmarksQuery.isLoading ? (
+                            <SectionSkeleton />
+                        ) : bookmarks.length > 0 ? (
+                            <div className="space-y-2.5">
+                                {bookmarks.slice(0, 4).map((b) => (
+                                    <Link
+                                        key={b.document_id}
+                                        to={`/knowledge/${b.document_id}`}
+                                        className="group flex items-center justify-between gap-2 p-3 rounded-2xl border border-border/40 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all text-xs"
+                                    >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                                                <BookMarked className="h-3.5 w-3.5" />
+                                            </div>
+                                            <span className="font-medium text-foreground truncate group-hover:text-amber-600 transition-colors">
+                                                {b.article?.title ?? t('training:savedArticle', 'Saved SOP Article')}
+                                            </span>
+                                        </div>
+                                        <ChevronRight
+                                            className={cn(
+                                                'h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover:text-amber-600',
+                                                isRTL && 'rotate-180'
+                                            )}
+                                        />
+                                    </Link>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center">
+                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/40 text-muted-foreground mb-3">
+                                    <BookMarked className="h-6 w-6" />
+                                </div>
+                                <h4 className="font-semibold text-sm text-foreground">
+                                    {isRTL ? 'لا توجد أدلة محفوظة' : 'No saved knowledge'}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                                    {isRTL
+                                        ? 'احفظ إجراءات التشغيل القياسية المهمة للوصول السريع إليها من هنا.'
+                                        : 'Bookmark hotel SOPs and policies to access them instantly.'}
+                                </p>
+                            </div>
+                        )}
+                    </SectionCard>
+                </div>
+            </div>
         </div>
     )
 }

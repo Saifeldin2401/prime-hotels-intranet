@@ -37,6 +37,7 @@ import {
     Volume2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 
 interface CourseModule {
     id: string
@@ -78,37 +79,12 @@ interface TrainingProgress {
 
 function resolveCourseThumbnail(course: Partial<CourseModule>): string {
     if (course.cover_image_url) return course.cover_image_url
-
-    const text = `${course.title || ''} ${course.description || ''} ${course.category || ''}`.toLowerCase()
-
-    if (text.includes('استقبال') || text.includes('كاونتر') || text.includes('reception') || text.includes('front desk') || text.includes('check-in') || text.includes('تسجيل الوصول')) {
-        return '/assets/altus/reception-desk.jpg'
-    }
-    if (text.includes('حقائب') || text.includes('أمتعة') || text.includes('luggage') || text.includes('bellman') || text.includes('طلب') || text.includes('concierge')) {
-        return '/assets/altus/luggage-trolley.jpg'
-    }
-    if (text.includes('طعام') || text.includes('أغذية') || text.includes('مشروبات') || text.includes('culinary') || text.includes('f&b') || text.includes('مطعم') || text.includes('dining')) {
-        return '/assets/altus/culinary-fnb.jpg'
-    }
-    if (text.includes('تدقيق') || text.includes('قائمة') || text.includes('sop') || text.includes('checklist') || text.includes('سلامة') || text.includes('امتثال') || text.includes('معايير')) {
-        return '/assets/altus/sop-checklist.jpg'
-    }
-    if (text.includes('شهادة') || text.includes('اعتماد') || text.includes('quiz') || text.includes('assessment') || text.includes('اختبار') || text.includes('تقييم')) {
-        return '/assets/altus/cert-badge.jpg'
-    }
-    if (text.includes('ترحاب') || text.includes('ترحيب') || text.includes('مرحبا') || text.includes('welcome') || text.includes('etiquette') || text.includes('إتيكيت')) {
-        return '/assets/altus/hospitality-welcome.jpg'
-    }
-
-    const ALTUS_SHOWCASE_GALLERY = [
-        '/assets/altus/concierge-frontdesk.jpg',
-        '/assets/altus/reception-desk.jpg',
-        '/assets/altus/hospitality-welcome.jpg',
-        '/assets/altus/luggage-trolley.jpg',
-        '/assets/altus/culinary-fnb.jpg',
-    ]
-    const seed = (course.id || 'altus').charCodeAt(0) || 0
-    return ALTUS_SHOWCASE_GALLERY[Math.abs(seed) % ALTUS_SHOWCASE_GALLERY.length]
+    return resolveAssetForTrack({
+        title: course.title,
+        description: course.description || undefined,
+        category: course.category,
+        id: course.id,
+    })
 }
 
 function getBlockIcon(blockType: string) {

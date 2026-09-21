@@ -94,32 +94,9 @@ export default function RoutingHealth() {
 
   const { data: requests = [], isLoading: loadingRequests } = useQuery({
     queryKey: ['routing-health', 'requests'],
+    enabled: false, // DEPRECATED: requests table removed
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('requests')
-        .select(
-          `
-          id,
-          request_no,
-          entity_type,
-          entity_id,
-          requester_id,
-          supervisor_id,
-          current_assignee_id,
-          status,
-          submitted_at,
-          created_at,
-          metadata,
-          requester:profiles!requests_requester_id_fkey(id, full_name, email),
-          supervisor:profiles!requests_supervisor_id_fkey(id, full_name, email),
-          current_assignee:profiles!requests_current_assignee_id_fkey(id, full_name, email)
-        `.trim()
-        )
-        .in('status', ['draft', 'pending_supervisor_approval', 'pending_hr_review', 'returned_for_correction'])
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      return (data || []) as unknown as RequestRow[]
+      return [] as RequestRow[]
     }
   })
 
@@ -261,39 +238,7 @@ export default function RoutingHealth() {
       type: 'supervisor' | 'hr'
     }) => {
       const { requestId, stepId, assigneeId, type } = params
-
-      if (type === 'supervisor') {
-        const { error } = await supabase
-          .from('requests')
-          .update({
-            supervisor_id: assigneeId,
-            current_assignee_id: assigneeId
-          })
-          .eq('id', requestId)
-        if (error) throw error
-
-        // If there's a pending supervisor step, update it too
-        if (stepId) {
-          await supabase
-            .from('request_steps')
-            .update({ assignee_id: assigneeId })
-            .eq('id', stepId)
-        }
-      } else {
-        // HR Assignment
-        const { error } = await supabase
-          .from('requests')
-          .update({ current_assignee_id: assigneeId })
-          .eq('id', requestId)
-        if (error) throw error
-
-        if (stepId) {
-          await supabase
-            .from('request_steps')
-            .update({ assignee_id: assigneeId })
-            .eq('id', stepId)
-        }
-      }
+      throw new Error('DEPRECATED: requests table removed')
     },
     onSuccess: () => {
       toast({ title: 'Assignee updated' })

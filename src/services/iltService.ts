@@ -30,7 +30,7 @@ export const iltService = {
       query = query.eq('organization_id', filters.organizationId)
     }
     if (filters?.hotelId) {
-      query = query.eq('hotel_id', filters.hotelId)
+      query = query.or(`hotel_id.eq.${filters.hotelId},hotel_id.is.null`)
     }
     if (filters?.courseId) {
       query = query.eq('course_id', filters.courseId)
@@ -78,14 +78,29 @@ export const iltService = {
     return data
   },
 
-  async registerAttendee(sessionId: string, userId: string): Promise<void> {
+  async registerAttendee(sessionId: string, userId: string, organizationId?: string): Promise<void> {
+    const payload: Record<string, any> = {
+      session_id: sessionId,
+      user_id: userId,
+      attendance_status: 'registered'
+    }
+    if (organizationId) {
+      payload.organization_id = organizationId
+    }
+
     const { error } = await supabase
       .from('training_session_attendees')
-      .insert({
-        session_id: sessionId,
-        user_id: userId,
-        attendance_status: 'registered'
-      })
+      .insert(payload)
+
+    if (error) throw error
+  },
+
+  async removeAttendee(sessionId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('training_session_attendees')
+      .delete()
+      .eq('session_id', sessionId)
+      .eq('user_id', userId)
 
     if (error) throw error
   },

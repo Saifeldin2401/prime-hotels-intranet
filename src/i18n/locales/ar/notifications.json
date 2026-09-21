@@ -1,0 +1,23 @@
+{
+  "title": "الإشعارات",
+  "mark_all_read": "تعيين الكل كمقروء",
+  "clear_all": "مسح الكل",
+  "no_notifications": "لا توجد إشعارات",
+  "new": "جديد",
+  "earlier": "سابقاً",
+  "today": "اليوم",
+  "yesterday": "أمس",
+  "this_week": "هذا الأسبوع",
+  "older": "أقدم",
+  "view_all": "عرض جميع الإشعارات",
+  "settings": "إعدادات الإشعارات",
+  "types": {
+    "approval": "الموافقات",
+    "training": "التدريب",
+    "announcement": "الإعلانات",
+    "task": "المهام",
+    "system": "النظام",
+    "maintenance": "الصيانة"
+  },
+  "filter_all": "الكل"
+}

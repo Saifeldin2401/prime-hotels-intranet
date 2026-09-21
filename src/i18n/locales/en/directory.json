@@ -1,0 +1,21 @@
+{
+  "title": "Employee Directory",
+  "search_placeholder": "Search employees...",
+  "department": "Department",
+  "position": "Position",
+  "email": "Email",
+  "phone": "Phone",
+  "property": "Property",
+  "status": "Status",
+  "active": "Active",
+  "inactive": "Inactive",
+  "no_results": "No employees found",
+  "filters": "Filters",
+  "all_departments": "All Departments",
+  "all_properties": "All Properties",
+  "view_profile": "View Profile",
+  "contact": "Contact",
+  "manager": "Manager",
+  "direct_reports": "Direct Reports",
+  "joined": "Joined"
+}

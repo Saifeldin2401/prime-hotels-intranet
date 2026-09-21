@@ -119,6 +119,15 @@ export function Header({
     navigate('/login')
   }, [signOut, navigate])
 
+  const getRoleDisplayName = (role?: string | null) => {
+    if (!role) return t('roles.staff', 'Staff')
+    const translated = t(`roles.${role}`, role.replace(/_/g, ' '))
+    if (translated.startsWith('roles.')) {
+      return role.replace(/_/g, ' ')
+    }
+    return translated
+  }
+
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-200">
       {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent.
@@ -331,7 +340,7 @@ export function Header({
                       </span>
                       <span className="text-[10px] text-hotel-gold-light uppercase tracking-wider font-semibold opacity-80 group-hover:opacity-100 transition-opacity">
                         {/* Display job title or translated primary role */}
-                        {profile?.job_title || (primaryRole ? t(`roles.${primaryRole}`) : t('roles.staff'))}
+                        {profile?.job_title || getRoleDisplayName(primaryRole)}
                       </span>
                     </div>
 

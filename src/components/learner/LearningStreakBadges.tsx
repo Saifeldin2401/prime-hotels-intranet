@@ -28,7 +28,7 @@ export const LearningStreakBadges: React.FC<LearningStreakBadgesProps> = ({
 
     return (
         <Card className={cn(
-            "overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card via-card/90 to-amber-500/[0.03]",
+            "overflow-hidden rounded-3xl border border-amber-500/20 border-t-amber-400/35 bg-gradient-to-br from-card/95 via-card/85 to-amber-950/[0.03]",
             "shadow-sm backdrop-blur-xl transition-all duration-300",
             className
         )}>
@@ -52,18 +52,27 @@ export const LearningStreakBadges: React.FC<LearningStreakBadgesProps> = ({
             <CardContent className="p-5 pt-3 space-y-4">
                 {/* Streak Counter & Daily Pips */}
                 <div className="flex items-center justify-between p-3.5 rounded-2xl border border-orange-500/20 bg-orange-500/[0.04]">
-                    <div>
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="font-mono text-3xl font-extrabold text-orange-500">
-                                {streakDays}
-                            </span>
-                            <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                                {isRTL ? 'أيام متتالية' : 'Day Streak'}
-                            </span>
+                    <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-xl overflow-hidden border border-orange-500/30 shrink-0 bg-slate-950/80 shadow-md">
+                            <img
+                                src="/assets/altus/streak-flame.jpg"
+                                alt="Streak Trophy"
+                                className="h-full w-full object-cover"
+                            />
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {isRTL ? 'حافظ على وتيرة تدريبك اليومية' : 'Consistency unlocks master badges'}
-                        </p>
+                        <div>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="font-mono text-3xl font-extrabold text-orange-500">
+                                    {streakDays}
+                                </span>
+                                <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                                    {isRTL ? 'أيام متتالية' : 'Day Streak'}
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                {isRTL ? 'حافظ على وتيرة تدريبك اليومية' : 'Consistency unlocks master badges'}
+                            </p>
+                        </div>
                     </div>
 
                     {/* KSA Weekday Dots */}
@@ -75,7 +84,7 @@ export const LearningStreakBadges: React.FC<LearningStreakBadgesProps> = ({
                                         "h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold transition-all",
                                         day.active
                                             ? "bg-gradient-to-br from-amber-400 to-orange-500 text-slate-950 shadow-sm shadow-orange-500/30"
-                                            : "bg-slate-800 text-slate-500 border border-slate-700/50"
+                                             : "bg-slate-800 text-slate-500 border border-slate-700/50"
                                     )}
                                 >
                                     {day.active ? <Check className="h-3 w-3 stroke-[3]" /> : (isRTL ? day.labelAr : day.labelEn)}
@@ -89,11 +98,11 @@ export const LearningStreakBadges: React.FC<LearningStreakBadgesProps> = ({
                 <div className="grid grid-cols-3 gap-2.5">
                     {/* Badge 1: Official Accreditation */}
                     <div className="group flex flex-col items-center p-2.5 rounded-xl border border-amber-500/20 bg-background/50 hover:bg-card hover:border-amber-500/40 transition-all text-center">
-                        <div className="h-10 w-10 rounded-lg overflow-hidden p-1 flex items-center justify-center bg-white/5 border border-white/10 mb-1.5 group-hover:scale-110 transition-transform">
+                        <div className="h-10 w-10 rounded-lg overflow-hidden p-0.5 flex items-center justify-center bg-white/5 border border-white/10 mb-1.5 group-hover:scale-110 transition-transform">
                             <img
-                                src="/assets/altus/cert-badge.jpg"
+                                src="/assets/altus/accreditation-seal.jpg"
                                 alt="Accredited"
-                                className="h-full w-full object-contain rounded"
+                                className="h-full w-full object-cover rounded"
                             />
                         </div>
                         <span className="text-[11px] font-bold text-foreground truncate w-full">
