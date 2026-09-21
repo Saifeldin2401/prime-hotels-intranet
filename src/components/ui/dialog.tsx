@@ -44,7 +44,7 @@ const DialogContent = React.forwardRef<
           <div className={cn("overflow-y-auto max-h-[90vh] p-4 sm:p-6", bodyClassName)}>
             {children}
           </div>
-          <DialogPrimitive.Close className="absolute end-3 top-3 sm:end-4 sm:top-4 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm opacity-90 ring-offset-background transition-all hover:opacity-100 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground p-1.5 touch-target">
+          <DialogPrimitive.Close className="absolute end-3 top-3 sm:end-4 sm:top-4 rounded-full p-1.5 opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none touch-target z-10">
             <X className="h-4 w-4" />
             <span className="sr-only">{t('actions.close', 'Close')}</span>
           </DialogPrimitive.Close>
@@ -61,7 +61,7 @@ const DialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 px-5 sm:px-6 pt-5 sm:pt-6 pb-4 bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-800 dark:to-slate-800/50 border-b border-slate-200/80 dark:border-slate-700/80 text-center sm:text-start",
+      "flex flex-col space-y-2 text-center sm:text-start",
       className
     )}
     {...props}
@@ -75,7 +75,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3 px-5 sm:px-6 py-4 bg-slate-50/50 dark:bg-slate-800/50 border-t border-slate-200/80 dark:border-slate-700/80",
+      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3",
       className
     )}
     {...props}
@@ -90,7 +90,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-xl font-semibold leading-none tracking-tight text-slate-900 dark:text-slate-100",
+      "text-xl font-semibold leading-none tracking-tight text-foreground",
       className
     )}
     {...props}

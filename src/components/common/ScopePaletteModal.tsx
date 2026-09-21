@@ -358,13 +358,13 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
 
       {/* Platform Operator Audited Break-Glass Entry Modal */}
       <Dialog open={!!selectedOrgForEnter} onOpenChange={(open) => !open && setSelectedOrgForEnter(null)}>
-        <DialogContent className="max-w-lg bg-hotel-navy-dark text-white border-hotel-gold/30">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-hotel-gold text-lg">
-              <ShieldAlert className="h-5 w-5 text-amber-400" />
-              {t('admin:enter_tenant_audited', 'Enter Customer Environment (Audited)')}
+        <DialogContent className="max-w-lg bg-hotel-navy-dark text-white border-hotel-gold/30 shadow-2xl">
+          <DialogHeader className="space-y-1.5 pb-2 text-start">
+            <DialogTitle className="flex items-center gap-2 text-hotel-gold text-lg font-serif">
+              <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0" />
+              <span>{t('admin:enter_tenant_audited', 'Enter Customer Environment (Audited)')}</span>
             </DialogTitle>
-            <DialogDescription className="text-slate-300 text-xs">
+            <DialogDescription className="text-slate-300 text-xs leading-relaxed">
               {t('admin:enter_tenant_dialog_desc', 'Accessing a customer environment starts an audited break-glass session with mandatory security logging and TTL expiration.')}
             </DialogDescription>
           </DialogHeader>
@@ -373,7 +373,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
             <div className="space-y-4 py-3">
               <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <Building2 className="h-4 w-4 text-hotel-gold" />
+                  <Building2 className="h-4 w-4 text-hotel-gold shrink-0" />
                   <span className="font-semibold text-sm">{selectedOrgForEnter.name}</span>
                 </div>
                 <Badge variant="outline" className="text-hotel-gold border-hotel-gold/30">
@@ -386,7 +386,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
                   {t('admin:acting_role', 'Acting Role')}
                 </Label>
                 <Select value={actingRole} onValueChange={setActingRole}>
-                  <SelectTrigger id="scope-acting-role" className="bg-slate-900 border-white/10 text-white text-xs">
+                  <SelectTrigger id="scope-acting-role" className="bg-slate-900 border-white/10 text-white text-xs focus:ring-hotel-gold">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-hotel-navy-dark border-white/20 text-white">
@@ -417,7 +417,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-white/10 mt-1">
             <Button
               type="button"
               variant="ghost"
@@ -430,7 +430,7 @@ export function ScopePaletteModal({ open, onOpenChange }: ScopePaletteModalProps
               type="button"
               disabled={isEntering || enterReason.trim().length < 10}
               onClick={handleConfirmEnterOrg}
-              className="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold"
+              className="bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-semibold shadow-sm"
             >
               {isEntering ? t('admin:entering', 'Starting Audited Session...') : t('admin:enter_environment', 'Enter Customer Environment')}
             </Button>
