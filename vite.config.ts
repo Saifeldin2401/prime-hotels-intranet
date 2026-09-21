@@ -120,7 +120,6 @@ export default defineConfig({
     // Raise chunk size warning limit - mermaid/excel/editor are heavy by nature and already split
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
-      external: ['@mermaid-js/parser'],
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
