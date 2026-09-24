@@ -151,31 +151,31 @@ BEGIN
     ASSERT v_operational = false, 'Assertion failed: Suspended tenant must NOT be operational.';
 
     RAISE NOTICE '>>> [STEP 4/10] Seeding Master Content Library & Deploying to Tenant A...';
-    INSERT INTO public.courses (title, slug, description, status, is_master_template)
-    VALUES ('Global Luxury Hospitality SOP', 'master-sop-' || substr(gen_random_uuid()::text, 1, 8), 'Standard global SOP', 'published', true)
+    INSERT INTO public.training_modules (organization_id, title, description, status, is_master_template)
+    VALUES (v_org_a_id, 'Global Luxury Hospitality SOP', 'Standard global SOP', 'draft', true)
     RETURNING id INTO v_master_course_id;
 
-    INSERT INTO public.course_modules (course_id, title, position)
-    VALUES (v_master_course_id, 'Guest Greeting & Check-In', 1);
+    INSERT INTO public.documents (organization_id, title, content_type, training_module_id, block_type, block_order, content_data)
+    VALUES (v_org_a_id, 'Guest Greeting & Check-In', 'training_block', v_master_course_id, 'text', 1, '{}'::jsonb);
 
     -- Execute master content deployment as platform operator (p_master_id, p_content_type, p_org_id)
     SELECT public.deploy_master_content(v_master_course_id, 'course', v_org_a_id) INTO v_deployed_course_id;
     ASSERT v_deployed_course_id IS NOT NULL, 'Assertion failed: Master content deployment returned null.';
 
     -- Verify cloned course belongs to Tenant A and is not a master template
-    SELECT count(*) INTO v_count FROM public.courses
+    SELECT count(*) INTO v_count FROM public.training_modules
     WHERE id = v_deployed_course_id 
       AND organization_id = v_org_a_id 
       AND is_master_template = false;
     ASSERT v_count = 1, 'Assertion failed: Deployed course not properly attached to Tenant A.';
 
     RAISE NOTICE '>>> [STEP 5/10] Creating Scoped Training Assignment for Learner...';
-    INSERT INTO public.learning_assignments (course_id, organization_id, hotel_id, user_id, assigned_by, status)
-    VALUES (v_deployed_course_id, v_org_a_id, v_hotel_a1_id, v_learner_a_id, v_admin_a_id, 'assigned')
+    INSERT INTO public.training_assignment_rules (organization_id, hotel_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, assigned_by, is_active, status)
+    VALUES (v_org_a_id, v_hotel_a1_id, 'user', v_learner_a_id::text, 'module', v_deployed_course_id, v_deployed_course_id, 'individual', v_admin_a_id, true, 'active')
     RETURNING id INTO v_assignment_id;
 
-    SELECT count(*) INTO v_count FROM public.learning_assignments
-    WHERE organization_id = v_org_a_id AND user_id = v_learner_a_id;
+    SELECT count(*) INTO v_count FROM public.training_assignment_rules
+    WHERE organization_id = v_org_a_id AND target_type = 'user' AND target_id = v_learner_a_id::text;
     ASSERT v_count = 1, 'Assertion failed: Learning assignment not recorded for learner.';
 
     RAISE NOTICE '>>> [STEP 6/10] Recording Learner Training Progress...';

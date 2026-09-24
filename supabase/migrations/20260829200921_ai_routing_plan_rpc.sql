@@ -1,26 +1,14 @@
--- ============================================================================
--- AI ROUTING PLAN + PROVIDER HEALTH RPCs  (audit Phase 2/3)
--- Split from 20260829200707_ai_provider_model_registry.sql — depends on
--- public.ai_models / public.ai_providers created there and
--- public.ai_platform_config from 20260827020314_ai_observability_and_platform_config.sql
--- ============================================================================
-
--- 4b. The authoritative router. Given a capability class + policy flags, return
---     the ranked list of models that (a) can serve that capability, (b) pass the
---     admin policy in ai_platform_config, (c) sit on a healthy, non-cooled-down
---     provider. The gateway walks this list in order and dispatches each model
---     to its provider's API.
+-- Capability-aware routing plan. One place (SQL) ranks eligible models for a
+-- capability class, applying platform policy + provider health/cooldown.
+-- Both the edge gateway and the client can call this.
 CREATE OR REPLACE FUNCTION public.get_ai_routing_plan(
-  p_capability    text,
-  p_free_only     boolean DEFAULT false,
+  p_capability text,               -- 'structured_json' | 'long_form' | 'fast' | 'reasoning' | 'compliance' | 'image' | 'embedding'
+  p_free_only  boolean DEFAULT false,
   p_allow_premium boolean DEFAULT false,
-  p_limit         integer DEFAULT 8
+  p_limit int DEFAULT 8
 )
 RETURNS jsonb
-LANGUAGE plpgsql
-STABLE SECURITY DEFINER
-SET search_path TO ''
-AS $function$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' STABLE AS $$
 DECLARE
   cfg              record;
   v_modality       text := CASE WHEN p_capability = 'image' THEN 'image'
@@ -85,31 +73,20 @@ BEGIN
     'models', coalesce(v_result, '[]'::jsonb)
   );
 END;
-$function$;
+$$;
+REVOKE ALL ON FUNCTION public.get_ai_routing_plan(text, boolean, boolean, int) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.get_ai_routing_plan(text, boolean, boolean, int) TO authenticated, service_role;
 
-REVOKE ALL ON FUNCTION public.get_ai_routing_plan(text, boolean, boolean, integer) FROM public, anon;
-GRANT EXECUTE ON FUNCTION public.get_ai_routing_plan(text, boolean, boolean, integer) TO authenticated, service_role;
-
--- 4c. Health transitions. The gateway calls this after it sees an auth failure /
---     429 / quota error from a provider, with a cooldown so the router stops
---     planning that provider until the window passes.
+-- helper for the health module / gateway to post provider health back
 CREATE OR REPLACE FUNCTION public.set_ai_provider_health(
-  p_provider         text,
-  p_status           text,
-  p_cooldown_seconds integer DEFAULT NULL
+  p_provider text, p_status text, p_cooldown_seconds int DEFAULT NULL
 )
-RETURNS void
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path TO ''
-AS $function$
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $$
   UPDATE public.ai_providers
      SET health_status = p_status,
-         cooldown_until = CASE WHEN p_cooldown_seconds IS NULL THEN NULL
-                               ELSE now() + make_interval(secs => p_cooldown_seconds) END,
+         cooldown_until = CASE WHEN p_cooldown_seconds IS NULL THEN NULL ELSE now() + make_interval(secs => p_cooldown_seconds) END,
          updated_at = now()
    WHERE id = p_provider;
-$function$;
-
-REVOKE ALL ON FUNCTION public.set_ai_provider_health(text, text, integer) FROM public, anon;
-GRANT EXECUTE ON FUNCTION public.set_ai_provider_health(text, text, integer) TO authenticated, service_role;
+$$;
+REVOKE ALL ON FUNCTION public.set_ai_provider_health(text, text, int) FROM public, anon;
+GRANT EXECUTE ON FUNCTION public.set_ai_provider_health(text, text, int) TO authenticated, service_role;

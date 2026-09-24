@@ -1,8 +1,11 @@
+
 -- Phase 11 / Phase 5 gap: profiles RLS keyed on has_profile_access(), which was entirely
 -- property/legacy-role based with a "target has no property -> allow" fallback. In the new
 -- tenant model most users have no user_properties row, so a regional_admin / corporate_admin
--- of ANY org could read EVERY such profile -> cross-tenant PII leak.
+-- of ANY org could read EVERY such profile -> cross-tenant PII leak (date_of_birth is
+-- populated for all users; emergency contacts, nationality, staff_id, etc. also present).
 
+-- shared-org predicate: do the two users share an active organization membership?
 CREATE OR REPLACE FUNCTION public.users_share_active_org(_a uuid, _b uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $fn$
   SELECT EXISTS (
@@ -15,6 +18,7 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
 $fn$;
 GRANT EXECUTE ON FUNCTION public.users_share_active_org(uuid, uuid) TO authenticated;
 
+-- WRITE / manage rule: self, platform super admin, or a people-admin in an org they share.
 CREATE OR REPLACE FUNCTION public.has_profile_access(_admin_id uuid, _target_user_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $fn$
   SELECT
@@ -30,6 +34,8 @@ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
     );
 $fn$;
 
+-- SELECT: same-org members may see each other's profile row (team lists, instructor lookup);
+-- cross-tenant is blocked. (Column-level PII minimisation is a separate follow-up.)
 DROP POLICY IF EXISTS profiles_select_public ON public.profiles;
 DROP POLICY IF EXISTS profiles_select ON public.profiles;
 CREATE POLICY profiles_select ON public.profiles FOR SELECT TO authenticated
@@ -39,6 +45,7 @@ USING (
   OR public.users_share_active_org(auth.uid(), id)
 );
 
+-- UPDATE stays on the stricter has_profile_access rule.
 DROP POLICY IF EXISTS consolidated_profiles_update ON public.profiles;
 CREATE POLICY profiles_update ON public.profiles FOR UPDATE TO authenticated
 USING (public.has_profile_access(auth.uid(), id))

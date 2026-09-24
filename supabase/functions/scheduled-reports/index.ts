@@ -1,9 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import {
-  getServiceRoleToken,
-  isAuthorizedServiceRoleRequest,
-} from "../_shared/auth.ts";
+import { resolveServiceRoleToken } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 type ReportDefinition = {
@@ -111,9 +108,10 @@ const fetchReportData = async (
       const [assignments, orgModules] = await Promise.all([
         applyDateRange(
           supabaseClient
-            .from("learning_assignments")
-            .select("id,status,due_date,created_at")
+            .from("training_assignment_rules")
+            .select("id,status,due_date,created_at,target_type,recipient_count")
             .eq("organization_id", organizationId)
+            .eq("is_deleted", false)
             .limit(500),
           "created_at",
           dateFrom,
@@ -267,11 +265,11 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const serviceRoleJwt = getServiceRoleToken(authHeader);
+    const serviceRoleToken = await resolveServiceRoleToken(
+      req.headers.get("Authorization"),
+    );
 
-    if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
+    if (!serviceRoleToken) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -281,7 +279,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseClient = createClient(
       supabaseUrl,
-      serviceRoleJwt ?? serviceRoleKey,
+      serviceRoleToken,
       {
         auth: {
           autoRefreshToken: false,

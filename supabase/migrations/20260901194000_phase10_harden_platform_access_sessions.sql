@@ -1,6 +1,7 @@
+
 -- Phase 10: harden cross-tenant operator access.
 -- Was: client INSERTs into platform_access_sessions with any access_reason, no TTL, no
--- server enforcement; sessions stayed active forever if the browser never called exit.
+-- server enforcement; sessions stay active forever if the browser never calls exit.
 
 -- 1. TTL column + expiry in the active-session check
 ALTER TABLE public.platform_access_sessions
@@ -75,7 +76,7 @@ REVOKE EXECUTE ON FUNCTION public.end_platform_session(uuid) FROM anon, public;
 GRANT EXECUTE ON FUNCTION public.start_platform_session(uuid,text,text,integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.end_platform_session(uuid) TO authenticated;
 
--- 3. Lock the table
+-- 3. Lock the table: self-scoped SELECT, constrained INSERT, super-admin-only UPDATE/DELETE
 DROP POLICY IF EXISTS "platform_access_sessions_admin_only" ON public.platform_access_sessions;
 CREATE POLICY platform_access_sessions_sel ON public.platform_access_sessions FOR SELECT TO authenticated
 USING (public.is_platform_super_admin() OR admin_user_id = auth.uid());
@@ -87,7 +88,10 @@ WITH CHECK (public.is_platform_super_admin() OR admin_user_id = auth.uid());
 CREATE POLICY platform_access_sessions_del ON public.platform_access_sessions FOR DELETE TO authenticated
 USING (public.is_platform_super_admin());
 
--- 4. platform_audit_logs: immutable — SELECT for super admin; writes only via SECURITY DEFINER / service_role
+-- 4. platform_audit_logs: immutable (SELECT for super admin; writes only via the SECURITY
+--    DEFINER loggers above / service_role). No UPDATE/DELETE for anyone.
 DROP POLICY IF EXISTS "platform_audit_logs_policy" ON public.platform_audit_logs;
 CREATE POLICY platform_audit_logs_sel ON public.platform_audit_logs FOR SELECT TO authenticated
 USING (public.is_platform_super_admin());
+-- (no INSERT/UPDATE/DELETE policy -> only SECURITY DEFINER functions & service_role can write)
+;

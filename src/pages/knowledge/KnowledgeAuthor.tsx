@@ -524,13 +524,14 @@ export default function KnowledgeAuthor() {
     // Helper function to notify reviewers when a document is submitted for review
     const notifyReviewersOfSubmission = async (documentId: string, documentTitle: string) => {
         try {
-            // Get reviewers with reviewer roles from user_roles table
-            const reviewerRoles: Database['public']['Enums']['app_role'][] = ['property_manager', 'regional_admin', 'regional_hr']
+            // Reviewers: tenant admins and knowledge managers (RLS limits the
+            // memberships to the author's own organization(s)).
+            const reviewerRoles: Database['public']['Enums']['membership_role'][] = ['organization_owner', 'organization_admin', 'knowledge_manager']
 
-            // Query user_roles to find users with reviewer roles, then get their profile info
             const { data: reviewerRolesData, error: rolesError } = await supabase
-                .from('user_roles')
+                .from('organization_memberships')
                 .select('user_id, profiles!inner(id, full_name, is_active)')
+                .eq('is_active', true)
                 .in('role', reviewerRoles)
 
             if (rolesError) {

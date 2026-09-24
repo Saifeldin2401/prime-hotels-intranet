@@ -504,11 +504,11 @@ async function fetchQuizDefinition(quizId: string) {
       id,
       title,
       status,
-      questions:learning_quiz_questions(
+      questions:unified_quiz_questions(
         id,
         question_id,
         display_order,
-        question:knowledge_questions(
+        question:unified_questions(
           id,
           question_text,
           question_type,
@@ -516,7 +516,7 @@ async function fetchQuizDefinition(quizId: string) {
           correct_answer,
           explanation,
           hint,
-          options:knowledge_question_options(
+          options:unified_question_options(
             id,
             option_text,
             is_correct,

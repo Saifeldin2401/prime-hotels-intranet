@@ -1,4 +1,4 @@
-﻿-- Migration: 20260901201000_database_deep_clean_hardening.sql
+-- Migration: 20260901201000_database_deep_clean_hardening.sql
 -- Description: Deep database cleanup and security hardening:
 -- 1. Fix missing RLS policies on training_certificates
 -- 2. Close leaks on document_department_access and knowledge_related_articles

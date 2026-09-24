@@ -16,8 +16,6 @@
 -- The frontend call is wrapped in a silent try/catch (ignores errors), so
 -- revoking here causes no functional regression -- real lockout enforcement
 -- continues via record_failed_login_attempt.
---
--- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 
 REVOKE EXECUTE ON FUNCTION public.lock_account(text, integer) FROM PUBLIC;

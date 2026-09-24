@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.delete_operations_import(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.execute_scheduled_report(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_analytics_summary() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_daily_active_users(integer) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_search_metrics(integer) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_secure_document_version_url(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_secure_expense_receipt_url(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_secure_maintenance_attachment_url(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_secure_report_run_url(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.replace_workflow_steps(uuid, jsonb) FROM anon;

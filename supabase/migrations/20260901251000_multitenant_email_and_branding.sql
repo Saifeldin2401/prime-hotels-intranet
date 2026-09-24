@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration: 20260901251000_multitenant_email_and_branding.sql
+-- Migration: 20260901245000_multitenant_email_and_branding.sql
 -- Multi-Tenant Email & Dynamic Branding Architecture
 -- 1. Enrich organizations with authoritative email branding fields
 -- 2. Add organization_id to notification tracking and queue tables
@@ -37,7 +37,7 @@ SECURITY DEFINER
 SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
-  v_org public.organizations%ROWTYPE;
+  v_org record;
   v_primary text;
   v_secondary text;
   v_accent text;

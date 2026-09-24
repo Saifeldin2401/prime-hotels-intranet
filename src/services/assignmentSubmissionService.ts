@@ -360,22 +360,9 @@ export const assignmentSubmissionService = {
 
     if (error) throw error
 
-    // If approved, also record block completion in training_block_progress
-    if (isApproved && data) {
-      try {
-        await supabase
-          .from('training_block_progress')
-          .upsert({
-            user_id: data.user_id,
-            training_module_id: data.training_module_id,
-            block_id: data.block_id,
-            completed_at: new Date().toISOString()
-          }, { onConflict: 'user_id,block_id' })
-      } catch (err) {
-        console.warn('Failed to auto-mark training_block_progress on approval:', err)
-      }
-    }
-
+    // No block-progress write here: complete_training_module gates practical
+    // blocks on the approved submission itself (reviewed_by/reviewed_at are
+    // stamped server-side by trg_guard_training_assignment_submission).
     return data as unknown as TrainingAssignmentSubmission
   },
 

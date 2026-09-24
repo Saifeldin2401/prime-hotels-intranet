@@ -712,7 +712,7 @@ export function TrainingAssignmentsProvider({
             selected_options,
             is_correct,
             time_spent_seconds,
-            question:learning_questions (
+            question:unified_questions (
               id,
               question_text,
               question_type,
@@ -721,6 +721,7 @@ export function TrainingAssignmentsProvider({
           )
         `)
         .eq('user_id', selectedProgress.user_id)
+        .is('archived_at', null) // earlier recertification cycles don't count
         .or(orConditions.join(','))
         .order('completed_at', { ascending: false })
 

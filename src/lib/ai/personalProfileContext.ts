@@ -42,18 +42,19 @@ export async function fetchPersonalExecutiveContext(
       .limit(8)
 
     // 2. Fetch User's Active Learning / Training Assignments
+    // Active module progress (assignments seed a training_progress row per learner).
     const learningPromise = supabase
-      .from('learning_assignments')
+      .from('training_progress')
       .select(`
         id,
         status,
-        progress,
-        due_date,
-        course:learning_courses(id, title, category, difficulty)
+        progress:progress_percentage,
+        course:training_modules(id, title, category, difficulty:difficulty_level)
       `)
       .eq('user_id', userId)
+      .eq('lp_content_type', 'module')
       .neq('status', 'completed')
-      .order('due_date', { ascending: true, nullsFirst: false })
+      .order('last_activity_at', { ascending: false, nullsFirst: false })
       .limit(5)
 
     // 3. Fetch Recent Property Announcements

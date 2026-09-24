@@ -192,34 +192,34 @@ DROP TABLE IF EXISTS properties CASCADE;
 
 -- 9. Security Definer Helper Functions
 CREATE OR REPLACE FUNCTION public.get_user_organizations()
-RETURNS SETOF uuid STABLE SECURITY DEFINER AS \$\$
+RETURNS SETOF uuid STABLE SECURITY DEFINER AS $$
   SELECT organization_id FROM public.organization_memberships
   WHERE user_id = auth.uid() AND is_active = true;
-\$\$ LANGUAGE sql;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION public.get_operator_impersonated_org()
-RETURNS uuid STABLE SECURITY DEFINER AS \$\$
+RETURNS uuid STABLE SECURITY DEFINER AS $$
   SELECT target_organization_id FROM public.platform_access_sessions
   WHERE admin_user_id = auth.uid() 
     AND is_active = true 
     AND expires_at > now()
   LIMIT 1;
-\$\$ LANGUAGE sql;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION public.is_platform_user(target_user_id uuid)
-RETURNS boolean STABLE SECURITY DEFINER AS \$\$
+RETURNS boolean STABLE SECURITY DEFINER AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.user_roles 
     WHERE user_id = target_user_id 
       AND role IN ('super_admin', 'corporate_admin', 'regional_admin')
   );
-\$\$ LANGUAGE sql;
+$$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION public.has_tenant_access(record_org_id uuid)
-RETURNS boolean STABLE SECURITY DEFINER AS \$\$
+RETURNS boolean STABLE SECURITY DEFINER AS $$
   SELECT (
     (record_org_id IS NOT NULL AND record_org_id IN (SELECT public.get_user_organizations()))
     OR (record_org_id IS NOT NULL AND record_org_id = public.get_operator_impersonated_org())
     OR (public.is_platform_user(auth.uid()))
   );
-\$\$ LANGUAGE sql;
+$$ LANGUAGE sql;

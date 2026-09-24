@@ -1,6 +1,3 @@
--- Migration: 20260901241000_phase4_system_settings_org_scope.sql
--- Description: Phase 4 System Settings tenant scoping (nullable organization_id, unique indices, get_setting RPC, RLS)
-
 -- 1. Add organization_id column to system_settings
 ALTER TABLE public.system_settings
   ADD COLUMN IF NOT EXISTS organization_id uuid REFERENCES public.organizations(id) ON DELETE CASCADE;

@@ -1,7 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { createNotification } from '@/services/notificationService'
-import type { AppRole } from '@/lib/constants'
+import { membershipToAppRole, type MembershipRole } from '@/lib/membershipRoles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useSubmitForApproval() {
@@ -31,28 +31,29 @@ export function useSubmitForApproval() {
 
       const { data: doc } = await supabase
         .from('documents')
-        .select('visibility, property_id, department_id, title')
+        .select('visibility, property_id, department_id, title, organization_id')
         .eq('id', documentId)
         .single()
 
       if (!doc) throw new Error('Document not found')
 
-      let roleFilters: AppRole[] = []
-      if (doc.visibility === 'all_properties') {
-        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'knowledge_manager', 'regional_admin']
-      } else if (doc.visibility === 'property') {
-        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'property_manager', 'property_hr']
+      // Approvers are members of the document's organization holding a
+      // membership role that fits the document's scope.
+      const adminRoles: MembershipRole[] = ['organization_owner', 'organization_admin']
+      let roleFilters: MembershipRole[] = [...adminRoles, 'knowledge_manager']
+      if (doc.visibility === 'property') {
+        roleFilters = [...adminRoles, 'hotel_admin', 'knowledge_manager']
       } else if (doc.visibility === 'department') {
-        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'department_head', 'author']
-      } else if (doc.visibility === 'role') {
-        roleFilters = ['administrator', 'super_admin', 'corporate_admin', 'knowledge_manager', 'regional_admin']
+        roleFilters = [...adminRoles, 'department_manager', 'author']
       }
 
       let approverQuery = supabase
         .from('profiles')
-        .select('id, user_roles!inner(role), organization_memberships(hotel_id, department_id)')
+        .select('id, organization_memberships!inner(role, organization_id, hotel_id, department_id, is_active)')
         .eq('is_active', true)
-        .in('user_roles.role', roleFilters)
+        .eq('organization_memberships.is_active', true)
+        .eq('organization_memberships.organization_id', doc.organization_id)
+        .in('organization_memberships.role', roleFilters)
 
       if (doc.visibility === 'property' && doc.property_id) {
         approverQuery = approverQuery.eq('organization_memberships.hotel_id', doc.property_id)
@@ -74,7 +75,7 @@ export function useSubmitForApproval() {
       const approvalRows = approverIds.map(approverId => ({
         document_id: documentId,
         approver_id: approverId,
-        approver_role: roleFilters[0] ?? null,
+        approver_role: membershipToAppRole(roleFilters[0]),
         status: 'pending',
         is_active: true,
         entity_type: 'document',

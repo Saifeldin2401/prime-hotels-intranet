@@ -587,24 +587,12 @@ export function TrainingTrackCommandCenter({
     // Action: 1-Click Recertification Trigger
     const recertifyMutation = useMutation({
         mutationFn: async ({ userId, moduleId }: { userId: string; moduleId: string }) => {
-            const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-            const { data, error } = await supabase
-                .from('training_progress')
-                .insert({
-                    user_id: userId,
-                    training_id: moduleId,
-                    status: 'not_started',
-                    progress_percentage: 0,
-                    score_percentage: null,
-                    metadata: {
-                        is_recertification: true,
-                        assigned_at: new Date().toISOString(),
-                        due_date: dueDate,
-                        assigned_by: user?.id
-                    }
-                })
-                .select()
-                .single()
+            // Server-side: archives the previous completion, supersedes the active
+            // certificate and issues a 14-day recertification assignment.
+            const { data, error } = await supabase.rpc('start_recertification', {
+                p_user_id: userId,
+                p_training_module_id: moduleId,
+            })
             if (error) throw error
             return data
         },

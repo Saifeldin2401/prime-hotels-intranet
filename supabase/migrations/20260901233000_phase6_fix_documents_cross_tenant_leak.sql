@@ -1,12 +1,10 @@
+
 -- ============================================================================
--- Phase 6 — close cross-tenant leaks on `documents` / `courses` introduced by
--- the multitenant_*_ policy rewrite.
---   * documents SELECT leaked EVERY content_type='training_block' row to every
---     tenant (verified live: an org-B admin read 264 of org-A's documents).
---   * documents DELETE/UPDATE allowed ANY authenticated user to mutate
---     is_master_template rows (the master branch had no is_platform_super_admin()).
---   * added org_is_operational() gate to the tenant SELECT branch of both tables
---     so a suspended org's content stops rendering for its own members.
+-- Phase 6 — close cross-tenant leaks on `documents` introduced by the
+-- multitenant_documents_* policy rewrite:
+--   * SELECT leaked EVERY content_type='training_block' row to every tenant
+--   * DELETE/UPDATE allowed ANY authenticated user to mutate is_master_template rows
+-- Verified live: an org-B admin could read 264 of org-A's documents.
 -- ============================================================================
 
 DROP POLICY IF EXISTS multitenant_documents_select ON public.documents;
@@ -15,7 +13,9 @@ USING (
   COALESCE(is_deleted, false) = false
   AND (
     public.is_platform_super_admin()
+    -- master templates are platform-owned reference content, readable to all tenants
     OR is_master_template = true
+    -- everything else (training_block included) is strictly org-scoped
     OR (
       (organization_id IN (SELECT unnest(public.current_user_organization_ids()))
        OR public.has_active_platform_session(organization_id))
@@ -53,6 +53,9 @@ USING (
   )
 );
 
+-- courses: the master-template SELECT branch is fine (platform reference content),
+-- but harden the DELETE/UPDATE master branch is already AND is_platform_super_admin().
+-- Add operational-org gate to the tenant SELECT branch for consistency.
 DROP POLICY IF EXISTS multitenant_courses_select ON public.courses;
 CREATE POLICY multitenant_courses_select ON public.courses FOR SELECT TO authenticated
 USING (

@@ -1,8 +1,10 @@
+
 -- Audit Critical #1 (real form): the child-organization_id triggers
 -- (set_training_child_org / set_documents_child_org / set_announcement_child_org,
 -- on ~30 tables) fell back to the hardcoded Altus org
 -- 'e0000000-0000-0000-0000-000000000001' via COALESCE whenever the parent row's
--- organization_id could not be resolved — a single-tenant assumption in the
+-- organization_id could not be resolved. That silently re-attaches orphaned
+-- child rows to one specific tenant — a single-tenant assumption baked into the
 -- write path.
 --
 -- Fix: resolve strictly from the parent; if that yields NULL, FAIL the write
@@ -10,8 +12,10 @@
 
 BEGIN;
 
--- 1. Backfill pre-existing orphans so the stricter triggers don't break
---    legitimate follow-on writes.
+-- 1. Backfill the pre-existing orphans so the stricter triggers don't break
+--    legitimate follow-on writes (e.g. issuing a certificate for this progress row).
+
+-- training_progress: derive org from the module/course the progress is for.
 UPDATE public.training_progress tp
 SET organization_id = COALESCE(tm.organization_id, c.organization_id)
 FROM public.training_modules tm
@@ -20,6 +24,9 @@ WHERE tp.organization_id IS NULL
   AND (tm.id = tp.training_id OR c.id = tp.training_id)
   AND COALESCE(tm.organization_id, c.organization_id) IS NOT NULL;
 
+-- training_paths: derive from the modules on the path; else from an explicit
+-- membership of the path's creator. Rows that still can't be resolved are left
+-- NULL on purpose (they need a human tenant decision).
 UPDATE public.training_paths p
 SET organization_id = sub.org
 FROM (
@@ -32,6 +39,7 @@ FROM (
 WHERE p.id = sub.path_id AND p.organization_id IS NULL;
 
 -- 2. Rewrite the three trigger functions: fail closed, no tenant default.
+
 CREATE OR REPLACE FUNCTION public.set_training_child_org()
  RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public'
 AS $function$

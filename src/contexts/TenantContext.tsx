@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserData } from '@/contexts/auth/UserDataContext'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { supabase } from '@/lib/supabase'
 import type { Organization, Brand, Hotel, OrganizationMembership, TenantRole } from '@/lib/types/tenant'
@@ -56,6 +57,12 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [memberships, setMemberships] = useState<OrganizationMembership[]>([])
   const [impersonationSession, setImpersonationSession] = useState<PlatformAccessSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { setActiveOrganizationId } = useUserData()
+
+  // Roles are evaluated in the organization the user is working in.
+  useEffect(() => {
+    setActiveOrganizationId(currentOrganization?.id ?? null)
+  }, [currentOrganization?.id, setActiveOrganizationId])
 
   // Platform-operator identity is resolved server-side (resolve_account_context),
   // not from a tenant role string. Name kept as `isPlatformAdmin` for the many

@@ -185,8 +185,9 @@ export const complianceEngineService = {
     // 2. Fetch waivable assignments (hotel-specific, non-mandatory, active)
     let waivableAssignments: Array<{ id: string; title: string; hotelId: string | null }> = []
     if (currentHotelId && currentHotelId !== params.targetHotelId) {
+      // Individual assignments are training_assignment_rules rows targeting the user.
       const { data: assignments } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select(`
           id,
           hotel_id,
@@ -195,10 +196,11 @@ export const complianceEngineService = {
             title
           )
         `)
-        .eq('user_id', params.userId)
-        .in('status', ['pending', 'in_progress', 'assigned'])
+        .eq('target_type', 'user')
+        .eq('target_id', params.userId)
+        .eq('is_active', true)
+        .eq('is_deleted', false)
         .eq('is_mandatory', false)
-        .eq('is_global', false)
         .eq('hotel_id', currentHotelId)
 
       if (assignments) {

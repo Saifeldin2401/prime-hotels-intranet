@@ -482,7 +482,7 @@ async function isPasswordRotationRequired(userId: string): Promise<{ required: b
       .select('role')
       .eq('user_id', userId);
     
-    const adminRoles = ['corporate_admin', 'regional_admin'];
+    const adminRoles = ['administrator'];
     const isAdmin = roles?.some(r => adminRoles.includes(r.role)) ?? false;
     
     if (!isAdmin) {

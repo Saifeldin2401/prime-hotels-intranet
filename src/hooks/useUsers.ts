@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { appRolesFromMemberships } from '@/lib/membershipRoles'
 import { secureSearchUsers } from '@/lib/secureSearch'
 import { sanitizeSearchInput } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -52,8 +53,10 @@ export function useProfiles(filters?: {
                     created_at,
                     updated_at,
                     reporting_to,
-                    user_roles(role),
                     organization_memberships(
+                        role,
+                        organization_id,
+                        is_active,
                         hotel_id,
                         department_id,
                         hotel:hotels(id, name),
@@ -90,7 +93,7 @@ export function useProfiles(filters?: {
             // The types might need adjusting if we want nice nested objects.
             return (data || []).map((profile: any) => ({
                 ...profile,
-                roles: profile.user_roles?.map((ur: any) => ur.role) || [],
+                roles: [...new Set(appRolesFromMemberships(profile.organization_memberships).map((r) => r.role))],
                 properties: (profile.organization_memberships || []).map((om: any) => om.hotel).filter(Boolean),
                 departments: (profile.organization_memberships || []).map((om: any) => om.department).filter(Boolean)
             }))

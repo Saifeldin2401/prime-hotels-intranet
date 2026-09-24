@@ -1,4 +1,4 @@
-﻿-- Migration: 20260901203000_fix_content_editor_permissions.sql
+-- Migration: 20260901203000_fix_content_editor_permissions.sql
 -- Description: Fix content editor permissions and sync membership roles
 
 -- 1. Upgrade is_platform_super_admin to recognize super_admin, corporate_admin, regional_admin, and administrator

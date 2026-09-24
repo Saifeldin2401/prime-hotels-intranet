@@ -76,6 +76,8 @@ export interface UserRole {
   id: string
   user_id: string
   role: AppRole
+  /** Organization the role is held in (roles derive from organization_memberships). */
+  organization_id?: string | null
 }
 
 export interface Property {

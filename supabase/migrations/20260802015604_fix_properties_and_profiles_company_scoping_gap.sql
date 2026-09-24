@@ -34,10 +34,6 @@
 -- profiles' UPDATE USING/WITH CHECK (identical on both sides, closing the
 -- broken-WITH-CHECK bug and the scoping gap together).
 --
--- Verified via rolled-back functional tests: regional_admin updating another
--- user's profile now succeeds (previously silently affected 0 rows);
--- department_head (unrelated role) attempting the same update is blocked.
---
 -- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 

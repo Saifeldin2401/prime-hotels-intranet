@@ -21,9 +21,6 @@
 --    deliberately maps administrator up through corporate_admin/super_admin).
 --    Both are fixed the same way: platform-wide config is manageable by true
 --    platform super admins only, never by a tenant-scoped role.
---
--- Applied live 2026-09-02 (schema_migrations 20260902161527); this file is the
--- repo record of that change. All statements are idempotent.
 -- ============================================================================
 
 -- 1. Close the NULL-org bypass in the two shared tenant-admin helpers.

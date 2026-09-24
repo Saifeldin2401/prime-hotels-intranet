@@ -16,10 +16,6 @@
 -- uses for its own escape hatch). 'close' and 'add_comment' are left on the
 -- broader can_view_request check since they aren't step-approval actions.
 --
--- Verified via rolled-back functional test: requester self-approve attempt
--- -> "Access denied: only the assigned approver may act on this step";
--- legitimate assignee -> "Action completed successfully".
---
 -- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 

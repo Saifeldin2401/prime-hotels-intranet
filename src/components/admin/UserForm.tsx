@@ -15,6 +15,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } 
 import { useTranslation } from 'react-i18next'
 import { ZodError } from 'zod'
 import { useTenant } from '@/contexts/TenantContext'
+import { appRoleToMembershipRole, membershipToAppRole } from '@/lib/membershipRoles'
 
 
 import { Badge } from '@/components/ui/badge'
@@ -56,9 +57,15 @@ interface PotentialManagerRow {
   full_name: string
   job_title: string | null
   staff_id: string | null
-  user_roles?: { role: string }[]
-  organization_memberships?: { hotel_id: string | null; department_id: string | null }[]
+  organization_memberships?: { role: string | null; hotel_id: string | null; department_id: string | null }[]
 }
+
+/** Platform roles a profile holds through its memberships. */
+const rowRoles = (p: PotentialManagerRow): string[] =>
+  (p.organization_memberships ?? []).map((m) => membershipToAppRole(m.role))
+
+const isDepartmentManager = (p: PotentialManagerRow): boolean =>
+  (p.organization_memberships ?? []).some((m) => m.role === 'department_manager')
 
 interface PotentialManager {
   id: string
@@ -75,7 +82,7 @@ const isValidUUID = (id: string | null | undefined): boolean => {
   return uuidRegex.test(id)
 }
 
-const MANAGER_ROLES = ['administrator', 'super_admin', 'training_manager', 'knowledge_manager', 'corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']
+const MANAGER_ROLES = ['administrator', 'training_manager', 'knowledge_manager']
 
 export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
   const { currentOrganization, organizations, isPlatformAdmin } = useTenant()
@@ -303,8 +310,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           full_name,
           job_title,
           staff_id,
-          user_roles(role),
-          organization_memberships(hotel_id, department_id)
+          organization_memberships(role, hotel_id, department_id)
         `)
         .eq('is_active', true)
 
@@ -316,8 +322,8 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
 
       return rows
         .filter((p: PotentialManagerRow) => {
-          const roles = p.user_roles?.map((r) => r.role) || []
-          const hasManagerRole = roles.some((r: string) => MANAGER_ROLES.includes(r))
+          const roles = rowRoles(p)
+          const hasManagerRole = isDepartmentManager(p) || roles.some((r: string) => MANAGER_ROLES.includes(r))
           if (!hasManagerRole) return false
 
           // Check if they're in the same department or property
@@ -334,8 +340,8 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           full_name: p.full_name,
           job_title: p.job_title,
           staff_id: p.staff_id,
-          roles: p.user_roles?.map((r) => r.role) || [],
-          isDeptHead: (p.user_roles?.map((r) => r.role) || []).includes('department_head')
+          roles: rowRoles(p),
+          isDeptHead: isDepartmentManager(p)
         }))
         // Sort: department heads first, then by name
         .sort((a: PotentialManager, b: PotentialManager) => {
@@ -376,8 +382,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           full_name,
           job_title,
           staff_id,
-          user_roles(role),
-          organization_memberships(hotel_id, department_id)
+          organization_memberships(role, hotel_id, department_id)
         `)
         .eq('is_active', true)
         .or(`full_name.ilike.%${escaped}%,staff_id.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
@@ -389,16 +394,16 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
 
       return rows
         .filter((p: PotentialManagerRow) => {
-          const roles = p.user_roles?.map((r) => r.role) || []
-          return roles.some((r: string) => MANAGER_ROLES.includes(r))
+          const roles = rowRoles(p)
+          return isDepartmentManager(p) || roles.some((r: string) => MANAGER_ROLES.includes(r))
         })
         .map((p: PotentialManagerRow): PotentialManager => ({
           id: p.id,
           full_name: p.full_name,
           job_title: p.job_title,
           staff_id: p.staff_id,
-          roles: p.user_roles?.map((r) => r.role) || [],
-          isDeptHead: (p.user_roles?.map((r) => r.role) || []).includes('department_head')
+          roles: rowRoles(p),
+          isDeptHead: isDepartmentManager(p)
         }))
         .sort((a: PotentialManager, b: PotentialManager) => a.full_name.localeCompare(b.full_name))
     },
@@ -429,23 +434,22 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
   const loadUserData = useCallback(async () => {
     if (!user) return
 
-    // Load roles
-    const { data: rolesData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-
-    if (rolesData && rolesData.length > 0) {
-      setRole(rolesData[0].role)
-      setOriginalRole(rolesData[0].role)
-    }
-
-    // Load properties / hotels and departments from memberships
+    // Role, hotels and departments all come from the user's memberships.
     const { data: membershipData } = await supabase
       .from('organization_memberships')
-      .select('hotel_id, department_id')
+      .select('role, organization_id, hotel_id, department_id, is_primary')
       .eq('user_id', user.id)
       .eq('is_active', true)
+
+    const scopedMembership =
+      membershipData?.find((m) => m.organization_id === currentOrganization?.id) ??
+      membershipData?.find((m) => m.is_primary) ??
+      membershipData?.[0]
+    if (scopedMembership) {
+      const appRole = membershipToAppRole(scopedMembership.role)
+      setRole(appRole)
+      setOriginalRole(appRole)
+    }
 
     if (membershipData) {
       setSelectedProperties(
@@ -585,54 +589,50 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
 
       if (profileError) throw profileError
 
-      // Update role (insert-first, then cleanup stale roles).
-      // This avoids leaving the user with no role if insertion fails.
-      if (role) {
-        const { error: upsertRoleErr } = await supabase
-          .from('user_roles')
-          .upsert({ user_id: user.id, role }, { onConflict: 'user_id,role', ignoreDuplicates: true })
-        if (upsertRoleErr) throw upsertRoleErr
-
-        const { error: cleanupRoleErr } = await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', user.id)
-          .neq('role', role)
-        if (cleanupRoleErr) throw cleanupRoleErr
-      }
-
-      // Update organization memberships (hotel and department scope)
+      // Roles live on organization_memberships (user_roles is a read-only view).
       const primaryHotelId = selectedProperties.find((id) => isValidUUID(id)) || null
       const primaryDeptId = selectedDepartments.find((id) => isValidUUID(id)) || null
-      const tenantRole = role === 'administrator' || role === 'corporate_admin' || role === 'super_admin'
-        ? 'organization_admin'
-        : role === 'training_manager'
-        ? 'training_manager'
-        : role === 'property_manager'
-        ? 'hotel_admin'
-        : role === 'department_head'
-        ? 'department_manager'
-        : 'learner'
 
       const finalOrgId = targetOrgId || user?.organization_id || currentOrganization?.id
       if (finalOrgId) {
-        await supabase
+        const { error: orgErr } = await supabase
           .from('profiles')
           .update({ organization_id: finalOrgId })
           .eq('id', user.id)
+        if (orgErr) throw orgErr
 
-        await supabase
+        const { data: existing, error: existingErr } = await supabase
           .from('organization_memberships')
-          .upsert({
-            user_id: user.id,
-            organization_id: finalOrgId,
-            hotel_id: primaryHotelId,
-            department_id: primaryDeptId,
-            role: tenantRole as any,
-            is_active: true,
-            is_primary: true,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'organization_id,user_id' })
+          .select('id, role')
+          .eq('user_id', user.id)
+          .eq('organization_id', finalOrgId)
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (existingErr) throw existingErr
+
+        // Keep a more specific membership role (e.g. organization_owner, hotel_admin)
+        // when it already maps to the chosen platform role.
+        const membershipRole =
+          existing && membershipToAppRole(existing.role) === role
+            ? existing.role
+            : appRoleToMembershipRole(role)
+
+        const membershipFields = {
+          hotel_id: primaryHotelId,
+          department_id: primaryDeptId,
+          role: membershipRole,
+          is_active: true,
+          is_primary: true,
+          updated_at: new Date().toISOString(),
+        }
+
+        const { error: membershipErr } = existing
+          ? await supabase.from('organization_memberships').update(membershipFields).eq('id', existing.id)
+          : await supabase
+              .from('organization_memberships')
+              .insert({ ...membershipFields, user_id: user.id, organization_id: finalOrgId })
+        if (membershipErr) throw membershipErr
       }
     },
     onSuccess: () => {

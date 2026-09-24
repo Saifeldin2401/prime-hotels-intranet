@@ -1,34 +1,10 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { resolveServiceRoleToken } from "../_shared/auth.ts";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+// Used to call sibling functions (send-email), which check this same env key.
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-function isAuthorizedServiceRoleRequest(
-  authHeader: string | null,
-  key: string,
-): boolean {
-  if (!key) return false;
-  const expected = `Bearer ${key}`;
-  const actual = authHeader ?? "";
-  if (actual.length !== expected.length) return false;
-
-  const a = new TextEncoder().encode(actual);
-  const b = new TextEncoder().encode(expected);
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a[i] ^ b[i];
-  }
-  return diff === 0;
-}
-
-function getServiceRoleToken(authHeader: string | null): string | null {
-  if (!authHeader || !serviceRoleKey) return null;
-  const token = authHeader.startsWith("Bearer ")
-    ? authHeader.slice("Bearer ".length).trim()
-    : authHeader.trim();
-  return token === serviceRoleKey ? token : null;
-}
 
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -40,26 +16,24 @@ Deno.serve(async (req) => {
     // ===================================
     // SECURITY CHECK - Internal Crons Only
     // ===================================
-    const authHeader = req.headers.get("Authorization");
-    const serviceRoleJwt = getServiceRoleToken(authHeader);
+    const serviceRoleToken = await resolveServiceRoleToken(
+      req.headers.get("Authorization"),
+    );
 
-    if (!isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)) {
+    if (!serviceRoleToken) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabase = createClient(
-      supabaseUrl,
-      serviceRoleJwt ?? serviceRoleKey,
-    );
+    const supabase = createClient(supabaseUrl, serviceRoleToken);
 
     const now = new Date();
 
     // 1. Fetch all active module assignments to process reminders
     const { data: upcomingAssignments, error: upcomingError } = await supabase
-      .from("learning_assignments")
+      .from("training_assignment_rules")
       .select(
         `
               id,
@@ -69,10 +43,12 @@ Deno.serve(async (req) => {
               notify_on_due,
               reminder_days_before,
               target_type,
-              target_id
+              target_id,
+              target_user_ids
             `,
       )
       .eq("content_type", "module")
+      .eq("is_active", true)
       .or("is_deleted.is.null,is_deleted.eq.false");
 
     if (upcomingError) throw upcomingError;
@@ -108,12 +84,16 @@ Deno.serve(async (req) => {
     }
 
     for (const assignment of upcomingAssignments || []) {
-      const targets = await resolveAssignmentTargets(
-        supabase,
-        assignment.target_type,
-        assignment.target_id,
-        assignment.organization_id,
-      );
+      // Scoped assignments snapshot their recipients in target_user_ids.
+      const targets = Array.isArray(assignment.target_user_ids) &&
+          assignment.target_user_ids.length > 0
+        ? await resolveUsersByIds(supabase, assignment.target_user_ids)
+        : await resolveAssignmentTargets(
+          supabase,
+          assignment.target_type,
+          assignment.target_id,
+          assignment.organization_id,
+        );
       if (targets.length === 0) continue;
 
       const moduleTitle =
@@ -405,6 +385,18 @@ function resolveReminderWindow(
   return null;
 }
 
+async function resolveUsersByIds(
+  supabase: ReturnType<typeof createClient>,
+  userIds: string[],
+): Promise<TargetUser[]> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, email, full_name")
+    .in("id", userIds)
+    .eq("is_active", true);
+  return ((data || []) as TargetUser[]).filter((u) => u?.id && u?.email);
+}
+
 async function resolveAssignmentTargets(
   supabase: ReturnType<typeof createClient>,
   targetType: string,
@@ -421,24 +413,20 @@ async function resolveAssignmentTargets(
   };
 
   switch (targetType) {
-    case "everyone": {
-      if (orgId) {
-        const { data } = await supabase
-          .from("organization_memberships")
-          .select("profiles(id, email, full_name)")
-          .eq("organization_id", orgId)
-          .eq("is_active", true);
-        return dedupe(
-          (data || [])
-            .map((u: any) => u.profiles)
-            .filter(Boolean) as TargetUser[],
-        );
-      }
+    case "everyone":
+    case "organization": {
+      // "Everyone" always means everyone in the rule's own organization.
+      if (!orgId) return [];
       const { data } = await supabase
-        .from("profiles")
-        .select("id, email, full_name")
+        .from("organization_memberships")
+        .select("profiles(id, email, full_name)")
+        .eq("organization_id", orgId)
         .eq("is_active", true);
-      return dedupe((data || []) as TargetUser[]);
+      return dedupe(
+        (data || [])
+          .map((u: any) => u.profiles)
+          .filter(Boolean) as TargetUser[],
+      );
     }
     case "user": {
       if (!targetId) return [];
@@ -480,11 +468,13 @@ async function resolveAssignmentTargets(
       );
     }
     case "role": {
-      if (!targetId) return [];
+      if (!targetId || !orgId) return [];
       const { data } = await supabase
-        .from("user_roles")
+        .from("organization_memberships")
         .select("profiles(id, email, full_name)")
-        .eq("role", targetId);
+        .eq("organization_id", orgId)
+        .eq("role", targetId)
+        .eq("is_active", true);
       return dedupe(
         (data || [])
           .map((u: any) => u.profiles)

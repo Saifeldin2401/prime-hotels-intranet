@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
+import { membershipToAppRole } from '@/lib/membershipRoles'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -74,8 +75,7 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
           id,
           full_name,
           job_title,
-          user_roles!inner(role),
-          organization_memberships(hotel_id)
+          organization_memberships(role, hotel_id, is_active)
         `)
                 .eq('is_active', true)
                 .order('full_name')
@@ -94,12 +94,17 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
 
             if (error) throw error
 
-            // Filter to managers/supervisors only (not staff)
-            const filtered = (data || []).filter((p) => {
-                const role = p.user_roles?.[0]?.role
-                return role && role !== 'staff'
-            })
-            return filtered as unknown as (Profile & { user_roles: { role: string }[] })[]
+            // Managers/supervisors only: someone holding more than a learner membership.
+            // `user_roles` keeps the shape ManagerSelect renders (roles derive from memberships).
+            return (data || [])
+                .map((p) => ({
+                    ...p,
+                    user_roles: (p.organization_memberships || [])
+                        .filter((m) => m.is_active !== false)
+                        .map((m) => ({ role: membershipToAppRole(m.role) }))
+                        .filter((r) => r.role !== 'learner'),
+                }))
+                .filter((p) => p.user_roles.length > 0) as unknown as (Profile & { user_roles: { role: string }[] })[]
         }
     })
 }

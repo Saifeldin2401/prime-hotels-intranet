@@ -1,0 +1,27 @@
+-- =============================================================================
+-- Drop the permanently-broken verify_report_signature() function
+-- =============================================================================
+-- verify_report_signature(uuid, jsonb, text) is exposed API surface that can
+-- only ever throw:
+--
+--   1. Its body calls generate_report_signature(uuid, jsonb), which does not
+--      exist in this database (only in the unapplied archived migration
+--      supabase/migrations/archive/20260304110200_create_audit_integrity_functions.sql).
+--      => every call fails with 42883 "function ... does not exist".
+--   2. Even if that function were restored, it selects FROM audit_exports,
+--      a table that does not exist here either (its creating migration,
+--      20260304110100_create_audit_exports_table.sql, is also archived/unapplied).
+--   3. The archived design is not coherent: generate_report_signature() derives
+--      its signing key from current_setting('app.settings.audit_signing_key', true),
+--      which is unset on this project. That returns NULL, NULL || text is NULL,
+--      digest(NULL) is NULL -- so every "signature" would be NULL and every
+--      verification would return NULL, not a boolean. The "constant-time
+--      comparison" comment is also inaccurate: it is a plain `=` on hex text.
+--
+-- Nothing calls it: no frontend reference (only the generated DB types),
+-- no other function body references *_report_signature, and no RLS policy
+-- references it. A function that can only throw is worse than no function,
+-- so it is dropped rather than half-restored.
+-- =============================================================================
+
+DROP FUNCTION IF EXISTS public.verify_report_signature(uuid, jsonb, text);

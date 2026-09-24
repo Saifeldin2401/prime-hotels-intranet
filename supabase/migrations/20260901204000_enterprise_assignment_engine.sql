@@ -1,4 +1,4 @@
-﻿-- Migration: 20260901204000_enterprise_assignment_engine.sql
+-- Migration: 20260901204000_enterprise_assignment_engine.sql
 -- Description: Complete hierarchical organizational scoping engine for training assignments
 
 -- 1. Extend training_assignment_rules with explicit multi-tier organizational columns

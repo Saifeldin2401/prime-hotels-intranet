@@ -105,7 +105,7 @@ export default function EmployeeTrainingHistory({ userId }: EmployeeTrainingHist
             selected_options,
             is_correct,
             time_spent_seconds,
-            question:learning_questions (
+            question:unified_questions (
               id,
               question_text,
               explanation

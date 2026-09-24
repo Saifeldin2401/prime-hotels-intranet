@@ -1,11 +1,5 @@
 -- ============================================================================
 -- MIGRATION: fix_verify_mfa_code_complete_bypass
--- (this file also incorporates two immediately-following live migrations,
--- fix_generate_totp_hmac_schema_qualification and
--- fix_verify_mfa_code_backup_code_order_regression -- both discovered and
--- fixed while functionally testing this fix, folded into the final function
--- bodies below)
---
 -- verify_mfa_code(p_user_id, p_code) never actually computed/checked a TOTP
 -- value against mfa_secrets.secret. After the backup-code check, it only
 -- validated that p_code was a syntactically well-formed 6-digit string, then
@@ -16,22 +10,12 @@
 -- today, but a live bypass the moment enrollment ships.
 --
 -- Fix: implement real RFC 6238 TOTP verification using pgcrypto's hmac()
--- (already enabled, v1.3, lives in the 'extensions' schema -- schema-
--- qualified explicitly since generate_totp inherits the caller's
--- search_path and verify_mfa_code pins SET search_path TO 'public').
--- Added two internal helper functions (base32_decode, generate_totp) --
--- not granted to anon/authenticated, callable only from within SECURITY
--- DEFINER functions running as the object owner. Checks the current 30s
--- time step plus +/-1 step for clock drift tolerance (90s total window),
--- matching standard authenticator app behavior. Backup-code check runs
--- BEFORE the 6-digit-format validation (backup codes are not necessarily
--- numeric), preserving the original function's check order.
---
--- Verified: generate_totp('JBSWY3DPEHPK3PXP', 1700000000) == '324550',
--- cross-checked against an independent Python hmac/hashlib/base64
--- reference implementation of RFC 6238 -- exact match. Functional test:
--- wrong static code rejected, correct live TOTP accepted, backup code
--- accepted and consumed.
+-- (already enabled, v1.3). Added two internal helper functions
+-- (base32_decode, generate_totp) -- not granted to anon/authenticated,
+-- callable only from within SECURITY DEFINER functions running as the
+-- object owner. Checks the current 30s time step plus +/-1 step for clock
+-- drift tolerance (90s total window), matching standard authenticator app
+-- behavior (Google Authenticator, Authy, 1Password all use this).
 --
 -- Applied live via Supabase MCP apply_migration on 2026-08-02.
 -- ============================================================================
@@ -94,7 +78,7 @@ BEGIN
     counter_bytes := set_byte(counter_bytes, i, byte_val);
   END LOOP;
 
-  hmac_result := extensions.hmac(counter_bytes, key_bytes, 'sha1');
+  hmac_result := hmac(counter_bytes, key_bytes, 'sha1');
 
   offset_val := get_byte(hmac_result, length(hmac_result) - 1) & 15;
 
@@ -126,6 +110,13 @@ BEGIN
     SELECT * INTO v_secret FROM public.mfa_secrets WHERE user_id = p_user_id AND enabled = true;
     IF NOT FOUND THEN RETURN false; END IF;
 
+    IF p_code IS NULL OR length(p_code) != 6 OR p_code !~ '^\d+$' THEN
+        INSERT INTO public.system_events (event_type, actor_id, entity_type, entity_id, metadata)
+        VALUES ('security', p_user_id, 'mfa', p_user_id,
+            jsonb_build_object('security_event_type', 'mfa.verification_failed', 'severity', 'warning', 'reason', 'invalid_format'));
+        RETURN false;
+    END IF;
+
     IF p_code = ANY(v_secret.backup_codes) THEN
         UPDATE public.mfa_secrets SET backup_codes = array_remove(backup_codes, p_code), updated_at = now() WHERE user_id = p_user_id;
         INSERT INTO public.system_events (event_type, actor_id, entity_type, entity_id, metadata)
@@ -133,13 +124,6 @@ BEGIN
             jsonb_build_object('security_event_type', 'mfa.backup_code_used', 'severity', 'warning',
                 'code_prefix', substring(p_code, 1, 4)));
         RETURN true;
-    END IF;
-
-    IF p_code IS NULL OR length(p_code) != 6 OR p_code !~ '^\d+$' THEN
-        INSERT INTO public.system_events (event_type, actor_id, entity_type, entity_id, metadata)
-        VALUES ('security', p_user_id, 'mfa', p_user_id,
-            jsonb_build_object('security_event_type', 'mfa.verification_failed', 'severity', 'warning', 'reason', 'invalid_format'));
-        RETURN false;
     END IF;
 
     FOR v_step IN -1..1 LOOP

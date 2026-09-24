@@ -1,10 +1,5 @@
 -- ============================================================================
 -- MIGRATION: fix_promote_employee_and_bulk_reporting_auth_gaps
--- (this file also incorporates the immediately-following live migration
--- fix_promote_employee_wrong_table_and_columns, applied 2026-08-02 14:03:06 --
--- both are folded into the promote_employee body below since the second was
--- discovered while functionally testing the first)
---
 -- promote_employee(p_employee_id, p_new_role, ...) had NO authorization check
 -- whatsoever -- any authenticated user could call it with p_employee_id =
 -- their own auth.uid() and p_new_role = 'super_admin' for instant
@@ -19,8 +14,7 @@
 -- caller to specifically be corporate_admin or regional_admin -- a
 -- property-level HR user should not be able to grant system-admin access
 -- via this path even though they can promote within lower roles. Also force
--- v_caller (auth.uid()) as the recorded actor rather than trusting the
--- p_promoter_id parameter.
+-- p_promoter_id := auth.uid() rather than trusting the parameter.
 --
 -- bulk_update_reporting_lines(p_updates) had no authorization check at all
 -- -- any authenticated user could rewrite profiles.reporting_to for
@@ -55,45 +49,55 @@ BEGIN
         RAISE EXCEPTION 'Unauthorized: only corporate_admin or regional_admin may grant top-tier admin roles';
     END IF;
 
+    -- Get current date
     v_current_date := CURRENT_DATE;
 
+    -- Fetch current details
     SELECT job_title INTO v_old_job_title FROM public.profiles WHERE id = p_employee_id;
+
     SELECT role INTO v_old_role FROM public.user_roles WHERE user_id = p_employee_id LIMIT 1;
+
     SELECT department_id INTO v_old_department_id FROM public.user_departments WHERE user_id = p_employee_id LIMIT 1;
 
-    INSERT INTO public.employee_promotions (
+    -- Insert Promotion Record
+    INSERT INTO public.promotions (
         employee_id,
-        from_role,
-        to_role,
-        from_title,
-        to_title,
-        from_department_id,
-        to_department_id,
+        promoted_by,
+        old_role,
+        new_role,
+        old_job_title,
+        new_job_title,
+        old_department_id,
+        new_department_id,
         effective_date,
-        approved_by,
-        notes
+        notes,
+        status
     ) VALUES (
         p_employee_id,
-        v_old_role::text,
-        p_new_role::text,
+        v_caller,
+        v_old_role,
+        p_new_role,
         v_old_job_title,
         p_new_job_title,
         v_old_department_id,
         p_new_department_id,
         p_effective_date,
-        v_caller,
-        p_notes
+        p_notes,
+        CASE WHEN p_effective_date <= v_current_date THEN 'completed' ELSE 'pending' END
     ) RETURNING id INTO v_promotion_id;
 
     -- Apply changes IMMEDIATELY if date is today or present
     IF p_effective_date <= v_current_date THEN
+        -- Update Profile Title
         UPDATE public.profiles
         SET job_title = p_new_job_title, updated_at = NOW()
         WHERE id = p_employee_id;
 
+        -- Update Role (Delete old, Insert new to avoid constraint issues)
         DELETE FROM public.user_roles WHERE user_id = p_employee_id;
         INSERT INTO public.user_roles (user_id, role) VALUES (p_employee_id, p_new_role);
 
+        -- Update Department
         DELETE FROM public.user_departments WHERE user_id = p_employee_id;
         IF p_new_department_id IS NOT NULL THEN
             INSERT INTO public.user_departments (user_id, department_id)
@@ -121,10 +125,12 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized: only HR or admin roles may bulk-update reporting lines';
   END IF;
 
+  -- Validate input is an array
   IF jsonb_typeof(p_updates) != 'array' THEN
     RAISE EXCEPTION 'Updates must be a JSON array';
   END IF;
 
+  -- Process each update within the same transaction
   FOR v_update IN SELECT * FROM jsonb_array_elements(p_updates)
   LOOP
     v_employee_id := (v_update.value->>'employee_id')::UUID;
@@ -134,7 +140,9 @@ BEGIN
       ELSE (v_update.value->>'new_manager_id')::UUID
     END;
 
+    -- Check for circular reporting (uses existing trigger, but let's add explicit check)
     IF v_new_manager_id IS NOT NULL THEN
+      -- Check if new_manager_id reports to employee_id (would create circular)
       IF EXISTS (
         WITH RECURSIVE chain AS (
           SELECT reporting_to FROM profiles WHERE id = v_new_manager_id
@@ -148,6 +156,7 @@ BEGIN
       END IF;
     END IF;
 
+    -- Perform the update
     UPDATE profiles
     SET reporting_to = v_new_manager_id, updated_at = NOW()
     WHERE id = v_employee_id;

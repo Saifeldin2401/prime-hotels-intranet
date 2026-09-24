@@ -1,3 +1,4 @@
+
 -- Phase 2 (security, advisor priority-1): subscriptions + subscription_plans were created by
 -- migration 20260901140000 with RLS DISABLED -> anon key = full read/write of every tenant's
 -- billing status, plan, and limits.

@@ -80,6 +80,8 @@ describe('Route Persistence & Role Hydration Protection', () => {
       shouldRefreshUserData: vi.fn(),
       resetUserData: vi.fn(),
       setRolesLoading: vi.fn(),
+      activeOrganizationId: null,
+      setActiveOrganizationId: vi.fn(),
     })
 
     render(
@@ -131,6 +133,8 @@ describe('Route Persistence & Role Hydration Protection', () => {
       shouldRefreshUserData: vi.fn(),
       resetUserData: vi.fn(),
       setRolesLoading: vi.fn(),
+      activeOrganizationId: null,
+      setActiveOrganizationId: vi.fn(),
     })
 
     render(
@@ -181,6 +185,8 @@ describe('Route Persistence & Role Hydration Protection', () => {
       shouldRefreshUserData: vi.fn(),
       resetUserData: vi.fn(),
       setRolesLoading: vi.fn(),
+      activeOrganizationId: null,
+      setActiveOrganizationId: vi.fn(),
     })
 
     render(

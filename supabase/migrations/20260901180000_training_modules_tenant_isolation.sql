@@ -1,13 +1,14 @@
+
 -- Phase 2 (security): training_modules had NO tenant isolation. Migration 20260901140000 §9
 -- (which would have added it) never ran, and 20260901160000 skipped the table. It carried only
 -- the non-org-scoped p5_training_modules_* policies -> any org's content editor could
 -- read/write every other org's training modules. training_modules holds the only real course
--- data in the system today.
+-- data in the system.
 --
--- The write policy keeps the legacy global editor checks (is_content_author / is_training_manager)
+-- The write policy keeps the legacy global editor checks (is_content_author/is_training_manager)
 -- as a TRANSITIONAL OR, but always ANDed with the org-membership predicate, so a global
 -- training_manager can now only edit modules in their own org. Phase 3 (role unification)
--- removes the legacy checks once organization_memberships roles are the sole vocabulary.
+-- removes the legacy checks once membership roles are the sole vocabulary.
 
 ALTER TABLE public.training_modules ENABLE ROW LEVEL SECURITY;
 

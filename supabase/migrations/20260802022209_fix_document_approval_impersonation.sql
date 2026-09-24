@@ -18,11 +18,6 @@
 -- their own id as p_approver_id, and can_user_act_on_document_approval
 -- checks whether THAT (now-verified) id is a valid delegate.
 --
--- Verified via rolled-back functional tests: an attacker passing the real
--- approver's id as p_approver_id while authenticated as a different user
--- -> blocked with "Unauthorized: Approver ID mismatch"; the real approver
--- calling with their own id -> succeeds and publishes the document.
---
 -- Applied live via Supabase MCP apply_migration on 2026-08-02.
 -- ============================================================================
 

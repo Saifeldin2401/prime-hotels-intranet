@@ -24,9 +24,6 @@
 --    be the employee themselves, their direct manager (reporting_to), or
 --    HR/admin.
 --
--- Verified via rolled-back functional tests: unrelated property_manager ->
--- blocked; self-request -> succeeds.
---
 -- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 

@@ -1,29 +1,53 @@
 -- ============================================================================
 -- MIGRATION: revoke_remaining_unnecessary_anon_execute_grants
--- create_request_for_invoice() and find_finance_approver() (added by the
--- Finance module build, 20260727012727_add_finance_module.sql) were left
--- executable by PUBLIC/anon by Postgres's implicit default -- same class of
--- oversight caught repeatedly this session. Neither has any legitimate
--- pre-auth caller: create_request_for_invoice is only ever invoked by the
--- invoice-insert trigger (SECURITY DEFINER, runs as the trigger owner
--- regardless of caller grants), and find_finance_approver is only called by
--- that same trigger's internal logic. Revoked anon/public execute; left
--- `authenticated` on find_finance_approver since it doesn't touch anything
--- caller-specific and the frontend approval-workflow UI reads its result
--- indirectly through the request/request_steps tables it populates.
+-- Completes the anon-executable-function review started in earlier rounds
+-- (25 originally flagged; 10 fixed round 2, 4 more fixed in the audit-report
+-- round). This closes out the remaining list:
 --
--- Reconstructed from live grant state for local drift-tracking -- the
--- original apply_migration call was made in a portion of this session that
--- was summarized before this file could be written; verified to match
--- current live grants exactly (see routine_privileges check below).
+-- Defense-in-depth only (already internally guarded, not exploitable):
+--   get_announcement_compliance_breakdown, get_top_events
+-- Real gaps (no internal auth check, genuinely should not be anon-callable):
+--   is_task_creator (ownership-probing), request_knowledge_content
+--   (unauthenticated write / spam vector -- inserts system_events with
+--   actor_id=NULL for anon callers)
+-- Own new Finance functions, made public only by Postgres's PUBLIC-execute
+-- default (same class of oversight found and fixed in round 2 for 9 of 10
+-- functions there): create_request_for_invoice (trigger-only, never meant
+-- to be called directly by anyone) and find_finance_approver (internal
+-- helper, no auth check, minor info leak about who approves for a property).
 --
--- Applied live via Supabase MCP apply_migration; this file mirrors it.
+-- Left unchanged (verified legitimate/low-risk): check_password_reuse,
+-- clear_failed_login_attempts, complete_password_reset, lock_account,
+-- record_failed_login_attempt (all pre-auth flows with proper internal
+-- guards from earlier rounds), verify_certificate (must work pre-login by
+-- design), track_related_article_click/impression and
+-- increment_article_view_count (anonymous analytics/view-counters, no
+-- content exposed, standard pattern).
+--
+-- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 
-REVOKE EXECUTE ON FUNCTION public.create_request_for_invoice() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.create_request_for_invoice() FROM anon;
-REVOKE EXECUTE ON FUNCTION public.create_request_for_invoice() FROM authenticated;
+REVOKE ALL ON FUNCTION public.get_announcement_compliance_breakdown(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_announcement_compliance_breakdown(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_announcement_compliance_breakdown(uuid) TO authenticated, service_role;
 
-REVOKE EXECUTE ON FUNCTION public.find_finance_approver(uuid) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.find_finance_approver(uuid) FROM anon;
-GRANT EXECUTE ON FUNCTION public.find_finance_approver(uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.get_top_events(integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_top_events(integer) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_top_events(integer) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.is_task_creator(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.is_task_creator(uuid, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_task_creator(uuid, uuid) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.request_knowledge_content(text, text, uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.request_knowledge_content(text, text, uuid, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.request_knowledge_content(text, text, uuid, uuid) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.create_request_for_invoice() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.create_request_for_invoice() FROM anon;
+REVOKE ALL ON FUNCTION public.create_request_for_invoice() FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.create_request_for_invoice() TO service_role;
+
+REVOKE ALL ON FUNCTION public.find_finance_approver(uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.find_finance_approver(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.find_finance_approver(uuid) TO authenticated, service_role;

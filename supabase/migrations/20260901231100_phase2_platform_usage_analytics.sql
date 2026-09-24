@@ -1,9 +1,3 @@
--- ============================================================================
--- Phase 2 — real cross-tenant usage analytics for the Platform Analytics page
--- (replaces the hard-coded 42%/28%/100% quota bars).
--- NOTE: training_status enum = {not_started,in_progress,completed,expired};
---       "passed" is a separate boolean column, not an enum value.
--- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.get_platform_usage_analytics()
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
@@ -26,7 +20,7 @@ BEGIN
       'ai_jobs_failed',  (SELECT count(*) FROM public.course_generation_jobs WHERE status IN ('failed','error')),
       'deployments',     (SELECT count(*) FROM public.master_content_deployments),
       'training_records',(SELECT count(*) FROM public.training_progress WHERE is_deleted = false),
-      'training_completed',(SELECT count(*) FROM public.training_progress WHERE is_deleted = false AND (status = 'completed' OR passed = true))
+      'training_completed',(SELECT count(*) FROM public.training_progress WHERE is_deleted = false AND status IN ('completed','passed'))
     ),
     'ai_credits', jsonb_build_object(
       'used',  COALESCE((SELECT sum(ai_credits_used_this_month) FROM public.organizations WHERE is_deleted = false), 0),
@@ -50,7 +44,7 @@ BEGIN
         'max_learners', o.max_learners,
         'training_completion_pct', (
           SELECT CASE WHEN count(*) = 0 THEN NULL
-                 ELSE round(100.0 * count(*) FILTER (WHERE tp.status = 'completed' OR tp.passed = true) / count(*), 1) END
+                 ELSE round(100.0 * count(*) FILTER (WHERE tp.status IN ('completed','passed')) / count(*), 1) END
           FROM public.training_progress tp
           WHERE tp.organization_id = o.id AND tp.is_deleted = false
         )
@@ -58,6 +52,7 @@ BEGIN
       FROM public.organizations o WHERE o.is_deleted = false
     ), '[]'::jsonb)
   ) INTO v_result;
+
   RETURN v_result;
 END;
 $function$;

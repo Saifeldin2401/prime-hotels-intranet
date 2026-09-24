@@ -114,13 +114,7 @@ export const platformService = {
         .eq('is_master_template', true)
         .eq('is_deleted', false)
 
-      const { count: cMasterCount } = await supabase
-        .from('courses')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_master_template', true)
-        .eq('is_deleted', false)
-
-      const totalMasterCourses = (tmMasterCount || 0) > 0 ? (tmMasterCount || 0) : (cMasterCount || 0)
+      const totalMasterCourses = tmMasterCount || 0
 
       // 6. Deployments count
       const { count: totalDeployments } = await supabase
@@ -566,23 +560,12 @@ export const platformService = {
       .eq('is_deleted', false)
       .order('created_at', { ascending: false })
 
-    if (!tmError && tmData && tmData.length > 0) {
-      return tmData
+    if (tmError) {
+      console.error('Error fetching master courses:', tmError)
+      return []
     }
 
-    const { data: cData, error: cError } = await supabase
-      .from('courses')
-      .select('*')
-      .eq('is_master_template', true)
-      .eq('is_deleted', false)
-      .order('created_at', { ascending: false })
-
-    if (cError) {
-      console.error('Error fetching master courses:', cError)
-      return tmData || []
-    }
-
-    return cData || []
+    return tmData || []
   },
 
   async createMasterSop(params: {
@@ -1039,16 +1022,7 @@ export const platformService = {
           .eq('id', masterId)
           .maybeSingle()
 
-        if (tmMaster) {
-          masterModule = tmMaster
-        } else {
-          const { data: cMaster } = await supabase
-            .from('courses')
-            .select('*')
-            .eq('id', masterId)
-            .maybeSingle()
-          masterModule = cMaster
-        }
+        masterModule = tmMaster
 
         if (!masterModule) return null
 
@@ -1229,16 +1203,7 @@ export const platformService = {
           .eq('id', masterId)
           .maybeSingle()
 
-        if (tmMaster) {
-          masterModule = tmMaster
-        } else {
-          const { data: cMaster } = await supabase
-            .from('courses')
-            .select('*')
-            .eq('id', masterId)
-            .maybeSingle()
-          masterModule = cMaster
-        }
+        masterModule = tmMaster
 
         if (!masterModule) throw new Error('Master Course not found')
 

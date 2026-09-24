@@ -81,7 +81,7 @@ export function ScheduleSessionModal({
     async function loadCourses() {
       setIsLoadingCourses(true)
       try {
-        let q = supabase.from('courses').select('id, title').order('title')
+        let q = supabase.from('training_modules').select('id, title').eq('is_deleted', false).order('title')
         if (organizationId) {
           q = q.eq('organization_id', organizationId)
         }

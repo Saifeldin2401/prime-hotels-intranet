@@ -1,11 +1,3 @@
--- ============================================================================
--- Phase 1 follow-up — align get_platform_user_directory with the new
--- platform-operator identity model (migration 20260901230000).
---   * is_platform_user column  -> real is_platform_operator(user)
---   * platform_role column     -> highest active platform_role_assignments role
---   * p_role filter also matches platform_role_assignments
--- ============================================================================
-
 CREATE OR REPLACE FUNCTION public.get_platform_user_directory(
   p_search text DEFAULT NULL::text,
   p_org_id uuid DEFAULT NULL::uuid,

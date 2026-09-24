@@ -1,3 +1,4 @@
+
 -- Phase 9 (AI grounding): search_knowledge_articles is SECURITY DEFINER over public.documents
 -- with no tenant predicate -> it ranked/returned document ids across every organization.
 -- rag.ts re-filters via a plain documents query (RLS applies there), but any other caller

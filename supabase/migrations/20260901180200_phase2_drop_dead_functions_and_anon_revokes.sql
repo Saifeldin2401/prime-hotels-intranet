@@ -1,3 +1,4 @@
+
 -- Phase 2 (security triage): drop functions that reference tables removed by the domain purge
 -- (all already runtime-broken), revoke anon EXECUTE on mutating/enumeration KB + analytics
 -- functions, and pin the 5 mutable search_paths flagged by the advisor.
@@ -30,7 +31,8 @@ DROP FUNCTION IF EXISTS public.export_birthdays_for_month(integer) CASCADE;
 DROP FUNCTION IF EXISTS public.update_request_details(uuid, jsonb) CASCADE;
 DROP FUNCTION IF EXISTS public.execute_scheduled_report(uuid) CASCADE;
 
--- 2. Revoke anon EXECUTE on KB mutation + enumeration + analytics functions.
+-- 2. Revoke anon EXECUTE on KB mutation + enumeration + analytics functions (no legitimate
+--    anonymous caller; keeps verify_certificate / password-reset / RLS helpers untouched).
 REVOKE EXECUTE ON FUNCTION public.publish_document_to_kb(uuid,uuid,text,uuid,uuid,uuid) FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.set_document_internal(uuid,uuid) FROM anon, public;
 REVOKE EXECUTE ON FUNCTION public.remove_document_from_kb(uuid,uuid,text) FROM anon, public;

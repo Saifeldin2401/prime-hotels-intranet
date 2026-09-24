@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { classifyAuthError } from '@/lib/authErrorUtils'
+import { appRolesFromMemberships } from '@/lib/membershipRoles'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { useCallback, useRef } from 'react'
 
@@ -168,8 +169,7 @@ export function useUserDataLoader(
           if (user) setProfile(buildFallbackProfile(user))
         }
 
-        // ── Load roles, organization memberships, and hotels in parallel ───────
-        const rolesPromise = supabase.from('user_roles').select('*').eq('user_id', userId)
+        // ── Load organization memberships (the only role source) and hotels ────
         const membershipsPromise = supabase
           .from('organization_memberships')
           .select('*, hotel:hotels(*), department:departments(*)')
@@ -177,49 +177,31 @@ export function useUserDataLoader(
           .eq('is_active', true)
         const hotelsPromise = supabase.from('hotels').select('*').eq('is_deleted', false)
 
-        const [rolesResult, membershipsResult, hotelsResult] = await Promise.allSettled([
-          withTimeout(rolesPromise as any, 10000, 'Roles load'),
+        const [membershipsResult, hotelsResult] = await Promise.allSettled([
           withTimeout(membershipsPromise as any, 10000, 'Memberships load'),
           withTimeout(hotelsPromise as any, 10000, 'Hotels load'),
         ]) as [
-          PromiseSettledResult<{ data?; error? }>,
           PromiseSettledResult<{ data?; error? }>,
           PromiseSettledResult<{ data?; error? }>,
         ]
 
         if (isStale()) { setRolesLoading(false); return }
 
-        // Handle roles & memberships
+        // Roles are organization-scoped: one entry per (organization, role).
+        // UserDataContext narrows them to the active organization.
         let userRoles = [] as UserRole[]
-        if (rolesResult.status === 'fulfilled') {
-          const { data: directRoles, error: rolesError } = rolesResult.value
-          if (rolesError) {
-            if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
-            console.warn('Error loading roles:', rolesError)
-          } else {
-            userRoles = directRoles || []
-          }
-        }
-
-        // Map membership roles into user roles if user_roles is sparse
         if (membershipsResult.status === 'fulfilled') {
           const { data: memberships, error: membError } = membershipsResult.value
-          if (!membError && Array.isArray(memberships)) {
-            memberships.forEach((m: any) => {
-              const mappedRole = m.role === 'organization_owner' || m.role === 'organization_admin'
-                ? 'administrator'
-                : m.role === 'training_manager' || m.role === 'hotel_admin'
-                ? 'training_manager'
-                : m.role === 'knowledge_manager'
-                ? 'knowledge_manager'
-                : m.role === 'department_manager' || m.role === 'author'
-                ? 'author'
-                : 'learner'
-
-              if (!userRoles.some((r) => r.role === mappedRole)) {
-                userRoles.push({ id: m.id, user_id: userId, role: mappedRole as any })
-              }
-            })
+          if (membError) {
+            if (await handleQueryAuthError('Memberships', membError)) { setRolesLoading(false); return }
+            console.warn('Error loading memberships:', membError)
+          } else {
+            userRoles = appRolesFromMemberships(memberships).map((r) => ({
+              id: `${r.organization_id ?? 'none'}:${r.role}`,
+              user_id: userId,
+              role: r.role,
+              organization_id: r.organization_id,
+            }))
           }
         }
 

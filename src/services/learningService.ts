@@ -484,7 +484,7 @@ export const learningService = {
             .from('learning_quizzes')
             .select(`
                 *,
-                questions:learning_quiz_questions(count)
+                questions:unified_quiz_questions(count)
             `)
             .order('created_at', { ascending: false })
             .eq('is_deleted', false)
@@ -506,15 +506,17 @@ export const learningService = {
     },
 
     async getQuiz(id: string) {
-        const { data, error } = await supabase
+        // Editor-side read (AssessmentBuilder): includes the answer key, which RLS
+        // only returns to the question's authors / content editors.
+        const { data: raw, error } = await supabase
             .from('learning_quizzes')
             .select(`
                 *,
-                questions:learning_quiz_questions(
+                questions:unified_quiz_questions(
                     *,
-                    question:knowledge_questions(
+                    question:unified_questions(
                         *,
-                        options:knowledge_question_options(*)
+                        options:unified_question_options(*)
                     )
                 )
             `)
@@ -522,6 +524,17 @@ export const learningService = {
             .single()
 
         if (error) throw error
+
+        // Keep the KnowledgeQuestion shape (difficulty_level) the builder expects.
+        const data = {
+            ...raw,
+            questions: (raw.questions || []).map((link) => ({
+                ...link,
+                question: link.question
+                    ? { ...link.question, difficulty_level: link.question.difficulty }
+                    : link.question,
+            })),
+        } as unknown as LearningQuiz & { randomize_questions?: boolean | null; randomize_answers?: boolean | null }
 
         if (data.questions) {
             data.questions = data.questions.filter((questionLink) => {
@@ -616,7 +629,7 @@ export const learningService = {
     // ==========================================
 
     async addQuestionToQuiz(quizId: string, questionId: string, order: number) {
-        // Write to unified_quiz_questions; learning_quiz_questions view provides read compat
+        // Quiz membership lives in unified_quiz_questions
         const { data, error } = await supabase
             .from('unified_quiz_questions')
             .insert({
@@ -757,6 +770,8 @@ export const learningService = {
 
         orSegments.push(`and(target_type.eq.everyone,${notDeletedFilter})`)
         orSegments.push(`and(target_type.eq.user,target_id.eq.${user.id},${notDeletedFilter})`)
+        // Scoped assignments (create_scoped_training_assignment) snapshot their recipients.
+        orSegments.push(`and(target_user_ids.cs.{${user.id}},${notDeletedFilter})`)
 
         roleIds.forEach((role) => {
             orSegments.push(`and(target_type.eq.role,target_id.eq.${role},${notDeletedFilter})`)
@@ -781,31 +796,6 @@ export const learningService = {
 
         if (rulesError) throw rulesError
 
-        // Query direct employee assignments from learning_assignments (primary enterprise table)
-        const { data: directData, error: directError } = await supabase
-            .from('learning_assignments')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-
-        if (directError) {
-            console.error('Error fetching direct learning_assignments:', directError)
-        }
-
-        // Map direct assignments to uniform AssignmentRow structure
-        const directAssignments: AssignmentRow[] = (directData || []).map((row) => ({
-            id: row.id,
-            target_type: 'user' as const,
-            target_id: row.user_id,
-            content_type: 'module' as const,
-            content_id: row.training_module_id || row.course_id || '',
-            due_date: row.due_date,
-            priority: (row.is_mandatory ? 'compliance' : 'normal') as AssignmentPriority,
-            assigned_by: row.assigned_by,
-            instructions: row.notes,
-            created_at: row.created_at,
-        })).filter(a => Boolean(a.content_id))
-
         // Query user's existing progress to include any self-enrolled or actively studied modules
         const { data: userProgressData, error: userProgressError } = await supabase
             .from('training_progress')
@@ -817,7 +807,7 @@ export const learningService = {
         }
 
         const ruleAssignments = (rulesData || []) as AssignmentRow[]
-        const combinedAssignments = [...directAssignments, ...ruleAssignments]
+        const combinedAssignments = [...ruleAssignments]
         const assignedContentIds = new Set(combinedAssignments.map(a => a.content_id).filter(Boolean))
 
         // Also include any module the user has started that wasn't formally assigned
@@ -910,7 +900,7 @@ export const learningService = {
                 } as LearningAssignment
             })
 
-        // Enrich with titles and details from assessments, training_modules, and courses
+        // Enrich with titles and details from learning_quizzes and training_modules
         const quizIds = filteredAssignments
             .filter(a => a.content_type === 'quiz')
             .map(a => a.content_id)
@@ -919,19 +909,12 @@ export const learningService = {
             .filter(a => a.content_type === 'module')
             .map(a => a.content_id)
 
-        const [quizResult, moduleResult, tmResult] = await Promise.all([
+        const [quizResult, tmResult] = await Promise.all([
             quizIds.length > 0
                 ? supabase
-                    .from('assessments')
+                    .from('learning_quizzes')
                     .select('id, title, description, time_limit_minutes, status')
                     .in('id', quizIds)
-                    .eq('is_deleted', false)
-                : Promise.resolve({ data: [], error: null }),
-            moduleIds.length > 0
-                ? supabase
-                    .from('courses')
-                    .select('id, title, description, estimated_duration_minutes, status')
-                    .in('id', moduleIds)
                     .eq('is_deleted', false)
                 : Promise.resolve({ data: [], error: null }),
             moduleIds.length > 0
@@ -944,7 +927,6 @@ export const learningService = {
         ])
 
         if (quizResult?.error) console.error('Error fetching quizzes:', quizResult.error)
-        if (moduleResult?.error) console.error('Error fetching modules from courses:', moduleResult.error)
         if (tmResult?.error) console.error('Error fetching modules from training_modules:', tmResult.error)
 
         const quizMap = new Map((quizResult?.data || []).map((q: {
@@ -962,9 +944,6 @@ export const learningService = {
         }
 
         const moduleMap = new Map<string, ModuleDetails>()
-        ;(moduleResult?.data || []).forEach((m: ModuleDetails) => {
-            if (m.id) moduleMap.set(m.id, m)
-        })
         ;(tmResult?.data || []).forEach((tm: ModuleDetails) => {
             if (tm.id) {
                 const existing = moduleMap.get(tm.id)

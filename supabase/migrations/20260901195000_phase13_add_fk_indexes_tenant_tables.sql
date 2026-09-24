@@ -1,6 +1,8 @@
+
 -- Phase 13 (perf): every multi-tenant RLS policy filters on organization_id (and often
 -- user_id / a parent FK). None of those columns were indexed. Add covering btree indexes
--- for the FK columns on the tenant + learning-domain tables. Idempotent.
+-- for the FK columns on the tenant + learning-domain tables so the policies stay fast as
+-- tenants grow. Idempotent.
 DO $$
 DECLARE r record;
 BEGIN
@@ -40,6 +42,7 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Common composite indexes for the hot RLS + query patterns.
 CREATE INDEX IF NOT EXISTS idx_training_progress_user_org ON public.training_progress (user_id, organization_id);
 CREATE INDEX IF NOT EXISTS idx_training_modules_org_status ON public.training_modules (organization_id, status) WHERE COALESCE(is_deleted,false) = false;
 CREATE INDEX IF NOT EXISTS idx_documents_org_status ON public.documents (organization_id, status) WHERE COALESCE(is_deleted,false) = false;

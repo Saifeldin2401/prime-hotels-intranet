@@ -13,11 +13,6 @@
 -- Fix: fetch the request's property_id/department_id, call
 -- can_approve_leave(auth.uid(), ...) before updating, reject if false.
 --
--- Verified via rolled-back functional tests: an unrelated employee (no
--- role) attempting to approve another employee's pending request ->
--- blocked with "Unauthorized: you are not authorized to approve this leave
--- request"; a regional_admin -> succeeds.
---
 -- Applied live via Supabase MCP apply_migration on 2026-08-02.
 -- ============================================================================
 

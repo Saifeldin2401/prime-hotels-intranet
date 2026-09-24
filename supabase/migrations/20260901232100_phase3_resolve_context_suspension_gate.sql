@@ -1,10 +1,3 @@
--- ============================================================================
--- Phase 3 — resolve_account_context() gains suspension awareness:
---   * tenant_memberships now carry lifecycle_status + operational flag
---   * a user whose every org is suspended/archived routes to /suspended
---   * top-role routing ignores non-operational orgs
---   * new top-level field: all_orgs_suspended
--- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.resolve_account_context()
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public

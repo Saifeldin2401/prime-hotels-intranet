@@ -88,3 +88,52 @@ export function getServiceRoleToken(authHeader: string | null): string | null {
 
   return token === serviceRoleKey ? token : null;
 }
+
+function decodeJwtRole(token: string): string | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    const payload = JSON.parse(json) as { role?: unknown };
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the service-role token of an internal (cron / server) request.
+ *
+ * Accepts the function's own SUPABASE_SERVICE_ROLE_KEY, or a service_role JWT
+ * (e.g. the key pg_cron reads from Vault) after the platform itself validates its
+ * signature - the functions' env key and the Vault key can legitimately differ in
+ * format after an API-key migration, which otherwise rejects every cron call.
+ * Returns the token to create the admin client with, or null when unauthorized.
+ */
+export async function resolveServiceRoleToken(
+  authHeader: string | null,
+): Promise<string | null> {
+  if (!authHeader) return null;
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : authHeader.trim();
+  if (!token) return null;
+
+  const envKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (envKey && isAuthorizedServiceRole(`Bearer ${token}`, envKey)) return token;
+
+  if (decodeJwtRole(token) !== "service_role") return null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  if (!supabaseUrl) return null;
+  try {
+    // PostgREST verifies the JWT signature; an invalid or foreign token is 401.
+    const res = await fetch(`${supabaseUrl}/rest/v1/`, {
+      headers: { apikey: token, Authorization: `Bearer ${token}` },
+    });
+    await res.body?.cancel();
+    return res.ok ? token : null;
+  } catch {
+    return null;
+  }
+}

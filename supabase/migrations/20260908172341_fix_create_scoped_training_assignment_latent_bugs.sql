@@ -1,10 +1,10 @@
+
 -- create_scoped_training_assignment had never executed successfully — three
--- latent bugs on the happy path (training_assignment_rules had 0 rows from this
--- path; only the trigger / direct-write paths populated it):
---   1. referenced non-existent identifier p_eligible_users (should be v_eligible_users)
---   2. 'enrolled'::enrollment_status — not a valid enum value
---      ({not_started,in_progress,completed,expired})
---   3. inserted a value into notifications.is_read, now a GENERATED column
+-- latent bugs on the happy path (training_assignment_rules table has 0 rows from
+-- this path; only the trigger / direct-write paths populated it):
+--   1. referenced non-existent identifier `p_eligible_users` (should be v_eligible_users)
+--   2. `'enrolled'::enrollment_status` — not a valid enum value ({not_started,in_progress,completed,expired})
+--   3. inserted a value into `notifications.is_read`, now a GENERATED column
 -- Same failure class as the historical create_task_atomic / apply_request_step_sla bugs.
 
 CREATE OR REPLACE FUNCTION public.create_scoped_training_assignment(

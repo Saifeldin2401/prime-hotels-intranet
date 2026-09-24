@@ -1,6 +1,3 @@
--- Migration: 20260901240000_phase4_global_search_org_context.sql
--- Description: Phase 4 Global Search with full tenant, brand, hotel, and department context + assessments and question banks
-
 CREATE OR REPLACE FUNCTION public.get_platform_global_search(p_query text)
 RETURNS jsonb
 LANGUAGE plpgsql

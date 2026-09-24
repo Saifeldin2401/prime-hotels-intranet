@@ -36,7 +36,7 @@
 --  - supplier_scorecards (no property_id, supplier-scoped like suppliers):
 --    mirrors suppliers exactly (write = property_manager role, read = true).
 --
--- Applied live via Supabase MCP apply_migration on 2026-08-02.
+-- Applied live via Supabase MCP apply_migration on 2026-08-01.
 -- ============================================================================
 
 -- journal_entries

@@ -2,6 +2,8 @@ import { useToast } from '@/components/ui/use-toast'
 import type { AppRole } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTenant } from '@/contexts/TenantContext'
+import { appRoleToMembershipRole, membershipToAppRole } from '@/lib/membershipRoles'
 
 interface BulkOperationResult {
     success: number
@@ -20,6 +22,7 @@ const assertBulkOperationSize = (ids: string[], operationLabel: string) => {
 export function useUserBulkOperations() {
     const queryClient = useQueryClient()
     const { toast } = useToast()
+    const { currentOrganization } = useTenant()
 
     const showResult = (action: string, result: BulkOperationResult) => {
         if (result.failed === 0) {
@@ -46,57 +49,47 @@ export function useUserBulkOperations() {
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            // Batch the pre-check: fetch every selected user's current roles in one
-            // round-trip instead of querying per user inside the loop.
-            const { data: existingRoleRows, error: existingRolesError } = await supabase
-                .from('user_roles')
-                .select('user_id, role')
-                .in('user_id', userIds)
-            if (existingRolesError) throw existingRolesError
+            // Roles live on organization_memberships (user_roles is a read-only view);
+            // the assignment applies to the organization the admin is working in.
+            const organizationId = currentOrganization?.id
+            if (!organizationId) throw new Error('Select an organization before assigning roles.')
 
-            const existingRolesByUser = new Map<string, Set<AppRole>>()
-            for (const row of existingRoleRows || []) {
-                const set = existingRolesByUser.get(row.user_id) ?? new Set<AppRole>()
-                set.add(row.role)
-                existingRolesByUser.set(row.user_id, set)
+            const { data: memberships, error: membershipsError } = await supabase
+                .from('organization_memberships')
+                .select('id, user_id, role')
+                .eq('organization_id', organizationId)
+                .eq('is_active', true)
+                .in('user_id', userIds)
+            if (membershipsError) throw membershipsError
+
+            const membershipsByUser = new Map<string, { id: string; role: string }[]>()
+            for (const m of memberships || []) {
+                const list = membershipsByUser.get(m.user_id) ?? []
+                list.push({ id: m.id, role: m.role })
+                membershipsByUser.set(m.user_id, list)
             }
 
             const succeededUserIds: string[] = []
 
             await Promise.all(userIds.map(async (userId) => {
                 try {
-                    // Preserve at least one role during updates using the pre-fetched roles.
-                    const currentRoles = existingRolesByUser.get(userId) ?? new Set<AppRole>()
-                    const staleRoles = [...currentRoles].filter((r) => r !== role)
+                    const userMemberships = membershipsByUser.get(userId) ?? []
+                    if (userMemberships.length === 0) {
+                        throw new Error('Not an active member of this organization')
+                    }
 
-                    const { error: upsertRoleError } = await supabase
-                        .from('user_roles')
-                        .upsert(
-                            { user_id: userId, role },
-                            { onConflict: 'user_id,role', ignoreDuplicates: true }
-                        )
-                    if (upsertRoleError) throw upsertRoleError
-
-                    if (staleRoles.length > 0) {
-                        // RLS (get_role_priority(role) > get_user_role_priority(caller)) silently
-                        // matches 0 rows - not an error - when the caller lacks the priority to
-                        // remove a stale role (e.g. a regional_hr targeting a regional_admin).
-                        // Assert the affected rows to avoid reporting a revocation that never
-                        // happened as a success.
-                        const { data: deletedRoles, error: deleteStaleError } = await supabase
-                            .from('user_roles')
-                            .delete()
-                            .eq('user_id', userId)
-                            .in('role', staleRoles)
-                            .select('role')
-                        if (deleteStaleError) throw deleteStaleError
-
-                        const deletedRoleSet = new Set((deletedRoles || []).map((r) => r.role))
-                        const undeletedRoles = staleRoles.filter((r) => !deletedRoleSet.has(r))
-                        if (undeletedRoles.length > 0) {
-                            throw new Error(
-                                `Insufficient privilege to revoke role(s): ${undeletedRoles.join(', ')}`
-                            )
+                    const toChange = userMemberships.filter((m) => membershipToAppRole(m.role) !== role)
+                    if (toChange.length > 0) {
+                        // RLS silently matches 0 rows when the caller may not manage this
+                        // membership; assert the affected rows so that is not reported as success.
+                        const { data: updated, error: updateError } = await supabase
+                            .from('organization_memberships')
+                            .update({ role: appRoleToMembershipRole(role), updated_at: new Date().toISOString() })
+                            .in('id', toChange.map((m) => m.id))
+                            .select('id')
+                        if (updateError) throw updateError
+                        if ((updated || []).length !== toChange.length) {
+                            throw new Error('Insufficient privilege to change this role')
                         }
                     }
 

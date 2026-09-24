@@ -1,0 +1,4 @@
+DROP POLICY IF EXISTS training_assignment_rules_select ON public.training_assignment_rules;
+DROP POLICY IF EXISTS training_assignment_rules_insert ON public.training_assignment_rules;
+DROP POLICY IF EXISTS training_assignment_rules_update ON public.training_assignment_rules;
+DROP POLICY IF EXISTS training_assignment_rules_delete ON public.training_assignment_rules;

@@ -58,11 +58,13 @@ export function useDepartmentKPIs(propertyId?: string) {
                 // Get Department Head
                 let headName = 'Not assigned'
                 if (userIds.length > 0) {
-                    // Find user with department_head role among these users
+                    // The department manager is the member holding that membership role here.
                     const { data: headUser } = await supabase
-                        .from('user_roles')
+                        .from('organization_memberships')
                         .select('user_id')
-                        .in('role', ['department_head', 'author', 'manager'])
+                        .eq('department_id', dept.id)
+                        .eq('role', 'department_manager')
+                        .eq('is_active', true)
                         .in('user_id', userIds)
                         .limit(1)
                         .maybeSingle()

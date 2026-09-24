@@ -37,6 +37,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { membershipToAppRole } from '@/lib/membershipRoles'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAccountContext } from '@/contexts/auth/AccountContext'
 import { platformService } from '@/services/platformService'
@@ -124,9 +125,6 @@ export default function UserManagement() {
             name,
             name_ar
           ),
-          user_roles (
-            role
-          ),
           organization_memberships (
             id,
             organization_id,
@@ -157,8 +155,12 @@ export default function UserManagement() {
       if (error) throw error
 
       return (data || []).map((p: any) => {
-        const rolesList = (p.user_roles || []).map((r: any) => r.role)
-        const primaryAppRole = rolesList[0] || p.role || 'staff'
+        // Roles come from the user's membership in the organization being managed.
+        const orgMemberships = (p.organization_memberships || []).filter(
+          (m: any) => m.organization_id === currentOrganization.id
+        )
+        const rolesList = [...new Set(orgMemberships.map((m: any) => membershipToAppRole(m.role)))]
+        const primaryAppRole = rolesList[0] || 'learner'
 
         const propMap = new Map<string, { id: string; name: string }>()
         const deptMap = new Map<string, { id: string; name: string }>()

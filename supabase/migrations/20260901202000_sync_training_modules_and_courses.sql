@@ -1,4 +1,4 @@
-﻿-- Migration: 20260901202000_sync_training_modules_and_courses.sql
+-- Migration: 20260901202000_sync_training_modules_and_courses.sql
 -- Description: Continuous synchronization trigger from training_modules to courses
 
 CREATE OR REPLACE FUNCTION public.sync_training_module_to_course()

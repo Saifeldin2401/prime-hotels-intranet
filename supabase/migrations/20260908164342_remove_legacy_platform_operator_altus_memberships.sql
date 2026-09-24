@@ -1,13 +1,13 @@
+
 -- Audit C2: Platform operators (System Owner / Platform Admin) must not be
 -- auto-enrolled as tenant members. The 2026-08-31 seed made every internal
--- operator an owner/admin of "Altus Hospitality Group" — the literal
+-- operator an owner/admin/manager of "Altus Hospitality Group" — the literal
 -- "Altus = the platform" legacy mapping. A platform operator reaches a tenant
 -- only through an audited break-glass session (start_platform_session).
 --
--- Reversible: rows are deactivated, not deleted; a copy is kept in
--- public._c2_removed_operator_memberships_backup. To restore a person as a
--- genuine tenant member, insert a fresh, intentional organization_memberships
--- row (or flip is_active back) — do not rely on the seed.
+-- Reversible: rows are deactivated, not deleted. To restore a specific person as
+-- a genuine tenant member, insert a fresh, intentional organization_memberships
+-- row (or flip is_active back) — do not rely on this seed.
 
 BEGIN;
 

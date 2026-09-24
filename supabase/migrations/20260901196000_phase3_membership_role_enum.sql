@@ -1,6 +1,3 @@
--- Phase 3 (full): replace the free-text organization_memberships.role with a typed enum
--- matching the frontend TenantRole union exactly. The 4 values in use
--- (organization_admin, hotel_admin, department_manager, learner) are all canonical.
 
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'membership_role') THEN
@@ -12,6 +9,7 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- drop policies that reference role literally, convert, recreate
 DROP POLICY IF EXISTS org_memberships_tenant_isolation_admin ON public.organization_memberships;
 DROP POLICY IF EXISTS org_memberships_tenant_isolation_select ON public.organization_memberships;
 
@@ -22,7 +20,8 @@ ALTER TABLE public.organization_memberships ALTER COLUMN role SET DEFAULT 'learn
 
 CREATE OR REPLACE FUNCTION public.is_tenant_admin(p_org_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $fn$
-  SELECT public.is_platform_super_admin() OR public.has_active_platform_session(p_org_id)
+  SELECT public.is_platform_super_admin()
+    OR public.has_active_platform_session(p_org_id)
     OR EXISTS (SELECT 1 FROM public.organization_memberships
       WHERE user_id = auth.uid() AND organization_id = p_org_id AND is_active = true
         AND role IN ('organization_owner','organization_admin'));
@@ -30,7 +29,8 @@ $fn$;
 
 CREATE OR REPLACE FUNCTION public.is_tenant_content_editor(p_org_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $fn$
-  SELECT public.is_platform_super_admin() OR public.has_active_platform_session(p_org_id)
+  SELECT public.is_platform_super_admin()
+    OR public.has_active_platform_session(p_org_id)
     OR EXISTS (SELECT 1 FROM public.organization_memberships
       WHERE user_id = auth.uid() AND organization_id = p_org_id AND is_active = true
         AND role IN ('organization_owner','organization_admin','brand_admin','hotel_admin',
@@ -39,16 +39,19 @@ $fn$;
 
 CREATE OR REPLACE FUNCTION public.is_tenant_people_admin(p_org_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public' AS $fn$
-  SELECT public.is_platform_super_admin() OR public.has_active_platform_session(p_org_id)
+  SELECT public.is_platform_super_admin()
+    OR public.has_active_platform_session(p_org_id)
     OR EXISTS (SELECT 1 FROM public.organization_memberships
       WHERE user_id = auth.uid() AND organization_id = p_org_id AND is_active = true
         AND role IN ('organization_owner','organization_admin','hotel_admin'));
 $fn$;
 GRANT EXECUTE ON FUNCTION public.is_tenant_people_admin(uuid) TO authenticated;
 
+-- recreate the org_memberships policies against the enum
 CREATE POLICY org_memberships_tenant_isolation_select ON public.organization_memberships FOR SELECT TO authenticated
 USING (
-  public.is_platform_super_admin() OR user_id = auth.uid()
+  public.is_platform_super_admin()
+  OR user_id = auth.uid()
   OR organization_id = ANY (public.current_user_organization_ids())
   OR public.has_active_platform_session(organization_id)
 );
@@ -56,5 +59,6 @@ CREATE POLICY org_memberships_tenant_isolation_admin ON public.organization_memb
 USING (public.is_platform_super_admin() OR public.is_tenant_people_admin(organization_id))
 WITH CHECK (
   (public.is_platform_super_admin() OR public.is_tenant_people_admin(organization_id))
+  -- non-platform admins cannot mint an owner (incl. for themselves)
   AND (public.is_platform_super_admin() OR role <> 'organization_owner')
 );

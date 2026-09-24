@@ -47,11 +47,6 @@ export function useTrainingModules(filters?: {
           profiles!training_modules_created_by_fkey(
             full_name,
             email
-          ),
-          training_quizzes(
-            id,
-            type,
-            order
           )
         `)
         // training_content_blocks removed – now in documents (content_type='training_block').
@@ -77,8 +72,6 @@ export function useTrainingModules(filters?: {
 
       return data as unknown as (TrainingModule & {
         profiles?: { full_name: string; email: string }
-        // training_content_blocks now live in documents (content_type='training_block')
-        training_quizzes?: TrainingQuiz[]
       })[]
     },
     enabled: !!orgId,
@@ -89,8 +82,8 @@ export function useTrainingModules(filters?: {
 // These are now stored in documents with content_type='training_block'.
 // The block-specific fields map as: type→block_type, order→block_order.
 // Training Quizzes
-// Write operations target unified_questions (source_domain = 'training').
-// The training_quizzes view provides backward-compatible reads.
+// Quizzes are learning_quizzes; questions live in unified_questions linked via
+// unified_quiz_questions (quiz blocks reference them by content_data.quiz_id).
 // Training Progress
 export function useTrainingProgress(userId?: string, trainingId?: string) {
   return useQuery({
@@ -101,7 +94,8 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
         .select(`
           id,
           user_id,
-          training_id:training_module_id,
+          training_id,
+          lp_content_type,
           assignment_id,
           status,
           completed_at,
@@ -110,13 +104,7 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
           is_deleted,
           created_at,
           updated_at,
-          training_modules(
-            id,
-            title,
-            description,
-            estimated_duration_minutes
-          ),
-          learning_assignments(
+          training_assignment_rules(
             id,
             due_date
           )
@@ -136,11 +124,12 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
 
       return (data as any[]).map(progress => ({
         ...progress,
-        training_modules: Array.isArray(progress.training_modules) ? progress.training_modules[0] : progress.training_modules,
-        learning_assignments: Array.isArray(progress.learning_assignments) ? progress.learning_assignments[0] : progress.learning_assignments
+        // The assignment this progress row was seeded from (training_progress.assignment_id).
+        assignment: Array.isArray(progress.training_assignment_rules)
+          ? progress.training_assignment_rules[0]
+          : progress.training_assignment_rules
       })) as unknown as (TrainingProgress & {
-        training_modules?: TrainingModule
-        learning_assignments?: LearningAssignment
+        assignment?: Pick<LearningAssignment, 'id' | 'due_date'>
       })[]
     },
   })
@@ -181,11 +170,6 @@ export function useMyAssignments() {
 
     const channel = supabase
       .channel(`my-assignments-${user.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'learning_assignments', filter: `user_id=eq.${user.id}` },
-        invalidateMyAssignments
-      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'training_assignment_rules' },
