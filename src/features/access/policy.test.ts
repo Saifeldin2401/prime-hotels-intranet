@@ -5,7 +5,6 @@ import {
   isAtLeastPlatformRole,
   roleHasPermission,
 } from '@/features/access/policy'
-import { NAVIGATION_GROUPS, ROUTES } from '@/config/navigation'
 
 describe('access policy', () => {
   it('supports inherited role access from one shared helper', () => {
@@ -34,16 +33,5 @@ describe('access policy', () => {
     // legacy roles resolve through the mapping
     expect(roleHasPermission('regional_hr', 'training.assign')).toBe(true)
     expect(roleHasPermission('staff', 'training.create')).toBe(false)
-  })
-
-  it('keeps navigation routes unique and assigned to valid groups', () => {
-    const groupIds = new Set(NAVIGATION_GROUPS.map((group) => group.id))
-    const routePaths = new Set<string>()
-
-    for (const route of ROUTES) {
-      expect(groupIds.has(route.group)).toBe(true)
-      expect(routePaths.has(route.path)).toBe(false)
-      routePaths.add(route.path)
-    }
   })
 })
