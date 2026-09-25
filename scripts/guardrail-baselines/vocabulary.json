@@ -1,0 +1,10 @@
+{
+  "_note": "Count of en/*.json strings using retired product terms. May only go down. See scripts/check-guardrails.mjs GUARDRAIL 7.",
+  "counts": {
+    "admin.json": 25,
+    "nav.json": 7,
+    "training.json": 15,
+    "users.json": 4,
+    "wizard.json": 36
+  }
+}
