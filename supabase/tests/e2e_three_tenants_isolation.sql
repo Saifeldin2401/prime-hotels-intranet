@@ -183,7 +183,7 @@ BEGIN
     RAISE NOTICE '>>> [STEP 4/7] Verifying Content Deployment & Multi-Tenant Course Isolation...';
     
     -- Seed Master Template Course
-    INSERT INTO public.training_modules (organization_id, title, description, status, is_master_template)
+    INSERT INTO public.courses (organization_id, title, description, status, is_master_template)
     VALUES (v_org_alpha_id, 'VIP Concierge Protocols', 'Global Master', 'draft', true)
     RETURNING id INTO v_master_course_id;
 
@@ -196,16 +196,16 @@ BEGIN
     ASSERT v_alpha_course_id <> v_beta_course_id, 'Assertion failed: Cloned courses must have distinct IDs.';
 
     -- Verify Alpha course belongs to Alpha only
-    SELECT count(*) INTO v_count FROM public.training_modules WHERE id = v_alpha_course_id AND organization_id = v_org_alpha_id;
+    SELECT count(*) INTO v_count FROM public.courses WHERE id = v_alpha_course_id AND organization_id = v_org_alpha_id;
     ASSERT v_count = 1, 'Assertion failed: Alpha course organization mismatch.';
 
-    SELECT count(*) INTO v_count FROM public.training_modules WHERE id = v_alpha_course_id AND organization_id = v_org_beta_id;
+    SELECT count(*) INTO v_count FROM public.courses WHERE id = v_alpha_course_id AND organization_id = v_org_beta_id;
     ASSERT v_count = 0, 'Assertion failed: Alpha course leaked to Beta.';
 
     RAISE NOTICE '>>> [STEP 5/7] Verifying Scoped Training Assignments & Progress Isolation...';
     
     -- Assign Alpha Course to Alpha Learner
-    INSERT INTO public.training_assignment_rules (organization_id, hotel_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, assigned_by, is_active, status)
+    INSERT INTO public.assignments (organization_id, hotel_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, assigned_by, is_active, status)
     VALUES (v_org_alpha_id, v_hotel_alpha1_id, 'user', v_user_alpha_learner_id::text, 'module', v_alpha_course_id, v_alpha_course_id, 'individual', v_user_alpha_admin_id, true, 'active')
     RETURNING id INTO v_assignment_id;
 

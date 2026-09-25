@@ -34,12 +34,12 @@ SELECT u.id::uuid, u.email, jsonb_build_object('organization_id', u.org, 'role',
     (current_setting('t.b_admin'), 'b-admin-' || left(current_setting('t.b_admin'), 8) || '@roles.test', current_setting('t.org_b'), 'organization_admin')
   ) AS u(id, email, org, role);
 
-INSERT INTO public.training_modules (id, organization_id, title, status)
+INSERT INTO public.courses (id, organization_id, title, status)
 VALUES (current_setting('t.module')::uuid,  current_setting('t.org_a')::uuid, 'Roles Module',  'published'),
        (current_setting('t.module2')::uuid, current_setting('t.org_a')::uuid, 'Review Module', 'pending_review');
 
 -- One standing (audience) rule and one individual assignment in org A.
-INSERT INTO public.training_assignment_rules (organization_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, is_active, status)
+INSERT INTO public.assignments (organization_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, is_active, status)
 VALUES (current_setting('t.org_a')::uuid, 'everyone', NULL, 'module', current_setting('t.module')::uuid, current_setting('t.module')::uuid, 'organization', true, 'active'),
        (current_setting('t.org_a')::uuid, 'user', current_setting('t.a_learn'), 'module', current_setting('t.module2')::uuid, current_setting('t.module2')::uuid, 'individual', true, 'active');
 
@@ -69,10 +69,10 @@ VALUES (current_setting('t.a_hire')::uuid, 'a-hire-' || left(current_setting('t.
 DO $$
 DECLARE v_n integer;
 BEGIN
-  SELECT count(*) INTO v_n FROM public.training_assignment_rules
+  SELECT count(*) INTO v_n FROM public.assignments
    WHERE target_type = 'user' AND target_id = current_setting('t.a_hire') AND is_active;
   IF v_n <> 1 THEN RAISE EXCEPTION 'FAIL: new hire received % individual assignments (expected 1)', v_n; END IF;
-  IF EXISTS (SELECT 1 FROM public.training_assignment_rules
+  IF EXISTS (SELECT 1 FROM public.assignments
               WHERE target_type = 'user' AND target_id = current_setting('t.a_hire')
                 AND content_id = current_setting('t.module2')::uuid) THEN
     RAISE EXCEPTION 'FAIL: new hire inherited another learner''s individual assignment';
@@ -149,7 +149,7 @@ BEGIN
   END IF;
 
   PERFORM public.approve_training_module(current_setting('t.module2')::uuid);
-  IF (SELECT status FROM public.training_modules WHERE id = current_setting('t.module2')::uuid) <> 'published' THEN
+  IF (SELECT status FROM public.courses WHERE id = current_setting('t.module2')::uuid) <> 'published' THEN
     RAISE EXCEPTION 'FAIL: training manager approval did not publish';
   END IF;
 END $$;

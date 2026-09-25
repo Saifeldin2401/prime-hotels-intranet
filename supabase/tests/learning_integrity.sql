@@ -47,10 +47,10 @@ VALUES
   (current_setting('t.outsider')::uuid, 'outsider-' || left(current_setting('t.outsider'), 8) || '@integrity.test',
    jsonb_build_object('organization_id', current_setting('t.org2'), 'role', 'learner',          'full_name', 'Other Tenant'));
 
-INSERT INTO public.training_modules (id, organization_id, title, passing_score_percentage, certificate_enabled, validity_period_days)
+INSERT INTO public.courses (id, organization_id, title, passing_score_percentage, certificate_enabled, validity_period_days)
 VALUES (current_setting('t.module')::uuid, current_setting('t.org')::uuid, 'Integrity Module', 80, true, 365);
 
-INSERT INTO public.learning_quizzes (id, organization_id, title, status, passing_score_percentage, show_feedback_during, created_by)
+INSERT INTO public.quizzes (id, organization_id, title, status, passing_score_percentage, show_feedback_during, created_by)
 VALUES (current_setting('t.quiz')::uuid, current_setting('t.org')::uuid, 'Integrity Quiz', 'published', 50, false,
         current_setting('t.manager')::uuid);
 
@@ -68,15 +68,15 @@ INSERT INTO public.unified_quiz_questions (organization_id, quiz_id, question_id
 VALUES (current_setting('t.org')::uuid, current_setting('t.quiz')::uuid, current_setting('t.q1')::uuid, 1),
        (current_setting('t.org')::uuid, current_setting('t.quiz')::uuid, current_setting('t.q2')::uuid, 2);
 
-INSERT INTO public.documents (id, organization_id, title, content_type, training_module_id, block_type, block_order, is_mandatory, content_data)
+INSERT INTO public.lessons (id, organization_id, title, training_module_id, block_type, block_order, is_mandatory, content_data)
 VALUES
-  (current_setting('t.b_text')::uuid, current_setting('t.org')::uuid, 'Read me', 'training_block', current_setting('t.module')::uuid, 'text', 1, true, '{}'::jsonb),
-  (current_setting('t.b_quiz')::uuid, current_setting('t.org')::uuid, 'Check',   'training_block', current_setting('t.module')::uuid, 'quiz', 2, true,
+  (current_setting('t.b_text')::uuid, current_setting('t.org')::uuid, 'Read me', current_setting('t.module')::uuid, 'text', 1, true, '{}'::jsonb),
+  (current_setting('t.b_quiz')::uuid, current_setting('t.org')::uuid, 'Check',   current_setting('t.module')::uuid, 'quiz', 2, true,
    jsonb_build_object('quiz_id', current_setting('t.quiz'))),
-  (current_setting('t.b_prac')::uuid, current_setting('t.org')::uuid, 'Do it',   'training_block', current_setting('t.module')::uuid, 'practical', 3, true, '{}'::jsonb);
+  (current_setting('t.b_prac')::uuid, current_setting('t.org')::uuid, 'Do it',   current_setting('t.module')::uuid, 'practical', 3, true, '{}'::jsonb);
 
 -- The learner's mandatory individual assignment.
-INSERT INTO public.training_assignment_rules (organization_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, is_active, status, is_mandatory, assigned_by)
+INSERT INTO public.assignments (organization_id, target_type, target_id, content_type, content_id, training_module_id, scope_type, is_active, status, is_mandatory, assigned_by)
 VALUES (current_setting('t.org')::uuid, 'user', current_setting('t.learner'), 'module', current_setting('t.module')::uuid, current_setting('t.module')::uuid, 'individual', true, 'active', true,
         current_setting('t.manager')::uuid);
 
@@ -104,16 +104,16 @@ BEGIN
   -- C3: learner cannot create, edit or delete mandatory assignments
   v_ok := false;
   BEGIN
-    INSERT INTO public.training_assignment_rules (organization_id, target_type, target_id, content_type, content_id, is_mandatory)
+    INSERT INTO public.assignments (organization_id, target_type, target_id, content_type, content_id, is_mandatory)
     VALUES (current_setting('t.org')::uuid, 'user', auth.uid()::text, 'module', current_setting('t.module')::uuid, false);
   EXCEPTION WHEN insufficient_privilege THEN v_ok := true;
   END;
   IF NOT v_ok THEN RAISE EXCEPTION 'FAIL C3: learner self-inserted an assignment'; END IF;
 
-  UPDATE public.training_assignment_rules SET is_mandatory = false, is_active = false WHERE target_id = auth.uid()::text;
+  UPDATE public.assignments SET is_mandatory = false, is_active = false WHERE target_id = auth.uid()::text;
   GET DIAGNOSTICS v_n = ROW_COUNT;
   IF v_n <> 0 THEN RAISE EXCEPTION 'FAIL C3: learner edited own assignment'; END IF;
-  DELETE FROM public.training_assignment_rules WHERE target_id = auth.uid()::text;
+  DELETE FROM public.assignments WHERE target_id = auth.uid()::text;
   GET DIAGNOSTICS v_n = ROW_COUNT;
   IF v_n <> 0 THEN RAISE EXCEPTION 'FAIL C3: learner deleted own assignment'; END IF;
 
@@ -218,7 +218,7 @@ BEGIN
   END IF;
 
   -- The player records content-block progress directly.
-  INSERT INTO public.training_block_progress (user_id, training_module_id, block_id, completed_at)
+  INSERT INTO public.lesson_progress (user_id, training_module_id, block_id, completed_at)
   VALUES (auth.uid(), current_setting('t.module')::uuid, current_setting('t.b_text')::uuid, now());
 END $$;
 
@@ -334,7 +334,7 @@ BEGIN
   END;
   IF NOT v_ok THEN RAISE EXCEPTION 'FAIL H3: recertification completed from the previous cycle'; END IF;
 
-  INSERT INTO public.training_block_progress (user_id, training_module_id, block_id, completed_at)
+  INSERT INTO public.lesson_progress (user_id, training_module_id, block_id, completed_at)
   VALUES (auth.uid(), current_setting('t.module')::uuid, current_setting('t.b_text')::uuid, now());
   PERFORM public.submit_quiz_attempt(current_setting('t.quiz')::uuid, jsonb_build_array(
     jsonb_build_object('question_id', current_setting('t.q1'), 'selected_answer', current_setting('t.q1_right')),
