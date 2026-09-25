@@ -63,7 +63,7 @@ interface LearningAssignment {
   notify_on_due?: boolean | null
   reminder_days_before?: number[] | null
   created_at: string
-  training_modules?: TrainingModule
+  courses?: TrainingModule
   profiles?: { id: string; full_name: string }
 }
 
@@ -503,7 +503,7 @@ export function TrainingAssignmentsProvider({
     queryKey: ['learning-assignments'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .select('*')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -529,7 +529,7 @@ export function TrainingAssignmentsProvider({
     queryKey: ['training-modules', 'assignable'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id, title, description, status')
         .eq('status', 'published')
         .not('is_deleted', 'is', true)
@@ -625,11 +625,10 @@ export function TrainingAssignmentsProvider({
     queryKey: ['training-progress-details-blocks', selectedProgress?.content_id],
     queryFn: async () => {
       if (!selectedProgress?.content_id) return []
-      // training_content_blocks consolidated into documents (content_type='training_block').
+      // Lesson blocks live in `lessons`.
       const { data, error } = await supabase
-        .from('documents')
+        .from('lessons')
         .select('id, title, block_type, block_order, content_data')
-        .eq('content_type', 'training_block')
         .eq('training_module_id', selectedProgress.content_id)
         .eq('is_deleted', false)
         .order('block_order', { ascending: true })
@@ -903,7 +902,7 @@ export function TrainingAssignmentsProvider({
                     sendEmail: true,
                     notificationData: {
                       ...notificationData,
-                      link: `/learning/training/${formModuleId}`
+                      link: `/learn/player/${formModuleId}`
                     }
                   })
                 })
@@ -949,7 +948,7 @@ export function TrainingAssignmentsProvider({
   const deleteAssignmentMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .delete()
         .eq('id', id)
       if (error) throw error
@@ -1062,7 +1061,7 @@ export function TrainingAssignmentsProvider({
     if (!rawAssignments || !modules) return []
     return rawAssignments.map(a => ({
       ...a,
-      training_modules: modules.find(m => m.id === a.content_id)
+      courses: modules.find(m => m.id === a.content_id)
     })) as LearningAssignment[]
   }, [rawAssignments, modules])
 
@@ -1222,7 +1221,7 @@ export function TrainingAssignmentsProvider({
       ) {
         return false
       }
-      const moduleTitle = assignment.training_modules?.title || ''
+      const moduleTitle = assignment.courses?.title || ''
       const searchValue = search.trim().toLowerCase()
       const targetDetails = getTargetDetails(assignment)
       const matchesSearch = !searchValue
@@ -1266,7 +1265,7 @@ export function TrainingAssignmentsProvider({
           key,
           assignments: [],
           latestCreatedAt: assignment.created_at,
-          moduleTitle: assignment.training_modules?.title || '',
+          moduleTitle: assignment.courses?.title || '',
           priority: assignment.priority || 'normal',
           dueDate: assignment.due_date
         })
@@ -1365,7 +1364,7 @@ export function TrainingAssignmentsProvider({
       const fallbackPropertyName = Array.isArray(propertyData) ? propertyData[0]?.name || '' : propertyData?.name || ''
       const user = users?.find((entry) => entry.id === item.user_id)
       const resolvedUserName = item.profiles?.full_name || user?.full_name || t('unknownUser')
-      const resolvedModuleTitle = item.training_modules?.title || modules?.find((m) => m.id === item.content_id)?.title || t('unknownModule')
+      const resolvedModuleTitle = item.courses?.title || modules?.find((m) => m.id === item.content_id)?.title || t('unknownModule')
       const resolvedProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
       const parsedScore = item.score_percentage === undefined || item.score_percentage === null
         ? null : Number(item.score_percentage)

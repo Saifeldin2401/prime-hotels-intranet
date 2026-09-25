@@ -18,6 +18,8 @@ import {
 } from '@/components/knowledge/ContentRenderers'
 import { ArticleContent } from '@/components/knowledge/ArticleContent'
 import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
+import { ArticleHeader } from '@/components/knowledge/reader/ArticleHeader'
+import { ArticleFeedback } from '@/components/knowledge/reader/ArticleFeedback'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +55,7 @@ import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTr
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { env, supabase } from '@/lib/supabase'
+import { subscribeToArticle, deleteKnowledgeArticle, downloadStorageAsset, getAuthAccessToken, fetchImageViaProxy } from '@/features/knowledge'
 import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 import { resolveDocumentUrl } from '@/lib/secureFileAccess'
 import { cn } from '@/lib/utils'
@@ -209,24 +211,12 @@ export default function KnowledgeRead() {
     useEffect(() => {
         if (!id) return
 
-        const channel = supabase
-            .channel(`knowledge-article-live-${id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'documents',
-                    filter: `id=eq.${id}`
-                },
-                () => {
-                    void refetchArticle()
-                }
-            )
-            .subscribe()
+        const unsubscribe = subscribeToArticle(id, () => {
+            void refetchArticle()
+        })
 
         return () => {
-            void supabase.removeChannel(channel)
+            unsubscribe()
         }
     }, [id, refetchArticle])
 
@@ -300,12 +290,7 @@ export default function KnowledgeRead() {
 
         setIsDeleting(true)
         try {
-            const { error } = await supabase
-                .from('documents')
-                .update({ is_deleted: true })
-                .eq('id', id)
-
-            if (error) throw error
+            await deleteKnowledgeArticle(id)
 
             toast.success(t('viewer.delete_success'))
             navigate('/knowledge')
@@ -435,27 +420,17 @@ export default function KnowledgeRead() {
                 // Try authenticated Supabase Storage download (private buckets / missing CORS headers)
                 const parsed = tryParseSupabaseStorage(url)
                 if (parsed) {
-                    const { data, error } = await supabase.storage.from(parsed.bucket).download(parsed.path)
-                    if (!error && data) {
+                    const data = await downloadStorageAsset(parsed.bucket, parsed.path)
+                    if (data) {
                         return await blobToPngDataUrl(data)
                     }
                 }
 
                 // Final fallback: server-side proxy (avoids browser CORS/canvas taint)
-                const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-                if (sessionError || !sessionData?.session?.access_token) throw sessionError || e
+                const accessToken = await getAuthAccessToken()
+                if (!accessToken) throw e
 
-                const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/image-proxy`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${sessionData.session.access_token}`
-                    },
-                    body: JSON.stringify({ url })
-                })
-
-                if (!res.ok) throw e
-                const blob = await res.blob()
+                const blob = await fetchImageViaProxy(url, accessToken)
                 return await blobToPngDataUrl(blob)
             }
         }
@@ -1089,7 +1064,7 @@ export default function KnowledgeRead() {
             {/* Reading Progress Bar */}
             <div className="fixed top-0 start-0 w-full h-1 z-50 pointer-events-none print:hidden">
                 <div
-                    className="h-full bg-hotel-gold transition-all duration-150"
+                    className="h-full bg-ds-brass transition-all duration-150"
                     style={{ width: `${readingProgress}%` }}
                 />
             </div>
@@ -1129,8 +1104,8 @@ export default function KnowledgeRead() {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => navigate(`/knowledge/${id}/edit`)}
-                                            className="h-9 px-2 sm:px-3 border-border hover:border-altus-copper hover:text-altus-copper rounded-lg group transition-all"
+                                            onClick={() => navigate(`/studio/articles/${id}/edit`)}
+                                            className="h-9 px-2 sm:px-3 border-border hover:border-ds-brass hover:text-ds-brass rounded-lg group transition-all"
                                         >
                                             <Pencil className="h-3.5 w-3.5 sm:me-2 group-hover:scale-110 transition-transform" />
                                             <span className="hidden sm:inline">{t('viewer.edit')}</span>
@@ -1181,7 +1156,7 @@ export default function KnowledgeRead() {
                                         size="sm"
                                         className={cn(
                                             "h-9 px-3 gap-2 rounded-lg transition-all",
-                                            translatedData ? "bg-altus-copper/10 border-altus-copper/30 text-altus-copper" : "border-border hover:border-altus-copper hover:text-altus-copper"
+                                            translatedData ? "bg-ds-brass/10 border-ds-brass/30 text-ds-brass" : "border-border hover:border-ds-brass hover:text-ds-brass"
                                         )}
                                         disabled={isTranslating}
                                     >
@@ -1201,7 +1176,7 @@ export default function KnowledgeRead() {
                                             </div>
                                             {SUPPORTED_TRANSLATION_LANGUAGES.map(lang => (
                                                 <DropdownMenuItem key={lang.code} onClick={() => handleAITranslate(lang.code)} className="gap-2">
-                                                    <Sparkles className="h-3.5 w-3.5 text-altus-copper" />
+                                                    <Sparkles className="h-3.5 w-3.5 text-ds-brass" />
                                                     {lang.label}
                                                 </DropdownMenuItem>
                                             ))}
@@ -1249,11 +1224,11 @@ export default function KnowledgeRead() {
                                     onClick={() => toggleBookmark.mutate(id!)}
                                     className={cn(
                                         "h-9 w-9 p-0 rounded-full transition-colors",
-                                        isBookmarked ? "text-hotel-gold bg-hotel-gold/10" : "text-muted-foreground hover:text-hotel-gold hover:bg-muted"
+                                        isBookmarked ? "text-ds-brass bg-ds-brass/10" : "text-muted-foreground hover:text-ds-brass hover:bg-muted"
                                     )}
                                     aria-label={isBookmarked ? t('accessibility.remove_bookmark', 'Remove bookmark') : t('accessibility.add_bookmark', 'Add bookmark')}
                                 >
-                                    {isBookmarked ? <BookmarkCheck className="h-5 w-5 fill-hotel-gold/30" /> : <Bookmark className="h-5 w-5" />}
+                                    {isBookmarked ? <BookmarkCheck className="h-5 w-5 fill-ds-brass/30 text-ds-brass" /> : <Bookmark className="h-5 w-5" />}
                                 </Button>
                                 <Button
                                     variant="ghost"
@@ -1303,152 +1278,21 @@ export default function KnowledgeRead() {
             ) : null}
 
             {/* Premium Article Hero Section */}
-            <header className={cn(
-                "kb-article-header py-8 md:py-16 border-b border-slate-200/60 kb-focus-transition",
-                isFocusMode && "opacity-0 -translate-y-8 pointer-events-none"
-            )}>
-                <div className="absolute inset-0 kb-hero-pattern" />
-                <div className="container relative max-w-[1400px] mx-auto px-4 select-none">
-                    <div className="flex flex-col gap-6">
-                        {/* Upper Metadata */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* Updated Since Last View Badge */}
-                            {article?.id && hasBeenUpdatedSinceLastView(article.id, article.updated_at) && (
-                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 ring-1 ring-orange-200 animate-pulse">
-                                    {t('viewer.updated_since_view', 'Updated since you last viewed')}
-                                </Badge>
-                            )}
-                            <Badge className={cn(
-                                "rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider",
-                                statusConfig.color === 'green' && 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
-                                statusConfig.color === 'yellow' && 'bg-amber-100 text-amber-700 ring-1 ring-amber-200',
-                                statusConfig.color === 'gray' && 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
-                                statusConfig.color === 'red' && 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
-                            )}>
-                                {statusLabel}
-                            </Badge>
-                            {article.content_type && (
-                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 border border-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                    <FileText className="h-3 w-3" />
-                                    {t(`content_types.${article.content_type}`)}
-                                </div>
-                            )}
-                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50 border border-indigo-100/50 text-[10px] font-bold text-indigo-600 uppercase tracking-widest">
-                                <ShieldCheck className="h-3 w-3" />
-                                {`v${article.current_version || article.version || 1}`}
-                                {article.published_version_number && article.published_version_number !== (article.current_version || article.version)
-                                    ? ` · ${t('viewer.published_revision', 'Published')} v${article.published_version_number}`
-                                    : ''}
-                            </div>
-                            {article.is_master_template && (
-                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-900 dark:text-amber-300 ring-1 ring-amber-400/50 flex items-center gap-1.5 shadow-2xs">
-                                    <Crown className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                                    {t('viewer.corporate_standard', 'Corporate Master Standard')}
-                                </Badge>
-                            )}
-                            {article.master_source_id && (
-                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 ring-1 ring-indigo-300/60 flex items-center gap-1.5 shadow-2xs">
-                                    <GitBranch className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
-                                    {t('viewer.inherited_master', 'Inherited Brand Standard')}
-                                </Badge>
-                            )}
-                            {article.scope_type && article.scope_type !== 'organization' && (
-                                <Badge variant="outline" className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-white/70 border-slate-300 text-slate-600">
-                                    {article.scope_type}
-                                </Badge>
-                            )}
-                        </div>
-
-                        {/* Title & Description */}
-                        <div className="max-w-4xl space-y-4">
-                            <h1 className={cn(
-                                "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-display font-black text-hotel-navy dark:text-white leading-[1.15] tracking-tight",
-                                shouldUseRtl && "font-arabic leading-[1.25]"
-                            )}>
-                                {translatedData && !showBilingual ? translatedData.title : article.title}
-                            </h1>
-
-                            {showBilingual && translatedData && (
-                                <h1
-                                    dir={isRtlTarget ? 'rtl' : 'ltr'}
-                                    className={cn(
-                                        "text-2xl md:text-4xl font-serif font-bold text-hotel-gold-dark dark:text-hotel-gold leading-snug",
-                                        isRtlTarget ? "font-arabic pe-6 border-e-4 border-hotel-gold/60" : "ps-6 border-s-4 border-hotel-gold/60"
-                                    )}
-                                >
-                                    {translatedData.title}
-                                </h1>
-                            )}
-
-                            {(translatedData?.description || article.description) && (
-                                <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 font-normal leading-relaxed max-w-3xl">
-                                    {translatedData ? translatedData.description : article.description}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* Lower Metadata Row */}
-                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-4 sm:gap-x-8 mt-4 pt-6 sm:pt-8 border-t border-slate-200/60">
-                            {article.author && (
-                                <div className="flex items-center gap-3 group">
-                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
-                                        <AvatarImage src={article.author.avatar_url} />
-                                        <AvatarFallback className="bg-gradient-to-br from-hotel-navy to-hotel-navy-dark text-white font-bold">
-                                            {article.author.full_name?.charAt(0) || '?'}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-slate-900 dark:text-white">{article.author.full_name}</span>
-                                        {article.department?.name && (
-                                            <span className="text-xs text-slate-500 flex items-center gap-1">
-                                                <Briefcase className="h-3 w-3 text-slate-400" />
-                                                {article.department.name}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {article.last_editor?.full_name && (
-                                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                                    <Pencil className="h-3.5 w-3.5 text-slate-400" />
-                                    <span>{article.last_editor.full_name}</span>
-                                </div>
-                            )}
-
-                            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.updated')}</span>
-                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                        <Calendar className="h-3.5 w-3.5 text-hotel-gold" />
-                                        {t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}
-                                    </div>
-                                </div>
-
-                                <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60" />
-
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.reading_time', 'Est. Time')}</span>
-                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                        <Timer className="h-3.5 w-3.5 text-hotel-navy dark:text-hotel-gold" />
-                                        {readingTime} {t('article.min_read', 'min read')}
-                                    </div>
-                                </div>
-
-                                <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60" />
-
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.views', 'Views')}</span>
-                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                                        <Eye className="h-3.5 w-3.5 text-slate-400" />
-                                        {article.view_count || 0}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <ArticleHeader
+                article={article}
+                statusColor={statusConfig.color}
+                statusLabel={statusLabel}
+                hasBeenUpdatedSinceLastView={article?.id ? hasBeenUpdatedSinceLastView(article.id, article.updated_at) : false}
+                translatedData={translatedData}
+                showBilingual={showBilingual}
+                isRtlTarget={isRtlTarget}
+                shouldUseRtl={shouldUseRtl}
+                readingTime={readingTime}
+                className={cn(
+                    "kb-article-header py-8 md:py-16 border-b border-slate-200/60 kb-focus-transition",
+                    isFocusMode && "opacity-0 -translate-y-8 pointer-events-none"
+                )}
+            />
 
             <div className={cn(
                 "container max-w-[1400px] mx-auto py-6 px-3 sm:py-10 sm:px-4 print:py-0 print:px-0 transition-all duration-500",
@@ -1481,7 +1325,7 @@ export default function KnowledgeRead() {
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="outline" className="w-full flex items-center justify-between border-border bg-card">
                                             <div className="flex items-center gap-2">
-                                                <List className="h-4 w-4 text-altus-copper" />
+                                                <List className="h-4 w-4 text-ds-brass" />
                                                 <span className="text-sm font-semibold text-foreground">{t('viewer.on_this_page', 'Jump to Section')}</span>
                                             </div>
                                             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -1492,7 +1336,7 @@ export default function KnowledgeRead() {
                                             <DropdownMenuItem key={item.id} onClick={() => scrollToSection(item.id)}>
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full me-2",
-                                                    activeSection === item.id ? "bg-altus-copper" : "bg-muted"
+                                                    activeSection === item.id ? "bg-ds-brass" : "bg-muted"
                                                 )} />
                                                 {item.text}
                                             </DropdownMenuItem>
@@ -1504,11 +1348,11 @@ export default function KnowledgeRead() {
 
                         {/* TL;DR Quick Summary */}
                         {article.summary && (
-                            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-altus-copper/30 via-hotel-gold/20 to-transparent">
+                            <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-ds-brass/30 via-ds-brass/20 to-transparent">
                                 <div className="bg-card rounded-[15px] p-6 shadow-xs overflow-hidden relative border border-border">
-                                    <div className="absolute -top-4 -end-4 h-24 w-24 bg-hotel-gold/10 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
-                                    <h3 className="text-[11px] font-bold text-altus-copper uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
-                                        <Zap className="h-3.5 w-3.5 fill-altus-copper" />
+                                    <div className="absolute -top-4 -end-4 h-24 w-24 bg-ds-brass/10 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
+                                    <h3 className="text-[11px] font-bold text-ds-brass uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                        <Zap className="h-3.5 w-3.5 fill-ds-brass" />
                                         {t('viewer.tldr', 'Quick Summary')}
                                     </h3>
                                     <div className="relative z-10 text-foreground text-base sm:text-lg font-medium leading-relaxed italic">
@@ -1518,7 +1362,7 @@ export default function KnowledgeRead() {
                                                 <div
                                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                                     className={cn(
-                                                        "text-altus-copper",
+                                                        "text-ds-brass",
                                                         isRtlTarget ? "text-end font-arabic" : "text-start"
                                                     )}
                                                 >
@@ -1564,7 +1408,7 @@ export default function KnowledgeRead() {
                         {article.file_url && (!translationTarget || translationTarget === 'en' || (!article.content_ar && !translatedData)) && (
                             <div className="bg-muted/40 border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                 <div className="flex items-center gap-3 min-w-0">
-                                    <div className="h-10 w-10 rounded-lg bg-altus-copper/10 flex items-center justify-center text-altus-copper">
+                                    <div className="h-10 w-10 rounded-lg bg-ds-brass/10 flex items-center justify-center text-ds-brass">
                                         <FileText className="h-5 w-5" />
                                     </div>
                                     <div>
@@ -1837,76 +1681,21 @@ export default function KnowledgeRead() {
                             )}
 
                             {/* Feedback Section */}
-                            <Card className="border-none shadow-md bg-white overflow-hidden relative">
-                                <CardContent className="p-6">
-                                    {submitFeedback.isSuccess ? (
-                                        <div className="flex items-center gap-4 animate-in fade-in zoom-in duration-500">
-                                            <div className="h-10 w-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-                                                <Sparkles className="h-5 w-5" />
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-900">{t('viewer.feedback_thanks')}</p>
-                                                <p className="text-xs text-slate-500">{t('viewer.feedback_thanks_desc')}</p>
-                                            </div>
-                                        </div>
-                                    ) : showFeedbackInput ? (
-                                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                                            <div className="flex items-center justify-between">
-                                                <p className="text-sm font-bold text-slate-900">
-                                                    {feedbackHelpful ? t('viewer.what_did_you_like', 'Feedback') : t('viewer.how_can_we_improve', 'Help us improve')}
-                                                </p>
-                                                <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px] uppercase font-bold text-slate-400" onClick={() => setShowFeedbackInput(false)}>
-                                                    {t('viewer.cancel')}
-                                                </Button>
-                                            </div>
-                                            <Textarea
-                                                value={feedbackText}
-                                                onChange={(e) => setFeedbackText(e.target.value)}
-                                                placeholder={t('viewer.feedback_placeholder', 'Your thoughts...')}
-                                                className="min-h-[80px] text-sm bg-slate-50 border-slate-200 focus:bg-white transition-colors"
-                                            />
-                                            <Button
-                                                size="sm"
-                                                className="w-full bg-slate-900 hover:bg-slate-800 text-white h-9"
-                                                onClick={() => submitFeedback.mutate({ documentId: id!, helpful: feedbackHelpful, feedbackText })}
-                                                disabled={submitFeedback.isPending}
-                                            >
-                                                {submitFeedback.isPending && <Loader2 className="h-4 w-4 animate-spin me-2" />}
-                                                {t('viewer.submit_feedback')}
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center justify-between gap-4">
-                                            <p className="text-sm font-bold text-slate-900">{t('viewer.feedback_title')}</p>
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-9 w-9 p-0 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all"
-                                                    disabled={submitFeedback.isPending}
-                                                    onClick={() => submitFeedback.mutate({ documentId: id!, helpful: true })}
-                                                    aria-label={t('accessibility.helpful', 'Mark as helpful')}
-                                                >
-                                                    <ThumbsUp className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="h-9 w-9 p-0 rounded-lg hover:bg-rose-50 hover:text-rose-600 transition-all"
-                                                    disabled={submitFeedback.isPending}
-                                                    onClick={() => {
-                                                        setFeedbackHelpful(false)
-                                                        setShowFeedbackInput(true)
-                                                    }}
-                                                    aria-label={t('accessibility.not_helpful', 'Mark as not helpful')}
-                                                >
-                                                    <ThumbsDown className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                            <ArticleFeedback
+                                isSuccess={submitFeedback.isSuccess}
+                                showFeedbackInput={showFeedbackInput}
+                                feedbackHelpful={feedbackHelpful}
+                                feedbackText={feedbackText}
+                                isPending={submitFeedback.isPending}
+                                onFeedbackTextChange={setFeedbackText}
+                                onCancel={() => setShowFeedbackInput(false)}
+                                onSubmit={() => submitFeedback.mutate({ documentId: id!, helpful: feedbackHelpful, feedbackText })}
+                                onMarkHelpful={() => submitFeedback.mutate({ documentId: id!, helpful: true })}
+                                onMarkNotHelpful={() => {
+                                    setFeedbackHelpful(false)
+                                    setShowFeedbackInput(true)
+                                }}
+                            />
                         </div>
 
                         {/* Comments Section */}
@@ -1917,7 +1706,7 @@ export default function KnowledgeRead() {
                             <CardHeader className="pb-4">
                                 <div className="flex items-center justify-between">
                                     <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5 text-altus-copper" />
+                                        <MessageSquare className="h-5 w-5 text-ds-brass" />
                                         {t('viewer.discussion')}
                                         <span className="text-sm font-normal text-muted-foreground ms-1">({comments?.length || 0})</span>
                                     </CardTitle>
@@ -1936,7 +1725,7 @@ export default function KnowledgeRead() {
                                             className="min-h-[80px] border-none focus-visible:ring-0 p-0 text-sm resize-none bg-transparent"
                                         />
                                         <div className="flex justify-end pt-2 border-t border-border">
-                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-hotel-navy dark:bg-hotel-gold text-white dark:text-hotel-navy font-semibold hover:opacity-90">
+                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-ds-ink hover:bg-ds-ink-secondary text-white font-semibold">
                                                 <Send className="h-3.5 w-3.5 me-2" /> {t('viewer.post')}
                                             </Button>
                                         </div>
@@ -1953,7 +1742,7 @@ export default function KnowledgeRead() {
                                                 <div key={comment.id} className="flex gap-4 group">
                                                     <Avatar className="h-10 w-10 border border-border shadow-xs shrink-0">
                                                         <AvatarImage src={comment.author?.avatar_url} />
-                                                        <AvatarFallback className="bg-hotel-navy text-hotel-gold font-bold">
+                                                        <AvatarFallback className="bg-ds-ink text-ds-brass font-bold">
                                                             {comment.author?.full_name?.charAt(0) || '?'}
                                                         </AvatarFallback>
                                                     </Avatar>
@@ -1991,12 +1780,12 @@ export default function KnowledgeRead() {
                                                 onClick={() => scrollToSection(item.id)}
                                                 className={cn(
                                                     "kb-sidebar-item w-full text-start text-sm py-2 px-3 rounded-xl transition-all flex items-center gap-3",
-                                                    activeSection === item.id ? "bg-altus-copper/10 text-altus-copper font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                                    activeSection === item.id ? "bg-ds-brass/10 text-ds-brass font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                 )}
                                             >
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full shrink-0",
-                                                    activeSection === item.id ? "bg-altus-copper" : "bg-muted"
+                                                    activeSection === item.id ? "bg-ds-brass" : "bg-muted"
                                                 )} />
                                                 <span className="truncate">{item.text}</span>
                                             </button>
@@ -2014,7 +1803,7 @@ export default function KnowledgeRead() {
                                             <Badge
                                                 key={tag.id}
                                                 variant="outline"
-                                                className="bg-card border-border text-foreground hover:border-altus-copper hover:text-altus-copper transition-colors cursor-default"
+                                                className="bg-card border-border text-foreground hover:border-ds-brass hover:text-ds-brass transition-colors cursor-default"
                                                 style={{ borderInlineStart: `3px solid ${tag.color}` }}
                                             >
                                                 {tag.name}
@@ -2039,7 +1828,7 @@ export default function KnowledgeRead() {
                                                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{t('viewer.training_hint', 'Complete this interactive training course based on this SOP.')}</p>
                                                     <Button
                                                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none rounded-xl"
-                                                        onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
+                                                        onClick={() => navigate(`/learn/player/${article.linked_training_id}`)}
                                                     >
                                                         <PlayCircle className="h-4 w-4 me-2" />
                                                         {t('viewer.start_training', 'Start Training Course')}
@@ -2054,7 +1843,7 @@ export default function KnowledgeRead() {
                                                     <Button
                                                         variant="outline"
                                                         className="w-full border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl"
-                                                        onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
+                                                        onClick={() => navigate(`/learn/quizzes/${article.linked_quiz_id}`)}
                                                     >
                                                         <Lightbulb className="h-4 w-4 me-2" />
                                                         {t('viewer.take_quiz', 'Take Assessment')}
@@ -2067,7 +1856,7 @@ export default function KnowledgeRead() {
                             ) : (
                                 /* AI Course & Quiz Generation Quick Actions for Authors/Managers */
                                 (hasPermission('training.create') || profile?.role === 'super_admin' || profile?.role === 'administrator') && (
-                                    <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-500 via-hotel-gold to-yellow-600">
+                                    <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-500 via-ds-brass to-yellow-600">
                                         <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
                                             <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                                                 <Sparkles className="h-4 w-4 text-amber-500" />
@@ -2080,7 +1869,7 @@ export default function KnowledgeRead() {
                                                 <Button
                                                     size="sm"
                                                     className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm rounded-xl text-xs font-semibold"
-                                                    onClick={() => navigate(`/learning/training/create?source_doc_id=${article.id}`)}
+                                                    onClick={() => navigate(`/studio/courses/new?source_doc_id=${article.id}`)}
                                                 >
                                                     <GraduationCap className="h-3.5 w-3.5 me-1.5" />
                                                     {t('viewer.generate_course_from_sop', 'Generate Course from SOP')}
@@ -2089,7 +1878,7 @@ export default function KnowledgeRead() {
                                                     size="sm"
                                                     variant="outline"
                                                     className="w-full border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl text-xs font-semibold"
-                                                    onClick={() => navigate(`/learning/quizzes/generate?source_doc_id=${article.id}`)}
+                                                    onClick={() => navigate(`/studio/quizzes/generate?source_doc_id=${article.id}`)}
                                                 >
                                                     <Lightbulb className="h-3.5 w-3.5 me-1.5" />
                                                     {t('viewer.generate_quiz_from_sop', 'Generate Quiz from SOP')}

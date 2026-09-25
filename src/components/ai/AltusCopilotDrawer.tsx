@@ -17,7 +17,6 @@ import {
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Bell,
   BookOpen,
   Check,
   CheckCircle2,
@@ -317,15 +316,6 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
   // Personal Assistant Action Starters
   const personalStarters = [
     {
-      badge: isArabic ? 'مهامي اليوم' : 'My Day',
-      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
-      title: isArabic ? 'ملخص مهامي اليومية' : 'My Daily Task Briefing',
-      desc: isArabic ? 'استعراض المهام المسندة لي ومواعيدها وأولوياتها' : 'List my assigned pending tasks with priorities and deadlines',
-      prompt: isArabic
-        ? 'لخص لي مهامي المعلقة اليوم ورتبها حسب الأولوية والموعد النهائي.'
-        : 'Summarize my pending tasks for today and list them in order of priority and deadline.',
-    },
-    {
       badge: isArabic ? 'التدريب' : 'Learning',
       icon: <BookOpen className="w-4 h-4 text-blue-500" />,
       title: isArabic ? 'متابعة دوراتي التدريبية' : 'My Training Progress',
@@ -335,13 +325,13 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
         : 'What training courses are assigned to me, and what is my progress and due date?',
     },
     {
-      badge: isArabic ? 'التعاميم' : 'Announcements',
-      icon: <Bell className="w-4 h-4 text-amber-500" />,
-      title: isArabic ? 'آخر تعاميم المنشأة' : 'Latest Property Notices',
-      desc: isArabic ? 'أحدث الإعلانات والتعاميم المعتمدة لفندقي' : 'Summarize the latest circulars and announcements for my property',
+      badge: isArabic ? 'المراجعة' : 'Revision',
+      icon: <CheckCircle2 className="w-4 h-4 text-emerald-500" />,
+      title: isArabic ? 'ما الذي يجب أن أكمله أولاً؟' : 'What should I finish first?',
+      desc: isArabic ? 'ترتيب دوراتي غير المكتملة حسب التقدم' : 'Order my unfinished courses by how close I am to completing them',
       prompt: isArabic
-        ? 'ما هي أحدث التعاميم والإعلانات المنشورة لفندقي هذا الأسبوع؟'
-        : 'What are the latest announcements and corporate circulars for my hotel property?',
+        ? 'رتب دوراتي غير المكتملة حسب نسبة التقدم، وأخبرني بأيها أبدأ.'
+        : 'Order my unfinished courses by progress and tell me which one to finish first.',
     },
     {
       badge: isArabic ? 'الضيافة' : 'Forbes 5-Star',
@@ -482,15 +472,6 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
               <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
                 <button
                   type="button"
-                  onClick={() => handleSend(undefined, isArabic ? 'لخص لي مهامي المعلقة اليوم.' : 'Summarize my pending tasks for today.')}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-emerald-400 transition-colors shadow-2xs whitespace-nowrap"
-                >
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  <span>{isArabic ? 'المهام' : 'Tasks'}</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => handleSend(undefined, isArabic ? 'ما هي الدورات التدريبية المسندة لي في منصة التعلم؟' : 'What training courses are assigned to me?')}
                   className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-blue-400 transition-colors shadow-2xs whitespace-nowrap"
                 >
@@ -498,14 +479,6 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
                   <span>{isArabic ? 'التدريب' : 'Courses'}</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSend(undefined, isArabic ? 'ما هي أحدث التعاميم والإعلانات المنشورة لفندقي؟' : 'What are the latest announcements for my hotel property?')}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-amber-400 transition-colors shadow-2xs whitespace-nowrap"
-                >
-                  <Bell className="w-3 h-3 text-amber-500" />
-                  <span>{isArabic ? 'التعاميم' : 'Notices'}</span>
-                </button>
               </div>
 
               {/* RAG SOP Toggle */}
@@ -535,8 +508,8 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
                       </h4>
                       <p className="text-[11px] text-muted-foreground max-w-xs mx-auto leading-relaxed">
                         {isArabic
-                          ? 'أنا مساعدك الشخصي لإدارة مهامك، متابعة التدريب، والإجابة عن السياسات التشغيلية.'
-                          : 'I am your personal AI assistant ready to help with your assigned tasks, training courses, and hotel SOPs.'}
+                          ? 'أنا مساعدك الشخصي لمتابعة تدريبك والإجابة عن الإجراءات التشغيلية.'
+                          : 'I am your personal AI assistant for your training courses and hotel SOPs.'}
                       </p>
                     </div>
 
@@ -756,8 +729,8 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
                     onChange={(e) => setInputVal(e.target.value)}
                     placeholder={
                       isArabic
-                        ? `اسأل مساعدك الشخصي، أو اطلب تلخيص مهامك...`
-                        : `Ask your personal assistant, check tasks, or speak...`
+                        ? `اسأل مساعدك الشخصي عن دوراتك أو الإجراءات...`
+                        : `Ask about your courses or SOPs, or speak...`
                     }
                     rows={1}
                     disabled={isStreaming || isSearchingKnowledge}

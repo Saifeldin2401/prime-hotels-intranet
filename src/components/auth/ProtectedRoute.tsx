@@ -7,10 +7,12 @@ import { useUserData } from '@/contexts/auth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { canRoleAccess, type Permission } from '@/features/access/policy'
 import { useAuth } from '@/hooks/useAuth'
+import type { Capability } from '@/hooks/useCapabilities'
 import { usePermissions } from '@/hooks/usePermissions'
 import { buildLoginUrl, setPostLoginRedirect } from '@/lib/authRedirect'
 import type { AppRole } from '@/lib/constants'
 
+import { CapabilityGate } from './CapabilityGate'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
 import { useEffect } from 'react'
 
@@ -18,6 +20,11 @@ interface ProtectedRouteProps {
   children: ReactNode
   allowedRoles?: AppRole[]
   requiredPermission?: Permission
+  /**
+   * Tenant capability (or any of several) from the database capability matrix
+   * for the current organization. Prefer this over allowedRoles for new routes.
+   */
+  requiredCapability?: Capability | Capability[]
   requiredPropertyId?: string
   requiredDepartmentId?: string
   fallbackPath?: string
@@ -28,6 +35,7 @@ export function ProtectedRoute({
   children,
   allowedRoles,
   requiredPermission,
+  requiredCapability,
   requiredPropertyId,
   requiredDepartmentId,
   fallbackPath = '/unauthorized',
@@ -138,7 +146,11 @@ export function ProtectedRoute({
 
   return (
     <PasswordEnforcementGuard>
-      {children}
+      {requiredCapability && !operatorInSession ? (
+        <CapabilityGate required={requiredCapability} fallbackPath={fallbackPath}>
+          {children}
+        </CapabilityGate>
+      ) : children}
     </PasswordEnforcementGuard>
   )
 }

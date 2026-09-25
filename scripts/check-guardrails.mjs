@@ -169,6 +169,182 @@ try {
 }
 
 // ---------------------------------------------------------------------------
+// GUARDRAIL 4: certificates are issued only by server command functions
+//
+// History (2026-09-25): any tenant author could INSERT/UPDATE `certificates`
+// directly, so compliance evidence could be forged, while learner quiz and
+// path certificates were silently rejected by RLS and the UI still reported
+// "certificate earned". Direct writes are now revoked in the database; issue
+// through createCertificate()/issueManualCertificate() (issue_* RPCs) instead.
+// ---------------------------------------------------------------------------
+
+const CERT_WRITE_RE = /from\(\s*['"]certificates['"]\s*\)\s*\.\s*(insert|update|upsert)\b/
+
+for (const file of sourceFiles) {
+  const rel = relative(ROOT, file).split(sep).join('/')
+  if (TEST_PATH_RE.test(rel)) continue
+  // Collapse whitespace so chained calls split across lines still match.
+  const text = readFileSync(file, 'utf8')
+  const flat = text.replace(/\s+/g, ' ')
+  if (CERT_WRITE_RE.test(flat)) {
+    failures.push(
+      `${rel}  Writes to \`certificates\` directly.\n` +
+      `    Certificates are issued only by the issue_* server functions — use\n` +
+      `    createCertificate() or issueManualCertificate() from certificateService.`
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GUARDRAIL 4b: course lessons live in `lessons`, never in `documents`
+//
+// History (2026-09-25): lesson blocks were `documents` rows with
+// content_type='training_block'. Sharing the knowledge table caused a
+// cross-tenant leak and left 152 orphaned blocks. The database now rejects
+// such rows (documents_no_lesson_blocks); this catches the code path early.
+// ---------------------------------------------------------------------------
+
+for (const file of sourceFiles) {
+  const rel = relative(ROOT, file).split(sep).join('/')
+  if (TEST_PATH_RE.test(rel) || rel === 'src/types/database.generated.ts') continue
+  const text = readFileSync(file, 'utf8')
+  if (/['"]training_block['"]/.test(text)) {
+    failures.push(
+      `${rel}  Uses content_type 'training_block'.\n` +
+      `    Lesson blocks live in the \`lessons\` table; query .from('lessons') instead.`
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GUARDRAIL 5: pages and components do not talk to the database (ratchet)
+//
+// History (rebuild audit 2026-09-25): 85 page/component files queried Supabase
+// directly, so the same business rule was re-implemented per screen and drifted
+// (e.g. certificate issuance in three places, two of them silently failing).
+// Data access belongs in services/hooks (target: features/<domain>/api).
+// Existing offenders are frozen in scripts/guardrail-baselines/; the list may
+// only shrink - a file that no longer imports the client must be removed too.
+// ---------------------------------------------------------------------------
+
+const UI_DIR_RE = /^src\/(pages|components)\//
+const SUPABASE_IMPORT_RE = /from\s+['"]@\/lib\/supabase['"]/
+const uiBaselinePath = join(ROOT, 'scripts', 'guardrail-baselines', 'ui-supabase-imports.json')
+const uiBaseline = new Set(JSON.parse(readFileSync(uiBaselinePath, 'utf8')).files)
+const uiOffenders = new Set()
+
+for (const file of sourceFiles) {
+  const rel = relative(ROOT, file).split(sep).join('/')
+  if (!UI_DIR_RE.test(rel) || TEST_PATH_RE.test(rel)) continue
+  if (SUPABASE_IMPORT_RE.test(readFileSync(file, 'utf8'))) uiOffenders.add(rel)
+}
+
+for (const rel of uiOffenders) {
+  if (uiBaseline.has(rel)) continue
+  failures.push(
+    `${rel}  Imports the Supabase client in a page/component.\n` +
+    `    Put the query in a service or hook (target: src/features/<domain>/api) and\n` +
+    `    call that instead. See docs/engineering/ARCHITECTURE.md.`
+  )
+}
+
+for (const rel of uiBaseline) {
+  if (uiOffenders.has(rel)) continue
+  failures.push(
+    `${rel}  No longer imports the Supabase client (or was moved/deleted).\n` +
+    `    Remove it from scripts/guardrail-baselines/ui-supabase-imports.json so the\n` +
+    `    ratchet stays tight.`
+  )
+}
+
+// ---------------------------------------------------------------------------
+// GUARDRAIL 6: links use canonical workspace URLs
+//
+// History (UX assessment 2026-09-25): the same job was reachable at up to five
+// URLs (/learn, /courses, /learning, /training, /training/hub), so navigation
+// state, active highlighting and workspace identity disagreed from screen to
+// screen, and the Studio landing sent authors back into Learn. Retired URLs
+// now live only in src/routes/legacyRedirects.tsx; code must link to the
+// canonical route (src/config/navigation.ts).
+// ---------------------------------------------------------------------------
+
+const LEGACY_URL_RE = new RegExp(
+  String.raw`['"\x60]/(` +
+  [
+    String.raw`training(/|['"\x60?#])`,
+    String.raw`learning(/|['"\x60?#])`,
+    String.raw`courses(/|['"\x60?#])`,
+    String.raw`assessments(/|['"\x60?#])`,
+    String.raw`questions(/|['"\x60?#])`,
+    String.raw`home/learner`,
+    String.raw`reports['"\x60?#]`,
+    String.raw`media['"\x60?#]`,
+    String.raw`knowledge/(create|review|search|browse|wiki)`,
+    String.raw`manage/review`,
+    String.raw`admin/(analytics|certificates|report-builder)`,
+    String.raw`dashboard/`,
+    String.raw`studio/(builder|assessments)`,
+  ].join('|') +
+  ')'
+)
+const LEGACY_URL_ALLOW = new Set(['src/routes/legacyRedirects.tsx'])
+
+for (const file of sourceFiles) {
+  const rel = relative(ROOT, file).split(sep).join('/')
+  if (LEGACY_URL_ALLOW.has(rel) || TEST_PATH_RE.test(rel) || rel.startsWith('src/integrations/')) continue
+  const lines = readFileSync(file, 'utf8').split('\n')
+  lines.forEach((text, i) => {
+    if (/^\s*(\*|\/\/)/.test(text)) return
+    if (LEGACY_URL_RE.test(text) && !hasOptOut(lines, i + 1)) {
+      failures.push(
+        `${rel}:${i + 1}  Links to a retired URL.\n` +
+        `    Use the canonical workspace route from src/config/navigation.ts\n` +
+        `    (old URLs are redirects only, in src/routes/legacyRedirects.tsx).`
+      )
+    }
+  })
+}
+
+// ---------------------------------------------------------------------------
+// GUARDRAIL 7: product vocabulary in English copy (ratchet)
+//
+// History (UX assessment 2026-09-25): "course", "module", "training",
+// "assessment" and "exam" were used interchangeably for the same things, and
+// "property"/"hotel", "tenant"/"organization" likewise. The official terms are
+// in docs/product/PRODUCT_DEFINITION.md#vocabulary. The count of retired terms
+// in en/*.json may only go down.
+// ---------------------------------------------------------------------------
+
+const VOCAB_RETIRED = [
+  /\bmodules?\b/i, /\bexams?\b/i, /\benrol+ments?\b/i, /\bwiki\b/i,
+  /\bpropert(y|ies)\b/i, /\bsuper ?admins?\b/i, /\bassessments?\b/i, /\btenants?\b/i,
+]
+const vocabBaselinePath = join(ROOT, 'scripts', 'guardrail-baselines', 'vocabulary.json')
+const vocabBaseline = JSON.parse(readFileSync(vocabBaselinePath, 'utf8')).counts
+const enDir = join(SRC, 'i18n', 'locales', 'en')
+const countRetired = (value) => {
+  if (typeof value === 'string') return VOCAB_RETIRED.some((re) => re.test(value)) ? 1 : 0
+  if (value && typeof value === 'object') return Object.values(value).reduce((n, v) => n + countRetired(v), 0)
+  return 0
+}
+for (const name of readdirSync(enDir).filter((f) => f.endsWith('.json'))) {
+  const count = countRetired(JSON.parse(readFileSync(join(enDir, name), 'utf8')))
+  const allowed = vocabBaseline[name] ?? 0
+  if (count > allowed) {
+    failures.push(
+      `src/i18n/locales/en/${name}  ${count} strings use retired product terms (baseline ${allowed}).\n` +
+      `    Use Course / Lesson / Quiz / Assignment / Certificate / Article / Organization / Hotel\n` +
+      `    (docs/product/PRODUCT_DEFINITION.md#vocabulary).`
+    )
+  } else if (count < allowed) {
+    failures.push(
+      `src/i18n/locales/en/${name}  Now has ${count} retired-term strings (baseline ${allowed}).\n` +
+      `    Lower the count in scripts/guardrail-baselines/vocabulary.json so the ratchet stays tight.`
+    )
+  }
+}
+
+// ---------------------------------------------------------------------------
 
 if (failures.length > 0) {
   console.error(`\n✖ ${failures.length} guardrail violation(s):\n`)
@@ -180,4 +356,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log('✔ Guardrails passed (no fake-data constants, no unknown storage buckets, types file intact).')
+console.log('✔ Guardrails passed (no fake-data constants, no unknown storage buckets, types file intact, no direct certificate writes, no new UI database access, canonical URLs only, vocabulary ratchet).')

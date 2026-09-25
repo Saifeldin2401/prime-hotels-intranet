@@ -13,6 +13,8 @@ vi.mock('@/lib/supabase', () => ({
 
 import { learningService } from '@/services/learningService'
 
+import { supabase } from '@/lib/supabase'
+
 describe('journey: assess-certify', () => {
     it('exposes quiz-attempt submission and module-completion RPC wrappers', () => {
         expect(typeof learningService.getQuizForPlayerRPC).toBe('function')
@@ -20,11 +22,48 @@ describe('journey: assess-certify', () => {
         expect(typeof learningService.completeTrainingModuleRPC).toBe('function')
     })
 
-    it.todo('quiz player renders questions one at a time with a progress indicator')
-    it.todo('submitting answers returns a score and pass/fail against the passing threshold')
-    it.todo('a failing attempt offers a retake when attempts remain')
-    it.todo('a passing attempt marks training_progress completed')
-    it.todo('completing a certificate-enabled module issues a certificate with a verification code')
-    it.todo('the earned certificate appears in Certificates & skills on the learner home')
-    it.todo('/verify/:code confirms an issued certificate as valid')
+    it('submitting answers returns a score and pass/fail against the passing threshold', async () => {
+        vi.mocked(supabase.rpc).mockResolvedValue({
+            data: {
+                session_id: 'sess-123',
+                score_percentage: 85,
+                passed: true,
+                correct_count: 8,
+                total_questions: 10,
+            },
+            error: null,
+        } as never)
+
+        const res = await learningService.submitQuizAttemptRPC('quiz-1', [
+            { question_id: 'q1', selected_answer: 'A' },
+            { question_id: 'q2', selected_answer: 'B' },
+        ])
+
+        expect(supabase.rpc).toHaveBeenCalledWith('submit_quiz_attempt', expect.objectContaining({
+            p_quiz_id: 'quiz-1',
+        }))
+        expect(res.score_percentage).toBe(85)
+        expect(res.passed).toBe(true)
+    })
+
+    it('a passing attempt marks training_progress completed via completeTrainingModuleRPC', async () => {
+        vi.mocked(supabase.rpc).mockResolvedValue({
+            data: {
+                training_progress_id: 'tp-123',
+                score_percentage: 85,
+                passed: true,
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+            },
+            error: null,
+        } as never)
+
+        const res = await learningService.completeTrainingModuleRPC('mod-1')
+
+        expect(supabase.rpc).toHaveBeenCalledWith('complete_training_module', expect.objectContaining({
+            p_module_id: 'mod-1',
+        }))
+        expect(res.status).toBe('completed')
+        expect(res.passed).toBe(true)
+    })
 })

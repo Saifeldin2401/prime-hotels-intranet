@@ -295,7 +295,7 @@ export function StepStructure({
               // once this module is saved/published.
               try {
                 const { data: createdQuiz } = await supabase
-                  .from('learning_quizzes')
+                  .from('quizzes')
                   .insert({
                     title: `Checkpoint: ${checkpoint.topic || sec.heading}`,
                     description: `Verification quiz for ${sec.heading}`,
@@ -384,7 +384,7 @@ export function StepStructure({
                       order: items.length,
                     })
                   } else {
-                    await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)
+                    await supabase.from('quizzes').delete().eq('id', createdQuiz.id)
                     checkpointFailures.push(checkpoint.topic || sec.heading)
                   }
                 }

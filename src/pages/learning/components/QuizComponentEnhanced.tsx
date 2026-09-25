@@ -873,6 +873,7 @@ export function QuizComponentEnhanced({
                         recipientName: profile?.full_name || user.email || 'Quiz Participant',
                         recipientEmail: user.email,
                         certificateType: 'sop_quiz',
+                        quizId: quiz.id,
                         title: quiz.title,
                         description: `Successfully completed ${quiz.title} with a score of ${serverResult.score_percentage}%.`,
                         completionDate: new Date(),

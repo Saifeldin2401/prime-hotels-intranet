@@ -68,7 +68,7 @@ export function ModuleQuickPreviewSheet({
     queryFn: async () => {
       if (!moduleId) return null
       const { data, error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('*')
         .eq('id', moduleId)
         .single()
@@ -84,9 +84,8 @@ export function ModuleQuickPreviewSheet({
     queryFn: async () => {
       if (!moduleId) return []
       const { data, error } = await supabase
-        .from('documents')
+        .from('lessons')
         .select('id, title, block_type, is_mandatory, duration_seconds, points, content')
-        .eq('content_type', 'training_block')
         .eq('training_module_id', moduleId)
         .eq('is_deleted', false)
         .order('block_order', { ascending: true })
@@ -102,7 +101,7 @@ export function ModuleQuickPreviewSheet({
     queryFn: async () => {
       if (!moduleId) return []
       const { data, error } = await supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .select('id, target_type, target_id, target_role, priority, valid_from')
         .eq('content_id', moduleId)
         .eq('content_type', 'module')

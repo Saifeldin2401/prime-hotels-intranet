@@ -93,7 +93,7 @@ export function TenantOnboardingGuide() {
 
         // 3. Learning modules count
         const { count: modCount } = await supabase
-          .from('training_modules')
+          .from('courses')
           .select('id', { count: 'exact', head: true })
           .eq('is_deleted', false)
 
@@ -133,7 +133,7 @@ export function TenantOnboardingGuide() {
         titleKey: 'onboarding.step_profile',
         descKey: 'onboarding.step_profile_desc',
         icon: Building2,
-        path: '/organization/cockpit',
+        path: '/admin/organization',
         isCompleted: Boolean(currentOrganization?.name),
       },
       {
@@ -149,7 +149,7 @@ export function TenantOnboardingGuide() {
         titleKey: 'onboarding.step_departments',
         descKey: 'onboarding.step_departments_desc',
         icon: FolderTree,
-        path: '/organization/structure',
+        path: '/admin/properties',
         isCompleted: departmentsCount > 0,
       },
       {
@@ -165,7 +165,7 @@ export function TenantOnboardingGuide() {
         titleKey: 'onboarding.step_learning',
         descKey: 'onboarding.step_learning_desc',
         icon: GraduationCap,
-        path: '/training/hub',
+        path: '/studio',
         isCompleted: learningCount > 0,
       },
     ]

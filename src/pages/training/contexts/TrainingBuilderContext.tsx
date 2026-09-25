@@ -8,7 +8,6 @@ import type { TrainingModule } from '@/lib/types'
 import { analytics } from '@/services/analyticsService'
 import { quizIntegrityService } from '@/services/quizIntegrityService'
 import type { LearningQuiz } from '@/types/learning'
-import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -281,7 +280,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     queryKey: ['available-quizzes'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('learning_quizzes')
+        .from('quizzes')
         .select('*, questions:unified_quiz_questions(count)')
         .eq('is_deleted', false)
         .order('title')
@@ -417,7 +416,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     queryFn: async () => {
       if (!moduleId) return null
       const { data, error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('*')
         .eq('id', moduleId)
         .single()
@@ -470,9 +469,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     queryFn: async () => {
       if (!moduleId) return []
       const { data, error } = await supabase
-        .from('documents')
-        .select('id, title, block_type, content, content_ar, block_order, created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
-        .eq('content_type', 'training_block')
+        .from('lessons')
+        .select('id, title, block_type, content, content_ar, block_order, created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id:source_document_id, ai_generated, ai_source_content, duration_seconds, points')
         .eq('training_module_id', moduleId)
         .order('block_order', { ascending: true })
       if (error) throw error
@@ -845,7 +843,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       let sectionsModified = false
       const quizCreationFailures: string[] = []
 
-      // 1. Ensure every quiz block has a concrete quiz_id in learning_quizzes
+      // 1. Ensure every quiz block has a concrete quiz_id in quizzes
       for (let sIdx = 0; sIdx < currentSections.length; sIdx++) {
         const section = currentSections[sIdx]
         const updatedItems = [...section.items]
@@ -860,7 +858,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
             if (!quizId) {
               const quizTitle = item.title?.trim() || `${title.trim() || 'Module'} - Assessment`
               const { data: newQuiz, error: newQuizError } = await supabase
-                .from('learning_quizzes')
+                .from('quizzes')
                 .insert({
                   title: quizTitle,
                   description: `Assessment for ${quizTitle}`,
@@ -1715,6 +1713,9 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     sections.forEach((section, sectionIndex) => {
       for (const item of section.items) {
         blocksToInsert.push({
+          // Existing lessons carry their database id; new items have a
+          // temporary "content-<timestamp>" id, which the server ignores.
+          id: item.id,
           training_module_id: targetId,
           type: item.type,
           title: item.title || null,
@@ -1744,32 +1745,11 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   }, [contentBlocks, sections])
 
   const replaceModuleBlocksSafely = useCallback(async (targetId: string, blocksToInsert: TrainingContentBlockInsert[]) => {
-    // training_content_blocks has been consolidated into documents (content_type='training_block').
-    const { data: existingBlocks, error: fetchError } = await supabase
-      .from('documents')
-      .select('id, title, block_type, content, content_ar, block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
-      .eq('content_type', 'training_block')
-      .eq('training_module_id', targetId)
-      .order('block_order', { ascending: true })
-    if (fetchError) throw fetchError
-
-    const previousRows = Array.isArray(existingBlocks) ? existingBlocks : []
-
-    const { error: deleteError } = await supabase
-      .from('documents')
-      .delete()
-      .eq('content_type', 'training_block')
-      .eq('training_module_id', targetId)
-    if (deleteError) throw deleteError
-
-    if (blocksToInsert.length === 0) return
-
-    // Map TrainingContentBlockInsert fields to the unified documents columns.
-    // documents has no `type`/`order`/`source_document_id` columns (they are
-    // block_type/block_order/linked_training_id), and title is NOT NULL.
-    // Note: linked_training_id on documents references training_modules(id), NOT documents(id).
-    // The source SOP / document ID is stored inside content_data.sop_id / content_data.source_document_id.
-    const docRows = blocksToInsert.map((b) => {
+    // One server transaction: lessons that already exist keep their id (so
+    // learners' lesson progress and practical submissions stay attached),
+    // new ones are inserted and removed ones deleted. Never delete-and-reinsert
+    // from the browser - that re-keyed every lesson on every save.
+    const lessons = blocksToInsert.map((b) => {
       // Keep the dedicated Arabic column in sync with the block's persisted
       // translation (content_data.translations.ar) so AI-generated bilingual
       // content survives a builder round-trip.
@@ -1779,55 +1759,30 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
           ? (translations as Record<string, unknown>).ar
           : undefined
       return {
-      training_module_id: b.training_module_id || targetId,
-      content_type: 'training_block',
-      block_type: b.type,
-      block_order: b.order,
-      title: b.title || 'Content block',
-      content: b.content || '',
-      content_ar: typeof arContent === 'string' && arContent.trim() ? arContent : null,
-      content_url: b.content_url || null,
-      content_data: {
-        ...(b.content_data || {}),
-        ...(b.source_document_id ? { sop_id: b.source_document_id, source_document_id: b.source_document_id } : {})
-      } as Json,
-      linked_training_id: null,
-      is_mandatory: b.is_mandatory ?? true,
-      duration_seconds: b.duration_seconds ?? null,
-      points: b.points ?? null,
-      is_master_template: isMasterTemplate,
-      scope_type: isMasterTemplate ? 'global' : 'organization',
+        id: b.id ?? null,
+        type: b.type,
+        title: b.title || 'Content block',
+        content: b.content || '',
+        content_ar: typeof arContent === 'string' && arContent.trim() ? arContent : null,
+        content_url: b.content_url || null,
+        content_data: {
+          ...(b.content_data || {}),
+          ...(b.source_document_id ? { sop_id: b.source_document_id, source_document_id: b.source_document_id } : {})
+        },
+        source_document_id: b.source_document_id ?? null,
+        is_mandatory: b.is_mandatory ?? true,
+        duration_seconds: b.duration_seconds ?? null,
+        points: b.points ?? null,
       }
     })
 
-    const { error: insertError } = await supabase
-      .from('documents')
-      .insert(docRows)
-
-    if (!insertError) return
-
-    if (previousRows.length > 0) {
-      const restoreRows = previousRows.map((row) => {
-        const { id, ...rest } = row
-        void id
-        return {
-          ...rest,
-          title: row.title || 'Content block',
-          training_module_id: targetId,
-          content_type: 'training_block',
-        }
-      })
-
-      const { error: restoreError } = await supabase
-        .from('documents')
-        .insert(restoreRows)
-
-      if (restoreError) {
-        console.error('Failed to restore previous training blocks after save error:', restoreError)
-      }
-    }
-
-    throw insertError
+    // save_course_lessons is newer than the generated DB types.
+    const rpc = supabase.rpc.bind(supabase) as unknown as (
+      name: string,
+      params: Record<string, unknown>
+    ) => PromiseLike<{ error: { message: string; hint?: string | null } | null }>
+    const { error } = await rpc('save_course_lessons', { p_course_id: targetId, p_lessons: lessons })
+    if (error) throw error
   }, [])
 
   const handleTemplateSelection = (value: string) => {
@@ -1952,14 +1907,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       if (moduleId) {
         const { error } = await supabase
-          .from('training_modules')
+          .from('courses')
           .update(payload)
           .eq('id', moduleId)
         if (error) throw error
         return moduleId
       } else {
         const { data, error } = await supabase
-          .from('training_modules')
+          .from('courses')
           .insert(payload)
           .select()
           .single()
@@ -2043,7 +1998,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       if (savedModuleId) {
         const { error } = await supabase
-          .from('training_modules')
+          .from('courses')
           .update({
             status: 'published',
             updated_at: new Date().toISOString(),
@@ -2089,7 +2044,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         next.set('assignModuleId', savedModuleId)
       }
       next.set('openAssign', '1')
-      navigate(`/training/hub?${next.toString()}`)
+      navigate(`/studio?${next.toString()}`)
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({

@@ -4,9 +4,7 @@ import { Header } from '@/components/layout/Header'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { PageTransition } from '@/components/layout/PageTransition'
-import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
 import { TenantBreadcrumbs } from '@/components/layout/TenantBreadcrumbs'
-import { AltusCopilotTrigger } from '@/components/ai/AltusCopilotTrigger'
 import { PlatformImpersonationBanner } from '@/components/platform/PlatformImpersonationBanner'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useTranslation } from 'react-i18next'
@@ -26,8 +24,7 @@ import {
   GuidedWizardModal, 
   WhatCanIDoSheet, 
   SearchableHelpDialog, 
-  RoleChangeAlertBanner,
-  InteractiveSpotlightTour
+  RoleChangeAlertBanner
 } from '@/components/wizard'
 
 interface AppLayoutProps {
@@ -87,24 +84,18 @@ export function AppLayout({ children }: AppLayoutProps) {
   const isImmersiveOrFocusedPage = useMemo(() => {
     const p = location.pathname.toLowerCase()
     return (
-      p.startsWith('/learning/training/') ||
-      p.startsWith('/learning/microlearning/') ||
-      p.startsWith('/training/player/') ||
-      p.includes('/take')
+      p.startsWith('/learn/player/') ||
+      p.startsWith('/learn/quizzes/')
     )
   }, [location.pathname])
 
   // Full-bleed player routes own the entire viewport: no app Header, no <main>
   // padding, no sidebar/mobile-nav/copilot. These pages render their own top bar
   // and exit control. Kept stricter than isImmersiveOrFocusedPage so it can never
-  // catch /assessments/builder/* or other */take* editor routes.
+  // catch the Studio quiz builder (/studio/quizzes/*) or other editor routes.
   const isFullBleedPage = useMemo(() => {
     const p = location.pathname.toLowerCase()
-    return (
-      p.startsWith('/learning/training/') ||
-      p.startsWith('/learning/microlearning/') ||
-      /^\/assessments\/[^/]+\/take$/.test(p)
-    )
+    return /^\/learn\/(player|quizzes)\/[^/]+$/.test(p)
   }, [location.pathname])
 
   if (isFullBleedPage) {
@@ -125,16 +116,17 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <InsideAppLayoutContext.Provider value={true}>
-      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
-        {/* Desktop Sidebar */}
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-[#F6F6F3] dark:bg-[#0D151D] text-[#15212E] dark:text-[#F4F2EC] antialiased">
+        <a className="skip-to-content" href="#main-content">Skip to main content</a>
+        {/* Desktop Sidebar (Width: 248px, Dark navy/ink #15212E) */}
         {!isImmersiveOrFocusedPage && (
-          <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-border/60 bg-card/80 backdrop-blur-2xl shadow-sm">
+          <aside className="hidden lg:flex lg:w-[248px] lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-[#30404D] bg-[#15212E] shadow-none">
             <Sidebar />
           </aside>
         )}
 
         {/* Main Content Area */}
-        <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
+        <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-[248px]' : ''}`}>
           <PlatformImpersonationBanner />
           <RoleChangeAlertBanner />
           {/* Top Header */}
@@ -144,10 +136,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           />
 
           {/* Main Content Stage */}
-          <main className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
-            {!isImmersiveOrFocusedPage && <HolidayCelebration />}
+          <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
             {!isImmersiveOrFocusedPage && <TenantBreadcrumbs />}
-            <PageTransition className="w-full min-w-0">{children}</PageTransition>
+            <PageTransition className="w-full min-w-0 max-w-[1680px] mx-auto">{children}</PageTransition>
           </main>
 
           {/* Mobile Bottom Navigation */}
@@ -161,20 +152,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetContent
               side={isRtl ? 'right' : 'left'}
-              className="p-0 w-[85vw] max-w-xs border-e border-border/60 bg-card overflow-hidden"
+              className="p-0 w-[85vw] max-w-xs border-e border-[#30404D] bg-[#15212E] overflow-hidden"
             >
               <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
             </SheetContent>
           </Sheet>
         )}
 
-        {/* Floating Altus Copilot Trigger */}
-        {!copilotOpen && !isImmersiveOrFocusedPage && (
-          <AltusCopilotTrigger onClick={() => setCopilotOpen(true)} />
-        )}
-
         {/* Role-Based Guided Wizard, Sheet & Searchable Help */}
-        <InteractiveSpotlightTour />
         <GuidedWizardModal />
         <WhatCanIDoSheet />
         <SearchableHelpDialog />

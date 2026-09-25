@@ -905,7 +905,7 @@ export function AICourseEngineStudioModal({
 
       onCourseCreated?.(moduleId)
       onOpenChange(false)
-      navigate(`/training/builder/${moduleId}`)
+      navigate(`/studio/courses/${moduleId}`)
     } catch (e: any) {
       toast({
         title: t('common:error', 'Save Error'),

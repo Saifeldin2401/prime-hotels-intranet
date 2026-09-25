@@ -583,7 +583,7 @@ export default function KnowledgeAuthor() {
                     title: '📋 New Document for Review',
                     message: `"${documentTitle}" has been submitted for review by ${profile?.full_name || 'a team member'}.`,
                     metadata: {
-                        link: `/knowledge/review`,
+                        link: `/studio/review/articles`,
                         document_id: documentId,
                         submitted_by: user?.id,
                         submitted_by_name: profile?.full_name

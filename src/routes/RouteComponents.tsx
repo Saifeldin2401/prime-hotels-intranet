@@ -1,7 +1,5 @@
 import { PageTracker } from '@/components/analytics/PageTracker'
 import { MaintenanceGuard } from '@/components/common/MaintenanceGuard'
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 import { NotificationProvider } from '@/contexts/NotificationContext'
@@ -22,17 +20,7 @@ import {
     useLocation,
 } from 'react-router-dom'
 
-const LearnerHome = lazy(() => import('@/pages/home/LearnerHome'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
-const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
-
-export const LearnerHomeRoute = () => (
-    <ProtectedRoute>
-        <AppLayout>
-            <LearnerHome />
-        </AppLayout>
-    </ProtectedRoute>
-)
 
 export const RootLayout = () => {
     const { loading } = useAuth()
@@ -62,7 +50,8 @@ export const RootIndex = () => {
     const destination = useMemo(() => {
         if (!user) return null
 
-        const GENERIC = new Set(['', '/', '/dashboard', '/home', '/home/learner'])
+        // guardrail-ok: retired landing URLs are recognised here so they never win over the account-aware home
+        const GENERIC = new Set(['', '/', '/dashboard', '/home', '/home/learner', '/learn'])
         const isDeepLink = (p: string | null | undefined): p is string =>
             !!p && !GENERIC.has(p.split('?')[0].replace(/\/$/, '') || '/')
 
@@ -92,7 +81,7 @@ export const RootIndex = () => {
             }
         }
 
-        return account.recommendedDestination ?? '/dashboard'
+        return account.recommendedDestination ?? '/learn'
     }, [user, location.search, account.recommendedDestination, account.isPlatformOperator, account.activePlatformSession, account.isMultiOrg])
 
     useEffect(() => {
@@ -120,7 +109,8 @@ export const RootIndex = () => {
         return <Navigate to={loginTarget} replace />
     }
 
-    return <PublicHome />
+    // Signed-out visitors go straight to sign-in; the app has no marketing site.
+    return <Navigate to="/login" replace />
 }
 
 /**
@@ -175,9 +165,35 @@ export const LegacyAnalyticsRedirect = () => {
 
     const destination = (account.isPlatformOperator && !account.activePlatformSession)
         ? '/platform/analytics'
-        : '/learning/analytics'
+        : '/manage/compliance'
 
     return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
 }
 
 export const LegacyScheduleRedirect = () => <Navigate to="/" replace />
+
+/**
+ * `/dashboard` is no longer a page: every member's home is the landing of the
+ * workspace that answers their first question (server-resolved in
+ * resolve_account_context). An operator inside a tenant session lands on that
+ * organization's overview.
+ */
+export const WorkspaceHomeRedirect = () => {
+    const { user, loading } = useAuth()
+    const account = useAccountContext()
+    const location = useLocation()
+
+    if (loading || (user && account.loading)) {
+        return <PageSkeleton />
+    }
+
+    if (!user) {
+        return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
+    }
+
+    const destination = account.isPlatformOperator && account.activePlatformSession
+        ? '/admin/organization'
+        : account.recommendedDestination || '/learn'
+
+    return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
+}

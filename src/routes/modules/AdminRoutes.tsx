@@ -1,11 +1,11 @@
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PlatformRoute } from '@/components/auth/PlatformRoute'
 import { TenantContextGuard } from '@/components/auth/TenantContextGuard'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
-import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
+import type { Capability } from '@/hooks/useCapabilities'
+import { page } from '@/routes/utils/page'
 import { lazy } from 'react'
-import { Route, Navigate, useParams } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioning'))
@@ -14,16 +14,12 @@ const PropertyManagement = lazy(() => import('@/pages/admin/PropertyManagement')
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
 const PIIAuditViewer = lazy(() => import('@/pages/admin/PIIIAuditViewer').then(m => ({ default: m.PIIAuditViewer })))
 const NotificationBatches = lazy(() => import('@/pages/admin/notifications/NotificationBatches'))
-const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsDashboard'))
-const AICourseGeneratorSettings = lazy(() => import('@/pages/admin/AICourseGeneratorSettings'))
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
-const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
-const TrainingCertificates = lazy(() => import('@/pages/training/TrainingCertificates'))
+const AICourseGeneratorSettings = lazy(() => import('@/pages/admin/AICourseGeneratorSettings'))
 const EmailAnalytics = lazy(() => import('@/pages/admin/EmailAnalytics'))
 const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
 const EmailTemplateEditor = lazy(() => import('@/pages/admin/EmailTemplateEditor'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
-const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
 const TenantDataExport = lazy(() => import('@/pages/admin/TenantDataExport'))
 const WizardManager = lazy(() => import('@/pages/admin/WizardManager'))
@@ -39,169 +35,28 @@ const PlatformSettings = lazy(() => import('@/pages/platform/PlatformSettings'))
 const PlatformAnalytics = lazy(() => import('@/pages/platform/PlatformAnalytics'))
 const PlatformAuditLogs = lazy(() => import('@/pages/platform/PlatformAuditLogs'))
 
+const ORG_ADMIN: Capability = 'org.admin'
+const PEOPLE: Capability[] = ['people.manage', 'org.admin']
 
-function PlatformTenantParamRedirect() {
-    const { id } = useParams<{ id: string }>()
-    return <Navigate to={id ? `/platform/organizations/${id}` : '/platform/organizations'} replace />
-}
-
+/**
+ * WORKSPACE: ORGANIZATION (/admin) - the tenant's own structure, people,
+ * settings and audit. Gated by the database capability matrix; the platform
+ * console below is gated by the platform-operator identity instead.
+ */
 export const AdminRoutes = () => (
     <>
-        <Route element={<TenantContextGuard resourceName="Administration" />}>
-            <Route
-                path="/admin/users"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
-                    <AppLayout>
-                        <UserManagement />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/users/bulk"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
-                    <AppLayout>
-                        <BulkUserProvisioning />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/properties"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <PropertyManagement />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/analytics"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <AdminAnalyticsDashboard />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/audit"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <AuditLogs />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/pii-access"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
-                    <AppLayout>
-                        <PIIAuditViewer />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/ai-course-generator"
-            element={<PreserveQueryNavigate to="/platform/ai-settings" />}
-        />
-        <Route
-            path="/admin/notifications"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr']}>
-                    <AppLayout>
-                        <NotificationBatches />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/email-analytics"
-            element={<PreserveQueryNavigate to="/platform/email-analytics" />}
-        />
-        <Route
-            path="/admin/email-templates"
-            element={<PreserveQueryNavigate to="/platform/email-templates" />}
-        />
-        <Route
-            path="/admin/inbound-emails"
-            element={<PreserveQueryNavigate to="/platform/email-inbound" />}
-        />
-        <Route
-            path="/admin/organization"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <OrganizationalControlCenter />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/settings"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <SystemSettings />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/certificates"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <TrainingCertificates />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/certificates/generate"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <ManualCertificateGenerator />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/retention-policies"
-            element={<PreserveQueryNavigate to="/platform/retention-policies" />}
-        />
-        <Route
-            path="/admin/report-builder"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <ReportBuilder />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/invitations"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
-                    <AppLayout>
-                        <UserInvitations />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
+        <Route element={<TenantContextGuard resourceName="Organization" />}>
+            <Route path="/admin/organization" element={page(<OrganizationalControlCenter />, { capability: PEOPLE })} />
+            <Route path="/admin/users" element={page(<UserManagement />, { capability: PEOPLE })} />
+            <Route path="/admin/users/bulk" element={page(<BulkUserProvisioning />, { capability: 'people.manage' })} />
+            <Route path="/admin/invitations" element={page(<UserInvitations />, { capability: PEOPLE })} />
+            <Route path="/admin/properties" element={page(<PropertyManagement />, { capability: ORG_ADMIN })} />
+            <Route path="/admin/settings" element={page(<SystemSettings />, { capability: 'org.settings' })} />
+            <Route path="/admin/audit" element={page(<AuditLogs />, { capability: 'audit.view' })} />
+            <Route path="/admin/pii-access" element={page(<PIIAuditViewer />, { capability: 'audit.view' })} />
+            <Route path="/admin/notifications" element={page(<NotificationBatches />, { capability: ORG_ADMIN })} />
+            <Route path="/admin/export" element={page(<TenantDataExport />, { capability: 'org.settings' })} />
+            <Route path="/admin/wizards" element={page(<WizardManager />, { capability: ORG_ADMIN })} />
         </Route>
 
         {/* ------------------------------------------------------------------ */}
@@ -238,14 +93,6 @@ export const AdminRoutes = () => (
                     </AppLayout>
                 </PlatformRoute>
             }
-        />
-        <Route
-            path="/platform/tenants"
-            element={<Navigate to="/platform/organizations" replace />}
-        />
-        <Route
-            path="/platform/tenants/:id"
-            element={<PlatformTenantParamRedirect />}
         />
         <Route
             path="/platform/users"
@@ -357,38 +204,6 @@ export const AdminRoutes = () => (
                         </MotionWrapper>
                     </AppLayout>
                 </PlatformRoute>
-            }
-        />
-
-        {/* ------------------------------------------------------------------ */}
-        {/* TENANT DATA PORTABILITY & COMPLIANCE ARCHIVE                       */}
-        {/* ------------------------------------------------------------------ */}
-        <Route
-            path="/admin/export"
-            element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'administrator']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <TenantDataExport />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-
-        {/* ------------------------------------------------------------------ */}
-        {/* ROLE-BASED GUIDED WIZARD & ONBOARDING MANAGEMENT                   */}
-        {/* ------------------------------------------------------------------ */}
-        <Route
-            path="/admin/wizards"
-            element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin', 'administrator']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <WizardManager />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
             }
         />
         <Route

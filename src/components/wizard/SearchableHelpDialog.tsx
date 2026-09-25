@@ -31,7 +31,7 @@ const FAQ_ITEMS: HelpItem[] = [
     answerKey: 'wizard.faqs.assign_training.a',
     categoryKey: 'wizard.faqs.categories.training',
     roles: ['training_manager', 'tenant_admin', 'tenant_owner', 'platform_operator'],
-    actionRoute: '/training/builder',
+    actionRoute: '/studio/courses/new',
     actionKey: 'wizard.actions.go_to_builder'
   },
   {
@@ -40,7 +40,7 @@ const FAQ_ITEMS: HelpItem[] = [
     answerKey: 'wizard.faqs.access_my_training.a',
     categoryKey: 'wizard.faqs.categories.training',
     roles: ['learner', 'department_manager', 'viewer'],
-    actionRoute: '/training',
+    actionRoute: '/learn/my',
     actionKey: 'wizard.actions.my_courses'
   },
   {
@@ -94,7 +94,7 @@ const FAQ_ITEMS: HelpItem[] = [
     answerKey: 'wizard.faqs.download_certificates.a',
     categoryKey: 'wizard.faqs.categories.training',
     roles: ['learner', 'department_manager', 'viewer'],
-    actionRoute: '/training',
+    actionRoute: '/learn/my',
     actionKey: 'wizard.actions.my_certificates'
   }
 ]

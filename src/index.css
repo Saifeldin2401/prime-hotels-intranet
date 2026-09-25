@@ -1,3 +1,15 @@
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+@import '@fontsource/ibm-plex-sans-arabic/400.css';
+@import '@fontsource/ibm-plex-sans-arabic/500.css';
+@import '@fontsource/ibm-plex-sans-arabic/600.css';
+@import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
 @import './editor/styles/ai-content.css';
 @import './styles/mobile-optimizations.css';
 @import './styles/dashboard-redesign.css';
@@ -5,6 +17,67 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Design-system palette (src/ui/tokens/colors.ts) as RGB channels, so Tailwind
+   opacity modifiers work: bg-ds-ink/90. Light on :root, dark on .dark. */
+:root {
+  --ds-ink: 21 33 46;
+  --ds-ink-secondary: 59 71 84;
+  --ds-muted: 102 112 128;
+  --ds-background: 246 246 243;
+  --ds-surface: 255 255 255;
+  --ds-surface-subtle: 240 241 238;
+  --ds-border: 221 219 212;
+  --ds-border-strong: 200 199 193;
+  --ds-brass: 134 103 44;
+  --ds-accent: 134 103 44;
+  --ds-accent-hover: 111 84 36;
+  --ds-accent-soft: 242 235 221;
+  --ds-success: 44 106 75;
+  --ds-success-soft: 232 242 236;
+  --ds-warning: 168 90 20;
+  --ds-warning-soft: 248 235 221;
+  --ds-danger: 165 48 42;
+  --ds-danger-soft: 248 233 232;
+  --ds-info: 70 99 122;
+  --ds-info-soft: 234 240 244;
+  /* Text on an ink-coloured surface (e.g. the primary button). */
+  --ds-on-ink: 255 255 255;
+  /* Navigation chrome: navy is the product's structural depth in both themes,
+     so these are deliberately not redefined under .dark. */
+  --ds-chrome: 21 33 46;
+  --ds-chrome-raised: 28 41 53;
+  --ds-chrome-border: 48 64 77;
+  --ds-chrome-text: 244 242 236;
+  --ds-chrome-muted: 146 156 165;
+  --ds-chrome-accent: 183 154 98;
+}
+
+.dark,
+[data-theme="dark"] {
+  --ds-ink: 240 243 247;
+  --ds-ink-secondary: 180 191 203;
+  --ds-muted: 125 139 155;
+  --ds-background: 16 20 25;
+  --ds-surface: 24 32 42;
+  --ds-surface-subtle: 28 41 53;
+  --ds-border: 44 54 68;
+  --ds-border-strong: 48 64 77;
+  --ds-brass: 212 170 85;
+  --ds-accent: 183 154 98;
+  --ds-accent-hover: 158 131 79;
+  --ds-accent-soft: 36 42 40;
+  --ds-success: 72 163 117;
+  --ds-success-soft: 20 40 30;
+  --ds-warning: 220 160 56;
+  --ds-warning-soft: 42 35 20;
+  --ds-danger: 226 88 80;
+  --ds-danger-soft: 44 22 21;
+  --ds-info: 111 164 199;
+  --ds-info-soft: 21 35 45;
+  --ds-on-ink: 21 33 46;
+}
+
 
 /* Accessibility: Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
@@ -24,56 +97,76 @@
 
 @layer base {
   :root {
-    /* Altus Advisory Corporate Palette */
-    /* Primary Navy: #0B1528 (HSL 219 57% 10%) */
-    /* Primary Gold: #C9A54D (HSL 43 53% 55%) */
-    /* Emerald Accent: #1B4332 (HSL 154 43% 18%) */
-    /* Cream: #F5F1EA (HSL 38 36% 94%) */
+    /* pc-* utilities alias the one palette (--ds-*), so they follow .dark too. */
+    --color-ink: rgb(var(--ds-ink));
+    --color-ink-secondary: rgb(var(--ds-ink-secondary));
+    --color-muted: rgb(var(--ds-muted));
+    --color-background: rgb(var(--ds-background));
+    --color-surface: rgb(var(--ds-surface));
+    --color-surface-subtle: rgb(var(--ds-surface-subtle));
+    --color-border: rgb(var(--ds-border));
+    --color-border-strong: rgb(var(--ds-border-strong));
+    --color-accent: rgb(var(--ds-accent));
+    --color-accent-hover: rgb(var(--ds-accent-hover));
+    --color-accent-soft: rgb(var(--ds-accent-soft));
+    --color-success: rgb(var(--ds-success));
+    --color-success-soft: rgb(var(--ds-success-soft));
+    --color-warning: rgb(var(--ds-warning));
+    --color-warning-soft: rgb(var(--ds-warning-soft));
+    --color-danger: rgb(var(--ds-danger));
+    --color-danger-soft: rgb(var(--ds-danger-soft));
+    --color-info: rgb(var(--ds-info));
+    --color-info-soft: rgb(var(--ds-info-soft));
 
-    --background: 0 0% 100%;
-    --foreground: 219 40% 10%;
+    /* Base theme bindings */
+
+    /* shadcn/ui bindings, derived from the --ds-* palette. Navy ink is the
+       primary action colour; gold (accent) is reserved for focus, priority
+       and achievement. */
+    --background: 60 14% 96%;
+    --foreground: 211 37% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 219 40% 10%;
+    --card-foreground: 211 37% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 219 40% 10%;
+    --popover-foreground: 211 37% 13%;
 
-    --primary: 43 53% 55%;
-    --primary-foreground: 219 57% 10%;
-    --primary-hover: 44 55% 62%;
-    --primary-active: 42 55% 30%;
+    --primary: 211 37% 13%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 211 30% 22%;
+    --primary-active: 211 40% 9%;
 
-    --secondary: 38 20% 96%;
-    --secondary-foreground: 219 40% 10%;
+    --secondary: 80 10% 94%;
+    --secondary-foreground: 211 37% 13%;
 
-    --muted: 38 20% 96%;
-    --muted-foreground: 219 10% 40%;
+    --muted: 80 10% 94%;
+    --muted-foreground: 217 11% 45%;
 
-    --accent: 38 20% 96%;
-    --accent-foreground: 43 53% 55%;
+    --accent: 80 10% 94%;
+    --accent-foreground: 211 37% 13%;
 
-    --destructive: 0 84% 45%;
+    --destructive: 3 59% 41%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 38 15% 89%;
-    --input: 38 15% 89%;
+    --border: 47 12% 85%;
+    --input: 47 12% 85%;
 
-    --border-accent: 43 53% 55%;
-    --ring: 43 53% 55%;
-    --focus-ring: 43 53% 55%;
+    --border-accent: 39 51% 35%;
+    --ring: 39 51% 35%;
+    --focus-ring: 39 51% 35%;
 
     --radius: 0.5rem;
 
     /* Semantic Status Palette (HSL values) */
-    --success: 142 76% 36%;
-    --success-foreground: 142 76% 95%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 95%;
-    --error: 0 84% 45%;
-    --error-foreground: 0 84% 95%;
-    --info: 199 89% 48%;
-    --info-foreground: 199 89% 95%;
+    --success: 150 41% 29%;
+    --success-foreground: 0 0% 100%;
+    --warning: 28 79% 37%;
+    --warning-foreground: 0 0% 100%;
+    --error: 3 59% 41%;
+    --error-foreground: 0 0% 100%;
+    --info: 207 27% 38%;
+    --info-foreground: 0 0% 100%;
 
     /* Extended Hotel Palette (Altus Advisory) */
     --hotel-gold: 43 53% 55%;
@@ -122,39 +215,45 @@
     --font-body: 'Inter', sans-serif;
   }
 
-  .dark {
-    --background: 219 45% 7%;
-    --foreground: 38 30% 95%;
+  .dark,
+  [data-theme="dark"] {
+    --background: 213 22% 8%;
+    --foreground: 214 30% 95%;
 
-    --card: 219 45% 9%;
-    --card-foreground: 38 30% 95%;
+    --card: 213 27% 13%;
+    --card-foreground: 214 30% 95%;
 
-    --popover: 219 45% 9%;
-    --popover-foreground: 38 30% 95%;
+    --popover: 213 27% 13%;
+    --popover-foreground: 214 30% 95%;
 
-    --primary: 43 53% 55%;
-    --primary-foreground: 219 57% 8%;
-    --primary-hover: 44 55% 62%;
-    --primary-active: 42 55% 30%;
+    --primary: 214 30% 95%;
+    --primary-foreground: 211 37% 13%;
+    --primary-hover: 214 20% 85%;
+    --primary-active: 214 20% 78%;
 
-    --secondary: 219 35% 14%;
-    --secondary-foreground: 38 30% 95%;
+    --secondary: 209 31% 16%;
+    --secondary-foreground: 214 30% 95%;
 
-    --muted: 219 35% 14%;
-    --muted-foreground: 219 10% 65%;
+    --muted: 209 31% 16%;
+    --muted-foreground: 212 13% 55%;
 
-    --accent: 219 35% 14%;
-    --accent-foreground: 43 53% 55%;
+    --accent: 209 31% 16%;
+    --accent-foreground: 214 30% 95%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 3 72% 60%;
+    --destructive-foreground: 211 37% 13%;
 
-    --border: 219 30% 17%;
-    --input: 219 30% 17%;
+    --border: 215 21% 22%;
+    --input: 215 21% 22%;
 
-    --border-accent: 43 53% 55%;
-    --ring: 43 53% 55%;
-    --focus-ring: 43 53% 55%;
+    --border-accent: 40 37% 55%;
+    --ring: 40 37% 55%;
+    --focus-ring: 40 37% 55%;
+
+    --success: 150 39% 46%;
+    --warning: 38 70% 54%;
+    --error: 3 72% 60%;
+    --info: 204 44% 61%;
 
     /* Altus Dark Mode Token Adjustments */
     --altus-copper: 18 62% 52%;
@@ -173,11 +272,6 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background-image:
-      radial-gradient(at 0% 0%, hsla(var(--altus-copper), 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(var(--hotel-gold), 0.06) 0px, transparent 40%),
-      radial-gradient(at 50% 100%, hsla(var(--altus-sand), 0.04) 0px, transparent 60%),
-      linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
     overflow-x: hidden;
   }
 
@@ -252,6 +346,29 @@ html {
   font-size: 14px;
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: hsl(var(--hotel-gold) / 0.25);
+  color: hsl(var(--foreground));
+}
+
+/* Inputs should make their active state unmistakable without relying on colour
+   alone. The additional shadow also holds up on low-quality displays. */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.16);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-card,
+  .widget-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 @media (min-width: 375px) {

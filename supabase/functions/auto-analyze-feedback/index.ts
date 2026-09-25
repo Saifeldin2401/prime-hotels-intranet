@@ -4,7 +4,8 @@
  *
  * Analyzes free-text feedback left on Knowledge Base documents and stores an AI
  * sentiment / theme / actionable-item summary. When feedback is negative it also
- * spins up a follow-up task for the owning department.
+ * records a `knowledge.feedback_action_required` platform event for the
+ * document's organization.
  *
  * AI calls are routed through the central `process-ai-request` gateway so that
  * provider selection, `ai_platform_config` (free_only_mode / enabled_providers /
@@ -135,8 +136,10 @@ Deno.serve(async (req) => {
         feedback_text,
         helpful,
         documents (
+          id,
           title,
-          department_id
+          department_id,
+          organization_id
         )
       `,
       )
@@ -234,53 +237,27 @@ Deno.serve(async (req) => {
       throw updateError;
     }
 
-    // ── Auto-create a task when the AI identifies an actionable item ─────
+    // ── Record an actionable item for the knowledge team ─────────────────
+    // (The tasks module was removed; the signal goes to the platform event
+    // outbox so the knowledge review queue / notifications can pick it up.)
     if (analysis.sentiment === "negative" && analysis.actionable_item) {
-      const docTitle =
-        (scopedFeedback as any).documents?.title ?? "Knowledge Base Document";
-      const deptId = (scopedFeedback as any).documents?.department_id ?? null;
-
-      let assigneeId: string | null = null;
-      if (deptId) {
-        // Department membership now lives on organization_memberships.department_id
-        // rather than a separate user_departments junction table.
-        const { data: deptUsers } = await supabase
-          .from("organization_memberships")
-          .select("user_id")
-          .eq("department_id", deptId)
-          .eq("is_active", true);
-        const deptUserIds = (deptUsers ?? []).map((r: any) => r.user_id);
-        if (deptUserIds.length > 0) {
-          const { data: headRow } = await supabase
-            .from("user_roles")
-            .select("user_id")
-            .eq("role", "department_head")
-            .in("user_id", deptUserIds)
-            .limit(1)
-            .maybeSingle();
-          if (headRow?.user_id) assigneeId = headRow.user_id;
-        }
-      }
-
-      const taskTitle = `KB Doc Action: ${String(analysis.actionable_item).slice(0, 100)}`;
-      await supabase.from("tasks").insert({
-        title: taskTitle,
-        description: [
-          `Document: ${docTitle}`,
-          `AI Actionable Item: ${analysis.actionable_item}`,
-          `Themes: ${Array.isArray(analysis.themes) ? analysis.themes.join(", ") : ""}`,
-          `Feedback ID: ${feedback_id}`,
-        ].join("\n\n"),
-        status: "todo",
-        priority: "medium",
-        assigned_to_id: assigneeId,
-        assigned_to: assigneeId,
-        department_id: deptId,
-        due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
-        is_deleted: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const doc = (scopedFeedback as any).documents ?? null;
+      const { error: eventError } = await supabase.rpc("emit_platform_event", {
+        p_event_type: "knowledge.feedback_action_required",
+        p_organization_id: doc?.organization_id ?? null,
+        p_resource_type: "document",
+        p_resource_id: doc?.id ?? null,
+        p_payload: {
+          feedback_id,
+          document_title: doc?.title ?? null,
+          department_id: doc?.department_id ?? null,
+          actionable_item: String(analysis.actionable_item).slice(0, 500),
+          themes: Array.isArray(analysis.themes) ? analysis.themes : [],
+        },
       });
+      if (eventError) {
+        console.error("Failed to record feedback action event:", eventError.message);
+      }
     }
 
     return new Response(JSON.stringify({ success: true, analysis }), {

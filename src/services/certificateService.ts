@@ -33,6 +33,7 @@ export interface CertificateData {
     trainingModuleId?: string
     trainingProgressId?: string
     sopId?: string
+    quizId?: string
     quizAttemptId?: string
 
     // Context & Multi-Tenant Scoping
@@ -55,12 +56,6 @@ export interface Certificate extends CertificateData {
     status: 'active' | 'revoked' | 'expired' | 'superseded'
     pdfUrl?: string
     createdAt: Date
-}
-
-type TrainingProgressSnapshot = {
-    id: string
-    training_id: string
-    score_percentage: number | null
 }
 
 type CertificateRecord = {
@@ -235,237 +230,132 @@ function formatDate(date: Date | string): string {
 }
 
 /**
- * Generate unique certificate number
+ * Raised when the server refuses to issue a certificate. `code` is the stable
+ * rule code the command function returns in its HINT (e.g. CERT_NOT_PASSED,
+ * CERT_SELF_ISSUE), so callers can show a specific message.
  */
-function generateCertificateNumber(): string {
-    const date = new Date()
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '')
-    const randomPart = crypto.randomUUID().replace(/-/g, '').slice(0, 6).toUpperCase()
-    return `CERT-${dateStr}-${randomPart}`
+export class CertificateIssueError extends Error {
+    readonly code: string | null
+
+    constructor(message: string, code: string | null) {
+        super(message)
+        this.name = 'CertificateIssueError'
+        this.code = code
+    }
+}
+
+type IssueRpcName =
+    | 'issue_training_certificate'
+    | 'issue_quiz_certificate'
+    | 'issue_path_certificate'
+    | 'issue_manual_certificate'
+
+type IssueRpcResult = {
+    data: CertificateRecord | null
+    error: { message: string; hint?: string | null } | null
+}
+
+// The issue_* command functions are newer than the generated DB types
+// (`npm run db:types` needs a valid Supabase CLI token), so they are called
+// through this one narrowly typed wrapper.
+async function callIssueRpc(fn: IssueRpcName, args: Record<string, unknown>): Promise<CertificateRecord> {
+    const rpc = supabase.rpc.bind(supabase) as unknown as (
+        name: string,
+        params: Record<string, unknown>
+    ) => { single: () => PromiseLike<IssueRpcResult> }
+
+    const { data, error } = await rpc(fn, args).single()
+    if (error || !data) {
+        throw new CertificateIssueError(error?.message || 'The certificate could not be issued.', error?.hint ?? null)
+    }
+    return data
 }
 
 /**
- * Generate unique verification code
+ * Issue a certificate the learner has earned. Certificates are never written
+ * from the browser: each kind goes through a server command function that
+ * re-checks the rule (completed and passed, same organization, one active
+ * certificate per source). Idempotent - a repeat call returns the existing
+ * certificate. Throws CertificateIssueError when the server refuses.
  */
-function generateVerificationCode(): string {
-    return crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()
-}
+export async function createCertificate(data: CertificateData): Promise<Certificate> {
+    let record: CertificateRecord
+    const pathId = typeof data.metadata?.training_path_id === 'string' ? data.metadata.training_path_id : null
 
-/**
- * Create a new certificate in the database
- */
-export async function createCertificate(data: CertificateData): Promise<Certificate | null> {
-    // 'training' certificates are no longer client-insertable (RLS requires an
-    // admin/HR role or routing through this RPC, which re-validates the learner's
-    // own training_progress server-side before issuing).
-    if (data.certificateType === 'training' && data.trainingProgressId) {
-        const { data: cert, error } = await supabase
-            .rpc('issue_training_certificate' as any, { p_training_progress_id: data.trainingProgressId })
-            .single()
-
-        if (error || !cert) {
-            console.error('Failed to issue training certificate:', error)
-            return null
+    if (data.certificateType === 'training') {
+        if (!data.trainingProgressId) {
+            throw new CertificateIssueError('This course completion has no progress record to certify.', 'CERT_NO_PROGRESS')
         }
-
-        const resultCertificate = mapCertificateFromDb(cert as CertificateRecord)
-
-        if (data.recipientEmail) {
-            void dispatchCertificateEmail(data, resultCertificate)
+        record = await callIssueRpc('issue_training_certificate', { p_training_progress_id: data.trainingProgressId })
+    } else if (data.certificateType === 'sop_quiz') {
+        if (!data.quizId) {
+            throw new CertificateIssueError('No quiz was given for this certificate.', 'CERT_QUIZ_NOT_FOUND')
         }
-
-        return resultCertificate
+        record = await callIssueRpc('issue_quiz_certificate', { p_quiz_id: data.quizId })
+    } else if (data.certificateType === 'achievement' && pathId) {
+        record = await callIssueRpc('issue_path_certificate', { p_path_id: pathId })
+    } else {
+        throw new CertificateIssueError(
+            'Only training managers and admins can issue this kind of certificate.',
+            'CERT_NOT_ALLOWED'
+        )
     }
 
-    let resolvedTrainingModuleId = data.trainingModuleId
-    let resolvedTrainingProgressId = data.trainingProgressId
-    let resolvedScore = data.score
-    let resolvedPassingScore = data.passingScore
-
-    if (data.certificateType === 'training' && data.userId) {
-        const resolveProgressById = async (progressId: string): Promise<TrainingProgressSnapshot | null> => {
-            const { data: progress, error } = await supabase
-                .from('training_progress')
-                .select('id, training_id, score_percentage')
-                .eq('id', progressId)
-                .eq('user_id', data.userId)
-                .eq('is_deleted', false)
-                .maybeSingle()
-
-            if (error || !progress) return null
-            return progress as TrainingProgressSnapshot
-        }
-
-        const resolveProgressByModule = async (moduleId: string): Promise<TrainingProgressSnapshot | null> => {
-            const { data: progress, error } = await supabase
-                .from('training_progress')
-                .select('id, training_id, score_percentage')
-                .eq('user_id', data.userId)
-                .eq('training_id', moduleId)
-                .eq('is_deleted', false)
-                .order('updated_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-
-            if (error || !progress) return null
-            return progress as TrainingProgressSnapshot
-        }
-
-        if (resolvedTrainingProgressId) {
-            const progress = await resolveProgressById(resolvedTrainingProgressId)
-            if (progress) {
-                if (!resolvedTrainingModuleId) {
-                    resolvedTrainingModuleId = progress.training_id
-                }
-                if (resolvedScore === undefined || resolvedScore === null) {
-                    resolvedScore = progress.score_percentage ?? undefined
-                }
-            }
-        }
-
-        if (!resolvedTrainingProgressId && resolvedTrainingModuleId) {
-            const progress = await resolveProgressByModule(resolvedTrainingModuleId)
-            if (progress) {
-                resolvedTrainingProgressId = progress.id
-                if (resolvedScore === undefined || resolvedScore === null) {
-                    resolvedScore = progress.score_percentage ?? undefined
-                }
-            }
-        }
-
-        if (!resolvedPassingScore && resolvedTrainingModuleId) {
-            const { data: moduleInfo } = await supabase
-                .from('training_modules')
-                .select('passing_score_percentage')
-                .eq('id', resolvedTrainingModuleId)
-                .maybeSingle()
-
-            const modulePassingScore = moduleInfo?.passing_score_percentage
-            if (typeof modulePassingScore === 'number') {
-                resolvedPassingScore = modulePassingScore
-            }
-        }
-
-        // Recertification: a module's validity_period_days is authored in the builder but was
-        // never actually applied to issued certificates, so nothing ever expired. Compute it here
-        // rather than requiring every caller to pass expiryDate explicitly.
-        if (!data.expiryDate && resolvedTrainingModuleId) {
-            const { data: validityInfo } = await supabase
-                .from('training_modules')
-                .select('validity_period_days')
-                .eq('id', resolvedTrainingModuleId)
-                .maybeSingle()
-
-            const validityDays = validityInfo?.validity_period_days
-            if (typeof validityDays === 'number' && validityDays > 0) {
-                const expiry = new Date(data.completionDate)
-                expiry.setDate(expiry.getDate() + validityDays)
-                data = { ...data, expiryDate: expiry }
-            }
-        }
-
-        if (resolvedTrainingProgressId) {
-            const { data: existingCert, error: existingCertError } = await supabase
-                .from('certificates')
-                .select('*')
-                .eq('training_progress_id', resolvedTrainingProgressId)
-                .eq('certificate_type', 'training')
-                .eq('status', 'active')
-                .maybeSingle()
-
-            const mappedExistingCert = existingCert ? mapCertificateFromDb(existingCert) : null
-            if (!existingCertError && mappedExistingCert?.status === 'active') {
-                return mappedExistingCert
-            }
-        }
-    }
-
-    const pathCertificateId =
-        data.certificateType === 'achievement' &&
-        data.metadata &&
-        typeof data.metadata.training_path_id === 'string'
-            ? data.metadata.training_path_id
-            : null
-
-    if (pathCertificateId) {
-        const { data: existingPathCert, error: existingPathCertError } = await supabase
-            .from('certificates')
-            .select('*')
-            .eq('user_id', data.userId)
-            .eq('certificate_type', 'achievement')
-            .eq('status', 'active')
-            .contains('metadata', { training_path_id: pathCertificateId })
-            .maybeSingle()
-
-        const mappedExistingPathCert = existingPathCert ? mapCertificateFromDb(existingPathCert) : null
-        if (!existingPathCertError && mappedExistingPathCert?.status === 'active') {
-            return mappedExistingPathCert
-        }
-    }
-
-    const certificateNumber = generateCertificateNumber()
-    const verificationCode = generateVerificationCode()
-
-    const { data: cert, error } = await supabase
-        .from('certificates')
-        .insert({
-            user_id: data.userId,
-            recipient_name: data.recipientName,
-            recipient_email: data.recipientEmail,
-            certificate_type: data.certificateType,
-            certificate_number: certificateNumber,
-            verification_code: verificationCode,
-            title: data.title,
-            description: data.description,
-            completion_date: data.completionDate.toISOString(),
-            expiry_date: data.expiryDate?.toISOString(),
-            score: resolvedScore,
-            passing_score: resolvedPassingScore,
-            training_module_id: resolvedTrainingModuleId,
-            training_progress_id: resolvedTrainingProgressId,
-            sop_id: data.sopId,
-            quiz_attempt_id: data.quizAttemptId,
-            organization_id: data.organizationId || null,
-            hotel_id: data.hotelId || data.propertyId || null,
-            property_id: data.propertyId,
-            department_id: data.departmentId,
-            issued_by: data.issuedBy,
-            status: 'active',
-            metadata: {
-                propertyName: data.propertyName,
-                departmentName: data.departmentName,
-                issuedByName: data.issuedByName,
-                ...(data.metadata || {})
-            }
-        })
-        .select()
-        .single()
-
-    if (error) {
-        if (resolvedTrainingProgressId && error.code === '23505') {
-            const { data: existingCert, error: existingCertError } = await supabase
-                .from('certificates')
-                .select('*')
-                .eq('training_progress_id', resolvedTrainingProgressId)
-                .eq('certificate_type', 'training')
-                .eq('status', 'active')
-                .maybeSingle()
-
-            const mappedExistingCert = existingCert ? mapCertificateFromDb(existingCert) : null
-            if (!existingCertError && mappedExistingCert?.status === 'active') {
-                return mappedExistingCert
-            }
-        }
-        console.error('Failed to create certificate:', error)
-        return null
-    }
-
-    // Automated email dispatch for attained certificates
+    const certificate = mapCertificateFromDb(record)
     if (data.recipientEmail) {
-        void dispatchCertificateEmail(data, mapCertificateFromDb(cert))
+        void dispatchCertificateEmail(data, certificate)
     }
+    return certificate
+}
 
-    return mapCertificateFromDb(cert)
+export interface ManualCertificateInput {
+    organizationId: string
+    userId: string
+    recipientName: string
+    recipientEmail?: string
+    certificateType: CertificateData['certificateType']
+    title: string
+    description?: string
+    completionDate: Date
+    expiryDate?: Date
+    trainingModuleId?: string
+    metadata?: Record<string, unknown>
+}
+
+/**
+ * Issue a certificate by hand (classroom training, external course). Only
+ * admins and training managers of the organization may do this, never for
+ * themselves; the server records who issued it and emits an audit event.
+ */
+export async function issueManualCertificate(input: ManualCertificateInput): Promise<Certificate> {
+    const record = await callIssueRpc('issue_manual_certificate', {
+        p_organization_id: input.organizationId,
+        p_user_id: input.userId,
+        p_certificate_type: input.certificateType,
+        p_title: input.title,
+        p_completion_date: input.completionDate.toISOString(),
+        p_description: input.description ?? null,
+        p_training_module_id: input.trainingModuleId ?? null,
+        p_expiry_date: input.expiryDate?.toISOString() ?? null,
+        p_metadata: input.metadata ?? {},
+    })
+
+    const certificate = mapCertificateFromDb(record)
+    if (input.recipientEmail) {
+        void dispatchCertificateEmail(
+            {
+                userId: input.userId,
+                recipientName: input.recipientName,
+                recipientEmail: input.recipientEmail,
+                certificateType: input.certificateType,
+                title: input.title,
+                completionDate: input.completionDate,
+                organizationId: input.organizationId,
+            },
+            certificate
+        )
+    }
+    return certificate
 }
 
 /**
@@ -510,7 +400,7 @@ async function dispatchCertificateEmail(data: CertificateData, resultCertificate
                 subject: 'Your Certificate of Completion: ' + data.title,
                 title: 'Certificate Attained',
                 message: `Congratulations ${data.recipientName}! You have successfully earned the ${data.title} certificate.`,
-                actionUrl: '/training/certificates',
+                actionUrl: '/learn/certificates',
                 businessDomain: 'operations',
                 notificationType: 'training_completed',
                 attachments,

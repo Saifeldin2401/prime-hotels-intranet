@@ -150,19 +150,19 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                         <NavItem
                             icon={LayoutGrid}
                             label={t('library.all_knowledge', 'All Knowledge')}
-                            href="/knowledge/search"
+                            href="/knowledge"
                             active={isLibrary}
                         />
                         <NavItem
                             icon={Star}
                             label={t('library.featured', 'Featured')}
-                            href="/knowledge/search?featured=true"
+                            href="/knowledge?featured=true"
                             active={isFeatured}
                         />
                         <NavItem
                             icon={Bookmark}
                             label={t('library.bookmarks', 'My Bookmarks')}
-                            href="/knowledge/search?bookmarks=true"
+                            href="/knowledge?bookmarks=true"
                             active={searchParams.get('bookmarks') === 'true'}
                         />
                     </div>
@@ -179,7 +179,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                                     key={id}
                                     icon={Building2}
                                     label={dept.name}
-                                    href={`/knowledge/search?department=${id}`}
+                                    href={`/knowledge?department=${id}`}
                                     active={activeDept === id}
                                     badge={dept.total}
                                 />
@@ -201,7 +201,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                                         key={type}
                                         icon={icon}
                                         label={t(`content_types.${type}`, type)}
-                                        href={`/knowledge/search?type=${type}`}
+                                        href={`/knowledge?type=${type}`}
                                         active={activeType === type}
                                         badge={count > 0 ? count : undefined}
                                     />
@@ -224,7 +224,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                                 {t('library.my_dept', 'My Dept: {{name}}', { name: departments?.[0]?.name || 'N/A' })}
                             </p>
                             {primaryRole !== 'staff' && (
-                                <Link to="/knowledge/create" className="text-[10px] text-altus-copper dark:text-hotel-gold font-bold hover:underline">
+                                <Link to="/studio/articles/new" className="text-[10px] text-altus-copper dark:text-hotel-gold font-bold hover:underline">
                                     + {t('library.create_new', 'Create New Article')}
                                 </Link>
                             )}

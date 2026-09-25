@@ -124,7 +124,7 @@ export function TrainingTrackCommandCenter({
         queryFn: async () => {
             // 1. Fetch modules
             const { data: modules, error: modErr } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('id, title, description, status, estimated_duration_minutes, passing_score_percentage, created_at, updated_at')
                 .not('is_deleted', 'is', true)
                 .order('title')
@@ -173,7 +173,7 @@ export function TrainingTrackCommandCenter({
             // fixed days-since-created heuristic.
             const [{ data: assignmentRows, error: assignErr }, { data: overrideRows, error: overrideErr }] = await Promise.all([
                 supabase
-                    .from('training_assignment_rules')
+                    .from('assignments')
                     .select('id, due_date')
                     .eq('content_type', 'module')
                     .or('is_deleted.is.null,is_deleted.eq.false'),
@@ -237,9 +237,8 @@ export function TrainingTrackCommandCenter({
 
             // 5. Fetch all training content blocks for course funnels
             const { data: contentBlocks, error: blocksErr } = await supabase
-                .from('documents')
+                .from('lessons')
                 .select('id, training_module_id, title, block_type, block_order, is_mandatory')
-                .eq('content_type', 'training_block')
                 .eq('is_deleted', false)
                 .order('block_order', { ascending: true })
             if (blocksErr) console.warn('Content blocks warning:', blocksErr)

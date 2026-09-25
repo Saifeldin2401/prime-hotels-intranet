@@ -3,138 +3,38 @@ import i18n from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 
-// Import language resources directly to prevent loading flickers
-import arAdmin from './locales/ar/admin.json';
-import arAnalytics from './locales/ar/analytics.json';
-import arAuth from './locales/ar/auth.json';
-import arCommon from './locales/ar/common.json';
-import arDashboard from './locales/ar/dashboard.json';
-import arDocuments from './locales/ar/documents.json';
-import arMedia from './locales/ar/media.json';
+import en from './locales/en';
 
-import arKnowledge from './locales/ar/knowledge.json';
-import arNav from './locales/ar/nav.json';
-import arProfile from './locales/ar/profile.json';
-import arPublic from './locales/ar/public.json';
-import arSettings from './locales/ar/settings.json';
-import arTraining from './locales/ar/training.json';
-import arUsers from './locales/ar/users.json';
-import enAdmin from './locales/en/admin.json';
-import enAnalytics from './locales/en/analytics.json';
-import enAuth from './locales/en/auth.json';
-import enCommon from './locales/en/common.json';
-import enDashboard from './locales/en/dashboard.json';
-import enDocuments from './locales/en/documents.json';
-import enMedia from './locales/en/media.json';
-
-import enKnowledge from './locales/en/knowledge.json';
-import enNav from './locales/en/nav.json';
-import enProfile from './locales/en/profile.json';
-import enPublic from './locales/en/public.json';
-import enSettings from './locales/en/settings.json';
-import enTraining from './locales/en/training.json';
-import enUsers from './locales/en/users.json';
-
-import arAiTools from './locales/ar/ai_tools.json';
-import arErrors from './locales/ar/errors.json';
-import arExtracted from './locales/ar/extracted.json';
-import arLearning from './locales/ar/learning.json';
-import arRequests from './locales/ar/requests.json';
-import enAiTools from './locales/en/ai_tools.json';
-import enErrors from './locales/en/errors.json';
-import enExtracted from './locales/en/extracted.json';
-import enLearning from './locales/en/learning.json';
-import enRequests from './locales/en/requests.json';
-import arWizard from './locales/ar/wizard.json';
-import enWizard from './locales/en/wizard.json';
-
-import arDirectory from './locales/ar/directory.json';
-import arMessages from './locales/ar/messages.json';
-import arNotifications from './locales/ar/notifications.json';
-import arTasks from './locales/ar/tasks.json';
-import enDirectory from './locales/en/directory.json';
-import enMessages from './locales/en/messages.json';
-import enNotifications from './locales/en/notifications.json';
-import enTasks from './locales/en/tasks.json';
-
-// Define the resources
-const resources = {
-  en: {
-    common: enCommon,
-    auth: enAuth,
-    nav: enNav,
-    dashboard: enDashboard,
-    documents: enDocuments,
-    users: enUsers,
-    settings: enSettings,
-    training: enTraining,
-    admin: enAdmin,
-    profile: enProfile,
-    public: enPublic,
-    knowledge: enKnowledge,
-    analytics: enAnalytics,
-    ai_tools: enAiTools,
-    errors: enErrors,
-    learning: enLearning,
-    requests: enRequests,
-    extracted: enExtracted,
-    media: enMedia,
-    directory: enDirectory,
-    tasks: enTasks,
-    messages: enMessages,
-    notifications: enNotifications,
-    wizard: {
-      ...enWizard,
-      wizard: {
-        ...enWizard,
-        ...(enWizard.wizard || {}),
-      },
-    },
-  },
-  ar: {
-    common: arCommon,
-    auth: arAuth,
-    nav: arNav,
-    dashboard: arDashboard,
-    documents: arDocuments,
-    users: arUsers,
-    settings: arSettings,
-    training: arTraining,
-    admin: arAdmin,
-    profile: arProfile,
-    public: arPublic,
-    knowledge: arKnowledge,
-    analytics: arAnalytics,
-    ai_tools: arAiTools,
-    errors: arErrors,
-    learning: arLearning,
-    requests: arRequests,
-    extracted: arExtracted,
-    media: arMedia,
-    directory: arDirectory,
-    tasks: arTasks,
-    messages: arMessages,
-    notifications: arNotifications,
-    wizard: {
-      ...arWizard,
-      wizard: {
-        ...arWizard,
-        ...(arWizard.wizard || {}),
-      },
-    },
+/**
+ * English ships with the app (it is the fallback for every missing key);
+ * Arabic is fetched as its own chunk the first time it is needed, so English
+ * sessions never download it and Arabic sessions download only Arabic.
+ */
+let arabic: Promise<Record<string, unknown>> | null = null;
+const lazyLocales = {
+  type: 'backend' as const,
+  init() {},
+  read(language: string, namespace: string, callback: (err: unknown, data?: unknown) => void) {
+    if (language !== 'ar') return callback(null, {});
+    arabic ??= import('./locales/ar').then((m) => m.default as Record<string, unknown>);
+    arabic.then((bundle) => callback(null, bundle[namespace] ?? {}), (err) => callback(err));
   },
 };
 
-i18n
+const resources = { en };
+
+export const i18nReady = i18n
   // detect user language
   // learn more: https://github.com/i18next/i18next-browser-languageDetector
   .use(LanguageDetector)
+  .use(lazyLocales)
   // pass the i18n instance to react-i18next.
   .use(initReactI18next)
   // init i18next
   // for all options read: https://www.i18next.com/overview/configuration-options
   .init({
     resources,
+    partialBundledLanguages: true,
     debug: false,
     fallbackLng: 'en',
     defaultNS: 'common',

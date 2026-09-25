@@ -6,7 +6,6 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyAssignments } from '@/hooks/useTraining'
-import { calculateStreak } from '@/lib/training/analytics'
 import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
 import { cn } from '@/lib/utils'
 import {
@@ -136,8 +135,8 @@ export default function MyLearning() {
             dueDate: item.due_date,
             actionUrl:
                 item.content_type === 'quiz'
-                    ? `/assessments/${item.content_id}/take?assignment=${item.id}`
-                    : `/learning/training/${item.content_id}?assignment=${item.id}`,
+                    ? `/learn/quizzes/${item.content_id}?assignment=${item.id}`
+                    : `/learn/player/${item.content_id}?assignment=${item.id}`,
         }))
     }, [filteredActiveItems, isRTL, t])
 
@@ -155,8 +154,8 @@ export default function MyLearning() {
             dueDate: item.due_date,
             actionUrl:
                 item.content_type === 'quiz'
-                    ? `/assessments/${item.content_id}/take?assignment=${item.id}`
-                    : `/learning/training/${item.content_id}?assignment=${item.id}`,
+                    ? `/learn/quizzes/${item.content_id}?assignment=${item.id}`
+                    : `/learn/player/${item.content_id}?assignment=${item.id}`,
         }))
     }, [filteredCompletedItems, isRTL, t])
 
@@ -174,9 +173,6 @@ export default function MyLearning() {
         const inProgress = allItems.filter((i) => i.progress?.status === 'in_progress').length
         const overdue = activeItems.filter((a) => a.due_date && new Date(a.due_date) < new Date()).length
         const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
-        const streak = calculateStreak(
-            completedItems.map((i) => ({ completed_at: i.progress?.completed_at || null }))
-        )
 
         return {
             totalAssigned: total,
@@ -184,7 +180,6 @@ export default function MyLearning() {
             completed,
             overdue,
             completionRate,
-            streak,
         }
     }, [allItems, completedItems, activeItems])
 
@@ -241,7 +236,7 @@ export default function MyLearning() {
                         variant="outline"
                         className="h-9 px-3.5 gap-2 rounded-2xl font-bold border-amber-500/30 text-amber-700 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 shadow-sm transition-all duration-150 active:scale-[0.97]"
                     >
-                        <Link to="/courses">
+                        <Link to="/learn/courses">
                             <Compass className="h-4 w-4" />
                             <span className="text-xs">{isRTL ? 'كتالوج الدورات' : 'Course Catalog'}</span>
                         </Link>
@@ -534,8 +529,8 @@ export default function MyLearning() {
                         >
                             <Link
                                 to={activeFocusItem.content_type === 'quiz'
-                                    ? `/assessments/${activeFocusItem.content_id}/take?assignment=${activeFocusItem.id}`
-                                    : `/learning/training/${activeFocusItem.content_id}?assignment=${activeFocusItem.id}`}
+                                    ? `/learn/quizzes/${activeFocusItem.content_id}?assignment=${activeFocusItem.id}`
+                                    : `/learn/player/${activeFocusItem.content_id}?assignment=${activeFocusItem.id}`}
                             >
                                 <Play className="h-3.5 w-3.5 fill-current me-1.5" />
                                 <span>{isRTL ? 'متابعة البرنامج' : 'Resume Module'}</span>
@@ -579,7 +574,7 @@ export default function MyLearning() {
                             asChild
                             className="mt-5 rounded-xl bg-amber-500 text-slate-950 hover:bg-amber-400 font-bold shadow-md transition-all duration-150 active:scale-[0.97]"
                         >
-                            <Link to="/courses">
+                            <Link to="/learn/courses">
                                 <Compass className="h-4 w-4 me-2" />
                                 {isRTL ? 'تصفح كتالوج الدورات' : 'Explore Course Catalog'}
                             </Link>

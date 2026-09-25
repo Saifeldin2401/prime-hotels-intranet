@@ -693,7 +693,7 @@ class AICourseOrchestrator {
             // The save path (blueprintToBlocks / saveBlueprintToDatabase) reads
             // `mod.moduleQuiz` (a QuizBlueprint) and `blueprint.finalAssessment` —
             // NOT `mod.quizzes`. Write the real shape so the questions actually
-            // become learning_quizzes + unified_questions rows.
+            // become quizzes + unified_questions rows.
             if (!wantsFinalOnly) {
               mod.moduleQuiz = wrapQuiz(mod.moduleQuiz?.title || `${mod.title} — Knowledge Check`, questions)
             }

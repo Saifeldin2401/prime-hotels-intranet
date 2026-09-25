@@ -14,7 +14,7 @@ interface PublicOnlyRouteProps {
 // Generic landing targets are NOT real deep links — a stale one of these must not
 // override the account-aware destination (an operator with a stored `/dashboard`
 // redirect should still land on `/platform`).
-const GENERIC_LANDINGS = new Set(['', '/', '/dashboard', '/home', '/home/learner'])
+const GENERIC_LANDINGS = new Set(['', '/', '/dashboard', '/home', '/learn'])
 const isDeepLink = (p: string | null | undefined): p is string =>
     !!p && !GENERIC_LANDINGS.has(p.split('?')[0].replace(/\/$/, '') || '/')
 

@@ -122,7 +122,7 @@ export default function CourseDetail() {
         queryFn: async () => {
             if (!id) throw new Error('Missing course ID')
             const { data, error } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('*')
                 .eq('id', id)
                 .maybeSingle()
@@ -142,9 +142,8 @@ export default function CourseDetail() {
         queryFn: async () => {
             if (!id) return []
             const { data, error } = await supabase
-                .from('documents')
+                .from('lessons')
                 .select('id, title, block_type, block_order, duration_seconds, is_mandatory, content_data')
-                .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .order('block_order', { ascending: true })
 
@@ -203,7 +202,7 @@ export default function CourseDetail() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['altus-course-user-progress', id, user?.id] })
             queryClient.invalidateQueries({ queryKey: ['catalog-user-progress', user?.id] })
-            navigate(`/training/player/${id}`)
+            navigate(`/learn/player/${id}`)
         },
         onError: (err: any) => {
             toast({
@@ -223,7 +222,7 @@ export default function CourseDetail() {
         const blockParam = typeof targetBlockIndex === 'number' ? `?block=${targetBlockIndex}` : ''
 
         if (progress) {
-            navigate(`/training/player/${id}${blockParam}`)
+            navigate(`/learn/player/${id}${blockParam}`)
         } else {
             enrollMutation.mutate()
         }
@@ -302,7 +301,7 @@ export default function CourseDetail() {
                         : 'The requested course could not be located or may have been archived. Please explore our active catalog.'}
                 </p>
                 <Button asChild className="rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold">
-                    <Link to="/courses">
+                    <Link to="/learn/courses">
                         {isRTL ? <ArrowRight className="h-4 w-4 ms-2" /> : <ArrowLeft className="h-4 w-4 me-2" />}
                         {isRTL ? 'العودة لكتالوج الدورات' : 'Back to Course Catalog'}
                     </Link>
@@ -323,7 +322,7 @@ export default function CourseDetail() {
                 <div className="container max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
                     {/* Breadcrumbs */}
                     <div className="flex items-center gap-2 text-xs font-semibold text-blue-200/80 mb-6">
-                        <Link to="/courses" className="hover:text-white transition-colors flex items-center gap-1">
+                        <Link to="/learn/courses" className="hover:text-white transition-colors flex items-center gap-1">
                             <BookOpen className="h-3.5 w-3.5" />
                             <span>{isRTL ? 'كتالوج الأكاديمية' : 'Course Catalog'}</span>
                         </Link>
@@ -490,7 +489,7 @@ export default function CourseDetail() {
                                                 variant="outline"
                                                 className="w-full rounded-2xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10"
                                             >
-                                                <Link to="/training/certificates">
+                                                <Link to="/learn/certificates">
                                                     <Award className="h-4 w-4 me-2" />
                                                     {isRTL ? 'عرض الشهادة المعتمدة' : 'View Accredited Certificate'}
                                                 </Link>
@@ -718,7 +717,7 @@ export default function CourseDetail() {
 
                                     <div className="pt-2 flex flex-wrap items-center justify-center md:justify-start gap-4">
                                         <Button asChild variant="outline" className="rounded-xl border-amber-500/30">
-                                            <Link to="/training/certificates">
+                                            <Link to="/learn/certificates">
                                                 <Award className="h-4 w-4 me-2 text-amber-500" />
                                                 {isRTL ? 'مركز الشهادات والإنجازات' : 'Accreditations & Certificates Hub'}
                                             </Link>

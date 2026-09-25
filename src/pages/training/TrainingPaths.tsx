@@ -128,7 +128,7 @@ export default function TrainingPaths() {
           *,
           training_path_modules(
             sequence,
-            training_modules(id, title, description, estimated_duration_minutes)
+            courses(id, title, description, estimated_duration_minutes)
           )
         `)
         .order('created_at', { ascending: false })
@@ -139,7 +139,7 @@ export default function TrainingPaths() {
         is_published: p.is_active ?? true,
       })) as unknown) as (TrainingPath & {
         training_path_modules: (TrainingPathModule & {
-          training_modules: TrainingModule
+          courses: TrainingModule
         })[]
       })[]
     }
@@ -158,7 +158,7 @@ export default function TrainingPaths() {
             *,
             training_path_modules(
               sequence,
-              training_modules(id, title, description, estimated_duration_minutes)
+              courses(id, title, description, estimated_duration_minutes)
             )
           )
         `)
@@ -175,7 +175,7 @@ export default function TrainingPaths() {
       })) as unknown) as (UserPathEnrollment & {
         training_paths: TrainingPath & {
           training_path_modules: (TrainingPathModule & {
-            training_modules: TrainingModule
+            courses: TrainingModule
           })[]
         }
       })[]
@@ -192,7 +192,7 @@ export default function TrainingPaths() {
     queryKey: ['available-training-modules'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id, title, estimated_duration_minutes')
         .eq('is_deleted', false)
       if (error) throw error

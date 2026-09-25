@@ -762,30 +762,27 @@ export default function UserManagement() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Executive Welcome & Operations Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/75 to-card/40 p-6 sm:p-8 backdrop-blur-2xl shadow-lg">
-        <div className="pointer-events-none absolute -top-24 -end-24 h-72 w-72 rounded-full bg-amber-500/[0.08] blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-emerald-500/[0.06] blur-3xl" />
-
+      <div className="relative overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#15212E] p-6 sm:p-8 text-[#F4F2EC] shadow-none">
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-0.5 flex items-center gap-1.5">
+              <Badge className="bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40 text-xs font-semibold px-2.5 py-0.5 rounded-[4px] flex items-center gap-1.5">
                 <Building className="h-3.5 w-3.5" />
                 <span>{isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}</span>
               </Badge>
-              <Badge variant="outline" className="border-border/60 text-xs font-medium px-2.5 py-0.5 text-muted-foreground">
-                <GraduationCap className="me-1.5 h-3.5 w-3.5 text-amber-500" />
+              <Badge variant="outline" className="border-[#30404D] bg-[#1E2D3D] text-[#929CA5] text-xs font-medium px-2.5 py-0.5 rounded-[4px]">
+                <GraduationCap className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
                 <span>{t('academy_badge', 'Organization Academy & Team')}</span>
               </Badge>
-              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs font-mono text-muted-foreground">
+              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[#30404D] bg-[#1E2D3D] px-2.5 py-0.5 text-xs font-mono text-[#929CA5]">
                 {users?.length || 0} {t('members_count', 'Members')}
               </span>
             </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl font-serif">
+            <h1 className="text-2xl font-bold tracking-tight text-[#F4F2EC] sm:text-3xl lg:text-4xl font-serif">
               {t('academy_user_management_title', 'Academy Learners & Team Management')}
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm font-normal max-w-2xl leading-relaxed">
+            <p className="text-xs text-[#929CA5] sm:text-sm font-normal max-w-2xl leading-relaxed">
               {t('academy_user_management_desc', 'Manage learners, course instructors, department managers, and administrators for {{orgName}}.', { orgName: isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name })}
             </p>
           </div>
@@ -794,10 +791,10 @@ export default function UserManagement() {
             {isPlatformUser && (
               <Link
                 to="/platform/users"
-                className="inline-flex h-9 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-700 dark:text-amber-300 backdrop-blur-xl hover:bg-amber-500/20 shadow-xs transition-colors"
+                className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none transition-colors"
                 title="Open Global SaaS Platform User Directory"
               >
-                <Shield className="me-1.5 h-3.5 w-3.5 text-amber-500" />
+                <Shield className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
                 <span>{t('platform_directory_button', 'Platform Directory')}</span>
                 <ExternalLink className="ms-1 h-3 w-3 opacity-70" />
               </Link>
@@ -806,9 +803,9 @@ export default function UserManagement() {
             <Link
               data-tour="users-bulk-btn"
               to="/admin/users/bulk"
-              className="inline-flex h-9 items-center justify-center rounded-2xl border border-border/60 bg-background/70 px-3.5 text-xs font-semibold text-foreground backdrop-blur-xl hover:border-amber-500/40 hover:bg-background/90 shadow-xs transition-colors"
+              className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none transition-colors"
             >
-              <Upload className="me-1.5 h-3.5 w-3.5 text-blue-500" />
+              <Upload className="me-1.5 h-3.5 w-3.5 text-[#6BA8E5]" />
               <span>{t('bulk_provisioning_btn', 'Bulk CSV Provisioning')}</span>
             </Link>
 
@@ -818,9 +815,9 @@ export default function UserManagement() {
               onClick={() => setInviteDialogOpen(true)}
               disabled={isSeatLimitReached}
               title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to invite users.' : undefined}
-              className="h-9 rounded-2xl border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shadow-xs"
+              className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
             >
-              <MailPlus className="me-1.5 h-3.5 w-3.5 text-amber-500" />
+              <MailPlus className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
               <span>{t('invite_learner_btn', 'Invite Learner')}</span>
             </Button>
 
@@ -829,7 +826,7 @@ export default function UserManagement() {
               onClick={openCreateForm}
               disabled={isSeatLimitReached}
               title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add members.' : undefined}
-              className="h-9 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="h-9 rounded-[6px] bg-[#86672C] hover:bg-[#6D5322] px-4 text-xs font-medium text-[#FFFFFF] shadow-none transition-colors"
             >
               <Plus className="me-1.5 h-3.5 w-3.5" />
               <span>{t('add_member_btn', 'Add Member')}</span>
@@ -839,7 +836,7 @@ export default function UserManagement() {
 
         {/* Learner Seats Entitlement Quota Bar */}
         <div className="mt-5 pt-4 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-2xl bg-card/70 border border-border/50">
+          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D]">
             <div className="text-[11px] text-muted-foreground font-medium flex items-center justify-between">
               <span>{t('learner_seat_quota', 'Learner Seats')}</span>
               <span className="font-mono font-bold text-foreground">{percentUsed}%</span>
@@ -861,24 +858,24 @@ export default function UserManagement() {
             </div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
             <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.learners', 'Enrolled Learners')}</div>
             <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.learners}</div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
             <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.instructors', 'Instructors & Trainers')}</div>
             <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.instructors}</div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-card/70 border border-border/50 flex flex-col justify-center">
+          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
             <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.admins', 'Academy Admins')}</div>
             <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.admins}</div>
           </div>
         </div>
 
         {isSeatLimitReached && (
-          <div className="mt-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-2xl flex items-center gap-3 text-rose-700 dark:text-rose-300 text-xs">
+          <div className="mt-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-[6px] flex items-center gap-3 text-rose-700 dark:text-rose-300 text-xs">
             <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
             <span>
               {t('seat_limit_reached_alert', { used: seatUsage, max: maxSeats, defaultValue: `Learner seat limit reached (${seatUsage} / ${maxSeats}). Upgrade subscription to invite or provision more learners.` })}
@@ -893,12 +890,12 @@ export default function UserManagement() {
       {/* Role Category Tabs & Status Filter Controls */}
       <div className="space-y-3">
         {/* Layer 1: Learning Role Filter Tabs (Academy Mental Model) */}
-        <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-muted/60 border border-border/50 max-w-fit">
+        <div className="flex flex-wrap items-center gap-2 p-1 rounded-[8px] bg-muted/40 border border-border max-w-fit">
           {(['all', 'learners', 'instructors', 'admins'] as const).map((cat) => (
             <button
               key={cat}
               onClick={() => setRoleCategoryFilter(cat)}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-semibold transition-colors ${
                 roleCategoryFilter === cat
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground'
@@ -919,7 +916,7 @@ export default function UserManagement() {
               <button
                 key={status}
                 onClick={() => setStatusFilter(status)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-medium transition-colors ${
                   statusFilter === status
                     ? 'bg-foreground text-background font-bold shadow-xs'
                     : 'bg-card text-muted-foreground border border-border/60 hover:text-foreground'
@@ -961,7 +958,7 @@ export default function UserManagement() {
       )}
 
       {/* Academy Members Roster Table Card */}
-      <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-4 sm:p-6 shadow-md backdrop-blur-2xl">
+      <div className="rounded-[8px] border border-border bg-card p-4 sm:p-6 shadow-none">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/40">
           <div>
             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
@@ -980,7 +977,7 @@ export default function UserManagement() {
               placeholder={t('search_placeholder', 'Search by name, email, or staff ID...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 w-full ps-9 pe-3 rounded-xl border border-border/60 bg-background/70 text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+              className="h-9 w-full ps-9 pe-3 rounded-[6px] border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-[#86672C]"
             />
           </div>
         </div>
@@ -1031,9 +1028,9 @@ export default function UserManagement() {
 
                     {/* Luxury Avatar */}
                     <div className="relative shrink-0">
-                      <Avatar className="h-11 w-11 rounded-2xl border-2 border-amber-500/30 shadow-xs">
+                      <Avatar className="h-11 w-11 rounded-[6px] border border-border">
                         <AvatarImage src={user.avatar_url || ''} className="object-cover" />
-                        <AvatarFallback className="bg-gradient-to-br from-amber-500/20 to-amber-600/10 text-amber-600 dark:text-amber-400 font-bold text-sm">
+                        <AvatarFallback className="bg-[#86672C]/10 text-[#86672C] dark:text-[#B79A62] font-semibold text-sm rounded-[6px]">
                           {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>

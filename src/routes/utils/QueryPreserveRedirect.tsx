@@ -1,15 +1,19 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useParams } from 'react-router-dom';
 
 /**
  * PreserveQueryNavigate
- * A navigation component that preserves query parameters and hash fragments during redirects.
- * 
+ * A navigation component that preserves query parameters, hash fragments and
+ * navigation state during redirects. `:param` segments in `to` are filled from
+ * the matched route's params, so `/training/hub/:id` can redirect to
+ * `/studio/courses/:id`.
+ *
  * @example
- * // Redirect /home to /dashboard while preserving ?redirect=... params and #hash
  * <Route path="/home" element={<PreserveQueryNavigate to="/dashboard" />} />
+ * <Route path="/courses/:id" element={<PreserveQueryNavigate to="/learn/courses/:id" />} />
  */
 export const PreserveQueryNavigate = ({ to }: { to: string }) => {
   const location = useLocation();
+  const params = useParams();
 
   // Split destination path, search, and hash
   const hashIndex = to.indexOf('#');
@@ -17,8 +21,11 @@ export const PreserveQueryNavigate = ({ to }: { to: string }) => {
   const explicitHash = hashIndex !== -1 ? to.slice(hashIndex) : '';
 
   const qIndex = pathAndSearch.indexOf('?');
-  const targetPath = qIndex !== -1 ? pathAndSearch.slice(0, qIndex) : pathAndSearch;
+  const rawTargetPath = qIndex !== -1 ? pathAndSearch.slice(0, qIndex) : pathAndSearch;
   const targetSearch = qIndex !== -1 ? pathAndSearch.slice(qIndex + 1) : '';
+  const targetPath = rawTargetPath.replace(/:(\w+)/g, (_, key: string) =>
+    encodeURIComponent(params[key] ?? '')
+  );
 
   const targetParams = new URLSearchParams(targetSearch);
   const currentParams = new URLSearchParams(location.search);
@@ -32,6 +39,5 @@ export const PreserveQueryNavigate = ({ to }: { to: string }) => {
   const searchString = mergedQuery ? `?${mergedQuery}` : '';
   const hashString = explicitHash || location.hash || '';
 
-  return <Navigate to={`${targetPath}${searchString}${hashString}`} replace />;
+  return <Navigate to={`${targetPath}${searchString}${hashString}`} state={location.state} replace />;
 };
-

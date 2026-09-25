@@ -10,33 +10,26 @@ import {
 } from 'react-router-dom'
 
 import {
-    LearnerHomeRoute,
     LegacyAnalyticsRedirect,
     LegacyScheduleRedirect,
     NotFoundWrapper,
     RootIndex,
     RootLayout,
+    WorkspaceHomeRedirect,
 } from './RouteComponents'
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
-import { DashboardRoutes } from './modules/DashboardRoutes'
-import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
+import { LearnRoutes } from './modules/LearnRoutes'
 import { ManageRoutes } from './modules/ManageRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
-import { TrainingRoutes } from './modules/TrainingRoutes'
-import { LegacyDomainRedirects } from './redirects'
+import { StudioRoutes } from './modules/StudioRoutes'
+import { LegacyRedirects } from './legacyRedirects'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
-const PublicLayout = lazy(() => import('@/pages/public/PublicLayout'))
-const AboutPage = lazy(() => import('@/pages/public/AboutPage'))
-const MethodologyPage = lazy(() => import('@/pages/public/MethodologyPage'))
-const VisionPage = lazy(() => import('@/pages/public/VisionPage'))
-const CaseStudiesPage = lazy(() => import('@/pages/public/CaseStudiesPage'))
-const LeadershipPage = lazy(() => import('@/pages/public/LeadershipPage'))
-const DigitalAIPage = lazy(() => import('@/pages/public/DigitalAIPage'))
 const OrgSuspended = lazy(() => import('@/pages/OrgSuspended'))
 const SelectTenant = lazy(() => import('@/pages/auth/SelectTenant'))
+const ComponentGallery = lazy(() => import('@/pages/gallery/ComponentGallery'))
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
@@ -44,33 +37,32 @@ export const router = createBrowserRouter(
             {StandaloneAuthRoutes()}
 
             <Route element={<RootLayout />} errorElement={<RouteErrorBoundary section="App"><Outlet /></RouteErrorBoundary>}>
-                <Route element={<PublicLayout />}>
-                    <Route path="/" element={<RootIndex />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="/methodology" element={<MethodologyPage />} />
-                    <Route path="/vision-2030" element={<VisionPage />} />
-                    <Route path="/case-studies" element={<CaseStudiesPage />} />
-                    <Route path="/leadership" element={<LeadershipPage />} />
-                    <Route path="/digital" element={<DigitalAIPage />} />
-                </Route>
+                <Route path="/" element={<RootIndex />} />
+                {/* The consulting marketing pages moved out of the app (product
+                    definition, decision 2). Old links land on sign-in. */}
+                {['/about', '/methodology', '/vision-2030', '/case-studies', '/leadership', '/digital'].map((path) => (
+                    <Route key={path} path={path} element={<PreserveQueryNavigate to="/login" />} />
+                ))}
                 <Route path="/verify/:code?" element={<VerifyCertificate />} />
+                {/* Design-system gallery: a developer tool, not part of the product.
+                    Available in development builds only. */}
+                {import.meta.env.DEV && <Route path="/design-system" element={<ComponentGallery />} />}
+                {import.meta.env.DEV && <Route path="/gallery" element={<ComponentGallery />} />}
                 <Route path="/analytics" element={<LegacyAnalyticsRedirect />} />
                 <Route path="/calendar" element={<LegacyScheduleRedirect />} />
                 <Route path="/schedule" element={<LegacyScheduleRedirect />} />
-                <Route path="/support" element={<PreserveQueryNavigate to="/knowledge" />} />
-                <Route path="/admin" element={<PreserveQueryNavigate to="/admin/users" />} />
-                <Route path="/learning/reports" element={<PreserveQueryNavigate to="/learning/analytics" />} />
-                <Route path="/learning/team" element={<PreserveQueryNavigate to="/learning/analytics" />} />
+                <Route path="/dashboard" element={<WorkspaceHomeRedirect />} />
 
-                {LegacyDomainRedirects()}
+                {/* Retired URLs: kept for bookmarks and emailed links only. */}
+                {LegacyRedirects()}
 
                 {AuthRoutes()}
+
+                {/* The five workspaces - one canonical URL per job. */}
+                {LearnRoutes()}
+                {StudioRoutes()}
+                {ManageRoutes()}
                 {AdminRoutes()}
-                <Route
-                    path="/home/learner"
-                    element={<LearnerHomeRoute />}
-                    errorElement={<RouteErrorBoundary section="Learner Home" />}
-                />
                 <Route
                     path="/suspended"
                     element={
@@ -87,10 +79,7 @@ export const router = createBrowserRouter(
                         </ProtectedRoute>
                     }
                 />
-                {TrainingRoutes()}
-                {KnowledgeRoutes()}
-                {ManageRoutes()}
-                {DashboardRoutes()}
+                {/* Account utilities, reachable from every workspace. */}
                 {MiscRoutes()}
 
                 {/* 404 Not Found - Authenticated users see styled page, unauthenticated get clean 404 */}

@@ -1,7 +1,7 @@
 {
     "title": "Requests Inbox",
     "description": "View and manage all requests across the organization",
-    "search_placeholder": "Search by employee, assignee, property, or request number...",
+    "search_placeholder": "Search by employee, assignee, hotel, or request number...",
     "filters": "Filters",
     "clear_all": "Clear all",
     "status_label": "Status",
@@ -19,7 +19,7 @@
     "due_date": "Due",
     "view_details": "View Details",
     "assigned_to_me": "Assigned to me",
-    "property_label": "Property",
+    "property_label": "Hotel",
     "job_title_label": "Job title",
     "error_loading": "Error loading requests",
     "error_loading_desc": "Please try again later",
@@ -40,7 +40,7 @@
         "pending_hr": "Pending HR",
         "pending_supervisor": "Pending supervisor"
     },
-    "search_hint": "Search by employee, assignee, property, request type, or request number.",
+    "search_hint": "Search by employee, assignee, hotel, request type, or request number.",
     "search_hint_numeric": "Matching request number and visible request details.",
     "status": {
         "draft": "Draft",

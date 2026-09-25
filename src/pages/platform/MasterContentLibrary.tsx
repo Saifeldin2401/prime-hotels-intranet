@@ -401,7 +401,7 @@ export default function MasterContentLibrary() {
       })
       await loadData()
       if (created?.id) {
-        navigate(`/training/hub/${created.id}?view=builder&master=true`)
+        navigate(`/studio/courses/${created.id}?view=builder&master=true`)
       }
     } catch (err: any) {
       toast({
@@ -512,7 +512,7 @@ export default function MasterContentLibrary() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/knowledge/create?isMaster=true')}
+                  onClick={() => navigate('/studio/articles/new?isMaster=true')}
                   className="gap-1.5 shadow-2xs font-semibold text-xs border-amber-300/80 bg-amber-50/50 hover:bg-amber-100/70 text-amber-950 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800"
                 >
                   <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
@@ -530,7 +530,7 @@ export default function MasterContentLibrary() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/training/hub/new?view=builder&master=true')}
+                  onClick={() => navigate('/studio/courses/new?view=builder&master=true')}
                   className="gap-1.5 shadow-2xs font-semibold text-xs border-indigo-300/80 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-950 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800"
                 >
                   <Crown className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -848,7 +848,7 @@ export default function MasterContentLibrary() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/training/hub/${course.id}?view=builder&master=true`)}
+                                onClick={() => navigate(`/studio/courses/${course.id}?view=builder&master=true`)}
                                 className="h-8 px-2.5 text-xs gap-1 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
                                 title={t('admin:edit_in_builder', 'Edit in Training Builder')}
                               >
@@ -859,7 +859,7 @@ export default function MasterContentLibrary() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => navigate(`/training/player/${course.id}`)}
+                                onClick={() => navigate(`/learn/player/${course.id}`)}
                                 className="h-8 px-2.5 text-xs gap-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                                 title={t('admin:preview_player', 'Player Preview')}
                               >

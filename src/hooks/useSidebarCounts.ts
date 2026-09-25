@@ -1,257 +1,81 @@
 /**
  * useSidebarCounts
- * 
- * Hook for fetching counts to display as badges in the sidebar navigation.
- * Aggregates counts from notifications, tasks, messages, and pending approvals.
- * Includes real-time subscriptions for immediate updates.
- * 
- * SMART ROUTING:
- * - Regional Admin / Regional HR: Full access to ALL items
- * - Property Manager / Property HR: Items for their assigned properties
- * - Department Head: Items for their managed departments
- * - Staff: Only items directly assigned to them
+ *
+ * Badge counts for the sidebar navigation: unread notifications and training
+ * the user still has to finish. Realtime updates on the user's notifications
+ * and training progress; polling every 5 minutes as a fallback.
  */
 
-import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
-import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 interface SidebarCounts {
     unreadNotifications: number
-    pendingApprovals: number
-    overdueTasks: number
-    unreadMessages: number
     pendingTraining: number
+    /** Not computed server-side yet; stays 0 until get_sidebar_counts returns it. */
     requiredReading: number
-    activeGoals: number
 }
 
+const EMPTY_COUNTS: SidebarCounts = { unreadNotifications: 0, pendingTraining: 0, requiredReading: 0 }
+
 export function useSidebarCounts() {
-    const { user, primaryRole, properties, departments } = useAuth()
-    const { currentProperty } = useProperty()
+    const { user } = useAuth()
     const queryClient = useQueryClient()
 
-    const propertyIds = properties?.map((p) => p.id) || []
-    const departmentIds = departments?.map((d) => d.id) || []
-    const propertyIdsKey = propertyIds.join(',')
-    const departmentIdsKey = departmentIds.join(',')
-    const currentPropertyId = currentProperty?.id
-
-    // Determine access level
-    const isRegionalAccess = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
-    const isPropertyLevel = ['property_manager', 'property_hr'].includes(primaryRole || '')
-    const isDepartmentHead = ['department_head', 'author'].includes(primaryRole || '')
-
-    // Set up real-time subscriptions for immediate badge updates
     useEffect(() => {
         if (!user?.id) return
 
         let invalidateTimer: ReturnType<typeof setTimeout> | null = null
-        let pendingInvalidation = false
-
         const scheduleInvalidate = () => {
-            pendingInvalidation = true
             if (invalidateTimer) return
-
             invalidateTimer = setTimeout(() => {
                 invalidateTimer = null
-                if (!pendingInvalidation) return
-                pendingInvalidation = false
                 queryClient.invalidateQueries({ queryKey: ['sidebar-counts'] })
             }, 400)
         }
 
-        const propertyIdSet = new Set(propertyIdsKey ? propertyIdsKey.split(',') : [])
-        const departmentIdSet = new Set(departmentIdsKey ? departmentIdsKey.split(',') : [])
-
-        const shouldInvalidateForRequest = (payload: {
-            new?: {
-                property_id?: string | null
-                department_id?: string | null
-                requester_id?: string | null
-                current_assignee_id?: string | null
-            } | null
-            old?: {
-                property_id?: string | null
-                department_id?: string | null
-                requester_id?: string | null
-                current_assignee_id?: string | null
-            } | null
-        }) => {
-            const row = payload?.new || payload?.old
-            if (!row) return false
-
-            if (isRegionalAccess) {
-                if (!currentPropertyId || isConsolidatedPropertyId(currentPropertyId)) return true
-                return row.property_id === currentPropertyId
-            }
-
-            if (isPropertyLevel) {
-                if (isRealPropertyId(currentPropertyId)) {
-                    return row.property_id === currentPropertyId
-                }
-                return propertyIdSet.size > 0
-                    ? propertyIdSet.has(row.property_id || '')
-                    : row.current_assignee_id === user.id
-            }
-
-            if (isDepartmentHead) {
-                return departmentIdSet.size > 0
-                    ? departmentIdSet.has(row.department_id || '')
-                    : row.current_assignee_id === user.id
-            }
-
-            return row.requester_id === user.id || row.current_assignee_id === user.id
-        }
-
-        // Apply server-side filter to requests channel to reduce DB load
-        let requestFilter: { event: '*'; schema: string; table: string; filter?: string }
-        if (isRegionalAccess || isPropertyLevel || isDepartmentHead) {
-            if (currentPropertyId && isRealPropertyId(currentPropertyId)) {
-                requestFilter = { event: '*', schema: 'public', table: 'requests', filter: `property_id=eq.${currentPropertyId}` }
-            } else {
-                requestFilter = { event: '*', schema: 'public', table: 'requests' }
-            }
-        } else {
-            requestFilter = { event: '*', schema: 'public', table: 'requests', filter: `current_assignee_id=eq.${user.id}` }
-        }
-
         const channel = supabase
             .channel('sidebar-counts-realtime')
-            // Listen for notification changes
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'notifications',
-                    filter: `user_id=eq.${user.id}`,
-                },
-                () => {
-                    scheduleInvalidate()
-                }
+                { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                scheduleInvalidate
             )
-            // Listen for message changes
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'messages',
-                    filter: `recipient_id=eq.${user.id}`,
-                },
-                () => {
-                    scheduleInvalidate()
-                }
-            )
-            // Listen for task changes assigned to user
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tasks',
-                    filter: `assigned_to_id=eq.${user.id}`,
-                },
-                () => {
-                    scheduleInvalidate()
-                }
-            )
-            // Listen for request changes (approvals) with filter
-            .on(
-                'postgres_changes',
-                requestFilter,
-                (payload) => {
-                    if (shouldInvalidateForRequest(payload)) {
-                        scheduleInvalidate()
-                    }
-                }
+                { event: '*', schema: 'public', table: 'training_progress', filter: `user_id=eq.${user.id}` },
+                scheduleInvalidate
             )
             .subscribe()
 
         return () => {
-            if (invalidateTimer) {
-                clearTimeout(invalidateTimer)
-            }
+            if (invalidateTimer) clearTimeout(invalidateTimer)
             supabase.removeChannel(channel)
         }
-    }, [
-        user?.id,
-        queryClient,
-        currentPropertyId,
-        isRegionalAccess,
-        isPropertyLevel,
-        isDepartmentHead,
-        propertyIdsKey,
-        departmentIdsKey
-    ])
+    }, [user?.id, queryClient])
 
     return useQuery({
-        queryKey: ['sidebar-counts', user?.id, primaryRole, currentPropertyId, propertyIdsKey, departmentIdsKey],
+        queryKey: ['sidebar-counts', user?.id],
         enabled: !!user?.id,
         refetchInterval: 300000, // Fallback polling every 5 minutes (Realtime handles immediate updates)
-        refetchIntervalInBackground: false, // Do not fetch in background
-        staleTime: 45000, // Consider data fresh for 45 seconds
+        refetchIntervalInBackground: false,
+        staleTime: 45000,
         queryFn: async (): Promise<SidebarCounts> => {
-            if (!user?.id) {
-                return {
-                    unreadNotifications: 0,
-                    pendingApprovals: 0,
-                    overdueTasks: 0,
-                    unreadMessages: 0,
-                    pendingTraining: 0,
-                    requiredReading: 0,
-                    activeGoals: 0,
-                }
-            }
+            if (!user?.id) return EMPTY_COUNTS
 
-            // Single RPC call replaces 6 separate REST queries + 6 CORS preflights
-            const currentPropId = isRealPropertyId(currentPropertyId) ? currentPropertyId : null
-
-            const { data, error } = await supabase.rpc('get_sidebar_counts', {
-                p_user_id: user.id,
-                p_role: primaryRole || null,
-                p_property_ids: propertyIds.length > 0 ? propertyIds : null,
-                p_department_ids: departmentIds.length > 0 ? departmentIds : null,
-                p_current_property_id: currentPropId,
-            })
-
+            const { data, error } = await supabase.rpc('get_sidebar_counts', { p_user_id: user.id })
             if (error) {
                 console.error('get_sidebar_counts RPC failed:', error)
-                return {
-                    unreadNotifications: 0,
-                    pendingApprovals: 0,
-                    overdueTasks: 0,
-                    unreadMessages: 0,
-                    pendingTraining: 0,
-                    requiredReading: 0,
-                    activeGoals: 0,
-                }
+                return EMPTY_COUNTS
             }
 
-            // get_sidebar_counts returns `json` (not a table), so the generated type is the
-            // generic Json union. The function (see migrations) always builds this exact object
-            // shape via json_build_object -- it does not include requiredReading.
-            const counts = data as {
-                unreadNotifications?: number
-                pendingApprovals?: number
-                overdueTasks?: number
-                unreadMessages?: number
-                pendingTraining?: number
-                activeGoals?: number
-            } | null
-
+            // get_sidebar_counts returns `json`, so the generated type is the generic Json union.
+            const counts = data as { unreadNotifications?: number; pendingTraining?: number } | null
             return {
                 unreadNotifications: counts?.unreadNotifications ?? 0,
-                pendingApprovals: counts?.pendingApprovals ?? 0,
-                overdueTasks: counts?.overdueTasks ?? 0,
-                unreadMessages: counts?.unreadMessages ?? 0,
                 pendingTraining: counts?.pendingTraining ?? 0,
-                activeGoals: counts?.activeGoals ?? 0,
-                // The RPC does not compute this yet; always 0 until it's added server-side.
                 requiredReading: 0,
             }
         },

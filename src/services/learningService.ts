@@ -257,7 +257,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
         overridesResult,
     ] = await Promise.all([
         supabase
-            .from('training_assignment_rules')
+            .from('assignments')
             .select('*')
             .eq('content_type', 'module')
             .eq('content_id', moduleId)
@@ -481,7 +481,7 @@ export const learningService = {
 
     async getQuizzes(status?: QuestionStatus) {
         let query = supabase
-            .from('learning_quizzes')
+            .from('quizzes')
             .select(`
                 *,
                 questions:unified_quiz_questions(count)
@@ -509,7 +509,7 @@ export const learningService = {
         // Editor-side read (AssessmentBuilder): includes the answer key, which RLS
         // only returns to the question's authors / content editors.
         const { data: raw, error } = await supabase
-            .from('learning_quizzes')
+            .from('quizzes')
             .select(`
                 *,
                 questions:unified_quiz_questions(
@@ -576,7 +576,7 @@ export const learningService = {
 
     async createQuiz(quiz: CreateQuizDTO) {
         const { data, error } = await supabase
-            .from('learning_quizzes')
+            .from('quizzes')
             .insert(quiz)
             .select()
             .single()
@@ -587,7 +587,7 @@ export const learningService = {
 
     async updateQuiz(id: string, updates: Partial<CreateQuizDTO>) {
         const { data, error } = await supabase
-            .from('learning_quizzes')
+            .from('quizzes')
             .update(updates)
             .eq('id', id)
             .select()
@@ -617,7 +617,7 @@ export const learningService = {
 
     async deleteQuiz(id: string) {
         const { error } = await supabase
-            .from('learning_quizzes')
+            .from('quizzes')
             .update({ is_deleted: true })
             .eq('id', id)
 
@@ -689,7 +689,7 @@ export const learningService = {
 
     async updateAssignment(id: string, updates: Partial<CreateAssignmentDTO>) {
         const { data, error } = await supabase
-            .from('training_assignment_rules')
+            .from('assignments')
             .update(updates)
             .eq('id', id)
             .select()
@@ -701,7 +701,7 @@ export const learningService = {
 
     async deleteAssignment(id: string) {
         const { error } = await supabase
-            .from('training_assignment_rules')
+            .from('assignments')
             .update({ is_deleted: true })
             .eq('id', id)
 
@@ -710,7 +710,7 @@ export const learningService = {
 
     async getAssignments(targetId?: string, targetType?: string) {
         let query = supabase
-            .from('training_assignment_rules')
+            .from('assignments')
             .select('*')
             .order('created_at', { ascending: false })
             .eq('is_deleted', false)
@@ -785,10 +785,10 @@ export const learningService = {
             orSegments.push(`and(target_type.eq.property,target_id.eq.${propertyId},${notDeletedFilter})`)
         })
 
-        // Query rule-based assignments from training_assignment_rules
+        // Query rule-based assignments from assignments
         const { data: rulesData, error: rulesError } = orSegments.length > 0
             ? await supabase
-                .from('training_assignment_rules')
+                .from('assignments')
                 .select('*')
                 .or(orSegments.join(','))
                 .order('created_at', { ascending: false })
@@ -900,7 +900,7 @@ export const learningService = {
                 } as LearningAssignment
             })
 
-        // Enrich with titles and details from learning_quizzes and training_modules
+        // Enrich with titles and details from quizzes and courses
         const quizIds = filteredAssignments
             .filter(a => a.content_type === 'quiz')
             .map(a => a.content_id)
@@ -912,14 +912,14 @@ export const learningService = {
         const [quizResult, tmResult] = await Promise.all([
             quizIds.length > 0
                 ? supabase
-                    .from('learning_quizzes')
+                    .from('quizzes')
                     .select('id, title, description, time_limit_minutes, status')
                     .in('id', quizIds)
                     .eq('is_deleted', false)
                 : Promise.resolve({ data: [], error: null }),
             moduleIds.length > 0
                 ? supabase
-                    .from('training_modules')
+                    .from('courses')
                     .select('id, title, description, estimated_duration_minutes, difficulty_level, status')
                     .in('id', moduleIds)
                     .eq('is_deleted', false)
@@ -927,7 +927,7 @@ export const learningService = {
         ])
 
         if (quizResult?.error) console.error('Error fetching quizzes:', quizResult.error)
-        if (tmResult?.error) console.error('Error fetching modules from training_modules:', tmResult.error)
+        if (tmResult?.error) console.error('Error fetching modules from courses:', tmResult.error)
 
         const quizMap = new Map((quizResult?.data || []).map((q: {
             id: string
@@ -1155,11 +1155,10 @@ export const learningService = {
 
         if (error) throw error
 
-        // training_content_blocks consolidated into documents (content_type='training_block').
+        // Lesson blocks live in `lessons`.
         const { data: quizBlocks, error: quizBlocksError } = await supabase
-            .from('documents')
+            .from('lessons')
             .select('id, content_data')
-            .eq('content_type', 'training_block')
             .eq('training_module_id', moduleId)
             .eq('block_type', 'quiz')
 

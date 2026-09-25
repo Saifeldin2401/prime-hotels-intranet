@@ -254,14 +254,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }, [fetchTenantData])
 
   // Apply dynamic tenant branding CSS variables to document root
+  // Every variable is set or removed on each change, so one organization's
+  // branding can never survive a switch to another (or to platform scope).
   useEffect(() => {
-    if (currentOrganization?.brand_colors) {
-      const root = document.documentElement
-      const { primary, secondary, accent } = currentOrganization.brand_colors
-      if (primary) root.style.setProperty('--tenant-primary', primary)
-      if (secondary) root.style.setProperty('--tenant-secondary', secondary)
-      if (accent) root.style.setProperty('--tenant-accent', accent)
+    const root = document.documentElement
+    const colors = currentOrganization?.brand_colors
+    const apply = (name: string, value: string | null | undefined) => {
+      if (value) root.style.setProperty(name, value)
+      else root.style.removeProperty(name)
     }
+    apply('--tenant-primary', colors?.primary)
+    apply('--tenant-secondary', colors?.secondary)
+    apply('--tenant-accent', colors?.accent)
   }, [currentOrganization])
 
   // Swap the browser tab favicon to the tenant's uploaded one, same override pattern as

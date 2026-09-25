@@ -1,10 +1,9 @@
 import { memo, useCallback, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Lock, LockKeyhole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { FloatingInput } from './FloatingInput';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
-import { Lock, LockKeyhole } from 'lucide-react';
 
 interface PasswordFieldProps {
   id?: string;
@@ -35,7 +34,7 @@ function PasswordFieldComponent({
   isRTL = false,
   showStrength = false,
   strengthScore = 0,
-  strengthColor = 'bg-gray-200',
+  strengthColor = 'bg-ds-border',
   strengthLabel = '',
   showCapsLock = false,
   isCapsLockOn = false,
@@ -55,7 +54,7 @@ function PasswordFieldComponent({
       type="button"
       onClick={togglePasswordVisibility}
       disabled={disabled}
-      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="p-1.5 text-ds-muted hover:text-ds-ink transition-colors rounded-md hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-brass disabled:opacity-50 disabled:cursor-not-allowed"
       aria-label={showPassword ? t('hide_password') : t('show_password')}
       aria-pressed={showPassword}
     >
@@ -68,7 +67,7 @@ function PasswordFieldComponent({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <FloatingInput
         id={id}
         type={showPassword ? 'text' : 'password'}
@@ -94,7 +93,7 @@ function PasswordFieldComponent({
         }
       />
 
-      {/* Password Strength Indicator */}
+      {/* Password Strength Indicator (Subtle & Restrained) */}
       <LazyMotion features={domAnimation}>
         <AnimatePresence>
           {showStrength && value && isFocused && (
@@ -103,12 +102,12 @@ function PasswordFieldComponent({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="space-y-2"
+              className="space-y-1.5 pt-0.5"
               aria-live="polite"
               aria-atomic="true"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 h-1 bg-ds-surface-subtle rounded-full overflow-hidden border border-ds-border">
                   <m.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(strengthScore / 4) * 100}%` }}
@@ -117,7 +116,7 @@ function PasswordFieldComponent({
                     aria-hidden="true"
                   />
                 </div>
-                <span className="text-xs text-gray-500 min-w-[60px] text-end font-medium">
+                <span className="text-[11px] text-ds-muted min-w-[55px] text-end font-medium">
                   {strengthLabel}
                 </span>
               </div>
@@ -130,15 +129,15 @@ function PasswordFieldComponent({
           {showCapsLock && isCapsLockOn && isFocused && (
             <m.div
               id="caps-lock-warning"
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              initial={{ opacity: 0, y: -6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className="flex items-center gap-2.5 text-amber-600 text-xs bg-gradient-to-r from-amber-50 to-amber-50/50 dark:from-amber-900/20 dark:to-amber-800/10 p-3 rounded-xl border border-amber-200/50 dark:border-amber-800/30"
+              exit={{ opacity: 0, y: -6, scale: 0.98 }}
+              className="flex items-center gap-2 text-ds-warning text-xs bg-ds-warning-soft/70 p-2.5 rounded-lg border border-ds-warning/25"
               role="alert"
               aria-live="polite"
             >
-              <div className="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-800/30 flex items-center justify-center">
-                <LockKeyhole className="h-3.5 w-3.5" aria-hidden="true" />
+              <div className="w-5 h-5 rounded bg-ds-warning/15 flex items-center justify-center shrink-0">
+                <LockKeyhole className="h-3 w-3 text-ds-warning" aria-hidden="true" />
               </div>
               <span className="font-medium">{t('caps_lock_on')}</span>
             </m.div>
@@ -151,5 +150,4 @@ function PasswordFieldComponent({
 
 export const PasswordField = memo(PasswordFieldComponent);
 PasswordField.displayName = 'PasswordField';
-
 export default PasswordField;

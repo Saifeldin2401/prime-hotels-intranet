@@ -42,7 +42,7 @@ export const viewerBlueprint: RoleBlueprint = {
       id: 'task_viewer_reports',
       titleKey: 'wizard.tasks.viewer.reports.title',
       descriptionKey: 'wizard.tasks.viewer.reports.desc',
-      actionRoute: '/training/reports',
+      actionRoute: '/manage/reports',
       actionKey: 'wizard.actions.training_reports'
     },
     {

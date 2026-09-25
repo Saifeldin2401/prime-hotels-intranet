@@ -161,7 +161,7 @@ export function TenantContextGuard({ children, resourceName }: TenantContextGuar
   const searchParams = new URLSearchParams(location.search)
   const isMasterMode = searchParams.get('master') === 'true' || 
                        searchParams.get('isMaster') === 'true' ||
-                       (location.pathname.startsWith('/training/player/') && (isPlatformScope || isPlatformAdmin))
+                       (location.pathname.startsWith('/learn/player/') && (isPlatformScope || isPlatformAdmin))
 
   if ((isPlatformScope || isPlatformAdmin) && isMasterMode) {
     return <>{children ?? <Outlet />}</>

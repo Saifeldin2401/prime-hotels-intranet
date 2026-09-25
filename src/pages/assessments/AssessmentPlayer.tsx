@@ -23,7 +23,7 @@ export default function AssessmentPlayer() {
     const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
 
     const handleExit = useCallback(() => {
-        navigate('/learning/my')
+        navigate('/learn/my')
     }, [navigate])
 
     if (!id) {

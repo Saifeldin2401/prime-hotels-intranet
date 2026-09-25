@@ -187,10 +187,10 @@ export const trainingAssignmentEngineService = {
    */
   async getScopedAssignmentRules(organizationId: string, hotelId?: string) {
     let query = supabase
-      .from('training_assignment_rules')
+      .from('assignments')
       .select(`
         *,
-        course:training_modules(id, title, description, estimated_duration_minutes, passing_score_percentage),
+        course:courses(id, title, description, estimated_duration_minutes, passing_score_percentage),
         hotel:hotels(id, name),
         department:departments(id, name),
         brand:brands(id, name)

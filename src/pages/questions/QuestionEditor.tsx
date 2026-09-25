@@ -205,7 +205,7 @@ export function QuestionEditor() {
                         title: 'Question Updated',
                         description: 'The question has been saved successfully.',
                     })
-                    navigate('/questions')
+                    navigate('/studio/quizzes')
                 },
                 onError: () => {
                     toast({
@@ -224,7 +224,7 @@ export function QuestionEditor() {
                         title: 'Question Created',
                         description: 'The question has been saved successfully.',
                     })
-                    navigate('/questions')
+                    navigate('/studio/quizzes')
                 },
                 onError: () => {
                     toast({
@@ -248,7 +248,7 @@ export function QuestionEditor() {
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/questions')}>
+                <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
                     <ArrowLeft className="h-4 w-4 me-2" />
                     Back
                 </Button>
@@ -758,7 +758,7 @@ export function QuestionEditor() {
                     </Card>
 
                     <div className="flex justify-end gap-4">
-                        <Button variant="outline" type="button" onClick={() => navigate('/questions')}>
+                        <Button variant="outline" type="button" onClick={() => navigate('/studio/quizzes')}>
                             Cancel
                         </Button>
                         <Button type="submit" disabled={form.formState.isSubmitting}>

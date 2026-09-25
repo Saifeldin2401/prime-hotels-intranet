@@ -65,7 +65,7 @@ import {
     Wand2,
     X
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TrainingAssignmentsPanel } from './TrainingAssignments'
@@ -117,6 +117,11 @@ export default function TrainingHub() {
   const rawViewParam = searchParams.get('view')
   const viewParam = (rawViewParam === 'analytics' ? 'insights' : rawViewParam) as ViewMode | null
   const validViews: ViewMode[] = ['list', 'builder', 'assignments', 'insights']
+  useEffect(() => {
+    if (viewParam === 'assignments') navigate('/manage/assignments', { replace: true })
+    else if (viewParam === 'insights') navigate('/manage/compliance', { replace: true })
+  }, [viewParam, navigate])
+
   const viewMode: ViewMode = validViews.includes(viewParam as ViewMode)
     ? (viewParam as ViewMode)
     : (moduleId ? 'builder' : 'list')
@@ -125,6 +130,16 @@ export default function TrainingHub() {
     mode: ViewMode,
     options?: { moduleId?: string; assignModuleId?: string; openAssign?: boolean }
   ) => {
+    // Studio authors content. Assigning and tracking belong to the Manage
+    // workspace, so those views hand over to it instead of rendering here.
+    if (mode === 'assignments') {
+      navigate(options?.assignModuleId ? `/manage/assignments?course=${options.assignModuleId}` : '/manage/assignments')
+      return
+    }
+    if (mode === 'insights') {
+      navigate('/manage/compliance')
+      return
+    }
     const nextParams = new URLSearchParams(searchParams)
     nextParams.set('view', mode)
 
@@ -145,7 +160,7 @@ export default function TrainingHub() {
     }
 
     const builderId = options?.moduleId || moduleId || 'new'
-    const targetPath = mode === 'builder' ? `/training/hub/${builderId}` : '/training/hub'
+    const targetPath = mode === 'builder' ? `/studio/courses/${builderId}` : '/studio'
     const query = nextParams.toString()
     navigate(query ? `${targetPath}?${query}` : targetPath)
   }
@@ -195,7 +210,7 @@ export default function TrainingHub() {
       if (!currentOrganization?.id) return []
 
       let query = supabase
-        .from('training_modules')
+        .from('courses')
         .select('*')
         .not('is_deleted', 'is', true)
         .order('created_at', { ascending: false })
@@ -215,7 +230,7 @@ export default function TrainingHub() {
       if (!currentOrganization?.id) return []
 
       let query = supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .select('content_id')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -433,7 +448,7 @@ export default function TrainingHub() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ModuleStatus }) => {
       const { error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
@@ -453,7 +468,7 @@ export default function TrainingHub() {
   const deleteModuleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .update({ is_deleted: true, updated_at: new Date().toISOString() })
         .eq('id', id)
 
@@ -474,7 +489,7 @@ export default function TrainingHub() {
   const bulkPublishMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .update({ status: 'published', updated_at: new Date().toISOString() })
         .in('id', ids)
 
@@ -496,7 +511,7 @@ export default function TrainingHub() {
   const bulkArchiveMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .update({ status: 'archived', updated_at: new Date().toISOString() })
         .in('id', ids)
 
@@ -518,7 +533,7 @@ export default function TrainingHub() {
   const bulkDeleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const { error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .update({ is_deleted: true, updated_at: new Date().toISOString() })
         .in('id', ids)
 
@@ -602,7 +617,7 @@ export default function TrainingHub() {
   }
 
   const handleView = (module: TrainingModule) => {
-    navigate(`/learning/training/${module.id}`)
+    navigate(`/learn/player/${module.id}`)
   }
 
   const handleDelete = (module: TrainingModule) => {
@@ -681,20 +696,6 @@ export default function TrainingHub() {
       icon: Wand2,
       visible: canManageModules
     },
-    {
-      key: 'assignments' as ViewMode,
-      label: t('workflow.assign'),
-      description: t('workflow.assignDesc'),
-      icon: Users,
-      visible: canAssignTraining
-    },
-    {
-      key: 'insights' as ViewMode,
-      label: t('workflow.track'),
-      description: t('workflow.trackDesc'),
-      icon: TrendingUp,
-      visible: canAssignTraining || canManageModules
-    }
   ].filter((step) => step.visible)
 
   const headerActions = (() => {
@@ -726,15 +727,6 @@ export default function TrainingHub() {
             <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('startFromScratch', 'Start Blank')}
           </Button>
-          <Button
-            data-tour="training-assign-wizard-btn"
-            variant="outline"
-            onClick={() => setAssignWizardOpen(true)}
-            className={cn("w-full sm:w-auto border-amber-300 text-amber-900 dark:text-amber-300 hover:bg-amber-50/50", isRTL ? "flex-row-reverse" : "")}
-          >
-            <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('assign_wizard', 'Assign to Team')}
-          </Button>
         </div>
       )
     }
@@ -744,7 +736,7 @@ export default function TrainingHub() {
         <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="outline"
-            onClick={() => navigate('/training/assignments/rules')}
+            onClick={() => navigate('/manage/assignments/rules')}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Settings className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
@@ -904,13 +896,13 @@ export default function TrainingHub() {
   return (
     <div className={`container mx-auto overflow-x-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-4 sm:py-6 ${isRTL ? 'text-end' : 'text-start'}`}>
       <PageHeader
-        title={t('lmsAdmin')}
-        description={t('lmsAdminDesc')}
+        title={t('studio.title', 'Courses')}
+        description={t('studio.description', 'Create, edit, review and publish your organization’s courses.')}
         actions={headerActions}
       />
 
       <div className="mb-6" data-tour="training-workflow-steps">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
           {workflowSteps.map((step) => {
             const Icon = step.icon
             const isActive = viewMode === step.key
@@ -1879,7 +1871,7 @@ export default function TrainingHub() {
         open={showTemplateDialog}
         onOpenChange={setShowTemplateDialog}
         onTemplateSelected={(template) => {
-          navigate(`/training/hub/new?template=${template.id}`)
+          navigate(`/studio/courses/new?template=${template.id}`)
           setShowTemplateDialog(false)
         }}
       />
@@ -1888,7 +1880,7 @@ export default function TrainingHub() {
         open={showSmartAIModal}
         onOpenChange={setShowSmartAIModal}
         onCourseCreated={(newModuleId) => {
-          navigate(`/training/hub/${newModuleId}?view=builder`)
+          navigate(`/studio/courses/${newModuleId}?view=builder`)
           setShowSmartAIModal(false)
         }}
       />
@@ -1947,7 +1939,7 @@ export default function TrainingHub() {
         open={previewOpen}
         onOpenChange={setPreviewOpen}
         onEdit={(id) => setViewMode('builder', { moduleId: id })}
-        onView={(id) => navigate(`/learning/training/${id}`)}
+        onView={(id) => navigate(`/learn/player/${id}`)}
         onAssign={(id) => handleAssign(id)}
       />
 

@@ -5,5 +5,11 @@ export type SimpleT = (key: string, fallback?: string, options?: Record<string, 
 
 /** Adapts i18next's overloaded `TFunction` to {@link SimpleT} (always returns a string). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const toSimpleT = (t: TFunction<any, any>): SimpleT => (key, fallback, options) =>
-  String(t(key, { ...options, defaultValue: fallback ?? key }))
+export const toSimpleT = (t: TFunction<any, any>): SimpleT => (key, fallback, options) => {
+  const res = t(key, fallback as any, options)
+  if (typeof res === 'string') return res
+  const resWithOpts = t(key, { ...options, defaultValue: fallback ?? key } as any)
+  if (typeof resWithOpts === 'string') return resWithOpts
+  return fallback ?? key
+}
+

@@ -628,17 +628,6 @@ export const GuidedWizardModal: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2 text-center">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => { closeWizard(); navigate('/requests'); }}
-                  className="text-xs gap-1.5"
-                >
-                  <GitPullRequest className="h-3.5 w-3.5 text-primary" />
-                  {t('actions.open_requests_hub', 'Open Requests Hub')}
-                </Button>
-              </div>
             </div>
           )}
 
@@ -739,7 +728,7 @@ export const GuidedWizardModal: React.FC = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => { closeWizard(); navigate('/settings/notifications'); }}
+                  onClick={() => { closeWizard(); navigate('/settings'); }}
                   className="text-xs gap-1.5"
                 >
                   <BellRing className="h-3.5 w-3.5 text-primary" />

@@ -7,7 +7,7 @@
  *
  * Managers approve or request changes inline. Filter by content type / owner.
  *
- * Route: /manage/review-queue  (see src/routes/modules/ManageRoutes.tsx)
+ * Route: /studio/review  (see src/routes/modules/StudioRoutes.tsx)
  */
 
 import { useMemo, useState } from 'react'
@@ -521,9 +521,9 @@ export default function ContentReviewQueue() {
                 if (previewItem.review.content_type === 'article') {
                   window.open(`/knowledge/${previewItem.review.content_id}`, '_blank')
                 } else if (previewItem.review.content_type === 'course') {
-                  window.open(`/learning/training/${previewItem.review.content_id}`, '_blank')
+                  window.open(`/learn/player/${previewItem.review.content_id}`, '_blank')
                 } else {
-                  window.open(`/assessments/questions/${previewItem.review.content_id}`, '_blank')
+                  window.open(`/studio/questions/${previewItem.review.content_id}`, '_blank')
                 }
               }}
               className="text-xs"

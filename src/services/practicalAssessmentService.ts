@@ -3,7 +3,7 @@ import type {
   PracticalAssessment,
   PracticalSubmission
 } from '@/types/enterpriseOperatingModel'
-import type { TablesInsert } from '@/lib/database.types'
+import type { TablesInsert } from '@/types/database.generated'
 
 export const practicalAssessmentService = {
   async getAssessments(filters?: {

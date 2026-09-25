@@ -16,7 +16,7 @@ export function useTrainingModulesList() {
         queryKey: ['training_modules_list'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('id, title')
                 .eq('status', 'published')
                 .order('title')
@@ -31,14 +31,14 @@ export function useTrainingRules() {
     const { user } = useAuth()
 
     return useQuery({
-        queryKey: ['training_assignment_rules'],
+        queryKey: ['assignments'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('training_assignment_rules')
+                .from('assignments')
                 .select(`
           *,
           departments (name),
-          training_modules (title),
+          courses (title),
           profiles:created_by (full_name)
         `)
                 .order('created_at', { ascending: false })
@@ -59,7 +59,7 @@ export function useCreateTrainingRule() {
     return useMutation({
         mutationFn: async (rule: Omit<InsertTrainingAssignmentRule, 'created_by'>) => {
             const { data, error } = await supabase
-                .from('training_assignment_rules')
+                .from('assignments')
                 .insert({ ...rule, created_by: user?.id })
                 .select()
                 .single()
@@ -68,7 +68,7 @@ export function useCreateTrainingRule() {
             return data
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['training_assignment_rules'] })
+            queryClient.invalidateQueries({ queryKey: ['assignments'] })
         }
     })
 }
@@ -79,14 +79,14 @@ export function useDeleteTrainingRule() {
     return useMutation({
         mutationFn: async (id: string) => {
             const { error } = await supabase
-                .from('training_assignment_rules')
+                .from('assignments')
                 .delete()
                 .eq('id', id)
 
             if (error) throw error
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['training_assignment_rules'] })
+            queryClient.invalidateQueries({ queryKey: ['assignments'] })
         }
     })
 }
@@ -97,7 +97,7 @@ export function useUpdateTrainingRule() {
     return useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: UpdateTrainingAssignmentRule }) => {
             const { data, error } = await supabase
-                .from('training_assignment_rules')
+                .from('assignments')
                 .update(updates)
                 .eq('id', id)
                 .select()
@@ -107,7 +107,7 @@ export function useUpdateTrainingRule() {
             return data
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['training_assignment_rules'] })
+            queryClient.invalidateQueries({ queryKey: ['assignments'] })
         }
     })
 }

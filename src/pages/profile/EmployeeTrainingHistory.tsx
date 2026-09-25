@@ -79,7 +79,7 @@ export default function EmployeeTrainingHistory({ userId }: EmployeeTrainingHist
       // 2. Fetch module titles
       const moduleIds = Array.from(new Set(progressRows.map((r) => r.training_id).filter(Boolean)))
       const { data: moduleRows } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id, title, category')
         .in('id', moduleIds)
 

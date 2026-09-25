@@ -3,7 +3,6 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PresenceProvider } from '@/contexts/PresenceContext'
-import { LensProvider } from '@/contexts/LensContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
 import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -27,15 +26,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <AuthProvider>
           <TenantProvider>
             <PropertyProvider>
-              <LensProvider>
-                <UserSettingsProvider>
-                  <WizardProvider>
-                    <PresenceProvider>
-                      {children}
-                    </PresenceProvider>
-                  </WizardProvider>
-                </UserSettingsProvider>
-              </LensProvider>
+              <UserSettingsProvider>
+                <WizardProvider>
+                  <PresenceProvider>
+                    {children}
+                  </PresenceProvider>
+                </WizardProvider>
+              </UserSettingsProvider>
             </PropertyProvider>
           </TenantProvider>
         </AuthProvider>

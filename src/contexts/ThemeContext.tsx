@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { Theme, ThemeMode } from '../lib/theme'
 import { lightTheme } from '../lib/theme'
 import { safeLocalStorage } from '@/lib/storage'
@@ -14,32 +14,55 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
+export function useTheme(): ThemeContextType {
+  const context = useContext(ThemeContext)
+  if (!context) {
+    return {
+      theme: lightTheme,
+      mode: 'light',
+      setMode: () => {},
+      toggleDarkMode: () => {},
+      isDark: false,
+    }
+  }
+  return context
+}
+
 interface ThemeProviderProps {
   children: ReactNode
   defaultMode?: ThemeMode
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [mode, setMode] = useState<ThemeMode>('light')
+export function ThemeProvider({ children, defaultMode }: ThemeProviderProps) {
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    const saved = safeLocalStorage.getItem('theme-mode')
+    if (saved === 'dark' || saved === 'light') return saved
+    return defaultMode ?? 'light'
+  })
 
-  const [theme, setTheme] = useState<Theme>(lightTheme)
-  const isDark = false
+  const isDark = mode === 'dark'
 
-  // Force light mode effect
   useEffect(() => {
-    // Always remove dark class
-    document.documentElement.classList.remove('dark')
-    // Always ensure theme is light
-    setTheme(lightTheme)
-    safeLocalStorage.setItem('theme-mode', 'light')
-  }, []) // Run once on mount to clear any existing preference
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark')
+      document.documentElement.setAttribute('data-theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      document.documentElement.setAttribute('data-theme', 'light')
+    }
+    safeLocalStorage.setItem('theme-mode', mode)
+  }, [mode])
+
+  const setMode = (newMode: ThemeMode) => {
+    setModeState(newMode)
+  }
 
   const toggleDarkMode = () => {
-    // Disabled
+    setModeState((prev) => (prev === 'dark' ? 'light' : 'dark'))
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, mode, setMode, toggleDarkMode, isDark }}>
+    <ThemeContext.Provider value={{ theme: lightTheme, mode, setMode, toggleDarkMode, isDark }}>
       {children}
     </ThemeContext.Provider>
   )

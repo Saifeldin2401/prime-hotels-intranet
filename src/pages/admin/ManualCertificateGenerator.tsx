@@ -3,10 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { useProfiles } from '@/hooks/useUsers'
-import { createCertificate } from '@/services/certificateService'
+import { CertificateIssueError, issueManualCertificate } from '@/services/certificateService'
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Award, Loader2, User as UserIcon } from 'lucide-react'
@@ -18,14 +17,13 @@ type CertificateType = 'training' | 'sop_quiz' | 'compliance' | 'achievement'
 
 export default function ManualCertificateGenerator() {
     const { t } = useTranslation('admin')
-    const { profile } = useAuth()
-    const { currentProperty } = useProperty()
+    const { currentOrganization } = useTenant()
     const { data: users, isLoading: usersLoading } = useProfiles()
     const { data: trainingModules = [], isLoading: modulesLoading } = useQuery({
         queryKey: ['manual-certificate-training-modules'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('id, title, passing_score_percentage')
                 .eq('is_deleted', false)
                 .eq('status', 'published')
@@ -70,27 +68,19 @@ export default function ManualCertificateGenerator() {
 
         setIsGenerating(true)
         try {
-            await createCertificate({
+            if (!currentOrganization) {
+                toast.error(t('manual_certificates.errors.generation_failed'))
+                return
+            }
+            await issueManualCertificate({
+                organizationId: currentOrganization.id,
                 userId: selectedUserId,
                 recipientName: selectedUser.full_name || 'Unknown User',
-                recipientEmail: selectedUser.email,
+                recipientEmail: selectedUser.email ?? undefined,
                 title,
                 certificateType,
                 completionDate: new Date(completionDate),
-                passingScore: selectedModule?.passing_score_percentage ?? undefined,
                 trainingModuleId: selectedModule?.id ?? undefined,
-                // Prefer the property the admin is currently working in when the target
-                // employee is assigned to it (common case); otherwise fall back to the
-                // employee's first assigned property for multi-property staff.
-                propertyId: ('user_properties' in selectedUser && Array.isArray(selectedUser.user_properties))
-                    ? (selectedUser.user_properties.find(up => up.property?.id === currentProperty?.id)?.property?.id
-                        ?? selectedUser.user_properties[0]?.property?.id
-                        ?? undefined)
-                    : (currentProperty?.id ?? undefined),
-                departmentId: ('user_departments' in selectedUser && Array.isArray(selectedUser.user_departments))
-                    ? (selectedUser.user_departments[0]?.department?.id ?? undefined)
-                    : undefined,
-                issuedBy: profile?.id,
                 metadata: {
                     issuedByName: issuedByName || undefined,
                     issuedByTitle: issuedByTitle || undefined,
@@ -110,7 +100,11 @@ export default function ManualCertificateGenerator() {
             setTitle('')
         } catch (error) {
             console.error('Error generating manual certificate:', error)
-            toast.error(t('manual_certificates.errors.generation_failed'))
+            // The server explains rule violations (self-issue, not a member,
+            // future date ...) in plain language; show that instead of a generic error.
+            toast.error(error instanceof CertificateIssueError
+                ? error.message
+                : t('manual_certificates.errors.generation_failed'))
         } finally {
             setIsGenerating(false)
         }

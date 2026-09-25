@@ -106,7 +106,7 @@ export function AIQuizDialog({
                 const finalQuizTitle = quizCustomTitle.trim() || aiPrefillTitle || title.trim() || t('builder.aiGeneratedQuiz', 'Knowledge Assessment')
                 try {
                   const { data: quizData, error: quizError } = await supabase
-                    .from('learning_quizzes')
+                    .from('quizzes')
                     .insert({
                       title: finalQuizTitle,
                       description: `Auto-generated quiz with ${count} questions`,

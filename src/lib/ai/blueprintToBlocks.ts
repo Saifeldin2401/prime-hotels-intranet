@@ -2,7 +2,7 @@
  * Blueprint -> Training Builder blocks
  *
  * Single source of truth for turning an AI `CourseBlueprint` into the
- * `documents` (content_type='training_block') rows that the Training Builder
+ * `lessons` rows that the Training Builder
  * (`src/pages/training/**`) and the Training Player (`src/pages/training/TrainingPlayer.tsx`)
  * both read.
  *
@@ -17,7 +17,7 @@
  */
 
 import type { QuestionType } from '@/types/questions'
-import type { TablesInsert } from '@/lib/database.types'
+import type { TablesInsert } from '@/types/database.generated'
 import type {
   CourseBlueprint,
   CourseVisualAsset,
@@ -212,7 +212,7 @@ interface BlueprintBlockDraft {
   durationSeconds?: number | null
   isMandatory: boolean
   contentData: Record<string, unknown>
-  /** When set, the save path creates a real `learning_quizzes` row + linked
+  /** When set, the save path creates a real `quizzes` row + linked
    *  `unified_questions` and stamps `content_data.quiz_id`. */
   quiz?: QuizBlueprint
   /** When set, the save path also inserts a `course_visual_assets` row. */

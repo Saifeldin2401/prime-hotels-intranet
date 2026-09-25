@@ -31,7 +31,7 @@ export function useTrainingModules(filters?: {
     queryKey: ['training-modules', orgId, filters],
     queryFn: async () => {
       let query = supabase
-        .from('training_modules')
+        .from('courses')
         .select(`
           id,
           title,
@@ -49,7 +49,6 @@ export function useTrainingModules(filters?: {
             email
           )
         `)
-        // training_content_blocks removed – now in documents (content_type='training_block').
         .order('created_at', { ascending: false })
         .eq('is_deleted', false)
 
@@ -79,10 +78,10 @@ export function useTrainingModules(filters?: {
 }
 
 // Training Content Blocks
-// These are now stored in documents with content_type='training_block'.
+// These are stored in `lessons` (one row per block).
 // The block-specific fields map as: type→block_type, order→block_order.
 // Training Quizzes
-// Quizzes are learning_quizzes; questions live in unified_questions linked via
+// Quizzes are quizzes; questions live in unified_questions linked via
 // unified_quiz_questions (quiz blocks reference them by content_data.quiz_id).
 // Training Progress
 export function useTrainingProgress(userId?: string, trainingId?: string) {
@@ -104,7 +103,7 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
           is_deleted,
           created_at,
           updated_at,
-          training_assignment_rules(
+          assignments(
             id,
             due_date
           )
@@ -125,9 +124,9 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
       return (data as any[]).map(progress => ({
         ...progress,
         // The assignment this progress row was seeded from (training_progress.assignment_id).
-        assignment: Array.isArray(progress.training_assignment_rules)
-          ? progress.training_assignment_rules[0]
-          : progress.training_assignment_rules
+        assignment: Array.isArray(progress.assignments)
+          ? progress.assignments[0]
+          : progress.assignments
       })) as unknown as (TrainingProgress & {
         assignment?: Pick<LearningAssignment, 'id' | 'due_date'>
       })[]
@@ -172,7 +171,7 @@ export function useMyAssignments() {
       .channel(`my-assignments-${user.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'training_assignment_rules' },
+        { event: '*', schema: 'public', table: 'assignments' },
         invalidateMyAssignments
       )
       .on(

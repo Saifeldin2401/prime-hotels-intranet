@@ -180,7 +180,7 @@ export const useAIQuizGenerator = () => {
             })
 
             // 6. Navigate to Editor
-            navigate(`/learning/quizzes/${newQuiz.id}`)
+            navigate(`/studio/quizzes/${newQuiz.id}`)
 
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred'

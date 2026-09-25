@@ -244,11 +244,11 @@ export default function TrainingAnalytics() {
             const row = data?.[0]
 
             const { count: moduleCount } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('*', { count: 'exact', head: true })
 
             const { count: quizCount } = await supabase
-                .from('learning_quizzes')
+                .from('quizzes')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'published')
 
@@ -305,7 +305,7 @@ export default function TrainingAnalytics() {
                         question_text,
                         training_module_id,
                         tags,
-                        training_module:training_modules(title)
+                        training_module:courses(title)
                     )
                 `)
                 .order('created_at', { ascending: false })

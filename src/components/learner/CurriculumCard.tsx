@@ -57,9 +57,8 @@ export const CurriculumCard: React.FC<CurriculumCardProps> = ({
 
     return (
         <Card className={cn(
-            "group relative flex flex-col overflow-hidden rounded-3xl border border-border/60 border-t-amber-400/25 bg-gradient-to-b from-card to-card/70",
-            "shadow-sm backdrop-blur-xl transition-all duration-300",
-            "hover:-translate-y-1.5 hover:border-amber-500/40 hover:shadow-xl hover:shadow-amber-500/5",
+            "group relative flex flex-col overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E]",
+            "shadow-none transition-colors duration-150 hover:border-[#86672C] dark:hover:border-[#B79A62]",
             className
         )}>
             {/* 16:9 Image Container with Scrim Gradients */}

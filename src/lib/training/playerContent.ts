@@ -137,7 +137,7 @@ export function getBlockLearningOutcomes(block: Pick<TrainingContentBlock, 'cont
 }
 
 /**
- * Course-level objectives / takeaways stored on `training_modules.blueprint`
+ * Course-level objectives / takeaways stored on `courses.blueprint`
  * (jsonb). Read defensively — the column may be absent on older modules.
  */
 export function getCourseBlueprintOutcomes(

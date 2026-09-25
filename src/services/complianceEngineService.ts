@@ -185,13 +185,13 @@ export const complianceEngineService = {
     // 2. Fetch waivable assignments (hotel-specific, non-mandatory, active)
     let waivableAssignments: Array<{ id: string; title: string; hotelId: string | null }> = []
     if (currentHotelId && currentHotelId !== params.targetHotelId) {
-      // Individual assignments are training_assignment_rules rows targeting the user.
+      // Individual assignments are assignments rows targeting the user.
       const { data: assignments } = await supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .select(`
           id,
           hotel_id,
-          training_modules (
+          courses (
             id,
             title
           )
@@ -205,7 +205,7 @@ export const complianceEngineService = {
 
       if (assignments) {
         waivableAssignments = assignments.map((a) => {
-          const mod = Array.isArray(a.training_modules) ? a.training_modules[0] : a.training_modules
+          const mod = Array.isArray(a.courses) ? a.courses[0] : a.courses
           return {
             id: a.id,
             title: mod?.title || 'Hotel Module',
@@ -219,7 +219,7 @@ export const complianceEngineService = {
     let targetDeltaRules: Array<{ id: string; title: string; isMandatory: boolean }> = []
     if (params.targetHotelId && orgId) {
       let rulesQuery = supabase
-        .from('training_assignment_rules')
+        .from('assignments')
         .select(`
           id,
           hotel_id,
@@ -228,7 +228,7 @@ export const complianceEngineService = {
           is_mandatory,
           scope_type,
           scope_id,
-          training_modules (
+          courses (
             id,
             title
           )
@@ -248,7 +248,7 @@ export const complianceEngineService = {
       const { data: rules } = await rulesQuery
       if (rules) {
         targetDeltaRules = rules.map((r) => {
-          const mod = Array.isArray(r.training_modules) ? r.training_modules[0] : r.training_modules
+          const mod = Array.isArray(r.courses) ? r.courses[0] : r.courses
           return {
             id: r.id,
             title: mod?.title || 'Training Rule',

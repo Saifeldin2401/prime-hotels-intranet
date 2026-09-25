@@ -29,7 +29,7 @@ export const learnerBlueprint: RoleBlueprint = {
       id: 'task_learner_first_course',
       titleKey: 'wizard.tasks.learner.first_course.title',
       descriptionKey: 'wizard.tasks.learner.first_course.desc',
-      actionRoute: '/training',
+      actionRoute: '/learn/my',
       actionKey: 'wizard.actions.start_learning'
     },
     {
@@ -67,7 +67,7 @@ export const learnerBlueprint: RoleBlueprint = {
       id: 'tour_learner_dashboard',
       titleKey: 'wizard.tours.learner_dashboard.title',
       descriptionKey: 'wizard.tours.learner_dashboard.desc',
-      route: '/training'
+      route: '/learn/my'
     },
     {
       id: 'tour_learner_requests',

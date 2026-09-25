@@ -20,7 +20,7 @@ import { getPipelineTelemetry } from '@/lib/ai/observability'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { aiAgentPolicyService } from '@/services/aiAgentPolicyService'
 import { supabase } from '@/lib/supabase'
-import type { Json } from '@/lib/database.types'
+import type { Json } from '@/types/database.generated'
 import {
   cloudflareProvider,
   DEFAULT_CLOUDFLARE_IMAGE_MODEL,
@@ -459,7 +459,7 @@ export const aiCourseEngineService = {
   },
 
   /**
-   * Saves the reviewed blueprint into real Supabase training_modules, content blocks, quizzes, and visual assets.
+   * Saves the reviewed blueprint into real Supabase courses, content blocks, quizzes, and visual assets.
    */
   async saveBlueprintToDatabase(
     blueprint: CourseBlueprint,
@@ -488,7 +488,7 @@ export const aiCourseEngineService = {
 
     // 2. Insert or update training_module
     const { data: moduleData, error: moduleError } = await supabase
-      .from('training_modules')
+      .from('courses')
       .insert({
         title: blueprint.title,
         description: blueprint.description,
@@ -551,7 +551,7 @@ export const aiCourseEngineService = {
     })
 
     /**
-     * Create a real `learning_quizzes` row plus linked `unified_questions` /
+     * Create a real `quizzes` row plus linked `unified_questions` /
      * `unified_question_options` / `unified_quiz_questions`. Returns the quiz id
      * and how many questions were actually linked (0 => caller must NOT attach a
      * mandatory quiz block, or module completion is permanently blocked).
@@ -561,7 +561,7 @@ export const aiCourseEngineService = {
       meta: { title: string; description: string; passingScore: number; timeLimitMinutes: number; maxAttempts: number },
     ): Promise<{ id: string; linked: number } | null> => {
       const { data: createdQuiz, error: quizError } = await supabase
-        .from('learning_quizzes')
+        .from('quizzes')
         .insert({
           title: meta.title,
           description: meta.description,
@@ -577,7 +577,7 @@ export const aiCourseEngineService = {
         .single()
 
       if (quizError || !createdQuiz) {
-        console.warn('Could not create learning_quizzes row:', quizError)
+        console.warn('Could not create quizzes row:', quizError)
         return null
       }
 
@@ -663,10 +663,9 @@ export const aiCourseEngineService = {
       if (quizId) contentData.quiz_id = quizId
 
       const { data: blockData, error: blockErr } = await supabase
-        .from('documents')
+        .from('lessons')
         .insert({
           training_module_id: moduleId,
-          content_type: 'training_block',
           block_type: draft.blockType,
           title: draft.title || 'Lesson block',
           content: draft.content || '',

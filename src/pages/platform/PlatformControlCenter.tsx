@@ -103,22 +103,20 @@ export default function PlatformControlCenter() {
   return (
     <div className="space-y-6 pb-12">
       {/* Executive SaaS Operator Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden">
-        <div className="absolute -end-10 -bottom-10 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#15212E] text-[#F4F2EC] p-6 rounded-[8px] border border-[#30404D] shadow-none relative overflow-hidden">
         <div className="space-y-1 relative z-10">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+            <div className="p-2 rounded-[6px] bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40">
               <ShieldCheck className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
+              <h1 className="text-2xl font-bold font-serif tracking-tight flex items-center gap-2 text-[#F4F2EC]">
                 <span>Platform Control Center</span>
-                <Badge variant="outline" className="bg-amber-500/10 text-amber-300 border-amber-500/40 text-[10px] uppercase font-bold tracking-wider">
+                <Badge variant="outline" className="bg-[#86672C]/20 text-[#D4AF37] border-[#86672C]/40 text-[10px] uppercase font-bold tracking-wider rounded-[4px]">
                   SaaS Operator Plane
                 </Badge>
               </h1>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-[#929CA5]">
                 Multi-tenant governance, organizational lifecycle, master content distribution, and system operations.
               </p>
             </div>
@@ -133,16 +131,16 @@ export default function PlatformControlCenter() {
               refetchStats()
               refetchOps()
             }}
-            className="bg-slate-800/80 border-slate-700 hover:bg-slate-700 text-slate-200 text-xs h-9"
+            className="bg-[#1E2D3D] border-[#30404D] hover:bg-[#25384D] text-[#F4F2EC] text-xs h-9 rounded-[6px] shadow-none"
           >
-            <RefreshCw className="h-3.5 w-3.5 me-1.5" />
+            <RefreshCw className="h-3.5 w-3.5 me-1.5 text-[#B79A62]" />
             <span>Refresh Telemetry</span>
           </Button>
 
           <Button
             size="sm"
             onClick={() => navigate('/platform/organizations')}
-            className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs h-9 shadow-lg shadow-amber-500/20"
+            className="bg-[#86672C] hover:bg-[#6D5322] text-[#FFFFFF] font-medium text-xs h-9 rounded-[6px] shadow-none transition-colors"
           >
             <Building2 className="h-3.5 w-3.5 me-1.5" />
             <span>Manage Organizations</span>
@@ -159,7 +157,7 @@ export default function PlatformControlCenter() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setSearchOverlayDismissed(false)}
-            className="ps-11 h-12 bg-card border-slate-200 dark:border-slate-800 shadow-sm text-sm rounded-xl"
+            className="ps-11 h-12 bg-card border border-border bg-card shadow-none rounded-[8px] shadow-sm text-sm rounded-[6px]"
           />
           {isSearching && (
             <div className="absolute end-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -332,11 +330,11 @@ export default function PlatformControlCenter() {
 
       {/* KPI Counters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-slate-200 dark:border-slate-800 hover:border-amber-500/40 transition-all shadow-sm">
+        <Card className="border border-border bg-card hover:border-[#86672C]/40 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Active Customer Tenants</span>
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                 <Building2 className="h-4 w-4" />
               </div>
             </div>
@@ -357,11 +355,11 @@ export default function PlatformControlCenter() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 dark:border-slate-800 hover:border-blue-500/40 transition-all shadow-sm">
+        <Card className="border border-border bg-card hover:border-blue-500/40 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Enrolled Learners & Staff</span>
-              <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                 <Users className="h-4 w-4" />
               </div>
             </div>
@@ -380,11 +378,11 @@ export default function PlatformControlCenter() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 dark:border-slate-800 hover:border-emerald-500/40 transition-all shadow-sm">
+        <Card className="border border-border bg-card hover:border-emerald-500/40 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Master SOP & Course Library</span>
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                 <BookOpen className="h-4 w-4" />
               </div>
             </div>
@@ -405,11 +403,11 @@ export default function PlatformControlCenter() {
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 dark:border-slate-800 hover:border-purple-500/40 transition-all shadow-sm">
+        <Card className="border border-border bg-card hover:border-purple-500/40 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Background Operations Queue</span>
-              <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                 <Cpu className="h-4 w-4" />
               </div>
             </div>
@@ -434,7 +432,7 @@ export default function PlatformControlCenter() {
       {/* Main Operations & Quick Access Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border border-border bg-card shadow-none rounded-[8px]">
             <CardHeader className="p-5 pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -621,7 +619,7 @@ export default function PlatformControlCenter() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-slate-200 dark:border-slate-800">
+          <Card className="border border-border bg-card shadow-none rounded-[8px]">
             <CardHeader className="p-5 pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -657,7 +655,7 @@ export default function PlatformControlCenter() {
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200 dark:border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 text-white p-5 space-y-3">
+          <Card className="border border-border bg-card shadow-none rounded-[8px] bg-gradient-to-br from-slate-900 to-slate-950 text-white p-5 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4 text-amber-400" />

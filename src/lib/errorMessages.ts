@@ -13,9 +13,40 @@ interface ErrorDetails {
 }
 
 /**
+ * Server command functions report business-rule violations with a stable code
+ * in HINT (`RAISE ... USING HINT = 'CERT_SELF_ISSUE'`). The server message is
+ * already written for people; a translation under `errors:rules.<CODE>`
+ * replaces it where one exists (e.g. Arabic).
+ */
+const RULE_CODE_RE = /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/
+
+function extractRuleCode(error: unknown): string | null {
+  if (typeof error !== 'object' || error === null) return null
+  const { hint, code } = error as { hint?: unknown; code?: unknown }
+  if (typeof hint === 'string' && RULE_CODE_RE.test(hint)) return hint
+  if (typeof code === 'string' && RULE_CODE_RE.test(code)) return code
+  return null
+}
+
+function mapRuleViolation(code: string, serverMessage: string | undefined): ErrorDetails {
+  const key = `errors:rules.${code}`
+  return {
+    message: i18n.exists(key) ? i18n.t(key) : serverMessage || i18n.t('errors:unknown_error'),
+    code,
+    retryable: false,
+    action: 'fix_input',
+  }
+}
+
+/**
  * Maps Supabase/API error codes to user-friendly messages
  */
 export function getUserFriendlyError(error: unknown): ErrorDetails {
+  const ruleCode = extractRuleCode(error)
+  if (ruleCode) {
+    return mapRuleViolation(ruleCode, (error as { message?: string }).message)
+  }
+
   // Handle Error objects
   if (error instanceof Error) {
     return mapErrorToUserMessage(error.message, error.name)

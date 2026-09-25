@@ -1,7 +1,7 @@
 {
     "title": "Dashboard",
     "welcome": "Welcome back, {{name}}",
-    "property_overview": "Property overview for {{name}}",
+    "property_overview": "Hotel overview for {{name}}",
     "widgets": {
         "time_and_weather": "Time & Operations",
         "weather": "Local Weather",
@@ -27,9 +27,9 @@
         "view_announcements": "View Announcements",
         "manage_users": "Manage Users",
         "no_role": "No role assigned",
-        "property": "property",
+        "property": "hotel",
         "department": "department",
-        "properties": "properties",
+        "properties": "hotels",
         "departments": "departments",
         "documents_desc": "Published documents",
         "training_desc": "{{count}} in progress",
@@ -43,7 +43,7 @@
             "documents": "Documents",
             "documents_desc": "Access procedures and policies",
             "training": "Training",
-            "training_desc": "My learning modules",
+            "training_desc": "My courses",
             "tasks": "My Tasks",
             "tasks_desc": "View assigned tasks",
             "directory": "Directory",
@@ -85,7 +85,7 @@
         "all_courses": "All Courses",
         "new": "New",
         "start": "Start",
-        "training_module_desc": "Comprehensive training module covering {{topic}} for hotel staff.",
+        "training_module_desc": "Comprehensive course covering {{topic}} for hotel staff.",
         "no_active_courses": "No active courses",
         "browse_training": "Browse Available Training",
         "continue": "Continue",
@@ -170,7 +170,7 @@
             "urgent": "Urgent"
         },
         "role_widget": {
-            "properties": "Properties",
+            "properties": "Hotels",
             "departments": "Departments"
         },
         "quick_actions_widget": {
@@ -232,7 +232,7 @@
             "sort_order": "Custom Order",
             "max_reached": "Maximum pinned items reached (10)",
             "already_pinned": "This item is already pinned",
-            "tip": "Tip: You can pin items by clicking the pin icon on documents, tasks, or training modules.",
+            "tip": "Tip: You can pin items by clicking the pin icon on documents, tasks, or courses.",
             "pin_items": "Pin Items"
         },
         "customize": "Customize Dashboard",
@@ -298,7 +298,7 @@
             "sat": "Sat",
             "shift": "Shift",
             "work": "Work",
-            "property": "Property",
+            "property": "Hotel",
             "meeting": "Meeting",
             "training": "Training",
             "deadline": "Deadline",
@@ -323,7 +323,7 @@
         "assigned": "Assigned {{date}}",
         "due": "Due {{date}}",
         "default_training_title": "Training Assignment",
-        "subtitle": "Recent activity across properties"
+        "subtitle": "Recent activity across hotels"
     },
     "active_users": {
         "title": "Active Team Members",
@@ -392,7 +392,7 @@
         "urgent": "urgent"
     },
     "role_widget": {
-        "properties": "properties",
+        "properties": "hotels",
         "departments": "departments"
     },
     "quick_actions_widget": {
@@ -515,7 +515,7 @@
             "support": "Support",
             "get_help": "Get help",
             "transfer_employee": "Transfer Employee",
-            "cross_property_moves": "Cross-property moves"
+            "cross_property_moves": "Cross-hotel moves"
         },
         "tabs": {
             "activity_feed": "Activity Feed",
@@ -535,7 +535,7 @@
     },
     "tabs": {
         "feed": "Feed",
-        "properties": "Properties",
+        "properties": "Hotels",
         "analytics": "Analytics",
         "compliance": "Compliance",
         "system": "System",
@@ -575,8 +575,8 @@
         "team": "Team",
         "approvals": "Approvals",
         "area_dashboard_title": "Area Management Dashboard",
-        "area_dashboard_subtitle": "Area Manager • {{count}} Properties",
-        "active_properties_badge": "{{count}} Active Properties",
+        "area_dashboard_subtitle": "Area Manager • {{count}} Hotels",
+        "active_properties_badge": "{{count}} Active Hotels",
         "regional_admin_badge": "REGIONAL ADMIN",
         "maintenance_efficiency_subtitle": "Resolution rate (30d)",
         "open_issues": "Open Issues",
@@ -630,7 +630,7 @@
         "reason_label": "Reason: {{reason}}",
         "department_label": "Department: {{name}}",
         "property_dashboard_title": "{{name}} Dashboard",
-        "property_dashboard_subtitle": "Oversee property operations and performance",
+        "property_dashboard_subtitle": "Oversee hotel operations and performance",
         "department_overview_subtitle": "Department Overview",
         "department_staff_badge": "{{count}} Staff Members",
         "overall_score_label": "Overall Score: {{score}}/100",
@@ -647,15 +647,15 @@
         "view_profile_btn": "View Profile",
         "department_not_found": "Department Not Found",
         "go_back_btn": "Go Back",
-        "property_not_found": "Property Not Found",
+        "property_not_found": "Hotel Not Found",
         "no_address_provided": "No Address Provided",
         "view_dashboard_btn": "View Dashboard",
         "total_departments_card": "Total Departments",
         "active_employees_subtitle": "Active employees",
         "departments_overview_title": "Departments Overview",
         "loading_departments": "Loading departments...",
-        "no_departments_in_property": "No departments found for this property.",
-        "add_departments_hint": "Go to Property Management to add departments.",
+        "no_departments_in_property": "No departments found for this hotel.",
+        "add_departments_hint": "Go to Hotel Management to add departments.",
         "export_headers": {
             "metric": "Metric",
             "value": "Value",
@@ -670,7 +670,7 @@
         "alert_low_compliance": "Compliance Risk",
         "alert_low_compliance_desc": "Training compliance is below 70%. Immediate follow-up required.",
         "alert_maintenance": "Maintenance Backlog",
-        "alert_maintenance_desc": "Resolution rate has dipped below target. Review high volume properties.",
+        "alert_maintenance_desc": "Resolution rate has dipped below target. Review high volume hotels.",
         "alert_open_issues": "Open Issues Spike",
         "alert_open_issues_desc": "Open issues are above the safety threshold. Escalate critical tasks.",
         "alert_vacancies": "Recruitment Pressure",
@@ -698,8 +698,8 @@
         "budget_utilization": "Budget Utilization",
         "pending_sync": "Pending Sync",
         "corporate_dashboard_title": "Corporate Dashboard",
-        "active_properties": "Active Properties",
-        "avg_staff_per_property": "Avg per property",
+        "active_properties": "Active Hotels",
+        "avg_staff_per_property": "Avg per hotel",
         "maintenance_issues": "Maintenance Issues",
         "job_title_missing": "Job Title Missing",
         "quick_actions": {
@@ -764,7 +764,7 @@
         "staff_spotlight": "Staff Spotlight",
         "no_scheduled_reports": "No Scheduled Reports",
         "coverage": "Coverage",
-        "inactive_properties": "Inactive Properties",
+        "inactive_properties": "Inactive Hotels",
         "pending_leave": "Pending Leave",
         "department_controls": "Department Controls",
         "training_records": "Training Records",
@@ -890,7 +890,7 @@
         "new_article": "New Article",
         "read_article": "Read Article",
         "completed_training": "Completed Training",
-        "training_congrats": "Congratulations on completing the training module!"
+        "training_congrats": "Congratulations on completing the course!"
     },
     "subtitle": "Your centralized hub for operational knowledge",
     "welcome_header": {
@@ -911,7 +911,7 @@
             "next_meeting": "Next Meeting: {{title}} at {{time}}",
             "announcement": "Announcement: {{title}}",
             "active_tasks": "You have {{count}} active tasks in your queue",
-            "milestone": "Milestone: {{count}} training modules completed",
+            "milestone": "Milestone: {{count}} courses completed",
             "operational_focus": "Operational focus: {{name}}",
             "system_operational": "Altus Advisory operational",
             "action_required_one": "1 action required",
@@ -1024,10 +1024,10 @@
         "post_announcement": "Post Announcement",
         "target_all": "All Staff",
         "target_department": "Department",
-        "target_property": "Property",
+        "target_property": "Hotel",
         "target_role": "Role",
         "select_department": "Select Department",
-        "select_property": "Select Property",
+        "select_property": "Select Hotel",
         "select_role": "Select Role",
         "issue_title": "Issue Title",
         "category": "Category",
@@ -1109,17 +1109,18 @@
     "roles": {
         "staff": "Staff",
         "department_head": "Department Head",
-        "property_manager": "Property Manager",
-        "property_hr": "Property HR",
+        "property_manager": "Hotel Manager",
+        "property_hr": "Hotel HR",
         "regional_hr": "Regional HR",
         "regional_admin": "Regional Admin"
     },
     "role_insights": {
         "corporate_title": "Organization Overview",
-        "property_title": "Property Overview",
+        "property_title": "Hotel Overview",
         "department_title": "Department Overview",
         "hr_title": "HR Overview",
-        "total_properties": "Properties",
+        "staff_title": "My Personal Operational Metrics",
+        "total_properties": "Hotels",
         "total_staff": "Total Staff",
         "compliance_rate": "Staff Compliance",
         "maintenance_efficiency": "Maintenance Efficiency",
@@ -1137,8 +1138,10 @@
         "pending_leave": "Pending Leave",
         "new_hires": "New Hires",
         "open_positions": "Open Positions",
-        "total_employees": "Total Employees",
-        "employee_engagement": "Employee Engagement"
+        "my_pending_tasks": "My Pending Tasks",
+        "my_urgent_tasks": "Urgent / Priority",
+        "my_completed_tasks": "Tasks Completed",
+        "training_modules": "Training Completed"
     },
     "insights": {
         "attendance_rate": "Attendance Rate",
@@ -1212,34 +1215,5 @@
         "asr": "Asr",
         "maghrib": "Maghrib",
         "isha": "Isha"
-    },
-    "role_insights": {
-        "corporate_title": "Organization Overview",
-        "property_title": "Property Overview",
-        "department_title": "Department Overview",
-        "hr_title": "HR Overview",
-        "staff_title": "My Personal Operational Metrics",
-        "total_properties": "Properties",
-        "total_staff": "Total Staff",
-        "compliance_rate": "Staff Compliance",
-        "maintenance_efficiency": "Maintenance Efficiency",
-        "open_vacancies": "Open Vacancies",
-        "total_tickets": "Total Tickets",
-        "active_departments": "Departments",
-        "pending_tasks": "Pending Tasks",
-        "maintenance_issues": "Maintenance Issues",
-        "training_completion": "Training Completion",
-        "team_size": "Team Size",
-        "present_today": "Present Today",
-        "training_compliance": "Training Compliance",
-        "pending_approvals": "Pending Approvals",
-        "performance_score": "Performance Score",
-        "pending_leave": "Pending Leave",
-        "new_hires": "New Hires",
-        "open_positions": "Open Positions",
-        "my_pending_tasks": "My Pending Tasks",
-        "my_urgent_tasks": "Urgent / Priority",
-        "my_completed_tasks": "Tasks Completed",
-        "training_modules": "Training Completed"
     }
 }

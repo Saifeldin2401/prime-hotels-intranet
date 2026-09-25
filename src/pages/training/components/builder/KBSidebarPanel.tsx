@@ -143,7 +143,7 @@ export function KBSidebarPanel({
             try {
               const quizTitle = `${title || t('builder.untitledModule', 'Untitled Module')} - Knowledge Quiz`
               const { data: quizData, error: quizError } = await supabase
-                .from('learning_quizzes')
+                .from('quizzes')
                 .insert({
                   title: quizTitle,
                   description: `Created from Knowledge Base question bank`,

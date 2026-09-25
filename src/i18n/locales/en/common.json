@@ -95,7 +95,7 @@
         "view_profile": "View Profile",
         "visibility": {
             "all_properties": "Consolidated (Cluster)",
-            "property_specific": "Property Specific",
+            "property_specific": "Hotel Specific",
             "department_specific": "Department Specific",
             "role_specific": "Role Specific"
         },
@@ -208,11 +208,11 @@
         "numeric": "Must be a number"
     },
     "roles": {
-        "super_admin": "Super Admin",
+        "super_admin": "Operator",
         "administrator": "Administrator",
         "admin": "Admin",
         "system_owner": "System Owner",
-        "platform_super_admin": "Platform Super Admin",
+        "platform_super_admin": "Platform Operator",
         "organization_owner": "Organization Owner",
         "organization_admin": "Organization Admin",
         "brand_admin": "Brand Admin",
@@ -220,8 +220,8 @@
         "corporate_admin": "Corporate Admin",
         "regional_admin": "Regional Admin",
         "regional_hr": "Regional HR",
-        "property_manager": "Property Manager",
-        "property_hr": "Property HR",
+        "property_manager": "Hotel Manager",
+        "property_hr": "Hotel HR",
         "department_head": "Department Head",
         "department_manager": "Department Manager",
         "manager": "Manager",
@@ -430,7 +430,7 @@
     "visibility": {
         "all_properties": "Consolidated (Cluster)",
         "department_specific": "Department Specific",
-        "property_specific": "Property Specific",
+        "property_specific": "Hotel Specific",
         "role_specific": "Role Specific"
     },
     "messages": {
@@ -539,7 +539,7 @@
         "search": "Search...",
         "enter_title": "Enter title",
         "enter_description": "Enter description (optional)",
-        "select_property": "Select property",
+        "select_property": "Select hotel",
         "select_department": "Select department",
         "select_employee": "Select employee",
         "select_user": "Select a user",
@@ -629,7 +629,7 @@
     "search_users": "Search users",
     "labels": {
         "typing_search": "Start typing to search...",
-        "property": "Property"
+        "property": "Hotel"
     },
     "my_team": "My Team",
     "active": "Active",

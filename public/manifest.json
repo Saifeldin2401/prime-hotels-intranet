@@ -1,7 +1,7 @@
 {
     "name": "Altus Connect",
     "short_name": "Altus Connect",
-    "description": "Altus Advisory Operating System",
+    "description": "Training, knowledge and assessment for hospitality teams",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0B1528",
@@ -79,10 +79,10 @@
             ]
         },
         {
-            "name": "Messages",
-            "short_name": "Messages",
-            "description": "View Messages",
-            "url": "/messaging",
+            "name": "Knowledge",
+            "short_name": "Knowledge",
+            "description": "Search SOPs and articles",
+            "url": "/knowledge",
             "icons": [
                 {
                     "src": "/icons/icon-96x96.png",

@@ -13,7 +13,7 @@ export default function QuestionGeneratorPage() {
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/questions')}>
+                <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
                     <ArrowLeft className="h-4 w-4 me-2" />
                     Back to Library
                 </Button>
@@ -44,7 +44,7 @@ export default function QuestionGeneratorPage() {
                     sopTitle="Manual Input"
                     sopContent={content}
                     onQuestionsCreated={() => {
-                        navigate('/questions')
+                        navigate('/studio/quizzes')
                     }}
                 />
             </div>

@@ -107,7 +107,7 @@ export function AssignTrainingWizardModal({
 
   // Step 2: Content Package Selection
   // Defaults to 'modules' since that is the only category currently backed by real,
-  // assignable content (training_modules). The other tabs show an honest empty state
+  // assignable content (courses). The other tabs show an honest empty state
   // until real onboarding/path/compliance content sources are wired up.
   const [contentCategory, setContentCategory] = useState<ContentCategory>('modules')
   const [selectedPackage, setSelectedPackage] = useState<ContentPackageItem | null>(null)
@@ -132,7 +132,7 @@ export function AssignTrainingWizardModal({
     queryKey: ['real-training-modules-wizard'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id, title, category, estimated_duration_minutes, difficulty_level')
         .eq('is_deleted', false)
         .limit(30)
@@ -157,7 +157,7 @@ export function AssignTrainingWizardModal({
     enabled: open && audienceType === 'user'
   })
 
-  // Only the "modules" tab is backed by a real content source (training_modules).
+  // Only the "modules" tab is backed by a real content source (courses).
   // Onboarding/Paths/Compliance packages were previously hardcoded placeholder data
   // that didn't exist in the database - selecting one and submitting created a
   // broken assignment pointing at a content_id nothing else in the app could resolve.

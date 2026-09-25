@@ -4,9 +4,9 @@
  * The shared content-lifecycle state machine for the learning platform.
  *
  * One machine spans all three content kinds:
- *   course      -> training_modules
+ *   course      -> courses
  *   article     -> documents
- *   assessment  -> learning_quizzes
+ *   assessment  -> quizzes
  *
  * States (mirror the `content_status` Postgres enum):
  *   draft -> in_review -> approved -> published -> archived
@@ -188,7 +188,7 @@ export function isContentManagerRole(role: string | null | undefined): boolean {
 // ---------------------------------------------------------------------------
 /** Which DB table backs each content type. */
 export const CONTENT_TABLE: Record<ContentType, string> = {
-  course: 'training_modules',
+  course: 'courses',
   article: 'documents',
-  assessment: 'learning_quizzes',
+  assessment: 'quizzes',
 }

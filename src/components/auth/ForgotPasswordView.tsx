@@ -54,7 +54,7 @@ function ForgotPasswordViewComponent({
       try {
         const trimmed = email.trim();
         if (!trimmed || !trimmed.includes('@')) {
-          throw new Error(t('forgot_password.invalid_email'));
+          throw new Error(t('forgot_password.invalid_email', { defaultValue: 'Please enter a valid email address.' }));
         }
 
         const { error: invokeError } = await supabase.functions.invoke(
@@ -69,9 +69,9 @@ function ForgotPasswordViewComponent({
             invokeError.message?.toLowerCase().includes('too many') ||
             invokeError.status === 429
           ) {
-            setError(t('errors.too_many_requests'));
+            setError(t('errors.rate_limit', { defaultValue: 'Too many requests. Please wait a few moments before trying again.' }));
           } else {
-            setError(t('errors.reset_password_failed'));
+            setError(t('forgot_password.error', { defaultValue: 'Failed to send reset email. Please try again.' }));
           }
           setLoading(false);
           return;
@@ -79,12 +79,12 @@ function ForgotPasswordViewComponent({
 
         onSuccess(trimmed);
         showSuccessToast(
-          t('forgot_password.success_title'),
-          t('forgot_password.success_message')
+          t('forgot_password.success_title', { defaultValue: 'Check your email' }),
+          t('forgot_password.success_message', { defaultValue: 'We have dispatched a secure password reset link to your email.' })
         );
       } catch (err: unknown) {
         const message =
-          err instanceof Error ? err.message : t('forgot_password.error');
+          err instanceof Error ? err.message : t('forgot_password.error', { defaultValue: 'Failed to send reset email.' });
         setError(message);
         showErrorToast(t('errors.title'), message);
       } finally {
@@ -99,36 +99,34 @@ function ForgotPasswordViewComponent({
       <m.form
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.3 }}
         onSubmit={handleSubmit}
-        className="space-y-5"
-        aria-label={t('forgot_password.title')}
+        className="space-y-4"
+        aria-label={t('forgot_password.title', { defaultValue: 'Forgot password' })}
       >
-        <div className="space-y-2 text-center">
-          <h3 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-            {t('forgot_password.title')}
-          </h3>
-          <p className="text-sm text-gray-500">
-            {t('forgot_password.description')}
+        <div className="space-y-1 text-start">
+          <h2 className="text-xl font-semibold text-ds-ink tracking-tight">
+            {t('forgot_password.title', { defaultValue: 'Reset your password' })}
+          </h2>
+          <p className="text-xs text-ds-muted leading-relaxed">
+            {t('forgot_password.description', { defaultValue: 'Enter your company email to receive password reset instructions.' })}
           </p>
         </div>
 
         <AnimatePresence mode="wait">
           {error && (
             <m.div
-              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              initial={{ opacity: 0, height: 0, scale: 0.98 }}
               animate={{ opacity: 1, height: 'auto', scale: 1 }}
-              exit={{ opacity: 0, height: 0, scale: 0.95 }}
-              className="text-sm p-4 rounded-xl flex items-start gap-3 border bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+              exit={{ opacity: 0, height: 0, scale: 0.98 }}
+              className="text-xs p-3 rounded-lg flex items-start gap-2.5 border bg-ds-danger-soft/80 text-ds-ink border-ds-danger/30"
               role="alert"
               aria-live="assertive"
             >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-red-100 dark:bg-red-800/30">
-                <AlertCircle className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div className="flex-1 pt-0.5">
-                <p className="font-semibold">{t('errors.title')}</p>
-                <p className="text-sm opacity-90 mt-0.5">{error}</p>
+              <AlertCircle className="h-4 w-4 shrink-0 text-ds-danger mt-0.5" aria-hidden="true" />
+              <div className="flex-1">
+                <p className="font-semibold text-ds-ink">{t('errors.title')}</p>
+                <p className="text-xs text-ds-ink-secondary mt-0.5 leading-relaxed">{error}</p>
               </div>
             </m.div>
           )}
@@ -141,7 +139,7 @@ function ForgotPasswordViewComponent({
           onChange={handleEmailChange}
           onFocus={() => setFocusedField('reset-email')}
           onBlur={() => setFocusedField(null)}
-          label={t('forgot_password.email_label')}
+          label={t('forgot_password.email_label', { defaultValue: 'Email address' })}
           icon={Mail}
           disabled={loading}
           isRTL={isRTL}
@@ -151,46 +149,47 @@ function ForgotPasswordViewComponent({
           autoComplete="email"
         />
 
-        <Button
-          type="submit"
-          className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
-          disabled={loading || !emailValid}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-          {loading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-              <span>{t('forgot_password.sending')}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span>{t('forgot_password.send_link')}</span>
-              <ArrowRight
-                className={cn(
-                  'h-5 w-5 transition-transform group-hover:translate-x-1',
-                  isRTL && 'rotate-180 group-hover:-translate-x-1'
-                )}
-                aria-hidden="true"
-              />
-            </div>
-          )}
-        </Button>
-
-        <Button
-          type="button"
-          variant="ghost"
-          className="w-full text-sm font-semibold"
-          onClick={onBackToLogin}
-        >
-          <ArrowRight
-            className={cn(
-              'h-4 w-4 me-2 rotate-180',
-              isRTL && 'rotate-0'
+        <div className="pt-2 space-y-2">
+          <Button
+            type="submit"
+            className="w-full h-12 bg-ds-brass hover:bg-ds-accent-hover text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-brass focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed border-none cursor-pointer"
+            disabled={loading || !emailValid}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2 justify-center">
+                <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
+                <span className="font-medium text-white">{t('forgot_password.sending', { defaultValue: 'Sending link...' })}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 justify-center">
+                <span className="font-medium text-white">{t('forgot_password.send_link', { defaultValue: 'Send reset link' })}</span>
+                <ArrowRight
+                  className={cn(
+                    'h-4 w-4 text-white transition-transform group-hover:translate-x-0.5',
+                    isRTL && 'rotate-180 group-hover:-translate-x-0.5'
+                  )}
+                  aria-hidden="true"
+                />
+              </div>
             )}
-            aria-hidden="true"
-          />
-          {t('forgot_password.back_to_login')}
-        </Button>
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full h-10 text-xs font-medium text-ds-ink-secondary hover:text-ds-ink hover:bg-ds-surface-subtle"
+            onClick={onBackToLogin}
+          >
+            <ArrowRight
+              className={cn(
+                'h-3.5 w-3.5 me-1.5 rotate-180',
+                isRTL && 'rotate-0'
+              )}
+              aria-hidden="true"
+            />
+            {t('forgot_password.back_to_login', { defaultValue: 'Back to sign in' })}
+          </Button>
+        </div>
       </m.form>
     </LazyMotion>
   );
@@ -198,5 +197,4 @@ function ForgotPasswordViewComponent({
 
 export const ForgotPasswordView = memo(ForgotPasswordViewComponent);
 ForgotPasswordView.displayName = 'ForgotPasswordView';
-
 export default ForgotPasswordView;

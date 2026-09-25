@@ -2,15 +2,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
-import {
-    useAchievementDefinitions,
-    useAchievementStats,
-    useUserAchievements,
-    type AchievementDefinition,
-} from '@/hooks/useAchievements'
 import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificates'
 import { cn } from '@/lib/utils'
 import type { Certificate } from '@/services/certificateService'
@@ -27,14 +20,10 @@ import {
     Copy,
     Download,
     Eye,
-    Flame,
     Loader2,
-    Lock,
     Search,
     Shield,
     ShieldCheck,
-    Sparkles,
-    Star,
     Trophy,
     XCircle
 } from 'lucide-react'
@@ -63,16 +52,7 @@ export default function MyCertificates() {
     // Real Supabase queries
     const { data: certificates, isLoading: certsLoading } = useMyCertificates()
     const downloadCertificate = useDownloadCertificate()
-    const { data: userAchievements = [], isLoading: achievementsLoading } = useUserAchievements(100)
-    const { data: definitions = [] } = useAchievementDefinitions()
-    // Real, not-yet-earned achievement definitions (earned rows are keyed by achievement_type).
-    const lockedDefinitions = useMemo(() => {
-        const earned = new Set(userAchievements.map((a) => a.achievement_type))
-        return definitions.filter((d) => !earned.has(d.achievement_type))
-    }, [definitions, userAchievements])
-    const { data: stats } = useAchievementStats()
-
-    const isLoading = certsLoading || achievementsLoading
+    const isLoading = certsLoading
 
     const filteredCertificates = useMemo(() => {
         return (certificates || []).filter(cert => {
@@ -83,20 +63,6 @@ export default function MyCertificates() {
 
     const activeCertificates = useMemo(() => filteredCertificates.filter(c => c.status === 'active'), [filteredCertificates])
     const expiredCertificates = useMemo(() => filteredCertificates.filter(c => c.status === 'expired' || c.status === 'revoked'), [filteredCertificates])
-
-    // Compute Learner XP & Progression Level
-    const totalXP = stats?.totalPoints || userAchievements.reduce((acc, a) => acc + (a.points || 0), 0)
-    const currentLevel = Math.max(1, Math.floor(totalXP / 200) + 1)
-    const xpInCurrentLevel = totalXP % 200
-    const levelProgressPercent = Math.min(100, Math.round((xpInCurrentLevel / 200) * 100))
-
-    const levelTitle = useMemo(() => {
-        if (currentLevel >= 5) return isRTL ? 'سفير التميز التنفيذي' : 'Executive Hospitality Ambassador'
-        if (currentLevel >= 4) return isRTL ? 'أخصائي ضيافة خبير' : 'Master Hospitality Specialist'
-        if (currentLevel >= 3) return isRTL ? 'ممارس ضيافة معتمد' : 'Certified Senior Practitioner'
-        if (currentLevel >= 2) return isRTL ? 'مهني ضيافة متقدم' : 'Advanced Professional'
-        return isRTL ? 'ممارس ضيافة معتمد' : 'Hospitality Scholar'
-    }, [currentLevel, isRTL])
 
     const handleDownload = async (certificateId: string) => {
         try {
@@ -118,7 +84,7 @@ export default function MyCertificates() {
         e.preventDefault()
         const trimmed = verifyInput.trim()
         if (!trimmed) return
-        window.open(`/certificates/verify/${encodeURIComponent(trimmed)}`, '_blank')
+        window.open(`/verify/${encodeURIComponent(trimmed)}`, '_blank')
     }
 
     if (isLoading) {
@@ -200,32 +166,11 @@ export default function MyCertificates() {
                         </div>
                     </div>
 
-                    {/* Level & XP Progression Dial */}
-                    <div className="flex flex-col gap-2 min-w-[240px] p-4 rounded-2xl bg-card/70 border border-border/60 backdrop-blur-md">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                {isRTL ? 'الرتبة المهنية' : 'Learner Tier'}
-                            </span>
-                            <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400">
-                                Level {currentLevel}
-                            </Badge>
-                        </div>
-                        <div className="font-display text-sm font-bold text-foreground">
-                            {levelTitle}
-                        </div>
-                        <div className="space-y-1 mt-1">
-                            <div className="flex justify-between text-[11px] font-mono text-muted-foreground">
-                                <span>{totalXP} XP</span>
-                                <span>{currentLevel * 200} XP</span>
-                            </div>
-                            <Progress value={levelProgressPercent} className="h-2 bg-muted/60" indicatorClassName="bg-amber-500" />
-                        </div>
-                    </div>
                 </div>
             </div>
 
             {/* Quick Metrics Deck */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
                     <CardContent className="p-4 sm:p-5 flex items-center gap-4">
                         <div className="h-12 w-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shrink-0">
@@ -258,56 +203,16 @@ export default function MyCertificates() {
                     </CardContent>
                 </Card>
 
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 shrink-0">
-                            <Sparkles className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <div className="font-mono text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-                                {userAchievements.length}
-                            </div>
-                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">
-                                {isRTL ? 'شارات الكفاءة' : 'Earned Badges'}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md rounded-2xl shadow-sm">
-                    <CardContent className="p-4 sm:p-5 flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-600 shrink-0">
-                            <Flame className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <div className="font-mono text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-400">
-                                {totalXP}
-                            </div>
-                            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">
-                                {isRTL ? 'نقاط التميز XP' : 'Total Points XP'}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
 
             {/* Top-Level Main Hub Navigation: Certificates | Badges | Milestones */}
             <Tabs value={hubTab} onValueChange={setHubTab} className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 rounded-2xl border border-border/60 bg-card/60 backdrop-blur-md">
-                    <TabsList className="grid grid-cols-3 h-11 bg-muted/60 rounded-xl p-1 w-full sm:w-auto">
+                    <TabsList className="grid grid-cols-1 h-11 bg-muted/60 rounded-xl p-1 w-full sm:w-auto">
                         <TabsTrigger value="certificates" className="text-xs sm:text-sm rounded-lg px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                             <Award className="h-4 w-4 text-amber-500" />
                             <span>{isRTL ? 'الشهادات الرسمية' : 'Certificates'}</span>
                             <span className="ms-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">{certificates?.length || 0}</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="badges" className="text-xs sm:text-sm rounded-lg px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                            <Sparkles className="h-4 w-4 text-blue-500" />
-                            <span>{isRTL ? 'شارات الكفاءة' : 'Skill Badges'}</span>
-                            <span className="ms-1 px-1.5 py-0.2 rounded-full text-[10px] bg-muted font-mono">{userAchievements.length}</span>
-                        </TabsTrigger>
-                        <TabsTrigger value="milestones" className="text-xs sm:text-sm rounded-lg px-4 gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-                            <Trophy className="h-4 w-4 text-emerald-500" />
-                            <span>{isRTL ? 'محطات التميز والتحقق' : 'Milestones & Verify'}</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -388,7 +293,7 @@ export default function MyCertificates() {
                                 </div>
                                 <div className="pt-2">
                                     <Button
-                                        onClick={() => navigate('/courses')}
+                                        onClick={() => navigate('/learn/courses')}
                                         className="rounded-xl font-bold bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-sm gap-2 text-xs h-9"
                                     >
                                         <Compass className="h-4 w-4" />
@@ -462,283 +367,6 @@ export default function MyCertificates() {
                     )}
                 </TabsContent>
 
-                {/* TAB 2: COMPETENCY BADGES & SKILL MASTERY */}
-                <TabsContent value="badges" className="space-y-8 mt-0">
-                    {/* Unlocked Badges Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h2 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-amber-500" />
-                                    <span>{isRTL ? 'الشارات المحققة والمكتسبة' : 'Earned Competency Badges'}</span>
-                                </h2>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    {isRTL
-                                        ? 'شارات تخصصية تثبت إتقانك لكفاءات الضيافة الفندقية ومعايير ألتوس.'
-                                        : 'Micro-credentials demonstrating proven mastery of luxury hospitality standards.'}
-                                </p>
-                            </div>
-                            <Badge variant="outline" className="text-xs font-mono font-bold bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400">
-                                {userAchievements.length} {isRTL ? 'شارة مكتسبة' : 'unlocked'}
-                            </Badge>
-                        </div>
-
-                        {userAchievements.length === 0 ? (
-                            <Card className="rounded-3xl border border-dashed border-border/60 bg-muted/20 p-8 text-center space-y-3">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-600">
-                                    <Sparkles className="h-7 w-7" />
-                                </div>
-                                <h3 className="font-display text-base font-bold text-foreground">
-                                    {isRTL ? 'ابدأ في اكتساب أولى شاراتك' : 'Begin Earning Your First Skill Badge'}
-                                </h3>
-                                <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                                    {isRTL
-                                        ? 'أكمل الدروس اليومية، وتفوق في الاختبارات العملية، واشترك في المسارات التدريبية لإلغاء قفل شارات الكفاءة.'
-                                        : 'Complete daily lessons, excel in quizzes, and progress through learning paths to unlock competency badges.'}
-                                </p>
-                            </Card>
-                        ) : (
-                            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {userAchievements.map(badge => (
-                                    <Card
-                                        key={badge.id}
-                                        className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-card via-card/95 to-amber-500/[0.04] p-4 shadow-sm hover:shadow-md hover:border-amber-500/60 transition-all"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div className="h-12 w-12 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                                                <Award className="h-6 w-6" />
-                                            </div>
-                                            <div className="flex-1 min-w-0 space-y-1">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <h3 className="font-display text-sm font-bold text-foreground truncate">
-                                                        {badge.title}
-                                                    </h3>
-                                                    <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 shrink-0">
-                                                        +{badge.points} XP
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                                                    {badge.description}
-                                                </p>
-                                                <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted-foreground pt-1">
-                                                    <CalendarIcon className="h-3 w-3 text-amber-500" />
-                                                    <span>
-                                                        {isRTL ? 'تاريخ الاكتساب: ' : 'Earned: '}
-                                                        {badge.earned_at
-                                                            ? format(new Date(badge.earned_at), 'MMM d, yyyy', { locale: dateLocale })
-                                                            : '-'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Available & Upcoming Badges Section */}
-                    {lockedDefinitions.length > 0 && (
-                    <div className="space-y-4 pt-4 border-t border-border/40">
-                        <div>
-                            <h2 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                                <Lock className="h-4 w-4 text-muted-foreground" />
-                                <span>{isRTL ? 'الشارات التخصصية المتاحة للقفل' : 'Available & Upcoming Badges'}</span>
-                            </h2>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {isRTL
-                                    ? 'استكشف متطلبات الحصول على شارات معايير الضيافة الخمس نجوم القادمة.'
-                                    : 'Explore milestones and criteria to achieve your next prestigious hospitality accreditation.'}
-                            </p>
-                        </div>
-
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                            {lockedDefinitions.map((badge, idx) => (
-                                <Card
-                                    key={idx}
-                                    className="relative overflow-hidden rounded-2xl border border-border/60 bg-muted/10 p-4 opacity-85 hover:opacity-100 hover:border-amber-500/30 transition-all"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="h-12 w-12 rounded-xl bg-muted/60 border border-border/60 flex items-center justify-center text-muted-foreground shrink-0">
-                                            <Lock className="h-5 w-5" />
-                                        </div>
-                                        <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <h3 className="font-display text-sm font-bold text-foreground truncate">
-                                                    {badge.title}
-                                                </h3>
-                                                <span className="font-mono text-xs font-semibold text-muted-foreground shrink-0">
-                                                    +{badge.points} XP
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                                                {badge.description}
-                                            </p>
-                                            <div className="mt-2 p-2 rounded-lg bg-background/60 border border-border/40 text-[11px] text-muted-foreground flex items-center gap-1.5">
-                                                <Compass className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                                                <span className="truncate">
-                                                    {typeof badge.criteria === 'object' && badge.criteria !== null && 'requirement' in badge.criteria
-                                                        ? String((badge.criteria as Record<string, unknown>).requirement)
-                                                        : (isRTL ? 'إكمال المسار المحدد' : 'Complete designated path')}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-                    )}
-                </TabsContent>
-
-                {/* TAB 3: FORBES 5-STAR MILESTONES & VERIFY */}
-                <TabsContent value="milestones" className="space-y-6 mt-0">
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        {/* Streak & Habit Card */}
-                        <Card className="border border-orange-500/30 bg-gradient-to-br from-card via-card/95 to-orange-500/[0.05] rounded-3xl p-6 relative overflow-hidden shadow-sm flex flex-col justify-between">
-                            <div className="absolute top-0 end-0 -mt-8 -me-8 h-36 w-36 rounded-full bg-orange-500/10 blur-2xl pointer-events-none" />
-                            <div className="space-y-4 relative z-10">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-12 w-12 rounded-2xl overflow-hidden border border-orange-500/30 shrink-0 bg-slate-950 shadow-md">
-                                        <img
-                                            src="/assets/altus/streak-flame.jpg"
-                                            alt="Streak Trophy"
-                                            className="h-full w-full object-cover"
-                                        />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-display text-base font-bold text-foreground">
-                                            {isRTL ? 'سلسلة التعلم اليومية' : 'Daily Learning Streak'}
-                                        </h3>
-                                        <span className="text-[11px] font-mono text-muted-foreground">
-                                            {isRTL ? 'الاستمرارية معيار التميز' : 'Consistency in Hospitality'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="p-4 rounded-2xl bg-background/60 border border-border/60 text-center space-y-1">
-                                    <div className="font-mono text-4xl font-black text-orange-600 dark:text-orange-400">
-                                        {stats?.totalAchievements ? Math.min(stats.totalAchievements + 2, 14) : 3}
-                                    </div>
-                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                                        {isRTL ? 'أيام متتالية من التطوير' : 'Consecutive Days Active'}
-                                    </div>
-                                </div>
-
-                                <p className="text-xs text-muted-foreground leading-relaxed">
-                                    {isRTL
-                                        ? 'الالتزام اليومي بالتعلم لمدة 10 دقائق يرفع معدل جودة خدمة النزلاء بنسبة 40% وفق دراسات معايير ألتوس.'
-                                        : 'A 10-minute daily commitment elevates guest satisfaction metrics and operational consistency across hotel departments.'}
-                                </p>
-
-                                <Button
-                                    onClick={() => navigate('/courses')}
-                                    className="w-full h-10 rounded-xl font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-sm gap-2 text-xs"
-                                >
-                                    <Flame className="h-4 w-4" />
-                                    <span>{isRTL ? 'واصل سلسلة اليوم' : 'Keep Streak Alive'}</span>
-                                </Button>
-                            </div>
-                        </Card>
-
-                        {/* Forbes 5-Star Hospitality Milestones */}
-                        <div className="lg:col-span-2 space-y-4">
-                            <div className="flex items-center justify-between gap-4 p-4 rounded-3xl border border-amber-500/30 bg-gradient-to-r from-amber-500/10 via-card to-card">
-                                <div className="space-y-1">
-                                    <h3 className="font-display text-lg font-bold text-foreground flex items-center gap-2">
-                                        <Star className="h-5 w-5 text-amber-500" />
-                                        <span>{isRTL ? 'معايير فوربس الخمس نجوم • مؤشرات التميز' : 'Forbes 5-Star Service Milestones'}</span>
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                        {isRTL
-                                            ? 'المؤشرات التشغيلية الإلزامية لفرق العمل في فنادق النخبة بالمملكة.'
-                                            : 'Mandatory operational benchmarks for luxury hospitality personnel across Saudi properties.'}
-                                    </p>
-                                </div>
-                                <div className="h-14 w-14 rounded-2xl overflow-hidden border border-amber-500/40 shrink-0 bg-slate-950 shadow-lg shadow-amber-500/10 hidden sm:block">
-                                    <img
-                                        src="/assets/altus/accreditation-seal.jpg"
-                                        alt="Accreditation Seal"
-                                        className="h-full w-full object-cover"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="space-y-3">
-                                {[
-                                    {
-                                        title: isRTL ? 'معيار الحفاوة والترحيب بالنزلاء' : 'Saudi Hafawah & Guest Arrival Standard',
-                                        desc: isRTL ? 'استقبال كل نزيل خلال 30 ثانية بابتسامة دافئة وترحيب سعودي أصيل.' : 'Acknowledge arriving guests within 30 seconds with warm, authentic Saudi hospitality.',
-                                        status: 'achieved',
-                                        points: '100 pts',
-                                    },
-                                    {
-                                        title: isRTL ? 'معيار المعالجة الفورية للملاحظات' : '15-Minute Guest Service Recovery',
-                                        desc: isRTL ? 'الاستجابة لطلبات النزلاء وحل التحديات مع المتابعة الشخصية خلال 15 دقيقة.' : 'Direct resolution and personal follow-up on service requests under fifteen minutes.',
-                                        status: 'achieved',
-                                        points: '120 pts',
-                                    },
-                                    {
-                                        title: isRTL ? 'معيار الخصوصية والسرية المطلقة' : 'VIP Protocol & High-Discretion Standard',
-                                        desc: isRTL ? 'حماية خصوصية كبار الشخصيات والنزلاء الدبلوماسيين بدقة متناهية.' : 'Complete discretion and bespoke protocol management for distinguished dignitaries.',
-                                        status: 'in_progress',
-                                        points: '150 pts',
-                                    },
-                                    {
-                                        title: isRTL ? 'الاعتماد القيادي التنفيذي' : 'ALTUS Executive Leadership Capstone',
-                                        desc: isRTL ? 'إدارة فرق العمل وإجراء عمليات التفتيش الدورية بمعايير التميز الفندقي.' : 'Departmental leadership, audit excellence, and operational mentorship certification.',
-                                        status: 'locked',
-                                        points: '250 pts',
-                                    },
-                                ].map((item, i) => (
-                                    <div
-                                        key={i}
-                                        className="p-4 rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm flex items-start justify-between gap-4"
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div
-                                                className={cn(
-                                                    'h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold font-mono',
-                                                    item.status === 'achieved' && 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30',
-                                                    item.status === 'in_progress' && 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30',
-                                                    item.status === 'locked' && 'bg-muted text-muted-foreground border border-border/60'
-                                                )}
-                                            >
-                                                {item.status === 'achieved' ? (
-                                                    <CheckCircle2 className="h-4 w-4" />
-                                                ) : item.status === 'in_progress' ? (
-                                                    <Sparkles className="h-4 w-4" />
-                                                ) : (
-                                                    <Lock className="h-4 w-4" />
-                                                )}
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-2">
-                                                    <h4 className="font-display text-sm font-bold text-foreground">{item.title}</h4>
-                                                    {item.status === 'achieved' && (
-                                                        <Badge className="text-[10px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                                                            {isRTL ? 'معتمد' : 'Achieved'}
-                                                        </Badge>
-                                                    )}
-                                                    {item.status === 'in_progress' && (
-                                                        <Badge className="text-[10px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-                                                            {isRTL ? 'قيد الإنجاز' : 'In Progress'}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                                            </div>
-                                        </div>
-
-                                        <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 shrink-0">
-                                            {item.points}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </TabsContent>
             </Tabs>
         </div>
     )

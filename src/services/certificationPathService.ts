@@ -129,7 +129,7 @@ export async function awardCertificationPathCertificates(
       const requiredModuleIds = mandatoryModuleIds.length > 0 ? mandatoryModuleIds : allModuleIds
 
       const { data: moduleThresholdRows, error: thresholdError } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id,passing_score_percentage,estimated_duration_minutes')
         .in('id', requiredModuleIds)
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -206,26 +206,32 @@ export async function awardCertificationPathCertificates(
           weightByModule
         )
         const completionDate = new Date()
-        const cert = await createCertificate({
-          userId: input.userId,
-          recipientName: input.recipientName,
-          recipientEmail: input.recipientEmail || undefined,
-          certificateType: 'achievement',
-          title: path.title,
-          description:
-            path.description || `Completed training path: ${path.title}`,
-          completionDate,
-          score: aggregateScore,
-          propertyId: input.propertyId,
-          propertyName: input.propertyName,
-          departmentId: input.departmentId,
-          departmentName: input.departmentName,
-          metadata: {
-            training_path_id: path.id,
-            training_path_title: path.title,
-            required_module_ids: requiredModuleIds
-          }
-        })
+        let cert: Awaited<ReturnType<typeof createCertificate>> | null = null
+        let certError: string | null = null
+        try {
+          cert = await createCertificate({
+            userId: input.userId,
+            recipientName: input.recipientName,
+            recipientEmail: input.recipientEmail || undefined,
+            certificateType: 'achievement',
+            title: path.title,
+            description:
+              path.description || `Completed training path: ${path.title}`,
+            completionDate,
+            score: aggregateScore,
+            propertyId: input.propertyId,
+            propertyName: input.propertyName,
+            departmentId: input.departmentId,
+            departmentName: input.departmentName,
+            metadata: {
+              training_path_id: path.id,
+              training_path_title: path.title,
+              required_module_ids: requiredModuleIds
+            }
+          })
+        } catch (issueError) {
+          certError = issueError instanceof Error ? issueError.message : String(issueError)
+        }
 
         if (cert?.id) {
           result.awarded.push({
@@ -236,7 +242,7 @@ export async function awardCertificationPathCertificates(
         } else {
           result.errors.push({
             pathId: path.id,
-            error: 'Failed to create certification path certificate'
+            error: certError ?? 'Failed to create certification path certificate'
           })
         }
       }

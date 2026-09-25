@@ -21,7 +21,7 @@ export function VersionHistoryCard({ moduleId, isRTL }: { moduleId: string | nul
         queryKey: ['training-module-versions', moduleId],
         queryFn: async (): Promise<VersionRow[]> => {
             const { data, error } = await supabase
-                .from('training_module_versions')
+                .from('course_versions')
                 .select('id, version_number, created_at, published_by:profiles!training_module_versions_published_by_fkey(full_name)')
                 .eq('training_module_id', moduleId!)
                 .order('version_number', { ascending: false })

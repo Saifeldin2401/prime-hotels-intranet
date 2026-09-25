@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs'
 import { relaxTriggerFilledOrg } from './relax-trigger-filled-org.mjs'
 
 const PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'dhbfaclkfysqwfppuxxa'
-const OUTPUTS = ['src/lib/database.types.ts', 'src/types/database.generated.ts']
+const OUTPUTS = ['src/types/database.generated.ts']
 
 const raw = execFileSync(
   'npx',

@@ -32,13 +32,13 @@
         "cases": "Case Studies",
         "cases_desc": "Proven turnaround track record and portfolio mandates",
         "verify": "Verify",
-        "verify_desc": "Official credential & certificate verification",
+        "verify_desc": "Official certificate & certificate verification",
         "portal": "Access Portal",
         "briefing": "Request Briefing",
         "contact": "Contact",
         "features": "Features",
         "features_learning": "Learning & Development",
-        "features_learning_desc": "Access training modules and certifications",
+        "features_learning_desc": "Access courses and certifications",
         "features_hr": "HR Services",
         "features_hr_desc": "Manage leave, payslips, and performance",
         "features_knowledge": "Knowledge Base",
@@ -48,7 +48,7 @@
         "title": "About ALTUS Advisory",
         "subtitle": "Who We Are",
         "mission": "ALTUS Advisory is dedicated to elevating hospitality and business performance, empowering teams with advisory insights, tools, and operational excellence.",
-        "description": "From onboarding to career advancement, everything you need is here. Our platform connects team members across all properties, creating a unified digital workplace that fosters collaboration, learning, and growth.",
+        "description": "From onboarding to career advancement, everything you need is here. Our platform connects team members across all hotels, creating a unified digital workplace that fosters collaboration, learning, and growth.",
         "features": {
             "1": "Centralized Information Hub",
             "2": "Seamless HR Services",
@@ -64,7 +64,7 @@
         "description": "Discover a comprehensive suite of tools designed to support your professional journey and enhance your daily work experience.",
         "learning": {
             "title": "Learning & Development",
-            "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
+            "desc": "Access courses, certifications, and skill-building resources tailored to your role and career aspirations."
         },
         "hr": {
             "title": "HR & Self-Service",
@@ -124,7 +124,7 @@
         "tagline": "Everything you need to excel in your role, all in one place.",
         "learning": {
             "title": "Learning & Development",
-            "desc": "Access training modules, certifications, and skill-building resources tailored to your role and career aspirations."
+            "desc": "Access courses, certifications, and skill-building resources tailored to your role and career aspirations."
         },
         "leadership": {
             "title": "HR & Self-Service",
@@ -136,7 +136,7 @@
         }
     },
     "footer": {
-        "description": "The Altus Portal is the official digital workplace platform for Altus Advisory teams and partner properties across the Kingdom of Saudi Arabia.",
+        "description": "The Altus Portal is the official digital workplace platform for Altus Advisory teams and partner hotels across the Kingdom of Saudi Arabia.",
         "copyright": "© {{year}} Altus Advisory. All Rights Reserved. | Internal Use Only",
         "links": {
             "title": "Quick Links",
@@ -197,18 +197,18 @@
         "hero_headline_1": "ELEVATE YOUR",
         "hero_headline_italic": "sanctuary",
         "hero_headline_2": "EXPERIENCE",
-        "hero_subtitle": "An elite hospitality portal engineered for executive operations, luxury property intelligence, and flawless guest experience management across the Kingdom of Saudi Arabia.",
+        "hero_subtitle": "An elite hospitality portal engineered for executive operations, luxury hotel intelligence, and flawless guest experience management across the Kingdom of Saudi Arabia.",
         "hero_cta": "EXPLORE PORTAL",
         "hero_cta_alt": "ACCESS INTRANET",
         "services_badge": "EXCELLENCE IN MOTION",
         "services_title": "SERVICES & OPERATIONS",
-        "service_1_title": "LUXURY PROPERTY MANAGEMENT",
-        "service_1_desc": "Integrated suite for tracking room inventories, VIP guest amenities, housekeeping shifts, and property maintenance schedules across KSA resorts.",
+        "service_1_title": "LUXURY HOTEL MANAGEMENT",
+        "service_1_desc": "Integrated suite for tracking room inventories, VIP guest amenities, housekeeping shifts, and hotel maintenance schedules across KSA resorts.",
         "service_2_title": "EXECUTIVE HUMAN CAPITAL",
         "service_2_desc": "Empower hotel staff with seamless leave workflows, automated shift scheduling, performance scorecards, and continuous Saudi hospitality accreditation.",
         "service_3_title": "KNOWLEDGE & SOP COMPLIANCE",
-        "service_3_desc": "Centralized repository for 5-star brand standards, emergency response playbooks, food safety compliance, and property audit checklists.",
-        "portfolio_badge": "PORTFOLIO & PROPERTIES",
+        "service_3_desc": "Centralized repository for 5-star brand standards, emergency response playbooks, food safety compliance, and hotel audit checklists.",
+        "portfolio_badge": "PORTFOLIO & HOTELS",
         "portfolio_title": "FLAGSHIP ASSETS",
         "portfolio_view_case": "View Case",
         "portfolio_item_1_category": "ROYAL SUITES & PALACE",
@@ -230,4 +230,3 @@
         "drag_hint": "SCROLL DOWN TO EXPLORE"
     }
 }
-

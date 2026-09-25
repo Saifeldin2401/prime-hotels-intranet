@@ -36,7 +36,7 @@ export const tenantAdminBlueprint: RoleBlueprint = {
       id: 'task_admin_training_overview',
       titleKey: 'wizard.tasks.tenant_admin.training_overview.title',
       descriptionKey: 'wizard.tasks.tenant_admin.training_overview.desc',
-      actionRoute: '/training',
+      actionRoute: '/learn/my',
       actionKey: 'wizard.actions.training_hub'
     },
     {

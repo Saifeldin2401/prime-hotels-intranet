@@ -28,7 +28,7 @@ export function ProgressDetailDialog() {
           <DialogDescription>
             {selectedProgress?.profiles?.full_name || users?.find((user) => user.id === selectedProgress?.user_id)?.full_name || t('unknownUser')}
             {' | '}
-            {selectedProgress?.training_modules?.title || modules?.find((module) => module.id === selectedProgress?.content_id)?.title || t('unknownModule')}
+            {selectedProgress?.courses?.title || modules?.find((module) => module.id === selectedProgress?.content_id)?.title || t('unknownModule')}
           </DialogDescription>
         </DialogHeader>
 

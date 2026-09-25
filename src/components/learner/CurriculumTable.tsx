@@ -32,7 +32,7 @@ export const CurriculumTable: React.FC<CurriculumTableProps> = ({
     }
 
     return (
-        <div className="overflow-hidden rounded-3xl border border-border/60 border-t-amber-400/25 bg-card/60 backdrop-blur-xl shadow-sm">
+        <div className="overflow-hidden rounded-none border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] shadow-none">
             <div className="overflow-x-auto">
                 <table className="w-full text-start text-xs border-collapse">
                     <thead>

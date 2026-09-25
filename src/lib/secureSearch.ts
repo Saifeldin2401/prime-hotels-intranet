@@ -38,18 +38,6 @@ interface SecureDocumentFilters {
   offset?: number
 }
 
-interface SecureTaskFilters {
-  search?: string
-  status?: string[]
-  priority?: string[]
-  assigned_to?: string
-  created_by?: string
-  property_id?: string
-  department_id?: string
-  limit?: number
-  offset?: number
-}
-
 interface SecureUserFilters {
   search?: string
   property_id?: string
@@ -139,59 +127,6 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
   if (error) {
     console.error('secureSearchDocuments error:', error)
     throw new Error('Failed to search documents securely')
-  }
-
-  return data || []
-}
-
-// ============================================================================
-// Secure Task Search
-// ============================================================================
-
-/**
- * SECURE: Search tasks using parameterized database function.
- */
-export async function secureSearchTasks(filters: SecureTaskFilters = {}) {
-  const {
-    search,
-    status,
-    priority,
-    assigned_to,
-    created_by,
-    property_id,
-    department_id,
-    limit = 100,
-    offset = 0
-  } = filters
-
-  const sanitizedSearch = search ? sanitizeSearchInput(search) : null
-  const sanitizedAssignedTo = sanitizeUUID(assigned_to)
-  const sanitizedCreatedBy = sanitizeUUID(created_by)
-  const sanitizedPropertyId = sanitizeUUID(property_id)
-  const sanitizedDepartmentId = sanitizeUUID(department_id)
-
-  // Validate status and priority arrays
-  const validStatuses = ['todo', 'in_progress', 'completed', 'cancelled', 'on_hold', 'review']
-  const validPriorities = ['low', 'medium', 'high', 'urgent']
-
-  const sanitizedStatus = status?.filter(s => validStatuses.includes(s.toLowerCase()))
-  const sanitizedPriority = priority?.filter(p => validPriorities.includes(p.toLowerCase()))
-
-  const { data, error } = await supabase.rpc('secure_search_tasks', {
-    p_search_query: sanitizedSearch,
-    p_status: sanitizedStatus?.length ? sanitizedStatus : null,
-    p_priority: sanitizedPriority?.length ? sanitizedPriority : null,
-    p_assigned_to: sanitizedAssignedTo,
-    p_created_by: sanitizedCreatedBy,
-    p_property_id: sanitizedPropertyId,
-    p_department_id: sanitizedDepartmentId,
-    p_limit: Math.min(limit, 500),
-    p_offset: Math.max(offset, 0)
-  })
-
-  if (error) {
-    console.error('secureSearchTasks error:', error)
-    throw new Error('Failed to search tasks securely')
   }
 
   return data || []

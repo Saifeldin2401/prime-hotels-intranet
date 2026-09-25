@@ -2,6 +2,7 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { StatusBadge } from '@/ui/components/StatusBadge'
 import { cn } from '@/lib/utils'
 import {
   Check,
@@ -28,6 +29,7 @@ interface BuilderHeaderProps {
   onMagic: () => void
   onTitleChange?: (title: string) => void
   isMasterTemplate?: boolean
+  status?: string
 
   // Navigation steps
   steps?: readonly { key: BuilderStep; label: string; description?: string }[]
@@ -57,6 +59,7 @@ export const BuilderHeader = ({
   onMagic,
   onTitleChange,
   isMasterTemplate = false,
+  status,
   steps,
   activeStep,
   onStepChange,
@@ -74,63 +77,87 @@ export const BuilderHeader = ({
   const isRTL = i18n.dir() === 'rtl'
   const navigate = useNavigate()
 
+  const LIFECYCLE_MAP: Record<string, { label: string; variant: 'neutral' | 'info' | 'warning' | 'success' }> = {
+    draft: { label: 'Draft', variant: 'neutral' },
+    submitted: { label: 'Submitted', variant: 'info' },
+    under_review: { label: 'Under Review', variant: 'warning' },
+    approved: { label: 'Approved', variant: 'info' },
+    published: { label: 'Published', variant: 'success' },
+  }
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-xs">
+    <header className="sticky top-0 z-50 w-full border-b border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] shadow-none">
       <div className={cn(
         "px-3 lg:px-5 flex h-14 items-center justify-between gap-2.5",
         isRTL ? "flex-row-reverse" : ""
       )}>
         {/* Left Section: Back, Title & Status */}
-        <div className={cn("flex items-center gap-2 min-w-0 max-w-[400px] xl:max-w-[460px]", isRTL ? "flex-row-reverse" : "")}>
+        <div className={cn("flex items-center gap-2 min-w-0 max-w-[420px] xl:max-w-[480px]", isRTL ? "flex-row-reverse" : "")}>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-            onClick={() => navigate(isMasterTemplate ? '/platform/master-library' : '/training/hub')}
+            className="h-8 w-8 shrink-0 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 rounded-[6px]"
+            onClick={() => navigate(isMasterTemplate ? '/platform/master-library' : '/studio')}
             title={isMasterTemplate ? t('builder.backToMasterLibrary', 'Back to Master Library') : t('back', 'Back to Hub')}
           >
             <ChevronLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
           </Button>
 
-          <div className={cn("flex items-center gap-1.5 min-w-0 flex-1", isRTL ? "flex-row-reverse text-end" : "text-start")}>
+          <div className={cn("flex items-center gap-1.5 min-w-0 flex-1 flex-wrap sm:flex-nowrap", isRTL ? "flex-row-reverse text-end" : "text-start")}>
             <div className={cn(
-              "relative flex items-center w-full max-w-[260px] xl:max-w-[300px] rounded-lg border transition-all duration-150",
+              "relative flex items-center w-full max-w-[240px] xl:max-w-[280px] rounded-[6px] border transition-colors duration-150",
               !title.trim() || title === 'Untitled Module'
-                ? "border-amber-400 bg-amber-50/60 dark:bg-amber-950/30 shadow-xs ring-2 ring-amber-400/30"
-                : "border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/70 hover:border-slate-300 dark:hover:border-slate-700 focus-within:border-hotel-gold focus-within:ring-2 focus-within:ring-hotel-gold/20"
+                ? "border-amber-400 bg-amber-50/60 dark:bg-amber-950/30"
+                : "border-[#DDDBD4] dark:border-[#30404D] bg-[#F6F6F3] dark:bg-[#0D151D] hover:border-[#86672C]/40 focus-within:border-[#86672C]"
             )}>
               <div className="ps-2 pe-1 text-slate-400 flex items-center pointer-events-none">
-                <Edit3 className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <Edit3 className="w-3.5 h-3.5 text-[#86672C] dark:text-[#D4AA55] shrink-0" />
               </div>
               <Input
                 value={title}
                 onChange={(e) => onTitleChange?.(e.target.value)}
                 placeholder={t('builder.nameYourCourse', 'Enter Course Title...')}
                 className={cn(
-                  "h-8 border-none bg-transparent shadow-none px-1 text-xs font-bold text-slate-900 dark:text-white placeholder:text-amber-700/70 dark:placeholder:text-amber-400/70 focus-visible:ring-0 truncate",
+                  "h-8 border-none bg-transparent shadow-none px-1 text-xs font-bold text-foreground focus-visible:ring-0 truncate",
                   isRTL ? "text-end" : "text-start"
                 )}
                 title={t('builder.clickToRename', 'Click to edit course name')}
               />
             </div>
+            {/* Lifecycle Status Badge */}
+            {status && LIFECYCLE_MAP[status.toLowerCase()] ? (
+              <StatusBadge
+                size="sm"
+                variant={LIFECYCLE_MAP[status.toLowerCase()].variant}
+                label={LIFECYCLE_MAP[status.toLowerCase()].label}
+                className="shrink-0"
+              />
+            ) : (
+              <StatusBadge
+                size="sm"
+                variant="neutral"
+                label="Draft"
+                className="shrink-0"
+              />
+            )}
             {isMasterTemplate && (
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1">
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold bg-indigo-50 text-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 shrink-0 flex items-center gap-1 rounded-[4px]">
                 <Crown className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
                 <span className="hidden sm:inline">{t('builder.globalMasterTemplate', 'Global Master')}</span>
               </Badge>
             )}
             {hasUnsavedChanges && (
-              <Badge variant="outline" className="h-5 px-1.5 text-[9px] uppercase font-mono bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 shrink-0">
+              <Badge variant="outline" className="h-5 px-1.5 text-[9px] uppercase font-mono bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800 shrink-0 rounded-[4px]">
                 {t('builder.unsaved', 'Unsaved')}
               </Badge>
             )}
           </div>
         </div>
 
-        {/* Center Section: Streamlined 3-Step Navigation Pills */}
+        {/* Center Section: Streamlined Step Navigation */}
         {steps && steps.length > 0 && onStepChange && (
           <nav className={cn(
-            "hidden md:flex items-center gap-1.5 p-1 rounded-full bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800",
+            "hidden md:flex items-center gap-1 p-1 rounded-[6px] bg-[#F6F6F3] dark:bg-[#0D151D] border border-[#DDDBD4] dark:border-[#30404D]",
             isRTL ? "flex-row-reverse" : ""
           )}>
             {steps.map((step, index) => {
@@ -145,21 +172,21 @@ export const BuilderHeader = ({
                   onClick={() => onStepChange(step.key)}
                   disabled={locked}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-150 select-none",
+                    "flex items-center gap-1.5 rounded-[4px] px-2.5 py-1 text-xs font-semibold transition-colors select-none",
                     isActive
-                      ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs font-bold ring-1 ring-hotel-gold/40"
-                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white",
-                    locked && "opacity-40 cursor-not-allowed hover:text-slate-600 dark:hover:text-slate-400"
+                      ? "bg-[#FFFFFF] dark:bg-[#15212E] text-[#15212E] dark:text-[#F4F2EC] shadow-2xs font-bold border border-[#DDDBD4] dark:border-[#30404D]"
+                      : "text-[#667080] dark:text-[#929CA5] hover:text-[#15212E] dark:hover:text-[#F4F2EC]",
+                    locked && "opacity-40 cursor-not-allowed"
                   )}
                 >
                   <span
                     className={cn(
-                      "flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold shrink-0 transition-colors",
+                      "flex h-4 w-4 items-center justify-center rounded-[3px] text-[10px] font-bold shrink-0 transition-colors",
                       isDone
-                        ? "bg-emerald-500 text-white"
+                        ? "bg-[#2C6A4B] text-white"
                         : isActive
-                        ? "bg-hotel-gold text-hotel-navy font-black"
-                        : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400"
+                        ? "bg-[#86672C] text-white"
+                        : "bg-[#DDDBD4] dark:bg-[#30404D] text-[#667080] dark:text-[#929CA5]"
                     )}
                   >
                     {isDone ? <Check className="w-2.5 h-2.5 stroke-[3]" /> : index + 1}
@@ -225,12 +252,12 @@ export const BuilderHeader = ({
             size="sm"
             onClick={onMagic}
             className={cn(
-              "hidden sm:flex h-8 px-2.5 text-xs font-semibold border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/50",
+              "hidden sm:flex h-8 px-2.5 text-xs font-semibold rounded-[6px] border border-[#86672C]/30 bg-[#86672C]/10 text-[#86672C] dark:text-[#D4AA55] hover:bg-[#86672C]/20",
               isRTL && "flex-row-reverse"
             )}
             title="Smart Course AI Generator (Ctrl+Shift+A)"
           >
-            <Wand2 className={cn("h-3.5 w-3.5 text-amber-600 dark:text-amber-400", isRTL ? "ms-1.5" : "me-1.5")} />
+            <Wand2 className={cn("h-3.5 w-3.5 text-[#86672C] dark:text-[#D4AA55]", isRTL ? "ms-1.5" : "me-1.5")} />
             <span>{t('builder.aiAssistant', 'AI Assistant')}</span>
           </Button>
 
@@ -238,7 +265,7 @@ export const BuilderHeader = ({
             variant="outline"
             size="sm"
             onClick={onPreview}
-            className={cn("h-8 px-2.5 text-xs font-semibold", isRTL ? "flex-row-reverse" : "")}
+            className={cn("h-8 px-2.5 text-xs font-semibold rounded-[6px] border-[#DDDBD4] dark:border-[#30404D]", isRTL ? "flex-row-reverse" : "")}
             title="Preview Learner View (Ctrl+Shift+P)"
           >
             <Eye className={cn("h-3.5 w-3.5", isRTL ? "ms-1.5" : "me-1.5")} />
@@ -250,7 +277,7 @@ export const BuilderHeader = ({
             onClick={onSave}
             disabled={isSaving}
             className={cn(
-              "h-8 px-3 text-xs font-bold bg-hotel-gold hover:bg-hotel-gold/90 text-hotel-navy shadow-xs",
+              "h-8 px-3 text-xs font-semibold bg-[#86672C] hover:bg-[#725725] text-white rounded-[6px] shadow-none",
               isRTL ? "flex-row-reverse" : ""
             )}
             title="Save Draft (Ctrl+S)"

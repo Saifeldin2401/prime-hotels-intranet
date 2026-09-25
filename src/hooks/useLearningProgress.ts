@@ -33,16 +33,23 @@ export interface LearningProgress {
         user_departments?: Array<{ departments: LearningProgressDept | null }>
         user_properties?: Array<{ properties: { name: string } | null }>
     }
-    training_modules?: {
+    courses?: {
         id: string
         title: string
         description?: string
     } | null
 }
 
-export function useLearningProgress() {
+/**
+ * Learning progress rows. Pass `userId` to fetch one member's own progress -
+ * learner surfaces must never download the whole organization's rows just to
+ * filter them in the browser.
+ */
+export function useLearningProgress(options: { userId?: string | null } = {}) {
+    const { userId } = options
     return useQuery({
-        queryKey: ['learning-progress'],
+        queryKey: userId ? ['learning-progress', userId] : ['learning-progress'],
+        enabled: userId !== null,
         staleTime: 0, // Disable stale time - always fetch fresh data
         refetchOnWindowFocus: false,
         refetchOnReconnect: true,
@@ -66,6 +73,7 @@ export function useLearningProgress() {
           )
         `)
                 .order('created_at', { ascending: false })
+                .match(userId ? { user_id: userId } : {})
 
             if (error) throw error
 
@@ -86,10 +94,10 @@ export function useLearningProgress() {
                     .map((row) => row.content_id)
             ))
 
-            let modulesById = new Map<string, LearningProgress['training_modules']>()
+            let modulesById = new Map<string, LearningProgress['courses']>()
             if (moduleIds.length > 0) {
                 const { data: modules, error: modulesError } = await supabase
-                    .from('training_modules')
+                    .from('courses')
                     .select('id, title, description')
                     .in('id', moduleIds)
 
@@ -145,7 +153,7 @@ export function useLearningProgress() {
                             user_properties: rawProfile.organization_memberships?.map(om => ({ properties: om.hotel ? { name: om.hotel.name } : null })) ?? undefined
                         }
                         : undefined,
-                    training_modules: trainingModule
+                    courses: trainingModule
                         ? {
                             id: trainingModule.id,
                             title: trainingModule.title,

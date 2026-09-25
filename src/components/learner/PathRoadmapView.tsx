@@ -20,7 +20,7 @@ import type { TrainingPath, TrainingPathModule, TrainingModule } from '@/lib/typ
 
 interface PathWithModules extends TrainingPath {
     training_path_modules: (TrainingPathModule & {
-        training_modules: TrainingModule
+        courses: TrainingModule
     })[]
 }
 
@@ -74,7 +74,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
         let firstUnfinishedId: string | null = null
 
         sortedModules.forEach((item) => {
-            const modId = item.training_modules?.id || item.module_id
+            const modId = item.courses?.id || item.module_id
             const prog = progressMap.get(modId)
             if (prog?.status === 'completed' || (prog?.progress_percentage ?? 0) >= 100) {
                 done++
@@ -89,7 +89,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
         return {
             completedCount: done,
             overallPercent: pct,
-            currentModuleId: firstUnfinishedId || (sortedModules[0]?.training_modules?.id || sortedModules[0]?.module_id),
+            currentModuleId: firstUnfinishedId || (sortedModules[0]?.courses?.id || sortedModules[0]?.module_id),
         }
     }, [sortedModules, progressMap])
 
@@ -104,7 +104,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
             if (onContinue) {
                 onContinue(currentModuleId)
             } else {
-                navigate(`/training/player/${currentModuleId}`)
+                navigate(`/learn/player/${currentModuleId}`)
             }
         }
     }
@@ -235,13 +235,13 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
 
                     <div className="space-y-6 sm:space-y-8 relative">
                         {sortedModules.map((item, idx) => {
-                            const mod = item.training_modules
+                            const mod = item.courses
                             if (!mod) return null
 
                             const prog = progressMap.get(mod.id)
                             const isDone = prog?.status === 'completed' || (prog?.progress_percentage ?? 0) >= 100
                             const isCurrent = mod.id === currentModuleId && !isPathComplete
-                            const isLocked = !isDone && !isCurrent && idx > 0 && !(progressMap.get(sortedModules[idx - 1]?.training_modules?.id)?.status === 'completed')
+                            const isLocked = !isDone && !isCurrent && idx > 0 && !(progressMap.get(sortedModules[idx - 1]?.courses?.id)?.status === 'completed')
 
                             return (
                                 <div key={mod.id || idx} className="relative flex items-start gap-4 sm:gap-6 group">
@@ -322,7 +322,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
                                                     size="sm"
                                                     className="rounded-xl text-xs font-semibold h-8"
                                                 >
-                                                    <Link to={`/courses/${mod.id}`}>
+                                                    <Link to={`/learn/courses/${mod.id}`}>
                                                         {isRTL ? 'التفاصيل' : 'Syllabus'}
                                                     </Link>
                                                 </Button>
@@ -339,7 +339,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
                                                             : "bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-700"
                                                     )}
                                                 >
-                                                    <Link to={`/training/player/${mod.id}`}>
+                                                    <Link to={`/learn/player/${mod.id}`}>
                                                         {isDone ? (
                                                             <span>{isRTL ? 'مراجعة' : 'Review'}</span>
                                                         ) : (
@@ -407,7 +407,7 @@ export const PathRoadmapView: React.FC<PathRoadmapViewProps> = ({
                                         )}
                                     >
                                         {isPathComplete ? (
-                                            <Link to="/training/certificates">
+                                            <Link to="/learn/certificates">
                                                 <Award className="h-4 w-4 me-1.5 text-slate-950" />
                                                 {isRTL ? 'عرض الشهادة' : 'View Certificate'}
                                             </Link>

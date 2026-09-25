@@ -4,7 +4,7 @@ import type {
   TrainingSessionAttendee,
   SessionAttendanceStatus
 } from '@/types/enterpriseOperatingModel'
-import type { TablesInsert } from '@/lib/database.types'
+import type { TablesInsert } from '@/types/database.generated'
 
 export const iltService = {
   async getSessions(filters?: {

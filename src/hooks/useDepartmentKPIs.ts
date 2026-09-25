@@ -10,10 +10,8 @@ interface DepartmentKPI {
     head_name: string | null
     staff_count: number
     metrics: {
-        task_completion_rate: number
         training_completion_rate: number
         sop_compliance_rate: number
-        avg_response_time_hours: number
     }
     overall_score: number
 }
@@ -86,35 +84,17 @@ export function useDepartmentKPIs(propertyId?: string) {
                         head_name: headName,
                         staff_count: 0,
                         metrics: {
-                            task_completion_rate: 0,
                             training_completion_rate: 0,
-                            sop_compliance_rate: 0,
-                            avg_response_time_hours: 0
+                            sop_compliance_rate: 0
                         },
                         overall_score: 0
                     })
                     continue
                 }
 
-                // Calculate Task Completion Rate
-                const { count: totalTasks } = await supabase
-                    .from('tasks')
-                    .select('*', { count: 'exact', head: true })
-                    .in('assigned_to_id', userIds)
-
-                const { count: completedTasks } = await supabase
-                    .from('tasks')
-                    .select('*', { count: 'exact', head: true })
-                    .in('assigned_to_id', userIds)
-                    .eq('status', 'completed')
-
-                const taskCompletionRate = totalTasks && totalTasks > 0
-                    ? Math.round((completedTasks || 0) / totalTasks * 100)
-                    : 0
-
                 // Calculate Training Completion Rate
                 const { count: totalTraining } = await supabase
-                    .from('training_assignment_rules')
+                    .from('assignments')
                     .select('*', { count: 'exact', head: true })
                     .eq('target_type', 'user')
                     .in('target_id', userIds)
@@ -125,8 +105,11 @@ export function useDepartmentKPIs(propertyId?: string) {
                     .in('user_id', userIds)
                     .eq('status', 'completed')
 
+                // Completions are counted against individual assignments only, so the
+                // ratio can exceed 100% until compliance is computed server-side
+                // (rebuild Phase 4). Clamp so the scorecard never shows >100%.
                 const trainingCompletionRate = totalTraining && totalTraining > 0
-                    ? Math.round((completedTraining || 0) / totalTraining * 100)
+                    ? Math.min(100, Math.round((completedTraining || 0) / totalTraining * 100))
                     : 0
 
                 // Calculate SOP Compliance Rate
@@ -148,35 +131,17 @@ export function useDepartmentKPIs(propertyId?: string) {
                         .in('user_id', userIds)
 
                     sopComplianceRate = totalSopRequired > 0
-                        ? Math.round((sopAcks || 0) / totalSopRequired * 100)
+                        ? Math.min(100, Math.round((sopAcks || 0) / totalSopRequired * 100))
                         : 0
                 }
 
-                // Calculate Avg Response Time (Task completion)
-                let avgResponseTime = 0
-                if (userIds.length > 0) {
-                    const { data: completedTasksData } = await supabase
-                        .from('tasks')
-                        .select('created_at, updated_at')
-                        .in('assigned_to_id', userIds)
-                        .eq('status', 'completed')
-                        .limit(50)
-
-                    if (completedTasksData && completedTasksData.length > 0) {
-                        const totalHours = completedTasksData.reduce((acc, task) => {
-                            const start = new Date(task.created_at).getTime()
-                            const end = new Date(task.updated_at).getTime()
-                            return acc + ((end - start) / (1000 * 60 * 60))
-                        }, 0)
-                        avgResponseTime = Math.round((totalHours / completedTasksData.length) * 10) / 10
-                    }
-                }
-
                 // Calculate Overall Score (weighted average)
+                // Training and SOP acknowledgement are the two compliance signals.
+                // (A 45% weight on the removed tasks domain used to cap every
+                // department at 55% and flag all of them as lagging.)
                 const overallScore = Math.round(
-                    (taskCompletionRate * 0.45) +
-                    (trainingCompletionRate * 0.33) +
-                    (sopComplianceRate * 0.22)
+                    (trainingCompletionRate * 0.6) +
+                    (sopComplianceRate * 0.4)
                 )
 
                 kpis.push({
@@ -185,10 +150,8 @@ export function useDepartmentKPIs(propertyId?: string) {
                     head_name: headName,
                     staff_count: staffCount,
                     metrics: {
-                        task_completion_rate: taskCompletionRate,
                         training_completion_rate: trainingCompletionRate,
-                        sop_compliance_rate: sopComplianceRate,
-                        avg_response_time_hours: avgResponseTime
+                        sop_compliance_rate: sopComplianceRate
                     },
                     overall_score: overallScore
                 })

@@ -1,0 +1,402 @@
+<USER_REQUEST>
+we reach to phase 4 a in other session continue from it /goal : Architecture · Product · Data · Security · UX audit
+
+Prime Connect: rebuild audit and target architecture
+25 September 2026 · master @ afd5675 · live database dhbfaclkfysqwfppuxxa · Audit only: no code, schema or data was changed.
+
+Verdict: redesign the product, the frontend and parts of the data model. Keep the security core. Do not rewrite from zero.
+
+The part of this system most worth keeping is the least visible: the tenant-isolation and learning-integrity layer in Postgres. It has been attacked with synthetic second-tenant sweeps three times this month and held. The parts that fail are above it. There is no ratified product definition, ~140 routes duplicate each other, business logic lives in components and triggers, three role systems overlap, and a design system exists only on paper (11,263 raw colour classes, first-choice fonts that never ship).
+
+The root cause is process, not code. There have been five overlapping audit and "takeover" passes in 30 days, concurrent AI sessions writing to master, every verification run against production, and no staging environment. Unless that changes first, another rebuild will add the sixth layer.
+
+149
+tables, ~70 of them empty
+291 / 347
+functions are SECURITY DEFINER; 200 callable by any signed-in user
+537
+RLS policies · 161 triggers · 45 enums
+~140
+routes for a product with ~6 core jobs
+9 · 2
+users · organizations (1 with data)
+218
+commits since 1 Aug; 5 audit passes
+The last row matters most for the plan. With 9 users and one tenant holding data, structural change is as cheap now as it will ever be. Renames, table splits and route changes that would need a migration program later cost a few scripts today.
+
+1What the product is supposed to do
+The last direction you ratified (31 Aug) is a multi-tenant Training, Knowledge and Assessment platform for hospitality groups, run by a platform operator. The shipped code still presents three different products:
+
+Where	What it says the product is
+index.html title	"PRIME Connect | Enterprise Hotel Operations Platform"
+og:description, package.json	"Premium hospitality consulting platform", "Connect Advisory Platform"
+Public routes /vision-2030 /methodology /case-studies /leadership /digital /about	A consulting firm's marketing site (Altus Advisory), bundled inside the app
+Live data, nav, DB	A learning platform: 54 courses, 69 quizzes, 726 questions, 61 knowledge docs
+Users and jobs-to-be-done (proposed, for ratification)
+Actor	Job	Value-creating action
+Learner (hotel staff)	Know what I must complete and by when; find the right SOP fast	Completes assigned course, passes assessment, earns certificate
+Author	Turn source documents into courses and quizzes quickly	Drafts (with AI) and submits course/article for review
+Knowledge manager	Keep SOPs and articles correct and findable	Reviews, publishes and retires knowledge content
+Training manager	Prove compliance per hotel and department	Assigns training, chases overdue, exports evidence
+Org admin	Run the tenant: people, structure, settings	Invites members, sets roles, maintains hotels/departments
+Platform operator	Onboard and support tenants, supply master content	Provisions tenant, deploys master library, enters tenant under audit
+The spine of the product is one loop: assign → learn → assess → certify → prove compliance, with knowledge search alongside it. Any screen that serves neither the loop nor search has to justify itself.
+
+ACurrent-state architecture audit
+Every finding below was measured against the live database or the repository today, not taken from earlier reports.
+
+Area	Finding	Severity	Business impact	Recommended action
+Product	No ratified product definition. Three identities in shipped code (hotel operations, advisory marketing, learning SaaS). Direction reversed twice in 30 days (HOS broadening → learning pivot → SaaS).	CRITICAL	Every downstream choice (routes, roles, tables) is unstable, so work gets redone.	One-page product definition signed off before any code (Decision 1).
+Process	Five audit/remediation passes in 30 days. Concurrent agent sessions on the same branch swept each other's edits into commits. All verification ran as rolled-back transactions on production. No staging.	CRITICAL	This is the generator of most other findings: drift, regressions, mis-attributed work.	Supabase staging branch, one writer per branch, migrations only through PR + CI.
+Security	Any tenant author or training manager can INSERT/UPDATE certificates directly (policy certificates_ins = is_tenant_content_editor) with no completion check, including for themselves.	CRITICAL	Certificates are the product's compliance evidence. They can be forged.	Revoke direct writes. Issue only through the completion RPC/trigger path. Hotfix now (Decision 5).
+Security	skills has no organization_id, yet any tenant's author/training manager can insert/update/delete rows via org-blind has_role() helpers.	HIGH	Tenant A can rename or delete the skills tenant B depends on.	Add organization_id (NULL = platform master), org-scoped write policies.
+Security	291 of 347 functions are SECURITY DEFINER; 200 are executable by every authenticated user; ~90 were never reviewed.	HIGH	Each is a potential RLS bypass. The surface is too large to reason about.	Default to SECURITY INVOKER. Keep DEFINER only for a registered list of ~25 command RPCs. Revoke the rest.
+Authorization	Three role vocabularies: app_role (14 values, incl. property_hr, regional_hr), membership_role (10), platform_role (7). Plus a user_roles view, role_permissions (101 rows), platform_role_map(_extra) and 40 is_/has_/can_ helpers. Several helpers (is_hr_or_admin, is_training_manager) ignore the organization.	HIGH	No one place answers "what can a training manager do?" Org-blind helpers are latent cross-tenant bugs.	One capability matrix (role → capability) per plane and one can(org, capability) function. Drop app_role.
+Data model	Course lesson content is stored as documents rows (content_type='training_block', 454 of 515 rows), sharing a table with SOPs and articles.	HIGH	Course content inherits document RLS, search and versioning. The 1 Sep cross-tenant leak came from exactly this overlap.	Dedicated lessons + lesson_blocks owned by the course. Migrate the 454 rows.
+Data model	training_progress.training_id is polymorphic (module | quiz | microlearning…) with no foreign key. Eight triggers on the table carry completion, certificates, achievements and audit.	HIGH	Core business rules are hidden and order-dependent. Some content types are unvalidated.	Separate course progress from quiz attempts with real FKs. Move rules into command RPCs.
+Information architecture	~140 routes. Five paths to a course (/courses, /training/hub, /training/modules, /learning/training/:id, /training/player), four to quizzes, five to knowledge (/knowledge, /documents, /sops, /operations/sops, /knowledge/wiki), seven dashboards incl. /dashboard/property-hr and /dashboard/regional-hr.	HIGH	Users can't tell where they are; duplicate screens drift apart and show contradictory states.	~42 routes grouped into role workspaces (section C).
+Frontend	80 page/component files query Supabase directly. God files: PlatformUserDirectory 3,680 lines, TrainingPlayer 2,817, platformService 2,514, TrainingBuilderContext 2,308. 638 any. Generated DB types duplicated (two 16k-line files).	HIGH	Rules get duplicated per screen; the UI can't be tested without the network.	Feature modules with one API layer. UI never imports the Supabase client (lint-enforced).
+Design	No enforced design system: 11,263 raw Tailwind palette classes, 898 hex literals, three competing brand palettes (hotel-gold/navy ×1,110, altus-copper ×109, gold primary), 286 gradients, 239 backdrop-blurs, 440 rounded-2xl/3xl, 39 files using framer-motion.	HIGH	This is the "generic AI dashboard" look the brief rejects, and it's inconsistent page to page.	Token-only styling, lint-enforced; new component set (section F).
+Design	The first-choice faces (Canela for display, Neue Haas Grotesk for "executive") are licensed and never shipped, so those styles fall back to Playfair Display and Plus Jakarta Sans. Meanwhile index.html loads five Google families (Inter, IBM Plex Mono, Playfair, Plus Jakarta, Cairo) in ~25 weights. Corrected 25 Sep: the first version of this report said no declared font loaded.	MEDIUM	The intended typography never renders, and the font payload is heavy for what's shown.	One open-licence family with a native Arabic companion, self-hosted (section F).
+AI grounding	knowledge_chunks has 0 rows, so vector-grounded answers from tenant knowledge aren't running. The "Copilot" drawer is shipped on every page.	MEDIUM	Risks presenting ungrounded answers as company guidance (brief §17).	Verify the copilot's grounding path. Hide it until chunking runs on publish.
+Database	~70 of 149 tables are empty, including leftovers of removed domains (six announcement* tables, tasks, messages, conversations, events, comments) and scaffolding with no UI (webhook_*).	MEDIUM	Policies and functions maintained for nothing; confusing surface.	Classification in section E.
+Database	certificates fires create_hr_notification(), an HR-era trigger that branches on performance_reviews/goals.	MEDIUM	Hidden side effect on a core table.	Drop; notifications via the outbox.
+Security	FOR ALL policies without WITH CHECK on document_bookmarks, document_favorites, failed_login_attempts. Leaked-password protection off. CSP allows 'unsafe-eval' and 20+ third-party hosts (HuggingFace, DeepSeek, weather, prayer times), although AI calls go through edge functions.	MEDIUM	Latent write-scope bugs; larger XSS blast radius.	Split policies per command; enable the dashboard toggle; cut CSP to Supabase + Sentry.
+State	11 React contexts (Auth, Tenant, Property, Lens, Presence, Wizard…). PropertyContext is an adapter over TenantContext. Hospitality naming (useProperty in 42 files) remains in a learning product.	MEDIUM	Unclear ownership of "current org" state, the cause of the 8 Sep wrong-tenant bug.	Two contexts only (Session, Workspace). Server state lives in React Query.
+Quality	50 test files for 773 TS files. No browser end-to-end tests. Typecheck was masked for weeks by a syntax error in dead code.	MEDIUM	Regressions ship undetected.	Workflow E2E suite on staging plus SQL isolation suites in CI.
+Terminology	Course / module / training / track / program. Quiz / assessment / learning_quiz. Tenant / organization / company. Hotel / property.	LOW	Confuses users and developers alike.	Terminology map below, enforced in UI, DB and API.
+Repo hygiene	11 SECURITY_*.md files and a stale SYSTEM_AUDIT_REPORT.md at the root. scratch/, tmp/, db_schema.txt, schema.sql, deploy_payload.json are tracked.	LOW	Readers trust outdated claims.	Move to docs/archive/; delete scratch.
+What earns retention
+Keep as-is
+Tenant isolation core: org_visible, is_tenant_*, org-operational gate (verified 3× by second-tenant sweeps)
+Learning-integrity guard on progress + submit_quiz_attempt, complete_training_module, grade_question_attempt, recertification cycles
+Platform operator model: platform_users, role assignments, break-glass sessions with TTL and immutable audit
+unified_* question engine (726 questions, 2,442 options)
+AI gateway edge function + model registry (provider keys stay server-side, verified)
+Keep, rebuild around
+Stack: React + Vite + React Query + Supabase. No evidence it's the problem.
+Radix primitives (43 ui/ components) as the base for the new component set
+TipTap editor (redesigned in PR #89)
+AI course generator pipeline (logic kept; the 2,122-line studio modal rebuilt)
+i18n EN/AR structure (48 files) and the logical-property RTL conversion
+Replace
+Navigation, routes and all seven dashboards
+Visual layer: tokens, typography, every page shell
+Course content storage (documents → lessons)
+Role and permission model
+Direct-from-component data access
+Public marketing pages inside the app
+BTarget architecture
+Postgres stays the application layer. It is already where the verified security lives. What changes is a strict rule for where each kind of logic may live.
+
+Browser (React)
+
+reads: RLS tables and INVOKER views
+
+writes with business rules: command RPCs
+
+AI, auth-admin, file scan
+
+Pages / workspaces(layout, no data access)
+
+Feature hooks(React Query, optimistic updates)
+
+features/*/apionly module that imports supabase
+
+PostgresRLS = tenant + role boundary
+
+Command RPCs (~25, DEFINER, registered)authorize → validate → rule → write → emit event
+
+platform_events outbox
+
+Worker edge functionemail · notifications · AI chunking
+
+Edge functions
+
+Frontend
+src/app: shell, providers, router
+src/features/<domain>/{api,model,components,pages} for learn, studio, knowledge, assignments, org, platform
+src/ui: design system only; no business logic
+Lint rule: @supabase/* importable only from features/*/api
+Forms: react-hook-form + zod schemas shared with the API layer
+Backend and API
+Reads through RLS tables and SECURITY INVOKER views
+Rule-bearing writes only through verb_noun command RPCs: assign_course, submit_quiz_attempt, publish_article, invite_member
+Error contract: RAISE with a stable code (e.g. ASSIGN_COURSE_NOT_PUBLISHED) → UI maps it to a localized message; no raw DB errors reach users
+Triggers limited to updated_at, org fill and integrity guards; side effects go through the outbox
+AuthN / AuthZ
+Authentication: Supabase Auth → resolve_account_context() once → Session context
+Authorization: role_capabilities(plane, role, capability) + can(org, cap); the same matrix is exported to the UI for hints only
+Tenant roles: learner, author, knowledge_manager, training_manager, org_admin (+ owner). Hotel/department scoping is an attribute of the membership, not a role.
+Suspended/deleted users: membership is_active=false → RLS returns nothing, and routing sends them to /suspended
+Integrations and deployment
+Resend (email), AI providers via the gateway, Sentry
+Environments: local → staging (Supabase branch) → prod
+Migrations: PR only; CI runs check:migrations, SQL isolation suites, typecheck, tests, build
+Vercel preview per PR against staging; prod on a tagged release
+CInformation architecture
+This replaces seven nav groups and ~140 routes with five workspaces and ~42 routes. Users only see the workspaces their role grants. The workspace switcher appears only when there's more than one, and the left nav shows only the current workspace, so "where am I" always has one answer.
+
+Learn (everyone)
+/home
+/learn/courses
+/learn/courses/:id
+/learn/courses/:id/play
+/learn/quizzes/:id
+/knowledge
+/knowledge/:id
+/certificates
+/profile
+Home = due/overdue, continue where I left off, recent certificates. Knowledge is search-first. Mobile bottom bar: Home · Courses · Knowledge · Me.
+
+Studio (author, knowledge manager)
+/studio/courses
+/studio/courses/:id
+/studio/quizzes
+/studio/questions
+/studio/knowledge
+/studio/knowledge/:id
+/studio/media
+/studio/review
+AI generation is an action inside the course builder, not a separate area.
+
+Manage (training manager, dept manager)
+/manage/assignments
+/manage/assignments/new
+/manage/progress
+/manage/reports
+Progress is compliance: by hotel, department and person, with overdue follow-up.
+
+Organization (org admin)
+/org/people
+/org/people/invite
+/org/structure
+/org/settings
+/org/audit
+Structure = brands → hotels → departments in one tree.
+
+Platform console (operators, separate shell)
+/platform/tenants
+/platform/tenants/:id
+/platform/operators
+/platform/library
+/platform/ai
+/platform/settings
+/platform/audit
+Visually distinct shell, so operators never confuse it with a tenant.
+
+Public / auth
+/login
+/forgot-password
+/reset-password
+/complete-invite
+/verify/:code
+/suspended
+Marketing pages move to a separate site (Decision 2).
+
+Removed or merged: 7 role dashboards → one role-aware /home. /training/*, /learning/*, /courses → /learn + /studio. /documents, /sops, /operations/sops, /knowledge/wiki → /knowledge. /assessments, /questions, /learning/quizzes → /studio/quizzes + /studio/questions. Email analytics, inbound email, wizard manager, retention policies and PII viewer → /platform. Old paths get permanent redirects.
+
+Responsive rules: at ≥1280 px a persistent sidebar; at 768–1279 a collapsible rail; below 768 a bottom bar (Learn) or drawer (other workspaces). Data tables collapse to row cards below 768 with the primary action kept visible. Filters move into a sheet on mobile. Modals become full-height sheets below 640. The course player is full-bleed at every size.
+
+DBusiness logic map
+Each row is one command RPC in the target. Anything the frontend shows as "done" must have come back from this chain.
+
+Actor → Action	Permission	Validation	Business rule	Database	Side effect	Result / failure
+Org admin → invite member	people.manage	Email format; not already active member	Seat entitlement; can't grant a role above their own	user_invitations, membership (invited)	Invite email via outbox; audit	Invited · SEAT_LIMIT, ALREADY_MEMBER
+Author → create / edit course	content.author	Title, language, ≥1 lesson to submit	Only drafts are editable; published = immutable version	courses, lessons, lesson_blocks	none	Draft saved · COURSE_LOCKED
+Author → generate with AI	content.author	Source docs belong to the org	AI credit available; output always lands as draft	course_generation_jobs, draft course	ai_usage_log, credit consumed	Draft for review · AI_CREDIT_EXHAUSTED
+Reviewer → publish course / article	content.publish	Draft complete; quiz has a passing score	Reviewer ≠ author; version snapshot frozen	version row, published_version_id	Assignees notified of change; knowledge chunked for search	Published · SELF_APPROVAL
+Manager → assign course	assignment.manage	Audience in org; due ≥ today	Course must be published; idempotent per user + course + cycle	assignment rule + materialized per-user rows	Notification to learners; audit	N assigned, M skipped (already assigned) · COURSE_NOT_PUBLISHED
+Learner → progress through lessons	own row, assigned or open enrolment	Lesson belongs to course	Can't mark completed directly (integrity guard)	lesson_progress	none	Resume point saved
+Learner → submit quiz	own open session	Session not expired; attempts < max	Graded server-side; answer key never sent to the client	attempts, session score	If passed and all lessons done → complete course	Score + pass/fail · ATTEMPTS_EXHAUSTED
+System → complete and certify	internal only	Passing score met this cycle	One active certificate per user + course + cycle; expiry from validity days	certificates (no client writes)	Notify learner + manager; audit	Certificate with verification code
+System → recertify	scheduled job	Certificate expiring	Opens a new cycle; history kept	training_completion_history, new assignment	Reminder notifications	New due date
+Public → verify certificate	anon	Code format	Returns name, course, dates, status only	read-only	rate-limited	Valid / expired / not found
+Operator → enter tenant	tenant.enter	Reason ≥ 10 chars	TTL 5–480 min, auto-expires	platform_access_sessions	Immutable platform audit	Banner with countdown (keep as-is)
+EDatabase remediation plan
+Classification of all 149 tables by group. No production row is deleted blindly: every DELETE first copies the table into an archive schema, the same pattern already used for archive.user_roles_20260924.
+
+Class	Tables	Reason
+KEEP	organizations, organization_memberships, brands, hotels, departments, platform_users, platform_role_assignments, platform_access_sessions, platform_audit_logs, platform_config, platform_feature_flags, organization_feature_overrides, subscription_plans, subscriptions, system_settings, unified_questions, unified_question_options, unified_question_attempts, unified_quiz_questions, unified_quiz_sessions, unified_question_versions, unified_question_usages, question_banks, training_completion_history, user_invitations, ai_providers, ai_models, ai_model_probes, ai_platform_config, ai_agent_policies, ai_usage_log, course_generation_jobs, course_generation_presets, course_source_documents, knowledge_chunks, media_assets, media_collections, media_collection_items, media_asset_usages, certificate_templates, system_events, platform_events, notification_preferences, notifications, password_history, failed_login_attempts, rate_limit_entries, user_settings	Verified core of tenancy, platform, assessment, AI, audit
+MODIFY	training_modules → courses; training_module_versions → course_versions; learning_quizzes → quizzes; training_assignment_rules → assignments; training_progress (drop polymorphism, real FKs); training_block_progress → lesson_progress; certificates (write lock); skills (+organization_id); profiles (strip unused HR PII: national_id, iqama, salary_grade, blood_group, emergency contacts); documents (knowledge only)	Right concept, wrong shape, name or permissions
+MIGRATE	documents where content_type='training_block' (454 rows) → new lessons / lesson_blocks	Separates course content from the knowledge base
+MERGE	role_permissions + platform_role_map + platform_role_map_extra → role_capabilities. learning_assignment_user_overrides + learning_assignment_exemptions → columns on assignment targets. related_articles + knowledge_related_articles → one. notification_queue + notification_batches + scheduled_reminders + notification_delivery_events → outbox + one delivery log. certificate_history → certificate status history	Duplicate structures for one concept
+DEPRECATE	webhook_endpoints, webhook_deliveries, report_definitions, report_runs, scheduled_compliance_reports, content_reviews, content_change_log, source_change_flags, audit_export_retention_policies, data_retention_policies, analytics_events (keep until a real reporting model exists), search_logs, user_sessions	No workflow in the target yet; kept read-only until a feature claims them
+DELETE	announcements, announcement_acknowledgments, announcement_attachments, announcement_comments, announcement_reads, announcement_targets, tasks, messages, conversations, events, comments, sop_comments, sop_comment_votes, status_history, push_subscriptions, user_pins, employee_transfer_logs, pending_user_approvals, microlearning_content, motivational_content, partner_briefing_requests, inbound_emails, document_notification_rules, document_department_access, document_folders, document_tags, document_tag_assignments, document_categories, document_acknowledgments, document_approvals, document_feedback, document_comments, categories, system_wiki	Removed domains or decoration; 0–44 rows each; archived first
+UNKNOWN	competencies, competency_levels, course_competencies, user_competencies, role_competency_requirements, module_skills, user_skills (skills framework). training_sessions, training_session_attendees (ILT). practical_assessments, practical_submissions. training_paths, training_path_modules, user_path_enrollments. achievement_definitions, user_achievements. wizard_definitions, wizard_user_progress. course_visual_assets, training_content_templates, account_action_notes, mfa_secrets, document_bookmarks, document_favorites, document_versions, master_content_deployments, quota_warning_logs, organization_notification_overrides, platform_notification_policies, notification_email_templates, password_reset_requests	Needs a product call (Decision 4) or a code-path check before classifying
+Functions: 347 → target ≈ 60 (≈25 command RPCs, ≈20 helpers, the rest trigger functions). Policies: 537 → one SELECT policy and one policy per write command per table, generated from a single pattern (read = org_visible, write = can(org, cap)).
+
+FDesign system
+Direction, taken from the reference site's discipline rather than its look: neutral grounds, one typeface family, hierarchy from weight and size rather than colour, real photography of hotel work, colour reserved for meaning. The current gold/navy/copper palette with gradients and blur is retired. This report is set in the proposed type and colour system, so it doubles as a preview.
+
+Colour tokens (light)
+Ink (primary)
+#15212E text, primary buttons, nav
+Ink secondary
+#3B4754 secondary text, icons
+Muted
+#667080 metadata, placeholders
+Border
+#DDDBD4 dividers, inputs
+Background
+#F6F6F3 app ground
+Surface
+#FFFFFF panels, tables
+Brass (accent)
+#86672C focus, active nav, links; never large fills
+Success
+#2C6A4B passed, completed, valid
+Warning
+#A85A14 due soon, expiring
+Danger
+#A5302A overdue, failed, destructive
+Info
+#46637A neutral notices, draft
+All pairs are chosen for WCAG AA on their ground (ink on background ≈ 15:1, muted on surface ≈ 4.9:1). Dark theme redefines the same tokens (see this page in dark mode). Tenants may override only the accent and logo, which keeps their branding without breaking semantics.
+
+Typography
+IBM Plex Sans with IBM Plex Sans Arabic (خط عربي مصمم ليتناسق مع النص اللاتيني). The family is open-licence, has a native Arabic companion drawn to the same metrics, and gets IBM Plex Mono for codes, IDs and numbers. It's self-hosted via fontsource so it actually loads.
+
+Display · 32/40 · 600
+Fire safety induction
+H1 · 24/32 · 600
+My assigned courses
+H2 · 18/26 · 600
+Due this week
+Body · 15/24 · 400
+Complete all lessons, then pass the assessment with 80% or higher.
+Label · 12/16 · 600 caps
+Due date
+Data · Mono 13
+CERT-2026-004817 · 86%
+Components and rules
+Shape and depth
+Radius 6px (controls), 8px (panels), none on tables
+Shadow only on overlays (menus, dialogs, sheets)
+No gradients, no backdrop blur, no glass
+Motion: 150–200 ms, opacity/translate only; honours reduced-motion
+Component set
+Button (primary, secondary, ghost, destructive), Input, Select, Combobox, DatePicker
+DataTable (sort, filter, paginate, row → card on mobile)
+Tabs, Badge/StatusPill, Alert, Dialog, Sheet, ConfirmDialog (typed confirmation for destructive actions)
+PageHeader + Breadcrumbs, EmptyState, ErrorState, PermissionState, Skeleton
+Enforcement
+ESLint bans raw palette classes and hex literals outside src/ui/tokens
+Every data view renders through a QueryState wrapper: loading, empty, error, forbidden, offline
+Touch targets ≥ 44 px; visible focus ring (brass); labelled controls
+Terminology map
+Concept	Official name	Alternatives in use today	Use
+Unit of training with lessons + assessment	Course	training module, module, training, track, program	UI, DB (courses), API
+Part of a course	Lesson	block, training_block, section, step	Everywhere
+Scored test	Quiz	assessment, learning_quiz, exam, test	"Assessment" reserved for practical assessments, if kept
+Requirement to complete	Assignment	assignment rule, learning assignment, enrollment	"Rule" only for auto-assignment logic
+Proof of completion	Certificate	training certificate, credential	Everywhere
+SOP / article	Article (type: SOP, Guide, Policy)	document, knowledge doc, wiki, SOP page	UI section is "Knowledge"
+Customer company	Organization	tenant, company, org	"Tenant" only in operator console and code
+Physical location	Hotel	property	Everywhere (drop property_id naming)
+Platform staff	Operator	super admin, platform admin, system owner	Operator role names stay granular
+Implementation plan
+This follows your phase order, with one addition in front of it. Each phase has a gate that must pass on staging before the next starts.
+
+0
+Foundations and hotfixes
+Ratify the product definition. Create a Supabase staging branch; one writer per branch; PR-only migrations. Hotfix now: lock certificates writes, org-scope skills, fix the three FOR ALL policies, enable leaked-password protection.
+
+Gate: forged-certificate and cross-tenant-skill tests fail as expected on staging and prod.
+
+Status 25 Sep: hotfix live in production (3 migrations), and supabase/tests/certificates_and_skills.sql passes there. Found and fixed along the way: learner quiz and path certificates were silently rejected while the UI said "certificate earned". Product definition and working agreement written; CI runs SQL suites against staging. Staging branch not yet created (costs ~$10/month, awaiting approval).
+
+1
+Architecture
+Create the features/* skeleton, API layer, error-code contract and lint boundaries. Remove duplicate generated types. Collapse contexts to Session + Workspace.
+
+Gate: lint forbids new direct Supabase imports in UI; CI runs typecheck, tests and build on every PR.
+
+2
+Data model
+Create courses / lessons / lesson_blocks / quizzes / assignments (renames plus split). Migrate the 454 lesson rows. Give progress real FKs. Archive then drop the DELETE group.
+
+Gate: row-count reconciliation old vs new; every table has a documented purpose, owner and lifecycle.
+
+3
+Security
+role_capabilities + can(); drop app_role, user_roles view and org-blind helpers. Regenerate policies from the single pattern. Reduce SECURITY DEFINER to the registered command list.
+
+Gate: role × tenant matrix suite (anon, learner, author, manager, admin, suspended, removed, other-tenant) passes for every table and RPC.
+
+4
+Business logic
+Implement the ~25 command RPCs from section D, with the outbox worker for notifications and email. Move rules out of the eight progress triggers.
+
+Gate: SQL tests per RPC covering happy path, invalid input, unauthorized, wrong tenant, duplicate action and concurrent update.
+
+5
+Core workflows
+End to end: invite → assign → learn → quiz → certificate → compliance report; author → review → publish; public verify.
+
+Gate: Playwright E2E on staging for each workflow, including refresh, back button and session expiry.
+
+6
+Design system
+Tokens, fonts, the component set above and a QueryState wrapper. Build it in isolation with a component gallery page.
+
+Gate: axe-clean gallery; AA contrast in both themes and in RTL.
+
+7
+Frontend rebuild
+Workspace by workspace in value order: Learn → Studio → Manage → Organization → Platform. Each replaces its old routes (with redirects) and deletes the old files in the same PR.
+
+Gate: no page file over ~400 lines; old routes redirect; the deleted-file count rises every PR.
+
+8
+Secondary features
+Whatever survives Decision 4 (learning paths, ILT, skills, gamification), plus AI copilot grounding via chunk-on-publish.
+
+Gate: each feature has a workflow row in section D before it's built.
+
+9
+Performance
+Measure first: route-level bundle budgets, query counts per page, the 34 auth_rls_initplan advisories, and a large-dataset seed (10k learners) on staging.
+
+Gate: p75 page-ready < 2 s on mid-range mobile against the seed.
+
+10
+QA
+Run your §20 matrix (happy, invalid, missing, unauthorized, wrong tenant, duplicate, network/server failure, empty, large, mobile/desktop, refresh, back, session expiry, concurrency, deletion, recovery) for every section D workflow.
+
+Gate: §21 acceptance checklist signed off item by item, with evidence links.
+
+Decisions needed before implementation
+1 · Product identity
+Multi-tenant learning and knowledge SaaS for hospitality groups (as ratified 31 Aug), a hotel operations platform, or an advisory firm's portal? And what's the product name?
+
+Recommendation: learning and knowledge SaaS. That is what the data, the security work and 30 days of effort already point at.
+
+2 · Marketing pages
+/vision-2030, /methodology, /case-studies, /leadership, /digital, /about live inside the app bundle.
+
+Recommendation: move them to a separate marketing site. The app's public surface is sign-in and certificate verification only.
+
+3 · Rename in the database
+Should training_modules become courses (and so on) in the schema itself, or only in the UI?
+
+Recommendation: rename in the schema now. With one tenant holding data it costs a few scripts; later it costs a program.
+
+4 · Secondary modules
+Skills/competency framework (5 competencies), ILT sessions (3), practical assessments (2), learning paths (1), achievements/gamification, onboarding wizards: keep, defer, or delete?
+
+Recommendation: keep learning paths. Defer ILT and competencies (tables archived, no UI). Delete gamification and motivational content.
+
+5 · Security hotfix before the rebuild
+Forgeable certificates and cross-tenant skills writes are live today.
+
+Recommendation: apply both as a small, reviewed migration now, independent of everything else.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-25T07:01:17+03:00.
+
+The user has mentioned some items in the form @[ITEM]. Here is extra information about the items that were mentioned by the user, in the order that they appear:
+
+/goal is a [Slash Command]:
+The user has marked this task with /goal, indicating that this task is intended to run for a long time without user input, e.g. overnight. You should be extra thorough and only stop when you are confident the goal has been completely fulfilled. The system will force you to continue execution, prompting you to audit your work until completion. Once complete, include <!-- GOAL_COMPLETE --> in your response. If the user explicitly asked to stop or cancel this goal, include <!-- GOAL_CANCELLED --> in your response to cancel the goal.
+</ADDITIONAL_METADATA>

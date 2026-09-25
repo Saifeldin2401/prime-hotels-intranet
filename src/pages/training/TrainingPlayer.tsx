@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { supabase } from '@/lib/supabase'
+import { fetchCourseWithContent, fetchLinkedTrainingProgress, recordLessonBlockCompletion, recordLessonBlockLastViewed, fetchPersistedProgress, subscribeToPlayerProgress } from '@/features/learn'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -13,7 +13,6 @@ import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleView
 import { SmartObserver } from '@/components/training/SmartObserver'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { useCheckAchievement, type AchievementType } from '@/hooks/useAchievements'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
@@ -37,7 +36,6 @@ import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import {
     AlertCircle,
-    Award,
     BookOpen,
     CheckCircle,
     CheckCircle2,
@@ -95,7 +93,22 @@ import type { CourseVisualAsset } from '@/types/aiCourseEngine'
 import { assignmentSubmissionService, type TrainingAssignmentSubmission } from '@/services/assignmentSubmissionService'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { marked } from 'marked'
+import {
+    PlayerCompletionView,
+    type PersistedQuizResult,
+    type PersistedQuizReviewItem,
+} from '@/components/training/player/PlayerCompletionView'
+import {
+    RichTextBlockContent,
+    VideoPlayer,
+    AudioPlayer,
+    ImageBlock,
+    BlockChangeEffects,
+    getBlockMediaUrl,
+    toEmbedUrl,
+    useOnlineStatus,
+    useResolvedHtmlContent,
+} from '@/components/training/player/PlayerMediaComponents'
 
 type PersistedModuleProgress = {
     status?: string
@@ -116,37 +129,6 @@ type PersistedModuleProgress = {
     updated_at?: string
 }
 
-type PersistedQuizReviewItem = {
-    questionId: string
-    questionText: string
-    selectedAnswer: string
-    correctAnswer: string
-    correct: boolean
-    explanation?: string
-    timeSpentSeconds: number
-}
-
-type PersistedQuizResult = {
-    quizId: string
-    quizTitle: string
-    score: number
-    passed: boolean
-    correctCount: number
-    totalQuestions: number
-    completedAt: string
-    reviewItems: PersistedQuizReviewItem[]
-}
-
-type RichTextBlockContentProps = {
-    originalHtml: string
-    translatedHtml?: string
-    translationTarget: TranslationTargetLanguage | null
-    showBilingual: boolean
-    translationDir: 'ltr' | 'rtl'
-    originalLabel: string
-    translatedLabel: string
-}
-
 type MediaWatchState = {
     lastTime: number
     watchedSeconds: number
@@ -160,13 +142,6 @@ type ModuleCompletionOverrides = {
     quizScore?: number | null
     lastBlockId?: string | null
     lastBlockIndex?: number
-}
-
-// Only these two achievement types have real, implemented qualification logic server-side
-// (check_and_award_achievement) that a training completion can actually satisfy.
-const TRAINING_ACHIEVEMENT_LABELS: Record<string, { title: string; description: string; icon: typeof Award }> = {
-    training_master: { title: 'Training Master', description: 'Completed 10 training modules', icon: Award },
-    perfect_completion: { title: 'Perfect Score', description: 'Scored 100% on a training module', icon: Sparkles },
 }
 
 const isValidUuid = (value?: string | null) =>
@@ -225,381 +200,6 @@ const restoreQuizProgressByBlock = <T,>(
     return restored
 }, {})
 
-function useResolvedHtmlContent(rawContent: string | null | undefined): string {
-    const [resolved, setResolved] = useState<string>(() => {
-        if (!rawContent) return ''
-        const isHtml = /<\/?[a-z][\s\S]*>/i.test(rawContent)
-        const initial = isHtml ? rawContent : (marked.parse(rawContent, { async: false }) as string)
-        return sanitizeHtml(initial)
-    })
-
-    useEffect(() => {
-        let cancelled = false
-        if (!rawContent) {
-            setResolved('')
-            return
-        }
-
-        const isHtml = /<\/?[a-z][\s\S]*>/i.test(rawContent)
-        const htmlToProcess = isHtml
-            ? rawContent
-            : (marked.parse(rawContent, { async: false }) as string)
-
-        resolveHtmlStorageUrls(htmlToProcess, 3600).then((processed) => {
-            if (!cancelled) {
-                setResolved(sanitizeHtml(processed))
-            }
-        })
-
-        return () => { cancelled = true }
-    }, [rawContent])
-
-    return resolved
-}
-
-function RichTextBlockContent({
-    originalHtml,
-    translatedHtml,
-    translationTarget,
-    showBilingual,
-    translationDir,
-    originalLabel,
-    translatedLabel
-}: RichTextBlockContentProps) {
-    const originalMarkup = useResolvedHtmlContent(originalHtml)
-    const translatedMarkup = useResolvedHtmlContent(translatedHtml)
-
-    if (!translationTarget || !translatedHtml) {
-        return (
-            <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                <InlineErrorBoundary>
-                    <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
-                </InlineErrorBoundary>
-            </div>
-        )
-    }
-
-    if (showBilingual) {
-        return (
-            <div className="space-y-6">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
-                        {originalLabel}
-                    </div>
-                    <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed">
-                        <InlineErrorBoundary>
-                            <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
-                        </InlineErrorBoundary>
-                    </div>
-                </div>
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4" dir={translationDir}>
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 mb-2">
-                        {translatedLabel}
-                    </div>
-                    <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap">
-                        <InlineErrorBoundary>
-                            <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
-                        </InlineErrorBoundary>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    return (
-        <div className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed whitespace-pre-wrap" dir={translationDir}>
-            <InlineErrorBoundary>
-                <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
-            </InlineErrorBoundary>
-        </div>
-    )
-}
-
-function getBlockMediaUrl(block: TrainingContentBlock | undefined | null): string | null {
-    if (!block) return null
-    if (block.content_url && typeof block.content_url === 'string' && block.content_url.trim().length > 0) {
-        return block.content_url.trim()
-    }
-    const data = block.content_data as Record<string, unknown> | null
-    if (!data) return null
-    const candidate = data.url || data.content_url || data.video_url || data.image_url || data.audio_url || data.file_url || data.public_url || data.src
-    if (typeof candidate === 'string' && candidate.trim().length > 0) {
-        return candidate.trim()
-    }
-    return null
-}
-
-/**
- * Convert a YouTube or Vimeo URL to a proper embeddable iframe URL.
- * Regular youtube.com/watch URLs refuse iframe embedding – we need
- * youtube-nocookie.com/embed/ instead.
- */
-function toEmbedUrl(url: string): string {
-    try {
-        const parsed = new URL(url)
-        const h = parsed.hostname
-
-        // YouTube
-        if (['youtube.com', 'www.youtube.com', 'youtu.be', 'www.youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(h)) {
-            let videoId: string | null = null
-
-            if (h === 'youtu.be' || h === 'www.youtu.be') {
-                videoId = parsed.pathname.replace('/', '').trim() || null
-            } else if (parsed.pathname.startsWith('/watch')) {
-                videoId = parsed.searchParams.get('v')
-            } else if (parsed.pathname.startsWith('/shorts/')) {
-                videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
-            } else if (parsed.pathname.startsWith('/embed/')) {
-                // Already an embed URL — normalise to nocookie domain
-                videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
-            } else if (parsed.pathname.startsWith('/live/')) {
-                videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
-            }
-
-            // Fallback regex
-            if (!videoId) {
-                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
-                const match = url.match(regExp)
-                videoId = match?.[2] || null
-            }
-
-            if (!videoId || videoId.length < 8) return url
-
-            const params = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1' })
-            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
-        }
-
-        // Vimeo
-        if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(h)) {
-            const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
-            const id = match?.[2]
-            if (id) return `https://player.vimeo.com/video/${id}`
-        }
-    } catch {
-        // URL parsing failed — return as-is
-    }
-    return url
-}
-
-type VideoPlayerProps = {
-    src: string
-    blockId: string
-    onMarkWatched: (blockId: string) => void
-    onTrackProgress: (blockId: string, currentTime: number, duration: number) => void
-    onRegisterSeek: (blockId: string, currentTime: number) => void
-    t: TFunction<'training', undefined>
-}
-
-function VideoPlayer({ src, blockId, onMarkWatched, onTrackProgress, onRegisterSeek, t }: VideoPlayerProps) {
-    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
-    const [videoError, setVideoError] = useState<string | null>(null)
-    const [videoLoading, setVideoLoading] = useState(true)
-    const videoRef = useRef<HTMLVideoElement>(null)
-
-    useEffect(() => {
-        setVideoError(null)
-        setVideoLoading(true)
-    }, [resolvedSrc])
-
-    if (resolving) {
-        return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 bg-slate-900">
-                <Loader2 className="animate-spin h-10 w-10 text-white mb-3" />
-                <span className="text-sm">{t('loadingVideo', 'Loading video...')}</span>
-            </div>
-        )
-    }
-
-    if (!resolvedSrc || videoError) {
-        return (
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center bg-slate-900">
-                <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
-                <span className="text-sm mb-2">{videoError || t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.')}</span>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                        setVideoError(null)
-                        setVideoLoading(true)
-                        videoRef.current?.load()
-                    }}
-                    className="mt-2 border-white/30 text-white hover:bg-white/10"
-                >
-                    {t('retry', 'Retry')}
-                </Button>
-            </div>
-        )
-    }
-
-    return (
-        <>
-            {videoLoading && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 pointer-events-none bg-black/40">
-                    <Loader2 className="animate-spin h-10 w-10 text-white mb-3" />
-                    <span className="text-sm">{t('loadingVideo', 'Loading video...')}</span>
-                </div>
-            )}
-            <video
-                ref={videoRef}
-                src={resolvedSrc}
-                className={cn("w-full h-full", videoLoading && "opacity-0")}
-                controls
-                controlsList="nodownload"
-                onLoadedData={() => setVideoLoading(false)}
-                onError={() => {
-                    setVideoLoading(false)
-                    setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.'))
-                }}
-                onEnded={() => onMarkWatched(blockId)}
-                onTimeUpdate={(e) => onTrackProgress(blockId, e.currentTarget.currentTime, e.currentTarget.duration)}
-                onSeeking={(e) => onRegisterSeek(blockId, e.currentTarget.currentTime)}
-            />
-        </>
-    )
-}
-
-
-// Images/audio uploaded through the Training Builder are stored in the private 'documents'
-// bucket with a URL that never resolves on its own (see resolveStorageUrl) - unlike video,
-// neither element has a natural error-triggered recovery path, so resolve proactively.
-function useResolvedStorageUrl(src: string | undefined) {
-    const [resolvedSrc, setResolvedSrc] = useState<string | null>(null)
-    const [resolving, setResolving] = useState(!!src)
-
-    useEffect(() => {
-        let cancelled = false
-        setResolving(!!src)
-        if (!src) {
-            setResolvedSrc(null)
-            return
-        }
-        // Training media uploads are stored in 'training-content' (or legacy 'documents');
-        // external URLs (YouTube etc.) pass through untouched.
-        resolveStorageUrl(src, 3600, 'training-content').then((url) => {
-            if (!cancelled) {
-                setResolvedSrc(url)
-                setResolving(false)
-            }
-        })
-        return () => { cancelled = true }
-    }, [src])
-
-    return { resolvedSrc, resolving }
-}
-
-type ImageBlockProps = {
-    src: string
-    alt: string
-    t: TFunction<'training', undefined>
-}
-
-function ImageBlock({ src, alt, t }: ImageBlockProps) {
-    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
-    const [imageError, setImageError] = useState(false)
-
-    if (resolving) {
-        return (
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
-            </div>
-        )
-    }
-
-    if (imageError || !resolvedSrc) {
-        return (
-            <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center h-64 text-slate-400 gap-2">
-                <ImageIcon className="h-10 w-10" />
-                <span className="text-sm">{t('imageLoadError', 'Unable to load this image.')}</span>
-            </div>
-        )
-    }
-
-    return (
-        <div className="relative group">
-            <img
-                src={resolvedSrc}
-                alt={alt}
-                onError={() => setImageError(true)}
-                className="rounded-2xl shadow-xl max-h-[600px] w-auto mx-auto border border-slate-200 transition-transform duration-500 group-hover:scale-[1.01]"
-            />
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10 pointer-events-none" />
-        </div>
-    )
-}
-
-type AudioPlayerProps = {
-    src: string
-    blockId: string
-    onTrackProgress: (blockId: string, currentTime: number, duration: number) => void
-    onRegisterSeek: (blockId: string, currentTime: number) => void
-    t: TFunction<'training', undefined>
-}
-
-function AudioPlayer({ src, blockId, onTrackProgress, onRegisterSeek, t }: AudioPlayerProps) {
-    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
-    const [audioError, setAudioError] = useState(false)
-
-    if (resolving) {
-        return (
-            <div className="flex items-center gap-3 text-slate-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>{t('loadingAudio', 'Loading audio...')}</span>
-            </div>
-        )
-    }
-
-    if (audioError || !resolvedSrc) {
-        return (
-            <div className="flex items-center gap-3 text-slate-500">
-                <Headphones className="h-6 w-6" />
-                <span>{t('audioLoadError', 'Unable to load this audio file.')}</span>
-            </div>
-        )
-    }
-
-    return (
-        <audio
-            className="w-full"
-            controls
-            src={resolvedSrc}
-            onError={() => setAudioError(true)}
-            onTimeUpdate={(e) => {
-                const target = e.currentTarget
-                onTrackProgress(blockId, target.currentTime, target.duration)
-            }}
-            onSeeking={(e) => onRegisterSeek(blockId, e.currentTarget.currentTime)}
-        />
-    )
-}
-
-function useOnlineStatus() {
-    const [online, setOnline] = useState(typeof navigator === 'undefined' ? true : navigator.onLine)
-    useEffect(() => {
-        const on = () => setOnline(true)
-        const off = () => setOnline(false)
-        window.addEventListener('online', on)
-        window.addEventListener('offline', off)
-        return () => {
-            window.removeEventListener('online', on)
-            window.removeEventListener('offline', off)
-        }
-    }, [])
-    return online
-}
-
-/**
- * Lives inside PlayerShell so it can reach the shell context. Resets scroll and
- * moves focus to the active block heading whenever the block changes.
- */
-function BlockChangeEffects({ blockKey }: { blockKey: string }) {
-    const { scrollToTop, focusHeading } = usePlayerShell()
-    useEffect(() => {
-        scrollToTop()
-        focusHeading()
-    }, [blockKey, scrollToTop, focusHeading])
-    return null
-}
-
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -620,7 +220,7 @@ export default function TrainingPlayer() {
                 description: t('invalidModuleId', 'Invalid training module ID.'),
                 variant: 'destructive'
             })
-            navigate('/learning/my', { replace: true })
+            navigate('/learn/my', { replace: true })
         }
     }, [id, isValidModuleId, navigate, t, toast])
 
@@ -642,8 +242,6 @@ export default function TrainingPlayer() {
     const [assignmentSubmissions, setAssignmentSubmissions] = useState<Record<string, TrainingAssignmentSubmission>>({})
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
     const [resumeNotice, setResumeNotice] = useState<string | null>(null)
-    const [newlyEarnedAchievements, setNewlyEarnedAchievements] = useState<string[]>([])
-    const checkAchievement = useCheckAchievement()
 
     // Luxury Player Upgrades State
     const [isZenMode, setIsZenMode] = useState(false)
@@ -685,7 +283,6 @@ export default function TrainingPlayer() {
         setCompletionPassed(null)
         setIsFinished(false)
         setResumeNotice(null)
-        setNewlyEarnedAchievements([])
         setTranslationTarget(null)
         setShowBilingual(false)
         setBlockTranslations({})
@@ -826,110 +423,7 @@ export default function TrainingPlayer() {
         queryKey: ['training-module-full', id],
         queryFn: async () => {
             if (!id || !isValidModuleId) throw new Error('Invalid module ID')
-
-            let moduleQuery = supabase
-                .from('training_modules')
-                .select('*')
-                .eq('id', id)
-
-            if (!canViewUnpublishedModules) {
-                moduleQuery = moduleQuery.eq('status', 'published')
-            }
-
-            const { data: module, error: moduleError } = await moduleQuery.maybeSingle()
-
-            if (moduleError) throw moduleError
-            if (!module) return null
-
-            // training_content_blocks consolidated into documents (content_type='training_block').
-            const { data: blocks, error: blocksError } = await supabase
-                .from('documents')
-                .select('id, training_module_id, created_at, title, block_type, content, content_ar, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
-                .eq('content_type', 'training_block')
-                .eq('training_module_id', id)
-                .eq('is_deleted', false)
-                .order('block_order', { ascending: true })
-
-            if (blocksError) throw blocksError
-
-            // Map raw DB column names to TrainingContentBlock shape
-            const mappedBlocks = (blocks || []).map(b => {
-                const contentData = b.content_data as Record<string, unknown> | null
-                const resolvedSourceDocId =
-                    (contentData?.sop_id as string | undefined) ||
-                    (contentData?.source_document_id as string | undefined) ||
-                    (contentData?.document_id as string | undefined) ||
-                    b.linked_training_id ||
-                    null
-
-                return {
-                    ...b,
-                    type: b.block_type,
-                    order: b.block_order,
-                    source_document_id: resolvedSourceDocId,
-                }
-            }) as TrainingContentBlock[]
-
-            // Fetch referenced content titles (SOPs, Quizzes) to show in sidebar
-            const sopIds = mappedBlocks
-                .filter(b => b.type === 'sop_reference')
-                .map(b => {
-                    const contentData = b.content_data as Record<string, unknown> | null
-                    const inlineId = contentData?.sop_id as string | undefined
-                    const legacyDocId = contentData?.document_id as string | undefined
-                    return inlineId || b.source_document_id || legacyDocId
-                })
-                .filter(Boolean) as string[]
-
-            const quizIds = mappedBlocks
-                .filter(b => b.type === 'quiz' && b.content_data?.quiz_id)
-                .map(b => b.content_data!.quiz_id as string)
-
-            const referencedTitles: Record<string, string> = {}
-
-            if (sopIds.length > 0) {
-                const { data: sops } = await supabase
-                    .from('documents')
-                    .select('id, title')
-                    .in('id', sopIds)
-                sops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
-
-                // sop_documents has been consolidated into documents (content_type='sop').
-                // All SOP IDs that existed in sop_documents now live in documents.
-                // The initial query above already covers the full documents table (all content types),
-                // so any remaining missing IDs simply don't exist.
-            }
-
-            if (quizIds.length > 0) {
-                const { data: quizzes } = await supabase
-                    .from('learning_quizzes')
-                    .select('id, title')
-                    .in('id', quizIds)
-                quizzes?.forEach(quiz => { referencedTitles[quiz.id] = quiz.title })
-            }
-
-            // AI Course Generator attaches inline illustrations to lessons via
-            // course_visual_assets (course_id = module id). Read defensively so a
-            // missing table / RLS denial never breaks the player.
-            let visualAssets: CourseVisualAsset[] = []
-            try {
-                const { data: assets } = await supabase
-                    .from('course_visual_assets')
-                    .select('*')
-                    .eq('course_id', id)
-                    .in('status', ['completed', 'draft'])
-                    .order('order_index', { ascending: true })
-                visualAssets = (assets || []) as CourseVisualAsset[]
-            } catch (_assetError) {
-                visualAssets = []
-            }
-
-            return {
-                module,
-                blocks: mappedBlocks,
-                referencedTitles,
-                visualAssets
-            }
+            return fetchCourseWithContent({ id, canViewUnpublished: canViewUnpublishedModules })
         },
         enabled: !!id && isValidModuleId,
         staleTime: 0,
@@ -1307,16 +801,7 @@ export default function TrainingPlayer() {
             let linkedTrainingProgressId: string | undefined
             let linkedTrainingQuizScore: number | undefined
             try {
-                const { data: syncedTrainingProgress } = await supabase
-                    .from('training_progress')
-                    .select('id, quiz_score')
-                    .eq('user_id', user.id)
-                    .eq('training_id', moduleData.module.id)
-                    .eq('is_deleted', false)
-                    .order('updated_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
-
+                const syncedTrainingProgress = await fetchLinkedTrainingProgress(user.id, moduleData.module.id)
                 linkedTrainingProgressId = syncedTrainingProgress?.id
                 if (typeof syncedTrainingProgress?.quiz_score === 'number') {
                     linkedTrainingQuizScore = syncedTrainingProgress.quiz_score
@@ -1493,27 +978,6 @@ export default function TrainingPlayer() {
             if (storageKey) {
                 safeLocalStorage.removeItem(storageKey)
             }
-
-            // Achievement checks run against real persisted progress (see
-            // check_and_award_achievement), so they're safe to fire right after the
-            // training_progress row above lands. Only the two types with real server-side
-            // qualification logic are checked here - the rest are permanently unearnable
-            // today and would just be a silent no-op.
-            try {
-                const results = await Promise.all(
-                    Object.keys(TRAINING_ACHIEVEMENT_LABELS).map(async (type) => {
-                        const awarded = await checkAchievement.mutateAsync(type as AchievementType)
-                        return awarded ? type : null
-                    })
-                )
-                const awardedTypes = results.filter((type): type is string => type !== null)
-                if (awardedTypes.length > 0) {
-                    setNewlyEarnedAchievements(awardedTypes)
-                }
-            } catch (_achievementError) {
-                // Achievement awarding is a nice-to-have, never block or dirty the
-                // completion flow if it fails.
-            }
         } catch (caughtError) {
             const errorDetails = getUserFriendlyError(caughtError)
             toast({
@@ -1622,21 +1086,11 @@ export default function TrainingPlayer() {
     const recordBlockCompletion = useCallback(async (blockId: string) => {
         if (!user || !moduleData) return
         try {
-            const nowIso = new Date().toISOString()
             let blockTime = timeByBlockRef.current[blockId] || 0
             if (activeBlock?.id === blockId) {
                 blockTime += Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
             }
-            await supabase
-                .from('training_block_progress')
-                .upsert({
-                    user_id: user.id,
-                    training_module_id: moduleData.module.id,
-                    block_id: blockId,
-                    completed_at: nowIso,
-                    last_viewed_at: nowIso,
-                    time_spent_seconds: blockTime
-                }, { onConflict: 'user_id,block_id' })
+            await recordLessonBlockCompletion(user.id, moduleData.module.id, blockId, blockTime)
         } catch (_error) {
             // Block completion recording is non-critical - continue silently
             // Main progress tracking will still work
@@ -1758,13 +1212,7 @@ export default function TrainingPlayer() {
                 applyRestoredProgress(localData, moduleData.blocks, moduleData.module, true)
             }
 
-            const { data } = await supabase
-                .from('training_progress')
-                .select('id, status, progress_percentage, score_percentage, passed, completed_at, last_block_index, last_block_id, time_spent_seconds, metadata, updated_at')
-                .eq('user_id', user.id)
-                .eq('lp_content_type', 'module')
-                .eq('training_id', moduleData.module.id)
-                .maybeSingle()
+            const data = await fetchPersistedProgress(user.id, moduleData.module.id)
 
             if (!isActive) return
 
@@ -1788,33 +1236,25 @@ export default function TrainingPlayer() {
     useEffect(() => {
         if (!user || !moduleData) return
 
-        const channel = supabase
-            .channel(`training-player-progress:${user.id}:${moduleData.module.id}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'training_progress',
-                filter: `user_id=eq.${user.id}`
-            }, (payload) => {
-                const next = payload.new as PersistedModuleProgress & {
-                    lp_content_type?: string
-                    training_id?: string
-                }
+        const unsubscribe = subscribeToPlayerProgress(user.id, moduleData.module.id, (payload) => {
+            const next = payload.new as PersistedModuleProgress & {
+                lp_content_type?: string
+                training_id?: string
+            }
 
-                if (next?.lp_content_type !== 'module' || next?.training_id !== moduleData.module.id) {
-                    return
-                }
+            if (next?.lp_content_type !== 'module' || next?.training_id !== moduleData.module.id) {
+                return
+            }
 
-                if (isResetProgressSnapshot(next) && storageKey) {
-                    safeLocalStorage.removeItem(storageKey)
-                }
+            if (isResetProgressSnapshot(next) && storageKey) {
+                safeLocalStorage.removeItem(storageKey)
+            }
 
-                applyRestoredProgress(next, moduleData.blocks, moduleData.module)
-            })
-            .subscribe()
+            applyRestoredProgress(next, moduleData.blocks, moduleData.module)
+        })
 
         return () => {
-            supabase.removeChannel(channel)
+            unsubscribe()
         }
     }, [user, moduleData, storageKey, applyRestoredProgress])
 
@@ -1836,15 +1276,7 @@ export default function TrainingPlayer() {
         setTimeSpentSeconds(getCurrentSessionSeconds())
 
         if (user && moduleData) {
-            const nowIso = new Date().toISOString()
-            void supabase
-                .from('training_block_progress')
-                .upsert({
-                    user_id: user.id,
-                    training_module_id: moduleData.module.id,
-                    block_id: activeBlockId,
-                    last_viewed_at: nowIso
-                }, { onConflict: 'user_id,block_id' })
+            void recordLessonBlockLastViewed(user.id, moduleData.module.id, activeBlockId)
         }
 
         scheduleProgressSave()
@@ -1946,7 +1378,7 @@ export default function TrainingPlayer() {
                 {showFallback && (
                     <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/40">
                         <AlertCircle className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-                        <p className="text-sm font-medium text-hotel-navy dark:text-slate-200">
+                        <p className="text-sm font-medium text-ds-ink dark:text-slate-200">
                             {t('blockContentUnavailable', 'This section is being prepared')}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
@@ -2079,7 +1511,7 @@ export default function TrainingPlayer() {
                             {block.is_mandatory && (
                                 <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                     <div>
-                                        <p className="text-sm font-semibold text-hotel-navy">
+                                        <p className="text-sm font-semibold text-ds-ink">
                                             {completedMediaBlocks.has(block.id)
                                                 ? t('audioCompleted', 'Audio completed')
                                                 : t('audioRequired', 'Listen to the audio to continue')}
@@ -2130,7 +1562,7 @@ export default function TrainingPlayer() {
                             {block.is_mandatory && (
                                 <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                     <div>
-                                        <p className="text-sm font-semibold text-hotel-navy">
+                                        <p className="text-sm font-semibold text-ds-ink">
                                             {completedMediaBlocks.has(block.id)
                                                 ? t('interactiveCompleted', 'Activity completed')
                                                 : t('interactiveRequired', 'Complete the activity to continue')}
@@ -2250,11 +1682,11 @@ export default function TrainingPlayer() {
                 {block.type === 'quiz' && (
                     <div className="py-8">
                         <div className="flex items-center gap-4 mb-8">
-                            <div className="h-12 w-12 rounded-xl bg-hotel-gold/20 flex items-center justify-center">
-                                <HelpCircle className="h-6 w-6 text-hotel-gold-dark" />
+                            <div className="h-12 w-12 rounded-xl bg-ds-brass/20 flex items-center justify-center">
+                                <HelpCircle className="h-6 w-6 text-ds-brass" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-hotel-navy leading-none mb-1">
+                                <h3 className="text-xl font-bold text-ds-ink leading-none mb-1">
                                     {t('knowledgeCheck')}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">{t('validateYourLearning')}</p>
@@ -2440,7 +1872,7 @@ export default function TrainingPlayer() {
             </p>
             <div className="flex items-center gap-2">
                 <Button onClick={() => refetch()}>{t('retry', 'Retry')}</Button>
-                <Button variant="link" onClick={() => navigate('/learning/my')}>{t('backToList')}</Button>
+                <Button variant="link" onClick={() => navigate('/learn/my')}>{t('backToList')}</Button>
             </div>
         </div>
     )
@@ -2451,7 +1883,7 @@ export default function TrainingPlayer() {
             <p className="text-xl font-medium">{t('trainingNotFound')}</p>
             <div className="flex items-center gap-2">
                 <Button variant="outline" onClick={() => refetch()}>{t('retry', 'Retry')}</Button>
-                <Button variant="link" onClick={() => navigate('/learning/my')}>{t('backToList')}</Button>
+                <Button variant="link" onClick={() => navigate('/learn/my')}>{t('backToList')}</Button>
             </div>
         </div>
     )
@@ -2467,136 +1899,16 @@ export default function TrainingPlayer() {
             .filter((entry): entry is { block: TrainingContentBlock; result: PersistedQuizResult } => !!entry.result)
 
         return (
-            <LazyMotion features={domAnimation}>
-                <m.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-                    className="min-h-screen bg-slate-50 flex items-center justify-center p-6 py-12"
-                >
-                    <Card className="max-w-xl w-full text-center p-6 sm:p-12 shadow-2xl border-0 overflow-hidden relative">
-                        <div className="absolute top-0 start-0 w-full h-2 bg-hotel-gold"></div>
-                        <m.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: "spring", duration: 0.5, bounce: 0.25, delay: 0.1 }}
-                            className="h-24 w-24 bg-hotel-gold/10 rounded-full flex items-center justify-center mx-auto mb-8 relative"
-                        >
-                            <Trophy className="h-12 w-12 text-hotel-gold-dark" />
-                            {finalPassed && (
-                                <m.span
-                                    initial={{ scale: 0.9, opacity: 0.6 }}
-                                    animate={{ scale: 1.4, opacity: 0 }}
-                                    transition={{ duration: 1.1, ease: "easeOut", delay: 0.15 }}
-                                    className="absolute inset-0 rounded-full border-2 border-hotel-gold/50"
-                                />
-                            )}
-                        </m.div>
-
-                    <h2 className="text-3xl font-bold text-hotel-navy mb-4 font-serif">
-                        {t('congratulations')}
-                    </h2>
-                    <p className="text-slate-600 mb-8 text-lg">
-                        {t('trainingCompletedMessage', { module: moduleData.module.title })}
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('finalScore')}</p>
-                            <p className="text-2xl font-bold text-hotel-navy">{finalScore !== null ? `${finalScore}%` : t('n_a')}</p>
-                        </div>
-                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                            <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('status')}</p>
-                            <p className={cn("text-2xl font-bold", finalPassed ? "text-emerald-600" : "text-rose-600")}>
-                                {finalPassed ? t('passed') : t('quizNotPassed')}
-                            </p>
-                        </div>
-                    </div>
-
-                    {quizBreakdown.length > 1 && (
-                        <div className="mb-6 rounded-xl border border-slate-100 overflow-hidden text-start">
-                            <div className="bg-slate-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                                {t('quizBreakdown', 'Quiz results')}
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {quizBreakdown.map(({ block, result }, idx) => (
-                                    <m.div
-                                        key={block.id}
-                                        initial={{ opacity: 0, y: 6 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.2, delay: 0.15 + idx * 0.04, ease: "easeOut" }}
-                                        className="flex items-center justify-between gap-3 px-4 py-2.5"
-                                    >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            {result.passed
-                                                ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                                                : <XCircle className="h-4 w-4 text-rose-400 shrink-0" />}
-                                            <span className="text-sm text-slate-700 truncate">{result.quizTitle}</span>
-                                        </div>
-                                        <span className={cn("text-sm font-semibold tabular-nums shrink-0", result.passed ? "text-emerald-600" : "text-rose-500")}>
-                                            {result.score}%
-                                        </span>
-                                    </m.div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    <CourseSourceDocuments
-                        trainingModuleId={moduleData.module.id}
-                        variant="learner"
-                        className="mb-8 text-start"
-                    />
-
-                    {newlyEarnedAchievements.length > 0 && (
-                        <div className="mb-8 space-y-2">
-                            {newlyEarnedAchievements.map((type, idx) => {
-                                const meta = TRAINING_ACHIEVEMENT_LABELS[type]
-                                if (!meta) return null
-                                const Icon = meta.icon
-                                return (
-                                    <m.div
-                                        key={type}
-                                        initial={{ opacity: 0, scale: 0.92, y: 6 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        transition={{ type: "spring", duration: 0.45, bounce: 0.3, delay: 0.3 + idx * 0.08 }}
-                                        className="flex items-center gap-3 rounded-xl border border-hotel-gold/30 bg-gradient-to-r from-hotel-gold/10 to-transparent px-4 py-3 text-start"
-                                    >
-                                        <div className="h-10 w-10 rounded-full bg-hotel-gold/20 flex items-center justify-center shrink-0">
-                                            <Icon className="h-5 w-5 text-hotel-gold-dark" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-bold text-hotel-navy">
-                                                {t('achievementUnlocked', 'Achievement unlocked')}: {meta.title}
-                                            </p>
-                                            <p className="text-xs text-slate-500 truncate">{meta.description}</p>
-                                        </div>
-                                    </m.div>
-                                )
-                            })}
-                        </div>
-                    )}
-
-                        <div className="space-y-3">
-                            {canViewCertificate && (
-                                <Button
-                                    className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12 transition-transform active:scale-[0.98]"
-                                    onClick={() => navigate('/training/certificates')}
-                                >
-                                    {t('viewCertificate', 'View Certificate')}
-                                </Button>
-                            )}
-                            <Button
-                                variant="outline"
-                                className="w-full h-12 transition-transform active:scale-[0.98]"
-                                onClick={() => navigate('/learning/my')}
-                            >
-                                {t('backToMyLearning')}
-                            </Button>
-                        </div>
-                    </Card>
-                </m.div>
-            </LazyMotion>
+            <PlayerCompletionView
+                moduleId={moduleData.module.id}
+                moduleTitle={moduleData.module.title}
+                finalScore={finalScore}
+                finalPassed={finalPassed}
+                canViewCertificate={canViewCertificate}
+                quizBreakdown={quizBreakdown}
+                onViewCertificate={() => navigate('/learn/certificates')}
+                onBackToMyLearning={() => navigate('/learn/my')}
+            />
         )
     }
 
@@ -2622,7 +1934,7 @@ export default function TrainingPlayer() {
                     )}
                     progress={progressPercentage}
                     saveState={saveState}
-                    onExit={() => navigate('/learning/my')}
+                    onExit={() => navigate('/learn/my')}
                     onToggleRail={() => setSidebarOpen((o) => !o)}
                     railOpen={sidebarOpen}
                     tutor={{ active: showTutorDrawer, onToggle: () => setShowTutorDrawer((p) => !p) }}
@@ -2740,7 +2052,7 @@ export default function TrainingPlayer() {
                         passed={completionPassed}
                         timeSpentSeconds={timeSpentSeconds}
                         isRTL={isRTL}
-                        onBackToDashboard={() => navigate('/learning/my')}
+                        onBackToDashboard={() => navigate('/learn/my')}
                     />
                 </>
             }

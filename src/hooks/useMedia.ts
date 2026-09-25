@@ -261,7 +261,7 @@ export function useMedia(options: UseMediaOptions = {}) {
             usage_count: 1,
             last_used_at: cva.created_at || null,
             uploaded_by: null,
-            uploader_name: 'PRIME AI Engine',
+            uploader_name: 'Altus AI Engine',
             property_id: null,
             property_name: null,
             is_public: true,

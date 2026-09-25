@@ -182,15 +182,15 @@ export function PracticalAssignmentBlockRenderer({
     <div className={cn("space-y-6 max-w-4xl mx-auto", isRTL && "text-end")}>
       {/* Assignment Header Card */}
       <Card className="border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="h-2 bg-hotel-gold w-full" />
+        <div className="h-2 bg-ds-brass w-full" />
         <CardHeader className="pb-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-hotel-gold/15 flex items-center justify-center text-hotel-gold-dark">
+              <div className="h-10 w-10 rounded-xl bg-ds-brass/15 flex items-center justify-center text-ds-brass">
                 <FileText className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-xl font-bold text-hotel-navy">
+                <CardTitle className="text-xl font-bold text-ds-ink">
                   {block.title || t('practicalAssignment', 'Practical Assignment')}
                 </CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -228,7 +228,7 @@ export function PracticalAssignmentBlockRenderer({
           {/* Instructions */}
           {instructions && (
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-5 text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-              <h4 className="font-semibold text-hotel-navy mb-2 flex items-center gap-2">
+              <h4 className="font-semibold text-ds-ink mb-2 flex items-center gap-2">
                 <span>{t('instructionsAndPrompt', 'Assignment Prompt & Instructions')}</span>
               </h4>
               {(!translatedPrompt || showBilingual) && <div>{instructions}</div>}
@@ -282,7 +282,7 @@ export function PracticalAssignmentBlockRenderer({
           {/* Submission Form / View */}
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between">
-              <label className="text-sm font-semibold text-hotel-navy">
+              <label className="text-sm font-semibold text-ds-ink">
                 {t('yourSubmission', 'Your Response & Work')}
               </label>
               {submission?.attempt_number && submission.attempt_number > 1 && (
@@ -321,7 +321,7 @@ export function PracticalAssignmentBlockRenderer({
                       className="hidden"
                       disabled={isUploading || isSubmitting}
                     />
-                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-hotel-gold-dark hover:text-hotel-gold px-2.5 py-1 rounded-md border border-hotel-gold/30 hover:bg-hotel-gold/10 transition-colors">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ds-brass hover:text-ds-brass px-2.5 py-1 rounded-md border border-ds-brass/30 hover:bg-ds-brass/10 transition-colors">
                       {isUploading ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
@@ -345,7 +345,7 @@ export function PracticalAssignmentBlockRenderer({
                         href={file.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="flex items-center gap-2 truncate hover:text-hotel-navy hover:underline flex-1"
+                        className="flex items-center gap-2 truncate hover:text-ds-ink hover:underline flex-1"
                       >
                         <Paperclip className="h-4 w-4 text-slate-400 shrink-0" />
                         <span className="truncate font-medium">{file.name}</span>
@@ -387,7 +387,7 @@ export function PracticalAssignmentBlockRenderer({
                     size="sm"
                     onClick={() => handleSubmit(false)}
                     disabled={isSubmitting || isUploading}
-                    className="bg-hotel-navy hover:bg-hotel-navy-light text-white text-xs gap-1.5 shadow-sm"
+                    className="bg-ds-ink hover:bg-ds-ink-secondary text-white text-xs gap-1.5 shadow-sm"
                   >
                     {isSubmitting ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />

@@ -2,7 +2,6 @@ import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { SyncStatus } from '@/components/common/SyncStatus'
 import { FacetedScopeCapsule } from '@/components/layout/FacetedScopeCapsule'
-import { useLens } from '@/contexts/LensContext'
 import {
     AlertDialogAction,
     AlertDialogCancel,
@@ -76,7 +75,6 @@ export function Header({
   const location = useLocation()
   const { user, profile, primaryRole, signOut } = useAuth()
   const { currentOrganization, currentHotel, isPlatformAdmin, isImpersonating, isPlatformScope, returnToPlatformScope } = useTenant()
-  const { activeLens, availableLenses, switchLens } = useLens()
   const { openWhatCanIDo, openWizard, startTour } = useWizard()
   const { t, i18n } = useTranslation(['common', 'nav', 'admin', 'wizard'])
   const isRtl = i18n.dir() === 'rtl'
@@ -133,7 +131,7 @@ export function Header({
       {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent.
           A tenant with saved brand_colors overrides the background/border via tenantHeaderStyle. */}
       <div
-        className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative"
+        className="bg-[#15212E] text-white shadow-none border-b border-[#30404D] relative"
         style={tenantHeaderStyle}
       >
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
@@ -434,44 +432,6 @@ export function Header({
                       </DropdownMenuSubContent>
                     </DropdownSub>
 
-                    {/* Operational Perspective / Lens Switcher */}
-                    <DropdownSub>
-                      <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-hotel-gold m-1 font-semibold">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-hotel-gold animate-pulse" />
-                          <span>{t('nav:operational_lens', 'Operational Lens')}</span>
-                        </div>
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/30 text-white shadow-2xl min-w-[250px] p-1">
-                        <DropdownMenuLabel className="text-[11px] text-hotel-gold uppercase tracking-wider px-2 py-1">
-                          {t('nav:switch_lens_tooltip', 'Switch Viewpoint')}
-                        </DropdownMenuLabel>
-                        {availableLenses.filter((l) => l.isAvailable).map((lens) => {
-                          const isCurrent = activeLens === lens.id
-                          return (
-                            <DropdownMenuItem
-                              key={lens.id}
-                              onClick={() => void switchLens(lens.id, navigate)}
-                              className={cn(
-                                "focus:bg-hotel-navy-light focus:text-white cursor-pointer py-2 px-2 text-white/90 flex items-center justify-between",
-                                isCurrent && "bg-hotel-navy-light/90 font-bold text-hotel-gold"
-                              )}
-                            >
-                              <div className="flex flex-col text-start">
-                                <span className="text-xs font-semibold">
-                                  {isRtl ? lens.labelAr : lens.labelEn}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-sans">
-                                  {isRtl ? lens.subtitleAr : lens.subtitleEn}
-                                </span>
-                              </div>
-                              {isCurrent && <Check className="w-4 h-4 text-hotel-gold shrink-0 ms-2" />}
-                            </DropdownMenuItem>
-                          )
-                        })}
-                      </DropdownMenuSubContent>
-                    </DropdownSub>
-
                     {isPlatformAdmin && (
                       <DropdownMenuItem
                         className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-amber-300 font-semibold m-1"
@@ -534,7 +494,7 @@ export function Header({
                   <DropdownMenuGroup>
                     <DropdownMenuItem
                       className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1"
-                      onSelect={() => navigate('/training/certificates')}
+                      onSelect={() => navigate('/learn/certificates')}
                     >
                       <Sparkles className="me-3 h-4 w-4 text-hotel-gold" />
                       <span>{t('nav:my_awards', 'My Awards')}</span>

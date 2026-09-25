@@ -28,9 +28,9 @@ const TAG_META: Record<
 > = {
     objectives: {
         icon: Target,
-        accent: 'text-hotel-navy',
-        ring: 'border-hotel-gold/40 bg-hotel-gold/5',
-        iconWrap: 'bg-hotel-gold/15 text-hotel-gold-dark',
+        accent: 'text-ds-ink',
+        ring: 'border-ds-brass/40 bg-ds-brass/5',
+        iconWrap: 'bg-ds-brass/15 text-ds-brass',
         defaultKey: 'moduleObjectivesTitle',
         defaultText: 'What you will be able to do',
     },

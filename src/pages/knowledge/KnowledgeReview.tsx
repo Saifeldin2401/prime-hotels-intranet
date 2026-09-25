@@ -225,7 +225,7 @@ export default function KnowledgeReview() {
 
                 const targetLink = action === 'approve'
                     ? `/knowledge/${selectedArticle.id}`
-                    : `/knowledge/${selectedArticle.id}/edit`
+                    : `/studio/articles/${selectedArticle.id}/edit`
 
                 await createNotification({
                     userId: selectedArticle.created_by,

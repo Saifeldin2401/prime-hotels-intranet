@@ -11,7 +11,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // Job-title-based rules were removed: the UI let an admin pick a job_titles.id,
-// but training_assignment_rules has no job_title_id column and profiles only
+// but assignments has no job_title_id column and profiles only
 // stores job_title as free text (not linked by id) - there was no data path
 // that could ever resolve who a "by job title" rule applied to. Role-based
 // rules are backed by a real relationship (user_roles) end to end.

@@ -217,7 +217,7 @@ Return a JSON object with:
 
             // Search for related quizzes
             const { data: quizzes } = await supabase
-                .from('learning_quizzes')
+                .from('quizzes')
                 .select('id, title, description')
                 .or(`title.ilike.%${topic}%,description.ilike.%${topic}%`)
                 .eq('status', 'published')

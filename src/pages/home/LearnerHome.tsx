@@ -1,546 +1,295 @@
 /**
- * LearnerHome - Executive Landing Cockpit for Training, SOP Knowledge & Hotel Certifications.
+ * My day - the Learn workspace home.
  *
- * Brand: ALTUS Hospitality Ecosystem
- * Aesthetic: Apple Design System + Emil Kowalski design engineering + MasterClass luxury.
- * Strictly backed by real query hooks (useLearningProgress, useMyAssignments, useTrainingModules,
- * useMyCertificates, useBookmarks).
+ * Answers one question: "What must I do now?" In order: required now
+ * (overdue and mandatory work), continue where I left off, due soon, then
+ * saved knowledge and certificates. Every item leads to an action and every
+ * number comes from the member's own data - nothing decorative or invented.
  */
+
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import { Award, BookMarked, BookOpen, ChevronRight, FileQuestion, PlayCircle } from 'lucide-react'
+
 import { useAuth } from '@/hooks/useAuth'
 import { useMyCertificates } from '@/hooks/useCertificates'
 import { useBookmarks } from '@/hooks/useKnowledge'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
-import { useMyAssignments, useTrainingModules } from '@/hooks/useTraining'
-import { calculateStreak } from '@/lib/training/analytics'
-import { getTimeBasedGreeting } from '@/lib/greetingUtils'
+import { useMyAssignments } from '@/hooks/useTraining'
+import type { LearningAssignment } from '@/types/learning'
 import { cn } from '@/lib/utils'
 import {
-    ArrowRight,
-    BookMarked,
-    BookOpen,
-    CheckCircle2,
-    ChevronRight,
-    ClipboardList,
-    Clock,
-    ExternalLink,
-    FileQuestion,
-    Play,
-    Sparkles,
-} from 'lucide-react'
-import { useMemo, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
+    ActionQueue,
+    EmptyState,
+    ErrorState,
+    PageHeader,
+    ProgressBar,
+    SectionHeader,
+    Skeleton,
+    type ActionQueueItem,
+} from '@/ui'
 
-// Modular ALTUS Learner Components
-import { LearnerHeroCockpit } from '@/components/learner/LearnerHeroCockpit'
-import { ContinueLearningSpotlight } from '@/components/learner/ContinueLearningSpotlight'
-import { getAltusAvatar } from '@/lib/avatarHelpers'
-import { resolveAssetForTrack } from '@/lib/altusAssetRegistry'
-import { CurriculumProgressRings } from '@/components/learner/CurriculumProgressRings'
-import { DailyKnowledgeBite } from '@/components/learner/DailyKnowledgeBite'
-import { LearningStreakBadges } from '@/components/learner/LearningStreakBadges'
-import { toSimpleT } from '@/lib/simpleT'
+const DUE_SOON_DAYS = 14
+const DAY_MS = 24 * 60 * 60 * 1000
 
-function SectionCard({
-    title,
-    subtitle,
-    icon,
-    children,
-    action,
-    className,
-}: {
-    title: string
-    subtitle?: string
-    icon: ReactNode
-    children: ReactNode
-    action?: ReactNode
-    className?: string
-}) {
-    return (
-        <Card
-            className={cn(
-                'overflow-hidden rounded-3xl border border-border/50 border-t-amber-400/25 bg-gradient-to-br from-card/95 via-card/85 to-amber-950/[0.03]',
-                'shadow-sm backdrop-blur-xl transition-all duration-300',
-                className
-            )}
-        >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-5 pb-3 border-b border-border/30">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-sm">
-                        {icon}
-                    </div>
-                    <div>
-                        <CardTitle className="font-display text-base font-bold text-foreground">
-                            {title}
-                        </CardTitle>
-                        {subtitle && (
-                            <p className="text-xs text-muted-foreground font-sans mt-0.5">
-                                {subtitle}
-                            </p>
-                        )}
-                    </div>
-                </div>
-                {action}
-            </CardHeader>
-            <CardContent className="p-5">{children}</CardContent>
-        </Card>
-    )
+function assignmentHref(a: LearningAssignment): string {
+    return a.content_type === 'quiz'
+        ? `/learn/quizzes/${a.content_id}?assignment=${a.id}`
+        : `/learn/player/${a.content_id}?assignment=${a.id}`
 }
 
 function SectionSkeleton() {
     return (
-        <div className="space-y-3 py-2 animate-pulse">
-            <Skeleton className="h-14 w-full rounded-2xl bg-muted/60" />
-            <Skeleton className="h-14 w-full rounded-2xl bg-muted/60" />
+        <div className="space-y-2.5" aria-hidden="true">
+            <Skeleton variant="card" className="h-16" />
+            <Skeleton variant="card" className="h-16" />
         </div>
     )
 }
 
 export default function LearnerHome() {
-    const { t, i18n } = useTranslation(['training', 'dashboard', 'common'])
+    const { t, i18n } = useTranslation(['training', 'common'])
     const { user, profile } = useAuth()
-    const navigate = useNavigate()
-    const userId = user?.id
-    const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
+    const locale = i18n.language?.startsWith('ar') ? 'ar-SA' : 'en-US'
+    const isRTL = i18n.dir() === 'rtl'
 
-    // Stable "now" captured at mount
+    // Captured once so "overdue" does not shift during a render pass.
     const [now] = useState(() => Date.now())
 
-    const progressQuery = useLearningProgress()
+    const progressQuery = useLearningProgress({ userId: user?.id ?? null })
     const assignmentsQuery = useMyAssignments()
-    const modulesQuery = useTrainingModules()
     const certificatesQuery = useMyCertificates()
     const bookmarksQuery = useBookmarks()
 
-    // Filter org progress to current user
-    const myProgress = useMemo(
-        () => (progressQuery.data ?? []).filter((p) => p.user_id === userId),
-        [progressQuery.data, userId]
+    const formatDate = (iso: string) =>
+        new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+
+    const open = useMemo(
+        () => (assignmentsQuery.data ?? []).filter((a) => a.progress?.status !== 'completed'),
+        [assignmentsQuery.data],
     )
 
-    // Most recent in-progress module to continue
-    const continueLearning = useMemo(() => {
-        return [...myProgress]
-            .filter((p) => p.status === 'in_progress')
-            .sort((a, b) => {
-                const at = a.last_accessed_at ? Date.parse(a.last_accessed_at) : 0
-                const bt = b.last_accessed_at ? Date.parse(b.last_accessed_at) : 0
-                return bt - at
-            })[0]
-    }, [myProgress])
-
-    // Adapt continue learning for the spotlight card
-    const spotlightModule = useMemo(() => {
-        if (!continueLearning) return null
-        return {
-            content_id: continueLearning.content_id,
-            progress_percentage: continueLearning.progress_percentage || 0,
-            title: continueLearning.training_modules?.title,
-            description: continueLearning.training_modules?.description,
-            category: 'Hospitality Core',
-            estimated_duration_minutes: 15,
-            currentChapter: isRTL ? 'معايير الخدمة الفندقية الفاخرة' : 'Luxury Service Standards',
-            thumbnail_url: '/assets/altus/concierge-frontdesk.jpg',
-        }
-    }, [continueLearning, isRTL])
-
-    // Active assignments sorted by priority & due date
-    const assignments = useMemo(() => {
-        return [...(assignmentsQuery.data ?? [])]
-            .filter((a) => a.progress?.status !== 'completed')
-            .sort((a, b) => {
-                if (a.priority === 'compliance' && b.priority !== 'compliance') return -1
-                if (b.priority === 'compliance' && a.priority !== 'compliance') return 1
-                const ad = a.due_date ? Date.parse(a.due_date) : Number.POSITIVE_INFINITY
-                const bd = b.due_date ? Date.parse(b.due_date) : Number.POSITIVE_INFINITY
-                return ad - bd
+    // Required now: overdue, or mandatory for compliance.
+    const requiredNow = useMemo<ActionQueueItem[]>(() => {
+        return open
+            .map((a) => ({ a, due: a.due_date ? Date.parse(a.due_date) : Number.POSITIVE_INFINITY }))
+            .filter(({ a, due }) => due < now || a.priority === 'compliance')
+            .sort((x, y) => x.due - y.due)
+            .map(({ a, due }) => {
+                const overdue = due < now
+                const started = a.progress?.status === 'in_progress'
+                return {
+                    id: a.id,
+                    title: a.content_title ?? t('training:untitledAssignment', 'Untitled item'),
+                    description: overdue
+                        ? t('training:myDay.overdueSince', 'Overdue since {{date}}', { date: formatDate(a.due_date!) })
+                        : a.due_date
+                            ? t('training:myDay.dueOn', 'Due {{date}}', { date: formatDate(a.due_date) })
+                            : undefined,
+                    meta: t('training:mandatory', 'Mandatory'),
+                    tone: overdue ? 'urgent' : 'attention',
+                    icon: a.content_type === 'quiz' ? FileQuestion : BookOpen,
+                    href: assignmentHref(a),
+                    actionLabel: started ? t('training:myDay.resume', 'Resume') : t('training:myDay.start', 'Start'),
+                } satisfies ActionQueueItem
             })
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- formatDate only depends on locale
+    }, [open, now, t, locale])
+
+    // Due soon: everything else with a due date inside the window.
+    const dueSoon = useMemo<ActionQueueItem[]>(() => {
+        const requiredIds = new Set(requiredNow.map((i) => i.id))
+        return open
+            .filter((a) => !requiredIds.has(a.id) && a.due_date && Date.parse(a.due_date) - now < DUE_SOON_DAYS * DAY_MS)
+            .sort((x, y) => Date.parse(x.due_date!) - Date.parse(y.due_date!))
             .map((a) => ({
-                ...a,
-                overdue: !!a.due_date && Date.parse(a.due_date) < now,
-            }))
-    }, [assignmentsQuery.data, now])
+                id: a.id,
+                title: a.content_title ?? t('training:untitledAssignment', 'Untitled item'),
+                description: t('training:myDay.dueOn', 'Due {{date}}', { date: formatDate(a.due_date!) }),
+                tone: 'standard',
+                icon: a.content_type === 'quiz' ? FileQuestion : BookOpen,
+                href: assignmentHref(a),
+                actionLabel: a.progress?.status === 'in_progress' ? t('training:myDay.resume', 'Resume') : t('training:myDay.start', 'Start'),
+            } satisfies ActionQueueItem))
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- formatDate only depends on locale
+    }, [open, requiredNow, now, t, locale])
 
-    // Recommended published modules not yet started
-    const recommended = useMemo(() => {
-        const seen = new Set<string>()
-        myProgress.forEach((p) => seen.add(p.content_id))
-        ;(assignmentsQuery.data ?? []).forEach((a) => seen.add(a.content_id))
-        return (modulesQuery.data ?? [])
-            .filter((m) => m.status === 'published' && !seen.has(m.id))
-            .slice(0, 4)
-    }, [modulesQuery.data, myProgress, assignmentsQuery.data])
+    // Continue: the course touched most recently and not yet finished.
+    const continueLearning = useMemo(() => {
+        return [...(progressQuery.data ?? [])]
+            .filter((p) => p.status === 'in_progress' && p.content_type === 'module')
+            .sort((a, b) => Date.parse(b.last_accessed_at ?? '0') - Date.parse(a.last_accessed_at ?? '0'))[0]
+    }, [progressQuery.data])
 
-    // Overall progress stats
-    const progressStats = useMemo(() => {
-        const total = myProgress.length
-        const completed = myProgress.filter((p) => p.status === 'completed').length
-        const inProgress = myProgress.filter((p) => p.status === 'in_progress').length
-        const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
-        return {
-            total,
-            completed,
-            inProgress,
-            completionRate: total > 0 ? completionRate : null,
-        }
-    }, [myProgress])
+    const completedCount = useMemo(
+        () => (progressQuery.data ?? []).filter((p) => p.status === 'completed').length,
+        [progressQuery.data],
+    )
 
-    // Certificates
-    const certificates = useMemo(() => certificatesQuery.data ?? [], [certificatesQuery.data])
-
-    // User streak
-    const streak = useMemo(() => {
-        const completedItems = myProgress
-            .filter((p) => p.status === 'completed' && p.completed_at)
-            .map((p) => ({ completed_at: p.completed_at || null }))
-        return calculateStreak(completedItems)
-    }, [myProgress])
+    const firstName = profile?.full_name?.split(' ')[0]
+    const hour = new Date(now).getHours()
+    const greeting = hour < 12
+        ? t('training:myDay.goodMorning', 'Good morning')
+        : hour < 18
+            ? t('training:myDay.goodAfternoon', 'Good afternoon')
+            : t('training:myDay.goodEvening', 'Good evening')
+    const today = new Date(now).toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' })
 
     const bookmarks = bookmarksQuery.data ?? []
-    const firstName = profile?.full_name?.split(' ')[0] ?? (isRTL ? 'الموظف' : 'Learner')
-    const greeting = getTimeBasedGreeting(toSimpleT(t))
-
-    // Formatted dates
-    const today = new Date()
-    const gregorianDate = today.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-    })
-
-    let hijriDate = ''
-    try {
-        hijriDate =
-            new Intl.DateTimeFormat(isRTL ? 'ar-SA-u-ca-islamic-umalqura' : 'en-US-u-ca-islamic-umalqura', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-            }).format(today) + (isRTL ? ' هـ' : ' AH')
-    } catch {
-        hijriDate = ''
-    }
+    const certificates = certificatesQuery.data ?? []
 
     return (
-        <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8 animate-fade-in">
-            {/* 1. Executive Learner Cockpit Hero */}
-            <LearnerHeroCockpit
-                firstName={firstName}
-                greetingText={greeting.greetingText}
-                greetingEmoji={greeting.emoji}
-                subtitleText={greeting.subtitleText}
-                avatarUrl={getAltusAvatar(profile)}
-                gregorianDate={gregorianDate}
-                hijriDate={hijriDate}
-                propertyName={profile?.job_title || (isRTL ? 'ألتوس للضيافة' : 'ALTUS Hospitality')}
-                departmentName={isRTL ? 'إدارة التميز التشغيلي' : 'Operational Excellence'}
-                masteryLevel={{
-                    level: 3,
-                    title: 'Senior Hospitality Associate',
-                    titleAr: 'أخصائي ضيافة متقدم',
-                    progress: progressStats.completionRate ?? 65,
-                }}
-                stats={{
-                    inProgress: progressStats.inProgress,
-                    completed: progressStats.completed,
-                    certificatesCount: certificates.length,
-                    streakDays: streak,
-                }}
-                isRTL={isRTL}
-                t={toSimpleT(t)}
+        <div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8">
+            <PageHeader
+                title={firstName ? `${greeting}, ${firstName}` : greeting}
+                subtitle={today}
             />
 
-            {/* 2. Spotlight "Continue Learning" MasterClass Stage */}
-            <ContinueLearningSpotlight
-                module={spotlightModule}
-                isLoading={progressQuery.isLoading}
-                isRTL={isRTL}
-                t={toSimpleT(t)}
-            />
-
-            {/* 3. Master 2-Column Command Deck */}
-            <div className="grid gap-6 lg:grid-cols-12 items-start">
-                {/* Primary Column (8 cols): Priority Stream, Competency Matrix, Recommended Horizons */}
-                <div className="lg:col-span-8 space-y-6">
-                    {/* 3A. Mandatory & Assigned Training Deck */}
-                    <SectionCard
-                        title={t('training:assignedTraining', 'Assigned training')}
-                        subtitle={isRTL ? 'البرامج الإلزامية ومواعيد الاستحقاق التشغيلية' : 'Mandatory operational courses & due dates'}
-                        icon={<ClipboardList className="h-4 w-4" />}
-                        action={
-                            <Link
-                                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                                to="/learning/my"
-                            >
-                                <span>{t('common:viewAll', 'View all')}</span>
-                                <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
-                            </Link>
-                        }
-                    >
+            <div className="grid gap-8 lg:grid-cols-12 items-start">
+                <div className="lg:col-span-8 space-y-8">
+                    {/* 1. Required now */}
+                    <section aria-labelledby="my-day-required" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-required"
+                            title={t('training:myDay.requiredNow', 'Required now')}
+                            subtitle={t('training:myDay.requiredNowHint', 'Overdue and mandatory training, most urgent first')}
+                        />
                         {assignmentsQuery.isLoading ? (
                             <SectionSkeleton />
-                        ) : assignments.length > 0 ? (
-                            <ul className="space-y-3" role="list">
-                                {assignments.slice(0, 4).map((a) => {
-                                    const thumb = resolveAssetForTrack({
-                                        title: a.content_title || '',
-                                        category: (a.content_metadata as Record<string, unknown>)?.category as string,
-                                        id: a.content_id,
-                                    })
-
-                                    return (
-                                        <li
-                                            key={a.id}
-                                            role="listitem"
-                                            className="group flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border border-border/50 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all duration-200"
-                                        >
-                                            <div className="flex items-center gap-3.5 min-w-0">
-                                                <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-xl overflow-hidden shrink-0 border border-amber-500/20 shadow-sm bg-slate-900">
-                                                    <img
-                                                        src={thumb}
-                                                        alt={a.content_title || ''}
-                                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                                    />
-                                                    <div className="absolute inset-0 bg-black/20" />
-                                                    <div className="absolute inset-0 flex items-center justify-center text-white/90">
-                                                        {a.content_type === 'quiz' ? (
-                                                            <FileQuestion className="h-4 w-4 drop-shadow" />
-                                                        ) : (
-                                                            <BookOpen className="h-4 w-4 drop-shadow" />
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <div className="min-w-0">
-                                                    <p className="text-xs sm:text-sm font-semibold text-foreground truncate group-hover:text-amber-500 transition-colors">
-                                                        {a.content_title ?? t('training:untitledAssignment', 'Untitled item')}
-                                                    </p>
-                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                                                        {a.priority === 'compliance' && (
-                                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold">
-                                                                {t('training:mandatory', 'Mandatory')}
-                                                            </Badge>
-                                                        )}
-                                                        {a.overdue && (
-                                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4 font-bold animate-pulse">
-                                                                {isRTL ? 'متأخر' : 'Overdue'}
-                                                            </Badge>
-                                                        )}
-                                                        {a.due_date && (
-                                                            <span
-                                                                className={cn(
-                                                                    'text-[11px] font-mono flex items-center gap-1',
-                                                                    a.overdue ? 'text-destructive font-bold' : 'text-muted-foreground'
-                                                                )}
-                                                            >
-                                                                <Clock className="h-3 w-3" />
-                                                                {a.overdue ? (isRTL ? 'مستحق: ' : 'Due: ') : (isRTL ? 'مستحق: ' : 'Due: ')}{' '}
-                                                                {new Date(a.due_date).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
-                                                                    month: 'short',
-                                                                    day: 'numeric',
-                                                                })}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <Button
-                                                size="sm"
-                                                className="h-8 px-3 text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-slate-950 shrink-0 font-bold rounded-xl border border-amber-500/30 transition-all duration-150 active:scale-[0.97]"
-                                                onClick={() => {
-                                                    if (a.content_type === 'quiz') {
-                                                        navigate(`/assessments/${a.content_id}/take?assignment=${a.id}`)
-                                                    } else {
-                                                        navigate(`/learning/training/${a.content_id}?assignment=${a.id}`)
-                                                    }
-                                                }}
-                                            >
-                                                <Play className="h-3 w-3 me-1 fill-current" />
-                                                {isRTL ? 'بدء' : 'Start'}
-                                            </Button>
-                                        </li>
-                                    )
-                                })}
-                            </ul>
+                        ) : assignmentsQuery.isError ? (
+                            <ErrorState
+                                message={t('training:myDay.loadError', 'Your assignments could not be loaded.')}
+                                onRetry={() => void assignmentsQuery.refetch()}
+                            />
                         ) : (
-                            <div className="py-8 text-center">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 mb-3 border border-emerald-500/20 shadow-inner">
-                                    <CheckCircle2 className="h-6 w-6" />
-                                </div>
-                                <h4 className="font-semibold text-sm text-foreground">
-                                    {isRTL ? 'لا توجد تدريبات معلقة' : 'All assignments complete'}
-                                </h4>
-                                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                                    {isRTL ? 'تمت تلبية جميع معايير التدريب الإلزامية والامتثال الفندقي بنجاح.' : 'All mandatory operational training requirements are satisfied.'}
-                                </p>
-                            </div>
+                            <ActionQueue
+                                items={requiredNow}
+                                emptyTitle={t('training:myDay.nothingRequired', 'Nothing required right now')}
+                                emptyDescription={t('training:myDay.nothingRequiredHint', 'You have no overdue or mandatory training.')}
+                            />
                         )}
-                    </SectionCard>
+                    </section>
 
-                    {/* 3B. Operational Competency Matrix */}
-                    <CurriculumProgressRings
-                        overallCompletionRate={progressStats.completionRate}
-                        isRTL={isRTL}
-                    />
-
-                    {/* 3C. Recommended Programs Horizon */}
-                    {recommended.length > 0 && (
-                        <SectionCard
-                            title={t('training:recommended', 'Recommended programs')}
-                            subtitle={isRTL ? 'دورات مقترحة لتطوير مسارك المهني في ألتوس' : 'Suggested courses to accelerate your ALTUS career'}
-                            icon={<Sparkles className="h-4 w-4" />}
-                            action={
+                    {/* 2. Continue */}
+                    {continueLearning && (
+                        <section aria-labelledby="my-day-continue" className="space-y-3">
+                            <SectionHeader
+                            headingId="my-day-continue" title={t('training:myDay.continue', 'Continue where you left off')} />
+                            <div className="flex flex-col gap-4 rounded-xl border border-ds-border bg-ds-surface p-4 sm:flex-row sm:items-center">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ds-accent-soft text-ds-accent">
+                                    <PlayCircle className="h-5 w-5" aria-hidden="true" />
+                                </div>
+                                <div className="min-w-0 flex-1 space-y-2">
+                                    <p className="truncate text-sm font-semibold text-ds-ink">
+                                        {continueLearning.courses?.title ?? t('training:untitledAssignment', 'Untitled item')}
+                                    </p>
+                                    <ProgressBar
+                                        value={continueLearning.progress_percentage ?? 0}
+                                        label={t('training:myDay.progress', 'Progress')}
+                                        showPercentage
+                                        size="sm"
+                                    />
+                                </div>
                                 <Link
-                                    className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                                    to="/courses"
+                                    to={`/learn/player/${continueLearning.content_id}`}
+                                    className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-lg bg-ds-ink px-4 text-sm font-semibold text-ds-on-ink hover:bg-ds-ink/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent focus-visible:ring-offset-2"
                                 >
-                                    <span>{isRTL ? 'تصفح الكتالوج بالكامل' : 'Explore Full Catalog'}</span>
-                                    <ChevronRight className={cn('h-3.5 w-3.5', isRTL && 'rotate-180')} />
+                                    {t('training:myDay.resume', 'Resume')}
+                                    <ChevronRight className={cn('h-4 w-4', isRTL && 'rotate-180')} aria-hidden="true" />
+                                </Link>
+                            </div>
+                        </section>
+                    )}
+
+                    {/* 3. Due soon */}
+                    <section aria-labelledby="my-day-due" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-due"
+                            title={t('training:dueSoon', 'Due soon')}
+                            subtitle={t('training:myDay.dueSoonHint', 'Due in the next two weeks')}
+                            action={
+                                <Link to="/learn/my" className="text-xs font-semibold text-ds-accent hover:underline">
+                                    {t('training:myDay.allMyLearning', 'All my learning')}
                                 </Link>
                             }
-                        >
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {recommended.slice(0, 4).map((m) => {
-                                    const thumb = resolveAssetForTrack({
-                                        title: m.title,
-                                        description: m.description,
-                                        category: m.category,
-                                        id: m.id,
-                                    })
-
-                                    return (
-                                        <Link
-                                            key={m.id}
-                                            to={`/learning/training/${m.id}`}
-                                            className="group flex flex-col justify-between overflow-hidden rounded-2xl border border-border/50 bg-background/50 hover:bg-card hover:border-amber-500/30 hover:shadow-md transition-all duration-200"
-                                        >
-                                            <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-900">
-                                                <img
-                                                    src={thumb}
-                                                    alt={m.title}
-                                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                                    loading="lazy"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
-                                                <div className="absolute top-2.5 start-2.5">
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className="text-[10px] bg-black/60 text-white backdrop-blur-md border border-white/10 px-2 py-0.5"
-                                                    >
-                                                        {m.category || (isRTL ? 'معيار فندقي' : 'Hospitality')}
-                                                    </Badge>
-                                                </div>
-                                                {m.estimated_duration_minutes && (
-                                                    <div className="absolute bottom-2 end-2 bg-black/60 text-slate-200 text-[10px] font-mono px-2 py-0.5 rounded-full backdrop-blur-md border border-white/10 flex items-center gap-1">
-                                                        <Clock className="h-2.5 w-2.5 text-amber-400" />
-                                                        <span>{m.estimated_duration_minutes} {isRTL ? 'د' : 'min'}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="p-4 space-y-2">
-                                                <h4 className="font-semibold text-sm text-foreground group-hover:text-amber-500 transition-colors line-clamp-1">
-                                                    {m.title}
-                                                </h4>
-                                                {m.description && (
-                                                    <p className="text-xs text-muted-foreground line-clamp-2 font-sans">
-                                                        {m.description}
-                                                    </p>
-                                                )}
-                                                <div className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 pt-2 border-t border-border/30">
-                                                    <span>{isRTL ? 'استعراض' : 'Explore'}</span>
-                                                    <ArrowRight
-                                                        className={cn(
-                                                            'h-3.5 w-3.5 transition-transform group-hover:translate-x-1',
-                                                            isRTL && 'rotate-180 group-hover:-translate-x-1'
-                                                        )}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    )
-                                })}
-                            </div>
-                        </SectionCard>
-                    )}
+                        />
+                        {assignmentsQuery.isLoading ? (
+                            <SectionSkeleton />
+                        ) : (
+                            <ActionQueue
+                                items={dueSoon}
+                                emptyTitle={t('training:myDay.nothingDueSoon', 'Nothing else due soon')}
+                                emptyDescription={t('training:myDay.nothingDueSoonHint', 'Browse the course catalog to keep learning.')}
+                            />
+                        )}
+                    </section>
                 </div>
 
-                {/* Companion Intelligence Sidebar (4 cols) */}
-                <div className="lg:col-span-4 space-y-6">
-                    {/* 3D. Daily SOP Scenario Challenge */}
-                    <DailyKnowledgeBite isRTL={isRTL} />
-
-                    {/* 3E. Learning Streak & Badges Locker */}
-                    <LearningStreakBadges
-                        streakDays={streak}
-                        certificatesCount={certificates.length}
-                        isRTL={isRTL}
-                    />
-
-                    {/* 3F. Saved SOPs & Knowledge Documents */}
-                    <SectionCard
-                        title={t('training:savedKnowledge', 'Saved knowledge')}
-                        subtitle={isRTL ? 'الأدلة والمعايير المحفوظة للرجوع السريع' : 'Bookmarked policies & standards'}
-                        icon={<BookMarked className="h-4 w-4" />}
-                        action={
-                            <Link
-                                className="text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
-                                to="/knowledge"
-                            >
-                                <span>{t('common:browse', 'Browse')}</span>
-                                <ExternalLink className="h-3 w-3" />
-                            </Link>
-                        }
-                    >
+                <aside className="lg:col-span-4 space-y-8">
+                    {/* 4. Saved knowledge */}
+                    <section aria-labelledby="my-day-knowledge" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-knowledge"
+                            title={t('training:savedKnowledge', 'Saved knowledge')}
+                            action={
+                                <Link to="/knowledge" className="text-xs font-semibold text-ds-accent hover:underline">
+                                    {t('common:browse', 'Browse')}
+                                </Link>
+                            }
+                        />
                         {bookmarksQuery.isLoading ? (
                             <SectionSkeleton />
                         ) : bookmarks.length > 0 ? (
-                            <div className="space-y-2.5">
-                                {bookmarks.slice(0, 4).map((b) => (
-                                    <Link
-                                        key={b.document_id}
-                                        to={`/knowledge/${b.document_id}`}
-                                        className="group flex items-center justify-between gap-2 p-3 rounded-2xl border border-border/40 bg-background/50 hover:bg-card hover:border-amber-500/30 transition-all text-xs"
-                                    >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <div className="h-7 w-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
-                                                <BookMarked className="h-3.5 w-3.5" />
-                                            </div>
-                                            <span className="font-medium text-foreground truncate group-hover:text-amber-600 transition-colors">
-                                                {b.article?.title ?? t('training:savedArticle', 'Saved SOP Article')}
-                                            </span>
-                                        </div>
-                                        <ChevronRight
-                                            className={cn(
-                                                'h-3.5 w-3.5 text-muted-foreground shrink-0 group-hover:text-amber-600',
-                                                isRTL && 'rotate-180'
-                                            )}
-                                        />
-                                    </Link>
+                            <ul className="space-y-2">
+                                {bookmarks.slice(0, 5).map((b) => (
+                                    <li key={b.document_id}>
+                                        <Link
+                                            to={`/knowledge/${b.document_id}`}
+                                            className="flex min-h-[44px] items-center gap-2.5 rounded-lg border border-ds-border bg-ds-surface px-3 text-sm text-ds-ink hover:border-ds-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+                                        >
+                                            <BookMarked className="h-4 w-4 shrink-0 text-ds-accent" aria-hidden="true" />
+                                            <span className="truncate">{b.article?.title ?? t('training:savedArticle', 'Saved article')}</span>
+                                        </Link>
+                                    </li>
                                 ))}
-                            </div>
+                            </ul>
                         ) : (
-                            <div className="py-8 text-center">
-                                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-800/40 text-muted-foreground mb-3">
-                                    <BookMarked className="h-6 w-6" />
-                                </div>
-                                <h4 className="font-semibold text-sm text-foreground">
-                                    {isRTL ? 'لا توجد أدلة محفوظة' : 'No saved knowledge'}
-                                </h4>
-                                <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                                    {isRTL
-                                        ? 'احفظ إجراءات التشغيل القياسية المهمة للوصول السريع إليها من هنا.'
-                                        : 'Bookmark hotel SOPs and policies to access them instantly.'}
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={<BookMarked className="h-5 w-5" aria-hidden="true" />}
+                                title={t('training:myDay.noSaved', 'No saved articles')}
+                                description={t('training:myDay.noSavedHint', 'Save the SOPs you use most to find them here.')}
+                            />
                         )}
-                    </SectionCard>
-                </div>
+                    </section>
+
+                    {/* 5. Completed and certified */}
+                    <section aria-labelledby="my-day-record" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-record" title={t('training:myDay.record', 'Your record')} />
+                        <dl className="grid grid-cols-2 gap-3">
+                            <div className="rounded-lg border border-ds-border bg-ds-surface p-3">
+                                <dt className="text-xs text-ds-muted">{t('training:completed', 'Completed')}</dt>
+                                <dd className="mt-1 font-mono text-2xl font-bold text-ds-ink">
+                                    {progressQuery.isLoading ? '–' : completedCount}
+                                </dd>
+                            </div>
+                            <div className="rounded-lg border border-ds-border bg-ds-surface p-3">
+                                <dt className="text-xs text-ds-muted">{t('training:certificates', 'Certificates')}</dt>
+                                <dd className="mt-1 font-mono text-2xl font-bold text-ds-ink">
+                                    {certificatesQuery.isLoading ? '–' : certificates.length}
+                                </dd>
+                            </div>
+                        </dl>
+                        <Link
+                            to="/learn/certificates"
+                            className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-ds-accent hover:underline"
+                        >
+                            <Award className="h-4 w-4" aria-hidden="true" />
+                            {t('training:myDay.viewCertificates', 'View certificates')}
+                        </Link>
+                    </section>
+                </aside>
             </div>
         </div>
     )

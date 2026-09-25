@@ -6,7 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import type { Json } from '@/lib/database.types'
+import type { Json } from '@/types/database.generated'
 
 export type SubmissionStatus =
   | 'draft'

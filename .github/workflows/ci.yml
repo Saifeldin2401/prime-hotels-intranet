@@ -44,3 +44,32 @@ jobs:
       - name: Security Audit
         run: npm run audit:ci
 
+  # Tenant-isolation and learning-integrity suites. Each builds its own
+  # fixtures, impersonates users the way PostgREST does and rolls back, so they
+  # are safe to run against the shared staging database. Never point this at
+  # production.
+  database-tests:
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    permissions:
+      contents: read
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Report missing staging database
+        if: env.STAGING_DB_URL == ''
+        run: echo "::warning::STAGING_DB_URL secret is not set; database regression suites were skipped."
+
+      - name: Run SQL regression suites against staging
+        if: env.STAGING_DB_URL != ''
+        run: |
+          for suite in supabase/tests/*.sql; do
+            echo "::group::$suite"
+            psql "$STAGING_DB_URL" -v ON_ERROR_STOP=1 -q -f "$suite"
+            echo "::endgroup::"
+          done
+

@@ -75,6 +75,8 @@ export interface BuilderDraftPayload {
 }
 
 export interface TrainingContentBlockInsert {
+  /** Database id of an existing lesson; absent/temporary for new ones. */
+  id?: string
   training_module_id: string
   type: ContentType
   title?: string | null

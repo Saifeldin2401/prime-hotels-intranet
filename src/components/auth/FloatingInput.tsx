@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+﻿import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 import { useState, useCallback, memo } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
@@ -53,29 +53,32 @@ function FloatingInputComponent({
     onBlur?.();
   }, [onBlur]);
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e);
-  }, [onChange]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onChange(e);
+    },
+    [onChange]
+  );
 
   return (
     <div className="relative group">
       {/* Icon */}
       <div
         className={cn(
-          'absolute top-1/2 -translate-y-1/2 z-10 transition-all duration-300 pointer-events-none',
-          isRTL ? 'end-4' : 'start-4',
+          'absolute top-1/2 -translate-y-1/2 z-10 transition-colors duration-200 pointer-events-none',
+          isRTL ? 'end-3.5' : 'start-3.5',
           isFocused
-            ? 'text-amber-600 scale-110'
+            ? 'text-ds-brass'
             : isActive
-            ? 'text-slate-700'
-            : 'text-slate-400'
+            ? 'text-ds-ink-secondary'
+            : 'text-ds-muted'
         )}
         aria-hidden="true"
       >
-        <Icon className="w-4 h-4 transition-transform duration-300" />
+        <Icon className="w-4 h-4 transition-transform duration-200" />
       </div>
 
-      {/* Input */}
+      {/* Input Field: 48px height, pure white background, immune to browser autofill blue */}
       <input
         id={id}
         type={type}
@@ -88,63 +91,65 @@ function FloatingInputComponent({
         aria-label={ariaLabel || label}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid ?? (valid === false && value.length > 0)}
+        placeholder=" "
         className={cn(
-          'w-full h-13 pt-3.5 pb-1 bg-slate-50/60 border border-slate-200 rounded-2xl outline-none transition-all duration-300 text-slate-900 font-medium text-sm placeholder:text-slate-400',
-          isRTL ? 'pe-11 text-end' : 'ps-11 text-start',
+          'peer w-full h-12 pt-4 pb-1.5 bg-white focus:bg-white border rounded-lg outline-none transition-all duration-200 text-ds-ink font-normal text-sm',
+          '[&:-webkit-autofill]:shadow-[inset_0_0_0_1000px_white] [&:-webkit-autofill]:[-webkit-text-fill-color:#15212e]',
+          isRTL ? 'pe-10 text-end' : 'ps-10 text-start',
           rightElement ? (isRTL ? 'ps-11' : 'pe-11') : '',
           isFocused
-            ? 'border-amber-500 bg-white shadow-sm ring-2 ring-amber-500/20'
+            ? 'border-ds-brass ring-2 ring-ds-brass/20 shadow-xs'
             : isActive
-            ? 'border-slate-300 bg-white'
-            : 'border-slate-200 hover:border-slate-300 bg-slate-50/60',
-          valid === true && 'border-emerald-500 focus:ring-emerald-500/20',
-          valid === false && value && 'border-rose-500 focus:ring-rose-500/20',
-          disabled && 'opacity-60 cursor-not-allowed'
+            ? 'border-ds-border-strong'
+            : 'border-ds-border hover:border-ds-border-strong',
+          valid === true && 'border-ds-success focus:ring-ds-success/20',
+          valid === false && value && 'border-ds-danger focus:ring-ds-danger/20',
+          disabled && 'opacity-50 cursor-not-allowed bg-slate-50'
         )}
-        placeholder=" "
       />
 
-      {/* Floating Label */}
+      {/* Floating Label (with peer selector to immediately float if browser autofills) */}
       <label
         htmlFor={id}
         className={cn(
-          'absolute pointer-events-none transition-all duration-300 tracking-wide',
-          isRTL ? 'end-11' : 'start-11',
+          'absolute pointer-events-none transition-all duration-200 tracking-normal',
+          isRTL ? 'end-10' : 'start-10',
           isActive
-            ? 'top-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-600'
-            : 'top-1/2 -translate-y-1/2 text-xs text-slate-400 font-normal'
+            ? 'top-1.5 text-[10px] font-semibold uppercase tracking-wider text-ds-brass'
+            : 'top-1/2 -translate-y-1/2 text-xs text-ds-muted font-normal peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:font-semibold peer-focus:uppercase peer-focus:tracking-wider peer-focus:text-ds-brass peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[10px] peer-[:not(:placeholder-shown)]:font-semibold peer-[:not(:placeholder-shown)]:uppercase peer-[:not(:placeholder-shown)]:tracking-wider peer-[:not(:placeholder-shown)]:text-ds-brass peer-autofill:top-1.5 peer-autofill:text-[10px] peer-autofill:font-semibold peer-autofill:uppercase peer-autofill:tracking-wider peer-autofill:text-ds-brass'
         )}
       >
         {label}
       </label>
 
-      {/* Right Element */}
+      {/* Right Element (e.g. Password Toggle) */}
       {rightElement && (
         <div
           className={cn(
             'absolute top-1/2 -translate-y-1/2 z-10',
-            isRTL ? 'start-3' : 'end-3'
+            isRTL ? 'start-2.5' : 'end-2.5'
           )}
         >
           {rightElement}
         </div>
       )}
 
-      {/* Validation Indicator */}
+      {/* Accessible Validation Indicator */}
       <LazyMotion features={domAnimation}>
         <AnimatePresence>
           {valid === true && (
             <m.div
-              initial={{ opacity: 0, scale: 0.5 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ duration: 0.15 }}
               className={cn(
-                'absolute top-1/2 -translate-y-1/2 z-10',
-                isRTL ? 'start-3' : 'end-10'
+                'absolute top-1/2 -translate-y-1/2 pointer-events-none',
+                isRTL ? (rightElement ? 'start-11' : 'start-3') : rightElement ? 'end-11' : 'end-3'
               )}
               aria-hidden="true"
             >
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 drop-shadow-sm" />
+              <CheckCircle2 className="w-4 h-4 text-ds-success" />
             </m.div>
           )}
         </AnimatePresence>
@@ -155,5 +160,4 @@ function FloatingInputComponent({
 
 export const FloatingInput = memo(FloatingInputComponent);
 FloatingInput.displayName = 'FloatingInput';
-
 export default FloatingInput;

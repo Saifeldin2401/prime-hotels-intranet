@@ -91,30 +91,27 @@ export default function LearningAnalyticsHub() {
   return (
     <div className="container mx-auto space-y-6 px-4 py-6 max-w-7xl animate-in fade-in duration-300">
       {/* Executive Intelligence Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/75 to-card/40 p-6 sm:p-8 backdrop-blur-2xl shadow-lg">
-        <div className="pointer-events-none absolute -top-20 -end-20 h-64 w-64 rounded-full bg-amber-500/[0.08] blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -start-20 h-64 w-64 rounded-full bg-emerald-500/[0.06] blur-3xl" />
-
+      <div className="relative overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#15212E] p-6 sm:p-8 text-[#F4F2EC] shadow-none">
         <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-0.5">
+              <Badge className="bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40 text-xs font-semibold px-2.5 py-0.5 rounded-[4px]">
                 <Sparkles className="me-1.5 h-3.5 w-3.5" />
                 {isRTL ? 'مركز ذكاء الأداء والتحليلات' : 'Executive Intelligence & Analytics'}
               </Badge>
 
               {currentOrganization && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-3 py-0.5 text-xs font-medium text-muted-foreground">
-                  <Building2 className="h-3 w-3 text-amber-500" />
+                <span className="inline-flex items-center gap-1.5 rounded-[4px] border border-[#30404D] bg-[#1E2D3D] px-2.5 py-0.5 text-xs font-medium text-[#929CA5]">
+                  <Building2 className="h-3 w-3 text-[#B79A62]" />
                   {currentOrganization.name}
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl font-serif">
+            <h1 className="text-2xl font-bold tracking-tight text-[#F4F2EC] sm:text-3xl lg:text-4xl font-serif">
               {isRTL ? 'تحليلات التعلم وكفاءة العمليات' : 'Learning & Operational Analytics'}
             </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm font-normal max-w-2xl leading-relaxed">
+            <p className="text-xs text-[#929CA5] sm:text-sm font-normal max-w-2xl leading-relaxed">
               {isRTL
                 ? 'لوحات قياس استراتيجية متعددة المحاور — تقدم المتعلمين، مسارات تسرب الدورات، استخدام أدلة SOP، وتمييز التقييمات مستخرجة بالكامل من الأداء الفعلي.'
                 : 'Multi-dimensional telemetry — learner progression, course drop-off funnels, SOP utilization, and assessment discrimination computed from verified database activity.'}
@@ -128,9 +125,9 @@ export default function LearningAnalyticsHub() {
               size="sm"
               onClick={handleRefreshAll}
               disabled={isRefreshing}
-              className="h-9 rounded-2xl border-border/60 bg-background/60 px-3 text-xs font-semibold hover:border-amber-500/40 hover:bg-background/90 shadow-xs"
+              className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
             >
-              <RefreshCw className={`me-1.5 h-3.5 w-3.5 text-amber-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`me-1.5 h-3.5 w-3.5 text-[#B79A62] ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRTL ? 'تحديث البيانات' : 'Refresh'}</span>
             </Button>
 
@@ -138,16 +135,16 @@ export default function LearningAnalyticsHub() {
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="h-9 rounded-2xl border-border/60 bg-background/60 px-3 text-xs font-semibold hover:border-amber-500/40 hover:bg-background/90 shadow-xs"
+              className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
             >
-              <Printer className="me-1.5 h-3.5 w-3.5 text-blue-500" />
+              <Printer className="me-1.5 h-3.5 w-3.5 text-[#6BA8E5]" />
               <span>{isRTL ? 'طباعة التقرير' : 'Print Briefing'}</span>
             </Button>
 
             <Button
               size="sm"
               onClick={handleExportCSV}
-              className="h-9 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-3.5 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="h-9 rounded-[6px] bg-[#86672C] hover:bg-[#6D5322] px-3.5 text-xs font-medium text-[#FFFFFF] shadow-none transition-colors"
             >
               <Download className="me-1.5 h-3.5 w-3.5" />
               <span>{isRTL ? 'تصدير التقرير' : 'Export CSV'}</span>
@@ -157,7 +154,7 @@ export default function LearningAnalyticsHub() {
       </div>
 
       {/* Scope Breakdown Filters */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-2xl border border-border/50 bg-card/60 p-3 backdrop-blur-xl">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-[8px] border border-border bg-card p-3 shadow-none">
         <div className="flex items-center gap-2 text-xs font-bold text-foreground">
           <Filter className="h-4 w-4 text-amber-500" />
           <span>{isRTL ? 'تصفية النطاق والتحليل:' : 'Scope & Filter Lens:'}</span>
@@ -168,7 +165,7 @@ export default function LearningAnalyticsHub() {
           <div className="flex items-center gap-1.5">
             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
             <Select value={selectedHotelFilter} onValueChange={setSelectedHotelFilter}>
-              <SelectTrigger className="h-8 w-44 rounded-xl text-xs bg-background/80 border-border/60">
+              <SelectTrigger className="h-8 w-44 rounded-[6px] text-xs bg-background border-border">
                 <SelectValue placeholder={isRTL ? 'كافة الفنادق' : 'All Hotels'} />
               </SelectTrigger>
               <SelectContent>
@@ -184,7 +181,7 @@ export default function LearningAnalyticsHub() {
           <div className="flex items-center gap-1.5">
             <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
             <Select value={selectedDeptFilter} onValueChange={setSelectedDeptFilter}>
-              <SelectTrigger className="h-8 w-44 rounded-xl text-xs bg-background/80 border-border/60">
+              <SelectTrigger className="h-8 w-44 rounded-[6px] text-xs bg-background border-border">
                 <SelectValue placeholder={isRTL ? 'كافة الأقسام' : 'All Departments'} />
               </SelectTrigger>
               <SelectContent>
@@ -207,10 +204,10 @@ export default function LearningAnalyticsHub() {
         }, { replace: true })}
         className="space-y-6"
       >
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto gap-2 bg-card/60 p-1.5 rounded-2xl border border-border/60 backdrop-blur-xl shadow-xs">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 h-auto gap-1 bg-muted/40 p-1 rounded-[8px] border border-border shadow-none">
           <TabsTrigger 
             value="learners" 
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs"
+            className="flex items-center justify-center gap-2 py-2 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors"
           >
             <Users className="h-4 w-4" />
             <span>{isRTL ? 'أداء المتعلمين' : 'Learners'}</span>
@@ -218,7 +215,7 @@ export default function LearningAnalyticsHub() {
 
           <TabsTrigger 
             value="courses" 
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs"
+            className="flex items-center justify-center gap-2 py-2 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors"
           >
             <BookOpen className="h-4 w-4" />
             <span>{isRTL ? 'الدورات والمسارات' : 'Courses & Funnels'}</span>
@@ -226,7 +223,7 @@ export default function LearningAnalyticsHub() {
 
           <TabsTrigger 
             value="knowledge" 
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs"
+            className="flex items-center justify-center gap-2 py-2 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors"
           >
             <FileText className="h-4 w-4" />
             <span>{isRTL ? 'استخدام الأدلة والمعرفة' : 'Knowledge & SOPs'}</span>
@@ -234,14 +231,14 @@ export default function LearningAnalyticsHub() {
 
           <TabsTrigger 
             value="assessments" 
-            className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs"
+            className="flex items-center justify-center gap-2 py-2 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors"
           >
             <Target className="h-4 w-4" />
             <span>{isRTL ? 'التقييمات وصعوبة الأسئلة' : 'Assessments'}</span>
           </TabsTrigger>
         </TabsList>
 
-        <Suspense fallback={<Skeleton className="h-96 w-full rounded-3xl" />}>
+        <Suspense fallback={<Skeleton className="h-96 w-full rounded-[8px]" />}>
           <TabsContent value="learners" className="mt-0 outline-none">
             <LearnerAnalyticsPanel />
           </TabsContent>

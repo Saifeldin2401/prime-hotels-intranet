@@ -1,14 +1,32 @@
 import { focusManager, onlineManager } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 
 
-import { persistQueryCache, restoreQueryCache } from './queryPersistence'
+import { supabase } from '@/lib/supabase'
+import { clearQueryCache, persistQueryCache, restoreQueryCache, setQueryCacheUser } from './queryPersistence'
 
 export function QueryRuntimeBridge() {
-  useState(() => {
-    restoreQueryCache()
-    return true
-  })
+  // Restore the cached snapshot only once we know who is signed in, and only
+  // if it was written for that member and organization. Signing out, or a
+  // different member signing in, wipes every cached query.
+  useEffect(() => {
+    let userId: string | null = null
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const nextUserId = session?.user?.id ?? null
+      if (event === 'INITIAL_SESSION') {
+        userId = nextUserId
+        setQueryCacheUser(nextUserId)
+        if (nextUserId) restoreQueryCache()
+        return
+      }
+      if (event === 'SIGNED_OUT' || (userId && nextUserId !== userId)) {
+        clearQueryCache()
+      }
+      userId = nextUserId
+      setQueryCacheUser(nextUserId)
+    })
+    return () => data.subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     const handleVisibilityChange = () => {

@@ -499,7 +499,7 @@ async function autoRepairEmptyQuiz(
 
 async function fetchQuizDefinition(quizId: string) {
   const { data, error } = await supabase
-    .from('learning_quizzes')
+    .from('quizzes')
     .select(`
       id,
       title,
@@ -765,7 +765,7 @@ async function publishQuizAndQuestions(quizId: string, questionIds: string[]) {
   const timestamp = new Date().toISOString()
 
   const { error: quizError } = await supabase
-    .from('learning_quizzes')
+    .from('quizzes')
     .update({
       status: 'published',
       updated_at: timestamp

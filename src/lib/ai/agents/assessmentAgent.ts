@@ -209,7 +209,7 @@ Content:\n${sanitizedContext}`
             },
           ],
           correct_answer: 'Acknowledge warmly, verify guest preferences, and execute standard operating steps promptly',
-          explanation: 'Active listening, empathy, and immediate procedural follow-through are foundational to prime hotel guest satisfaction.',
+          explanation: 'Active listening, empathy, and immediate procedural follow-through are foundational to guest satisfaction.',
           hint: 'Think about five-star first-contact resolution standards.',
         },
       ]

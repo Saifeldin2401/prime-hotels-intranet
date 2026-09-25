@@ -39,10 +39,10 @@ export function getNotificationLink(
     case 'training_assigned':
     case 'training_deadline':
     case 'training_overdue':
-      return '/learning/my'
+      return '/learn/my'
 
     case 'training_completed':
-      return '/training/certificates'
+      return '/learn/certificates'
 
     // ── Knowledge / Documents ──────────────────────────────
     case 'document_published':
@@ -66,7 +66,7 @@ export function getNotificationLink(
     // ── Certificates ──────────────────────────────────────
     case 'certificate_issued':
     case 'certificate_expiring':
-      return '/training/certificates'
+      return '/learn/certificates'
 
     // ── Maintenance ────────────────────────────────────────
     case 'maintenance_assigned':
@@ -129,8 +129,8 @@ function resolveLinkByTitle(title?: string | null): string | null {
   if (!title) return null
   const t = title.toLowerCase()
 
-  if (t.includes('certificate')) return '/training/certificates'
-  if (t.includes('training') || t.includes('learning')) return '/learning/my'
+  if (t.includes('certificate')) return '/learn/certificates'
+  if (t.includes('training') || t.includes('learning')) return '/learn/my'
   if (t.includes('maintenance')) return '/maintenance'
   if (t.includes('task')) return '/tasks'
   if (t.includes('announcement')) return '/announcements'

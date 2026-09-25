@@ -5,7 +5,7 @@
  * former `questions/QuestionLibrary` (question browsing + review queue) and
  * `learning/QuizList` (assessment list + AI generation) into one page with two
  * sections. Per-question review detail remains the `QuestionReview` route
- * (`/assessments/questions/:id`); the "Pending review" sub-tab here is the queue.
+ * (`/studio/questions/:id`); the "Pending review" sub-tab here is the queue.
  */
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -197,13 +197,13 @@ function QuestionsPanel() {
                 </p>
                 <div className="flex gap-2 shrink-0">
                     <Button variant="outline" asChild className="hidden sm:flex border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold h-9">
-                        <Link to="/assessments/generate">
+                        <Link to="/studio/quizzes/generate">
                             <Sparkles className="h-3.5 w-3.5 me-1.5 text-purple-600 animate-pulse" />
                             {t('question_library.generate_with_ai', 'AI Generation')}
                         </Link>
                     </Button>
                     <Button asChild className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy font-bold text-xs h-9 shadow-sm">
-                        <Link to="/assessments/questions/new">
+                        <Link to="/studio/questions/new">
                             <Plus className="h-3.5 w-3.5 me-1.5" />
                             {t('question_library.create_question', 'New Question')}
                         </Link>
@@ -359,7 +359,7 @@ function QuestionsPanel() {
                                     Try adjusting your search criteria or create a new procedural checkpoint question.
                                 </p>
                                 <Button asChild className="mt-4 bg-hotel-navy text-white text-xs font-bold h-9">
-                                    <Link to="/assessments/questions/new">{t('question_library.create_first', 'Draft First Question')}</Link>
+                                    <Link to="/studio/questions/new">{t('question_library.create_first', 'Draft First Question')}</Link>
                                 </Button>
                             </CardContent>
                         </Card>
@@ -599,7 +599,7 @@ function QuestionsPanel() {
                                         className="bg-hotel-navy hover:bg-hotel-navy/90 text-white text-xs font-bold h-9"
                                         asChild
                                     >
-                                        <Link to={`/assessments/questions/${previewQuestion.id}/edit`}>
+                                        <Link to={`/studio/questions/${previewQuestion.id}/edit`}>
                                             <FileEdit className="h-3.5 w-3.5 me-1.5" />
                                             Edit Question
                                         </Link>
@@ -748,7 +748,7 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-36">
                                 <DropdownMenuItem asChild className="text-xs font-medium">
-                                    <Link to={`/assessments/questions/${question.id}/edit`}>
+                                    <Link to={`/studio/questions/${question.id}/edit`}>
                                         <FileEdit className="h-3.5 w-3.5 me-2 text-slate-500" />
                                         Edit
                                     </Link>
@@ -869,7 +869,7 @@ function AssessmentsPanel() {
                         <Sparkles className={`h-4 w-4 ${generating ? 'animate-pulse text-purple-600' : 'text-purple-600'}`} />
                         {generating ? t('quizzes.generating', 'Generating...') : t('quizzes.generate_from_document')}
                     </Button>
-                    <Button onClick={() => navigate('/assessments/builder/new')}>
+                    <Button onClick={() => navigate('/studio/quizzes/new')}>
                         <Plus className="me-2 h-4 w-4" />
                         {t('quizzes.create_quiz')}
                     </Button>
@@ -921,7 +921,7 @@ function AssessmentsPanel() {
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => navigate(`/assessments/builder/${quiz.id}`)}>
+                                            <DropdownMenuItem onClick={() => navigate(`/studio/quizzes/${quiz.id}`)}>
                                                 {t('quizzes.edit')}
                                             </DropdownMenuItem>
                                             <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(quiz.id)}>
@@ -956,10 +956,10 @@ function AssessmentsPanel() {
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-2">
-                                    <Button variant="outline" className="w-full" onClick={() => navigate(`/assessments/builder/${quiz.id}`)}>
+                                    <Button variant="outline" className="w-full" onClick={() => navigate(`/studio/quizzes/${quiz.id}`)}>
                                         {t('quizzes.edit')}
                                     </Button>
-                                    <Button className="w-full" onClick={() => navigate(`/learning/assignments?quiz=${quiz.id}`)}>
+                                    <Button className="w-full" onClick={() => navigate(`/manage/assignments/quizzes?quiz=${quiz.id}`)}>
                                         {t('quizzes.assign')}
                                     </Button>
                                 </div>

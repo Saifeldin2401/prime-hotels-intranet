@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const cardVariants = cva(
-  "rounded-xl border border-border/70 bg-card text-card-foreground shadow-sm transition-[transform,box-shadow,border-color] duration-200 ease-out hover:shadow-md hover:border-border hover:-translate-y-0.5",
+  "rounded-xl border border-border/70 bg-card text-card-foreground shadow-sm transition-[transform,box-shadow,border-color] duration-200 ease-out",
   {
     variants: {
       variant: {
@@ -15,6 +15,7 @@ const cardVariants = cva(
         copper: "bg-card border-altus-copper/25 text-card-foreground shadow-sm hover:shadow-md hover:border-altus-copper/50",
         elevated: "shadow-lg hover:shadow-xl ring-1 ring-black/5 dark:ring-white/10 hover:border-border",
         premium: "bg-gradient-to-br from-card via-card to-hotel-cream/40 dark:to-hotel-navy/40 border-hotel-gold/30 shadow-lg relative overflow-hidden after:absolute after:inset-0 after:bg-gradient-to-br after:from-hotel-gold/5 after:to-transparent after:pointer-events-none hover:shadow-xl hover:border-hotel-gold/50",
+        interactive: "cursor-pointer hover:-translate-y-0.5 hover:border-ring/40 hover:shadow-md active:translate-y-0 active:scale-[0.995] motion-reduce:transform-none",
       },
       padding: {
         none: "p-0",

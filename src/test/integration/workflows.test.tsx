@@ -93,7 +93,7 @@ describe('Training Module Critical Path', () => {
       single: vi.fn().mockResolvedValue(mockQueryResponse(module))
     })
 
-    const result = await mockClient.from('training_modules')
+    const result = await mockClient.from('courses')
       .insert(module)
       .select()
       .single()

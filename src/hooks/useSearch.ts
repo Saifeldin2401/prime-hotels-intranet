@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react'
 
 interface SearchResult {
   id: string
-  type: 'document' | 'user' | 'training' | 'announcement' | 'sop' | 'task' | 'page'
+  type: 'document' | 'user' | 'training' | 'sop' | 'page'
   title: string
   description?: string
   category?: string
@@ -23,9 +23,7 @@ interface UseSearchOptions {
   includeDocuments?: boolean
   includeUsers?: boolean
   includeTraining?: boolean
-  includeAnnouncements?: boolean
   includeSOPs?: boolean
-  includeTasks?: boolean
   limit?: number
   propertyId?: string
   departmentId?: string
@@ -71,18 +69,6 @@ const USER_SEARCH_ROLES = new Set([
   'department_head'
 ])
 
-const ALL_TASKS_ROLES = new Set([
-  'administrator',
-  'super_admin',
-  'corporate_admin',
-  'training_manager',
-  'regional_admin',
-  'regional_hr',
-  'property_manager',
-  'property_hr',
-  'department_head'
-])
-
 export function useSearch(query: string, options: UseSearchOptions = {}) {
   const { user, primaryRole, roles, departments, properties } = useAuth()
   const { currentProperty, propertyIds } = useProperty()
@@ -94,9 +80,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     includeDocuments = true,
     includeUsers = true,
     includeTraining = true,
-    includeAnnouncements = true,
     includeSOPs = true,
-    includeTasks = true,
     limit = 20,
     propertyId: explicitPropertyId,
     departmentId: explicitDepartmentId
@@ -106,7 +90,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
   const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')
-  const canViewAllTasks = ALL_TASKS_ROLES.has(primaryRole || '')
 
   const userPropertyIds = uniqueStrings((properties || []).map((p) => p?.id))
   const userDepartmentIds = uniqueStrings((departments || []).map((d) => d?.id))
@@ -134,28 +117,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     return userDepartmentIds
   })()
 
-  const matchesAnnouncementAudience = (announcement): boolean => {
-    if (!user?.id) return false
-    if (announcement.created_by === user.id) return true
-
-    const audience = announcement.target_audience
-    if (!audience || audience.type === 'all') return true
-
-    const values = audience.values || []
-    switch (audience.type) {
-      case 'role':
-        return roleValues.some((role) => values.includes(role))
-      case 'department':
-        return scopedDepartmentIds.some((departmentId) => values.includes(departmentId))
-      case 'property':
-        return scopedPropertyIds.some((propertyId) => values.includes(propertyId))
-      case 'individual':
-        return values.includes(user.id)
-      default:
-        return true
-    }
-  }
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['global-search', query, options, user?.id, primaryRole, scopedPropertyIds, scopedDepartmentIds, roleValues, currentOrganization?.id, isPlatformScope],
     queryFn: async () => {
@@ -167,7 +128,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
       const escapedQuery = escapeSearchQuery(query)
 
       const matchingPages = SYSTEM_PAGES.filter((page) => {
-        if (isPlatformScope && (page.url.startsWith('/knowledge') || page.url.startsWith('/learning') || page.url.startsWith('/documents') || page.url.startsWith('/sops') || page.url.startsWith('/training'))) {
+        if (isPlatformScope && (page.url.startsWith('/knowledge') || page.url.startsWith('/learn/my') || page.url.startsWith('/documents') || page.url.startsWith('/sops') || page.url.startsWith('/learn/my'))) {
           return false
         }
         return (
@@ -302,7 +263,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 title: profileRow.full_name || 'Unknown User',
                 description: profileRow.email,
                 category: 'Staff',
-                url: `/users/${profileRow.id}`,
+                url: `/profile/${profileRow.id}`,
                 metadata: {},
                 relevance_score: calculateRelevanceScore(
                   query,
@@ -324,7 +285,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
 
             const buildTrainingQuery = () => {
               let q = supabase
-                .from('training_modules')
+                .from('courses')
                 .select('id, title, description, category, status, property_id')
                 .or(textFilter)
                 .limit(trainingLimit)
@@ -361,50 +322,13 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               description: module.description,
               category: module.category,
               url: isTrainingAdmin
-                ? `/training/hub/${module.id}?view=builder`
-                : `/learning/training/${module.id}`,
+                ? `/studio/courses/${module.id}?view=builder`
+                : `/learn/player/${module.id}`,
               metadata: { status: module.status },
               relevance_score: calculateRelevanceScore(query, module.title, module.description)
             })))
           } catch (searchError) {
             console.error('Error searching training:', searchError)
-          }
-        }
-
-        if (includeAnnouncements && currentOrganization?.id && !isPlatformScope) {
-          try {
-            const announcementsLimit = Math.ceil(limit / 2)
-            const announcementQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
-
-            const buildAnnouncementsQuery = () =>
-              supabase
-                .from('announcements')
-                .select('id, title, content, priority, target_audience, created_by, property_id')
-                .eq('organization_id', currentOrganization.id)
-                .or(`title.ilike.%${escapedQuery}%,content.ilike.%${escapedQuery}%`)
-                .limit(announcementsLimit)
-
-            announcementQueries.push(toPromise(buildAnnouncementsQuery().is('property_id', null)))
-            if (scopedPropertyIds.length > 0) {
-              announcementQueries.push(toPromise(applyIdsScope(buildAnnouncementsQuery(), 'property_id', scopedPropertyIds)))
-            }
-
-            const announcementResults = await Promise.all(announcementQueries)
-            const announcementsRaw = dedupeById(announcementResults.flatMap((result) => result.data || []))
-            const announcements = announcementsRaw.filter(matchesAnnouncementAudience)
-
-            results.push(...announcements.map((announcement) => ({
-              id: announcement.id,
-              type: 'announcement' as const,
-              title: announcement.title,
-              description: announcement.content,
-              category: 'Announcement',
-              url: `/announcements/${announcement.id}`,
-              metadata: { priority: announcement.priority },
-              relevance_score: calculateRelevanceScore(query, announcement.title, announcement.content)
-            })))
-          } catch (searchError) {
-            console.error('Error searching announcements:', searchError)
           }
         }
 
@@ -459,57 +383,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             })))
           } catch (searchError) {
             console.warn('SOP search failed:', searchError)
-          }
-        }
-
-        if (includeTasks && currentOrganization?.id && !isPlatformScope) {
-          try {
-            const taskLimit = Math.ceil(limit / 3)
-            const textFilter = `title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`
-            const taskDepartmentIds =
-              explicitDepartmentId
-                ? [explicitDepartmentId]
-                : (primaryRole === 'department_head' || primaryRole === 'author')
-                  ? userDepartmentIds
-                  : []
-
-            const buildTaskBaseQuery = () => {
-              let q = supabase
-                .from('tasks')
-                .select('id, title, description, status, due_date, assigned_to_id, created_by_id, department_id')
-                .eq('is_deleted', false)
-                .eq('organization_id', currentOrganization.id)
-                .or(textFilter)
-                .limit(taskLimit)
-
-              q = applyIdsScope(q, 'property_id', scopedPropertyIds)
-              q = applyIdsScope(q, 'department_id', taskDepartmentIds)
-              return q
-            }
-
-            const taskQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
-            if (canViewAllTasks) {
-              taskQueries.push(toPromise(buildTaskBaseQuery()))
-            } else if (user?.id) {
-              taskQueries.push(toPromise(buildTaskBaseQuery().eq('assigned_to_id', user.id)))
-              taskQueries.push(toPromise(buildTaskBaseQuery().eq('created_by_id', user.id)))
-            }
-
-            const taskResults = await Promise.all(taskQueries)
-            const tasks = dedupeById(taskResults.flatMap((result) => result.data || []))
-
-            results.push(...tasks.map((task) => ({
-              id: task.id,
-              type: 'task' as const,
-              title: task.title || 'Untitled Task',
-              description: task.description || undefined,
-              category: 'Task',
-              url: `/tasks/${task.id}`,
-              metadata: { status: task.status, due_date: task.due_date },
-              relevance_score: calculateRelevanceScore(query, task.title || '', task.description || '')
-            })))
-          } catch (searchError) {
-            console.error('Error searching tasks:', searchError)
           }
         }
 

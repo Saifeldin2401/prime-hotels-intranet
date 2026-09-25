@@ -36,7 +36,7 @@ export const departmentManagerBlueprint: RoleBlueprint = {
       id: 'task_dept_training',
       titleKey: 'wizard.tasks.department_manager.training.title',
       descriptionKey: 'wizard.tasks.department_manager.training.desc',
-      actionRoute: '/training',
+      actionRoute: '/learn/my',
       actionKey: 'wizard.actions.team_training'
     },
     {

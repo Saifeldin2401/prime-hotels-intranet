@@ -195,7 +195,7 @@ export function KnowledgeBaseSidebar({
         queryKey: ['kb-quizzes-enhanced', effectiveSearch, moduleTopic],
         queryFn: async () => {
             let query = supabase
-                .from('learning_quizzes')
+                .from('quizzes')
                 .select('id, title, description, passing_score_percentage, questions:unified_quiz_questions(count)')
                 .eq('status', 'published')
                 .order('created_at', { ascending: false })

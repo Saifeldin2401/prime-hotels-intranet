@@ -408,13 +408,13 @@ export default function MyProfile() {
                                         <div className="grid gap-2 pt-4">
                                             <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{isRTL ? 'روابط التعلم السريعة' : 'Learning Quick Links'}</Label>
                                             <div className="flex flex-wrap gap-2 mt-1">
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learning/my')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/my')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
                                                     <BookOpen className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'مساري التعليمي' : 'My Learning'}
                                                 </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/courses')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/courses')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
                                                     <Compass className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'دليل الدورات' : 'Course Catalog'}
                                                 </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/training/certificates')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
+                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/certificates')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
                                                     <Award className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'الشهادات والاعتمادات' : 'My Certificates'}
                                                 </Button>
                                             </div>

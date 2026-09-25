@@ -41,8 +41,8 @@
         "description": "Start by uploading your first document or adjust your filters."
     },
     "document": {
-        "all_properties": "All properties",
-        "property_specific": "Property-specific",
+        "all_properties": "All hotels",
+        "property_specific": "Hotel-specific",
         "department_specific": "Department-specific",
         "role_specific": "Role-specific",
         "acknowledged": "Acknowledged",
@@ -57,16 +57,16 @@
         "REJECTED": "Rejected"
     },
     "visibility": {
-        "all_properties": "All Properties",
-        "property": "Specific Property",
+        "all_properties": "All Hotels",
+        "property": "Specific Hotel",
         "department": "Specific Department",
         "role": "Specific Role"
     },
     "role": {
         "regional_admin": "Regional Admin",
         "regional_hr": "Regional HR",
-        "property_manager": "Property Manager",
-        "property_hr": "Property HR",
+        "property_manager": "Hotel Manager",
+        "property_hr": "Hotel HR",
         "department_head": "Department Head",
         "staff": "Staff"
     },
@@ -86,7 +86,7 @@
         "pending_review_msg": "This document is currently under review.",
         "fields": {
             "department": "Department",
-            "property": "Property",
+            "property": "Hotel",
             "created_by": "Created By",
             "last_updated": "Last Updated",
             "status": "Status",
@@ -114,7 +114,7 @@
     },
     "common": {
         "all_departments": "All Departments",
-        "all_properties": "All Properties",
+        "all_properties": "All Hotels",
         "unknown": "Unknown",
         "all_roles": "All Roles",
         "popular_tags": "Popular Tags",
@@ -201,7 +201,7 @@
         "reason_placeholder": "e.g. SOP under review, outdated procedure...",
         "modal_remove_confirm": "Revoke & Remove",
         "modal_internal_title": "Mark as Internal Only",
-        "modal_internal_desc": "This will approve the document for internal department/property reference, but keep it strictly excluded from AI knowledge base indexing and semantic search.",
+        "modal_internal_desc": "This will approve the document for internal department/hotel reference, but keep it strictly excluded from AI knowledge base indexing and semantic search.",
         "modal_internal_confirm": "Save as Internal Only",
         "published_success_title": "Published to Knowledge Base",
         "published_success_desc": "Document is now indexed and available for AI assistants, RAG retrieval, and course generation.",

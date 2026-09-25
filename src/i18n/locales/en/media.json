@@ -36,7 +36,7 @@
     "training": "Training & Onboarding",
     "onboarding": "New Hire Onboarding",
     "compliance": "Compliance & Safety",
-    "brandMarketing": "Brand & Property Assets",
+    "brandMarketing": "Brand & Hotel Assets",
     "suitesAmenities": "Suites & Amenities",
     "marketingEvents": "Dining & Events",
     "customFolders": "Custom Folders",
@@ -125,4 +125,3 @@
     "uploadSuccess": "File uploaded successfully"
   }
 }
-

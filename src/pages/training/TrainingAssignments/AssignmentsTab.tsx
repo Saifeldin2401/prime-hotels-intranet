@@ -409,8 +409,8 @@ export function AssignmentsTab() {
                       )}
                     </div>
                   </div>
-                  <CardTitle className="text-lg font-semibold mt-3 line-clamp-2 leading-snug text-slate-900" title={primaryAssignment.training_modules?.title}>
-                    {primaryAssignment.training_modules?.title || t('unknownModule')}
+                  <CardTitle className="text-lg font-semibold mt-3 line-clamp-2 leading-snug text-slate-900" title={primaryAssignment.courses?.title}>
+                    {primaryAssignment.courses?.title || t('unknownModule')}
                   </CardTitle>
                 </CardHeader>
 
@@ -496,7 +496,7 @@ export function AssignmentsTab() {
                       type="button"
                       variant="outline"
                       className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium h-9"
-                      onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
+                      onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.courses?.title)}
                     >
                       <Users className={cn("h-4 w-4 text-slate-500", isRTL ? "ms-2" : "me-2")} />
                       {t('manageAssignees', 'Manage assignees')}

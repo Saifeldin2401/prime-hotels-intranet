@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     // 1. Fetch all active module assignments to process reminders
     const { data: upcomingAssignments, error: upcomingError } = await supabase
-      .from("training_assignment_rules")
+      .from("assignments")
       .select(
         `
               id,
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     const moduleTitleById = new Map<string, string>();
     if (moduleIds.length > 0) {
       const { data: modules, error: moduleError } = await supabase
-        .from("training_modules")
+        .from("courses")
         .select("id, title")
         .in("id", moduleIds);
 
@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
           type: "training_deadline",
           title: emailTitle,
           message: notificationMessage,
-          link: `/learning/my-learning`,
+          link: `/learning/my`,
           metadata: {
             assignment_id: assignment.id,
             content_id: assignment.content_id,
@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
                 days_until_due: reminderMatch.daysUntilDue,
                 due_date: assignment.due_date,
               },
-              actionUrl: "/learning/my-learning",
+              actionUrl: "/learning/my",
               businessDomain: "learning",
               notificationType: "training_deadline",
             },

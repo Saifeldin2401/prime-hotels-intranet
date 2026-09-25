@@ -29,6 +29,7 @@ import { DepartmentsManagement } from './components/DepartmentsManagement'
 import { RolesManagement } from './components/RolesManagement'
 import { MembershipsManagement } from './components/MembershipsManagement'
 import { OrgStructureTree } from '@/components/org/OrgStructureTree'
+import { TenantOnboardingGuide } from '@/components/onboarding/TenantOnboardingGuide'
 import {
     Building,
     Building2,
@@ -111,28 +112,25 @@ export default function OrganizationalControlCenter() {
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
             {/* Executive Control Header Banner */}
-            <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/75 to-card/40 p-6 sm:p-8 backdrop-blur-2xl shadow-lg">
-                <div className="pointer-events-none absolute -top-24 -end-24 h-72 w-72 rounded-full bg-amber-500/[0.08] blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-blue-500/[0.06] blur-3xl" />
-
+            <div className="relative overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#15212E] p-6 sm:p-8 text-[#F4F2EC] shadow-none">
                 <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                     <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold px-3 py-0.5">
+                            <Badge className="bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40 text-xs font-semibold px-2.5 py-0.5 rounded-[4px]">
                                 <Building2 className="me-1.5 h-3.5 w-3.5" />
                                 {t('admin:organization.title', 'Organizational Control Center')}
                             </Badge>
                             {currentOrganization && (
-                                <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-xs font-mono text-muted-foreground">
+                                <span className="inline-flex items-center gap-1 rounded-[4px] border border-[#30404D] bg-[#1E2D3D] px-2.5 py-0.5 text-xs font-mono text-[#929CA5]">
                                     {currentOrganization.name}
                                 </span>
                             )}
                         </div>
 
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl font-serif">
+                        <h1 className="text-2xl font-bold tracking-tight text-[#F4F2EC] sm:text-3xl lg:text-4xl font-serif">
                             {t('admin:organization.title', 'Organizational Control Center')}
                         </h1>
-                        <p className="text-xs text-muted-foreground sm:text-sm font-normal max-w-2xl leading-relaxed">
+                        <p className="text-xs text-[#929CA5] sm:text-sm font-normal max-w-2xl leading-relaxed">
                             {t('admin:organization.description', 'Manage enterprise hierarchy, hotels, brands, departments, tenant roles, and reporting structures.')}
                         </p>
                     </div>
@@ -141,32 +139,35 @@ export default function OrganizationalControlCenter() {
                         <Button 
                             variant="outline" 
                             onClick={handleGlobalRefresh}
-                            className="h-9 rounded-2xl border-border/60 bg-background/70 px-3.5 text-xs font-semibold hover:border-amber-500/40 hover:bg-background/90 shadow-xs"
+                            className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
                         >
-                            <RefreshCw className="h-3.5 w-3.5 me-1.5 text-amber-500" />
+                            <RefreshCw className="h-3.5 w-3.5 me-1.5 text-[#B79A62]" />
                             <span>{t('common:refresh', 'Refresh')}</span>
                         </Button>
                     </div>
                 </div>
             </div>
 
+            {/* Exceptions first: what is still blocking this organization's setup */}
+            <TenantOnboardingGuide />
+
             {/* Quick Filters for Org Chart / Assignments */}
             {(activeTab === 'orgchart' || activeTab === 'assignments') && (
-                <div className="flex flex-col sm:flex-row gap-3 rounded-2xl border border-border/50 bg-card/60 p-3 backdrop-blur-xl">
+                <div className="flex flex-col sm:flex-row gap-3 rounded-[8px] border border-border bg-card p-3 shadow-none">
                     <div className="flex-1 relative">
                         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                         <Input
                             placeholder={t('admin:organization.search_employees', 'Search employees...')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="h-9 ps-9 rounded-xl border-border/60 bg-background/80 text-xs focus:ring-amber-500/30"
+                            className="h-9 ps-9 rounded-[6px] border-border bg-background text-xs"
                         />
                     </div>
                     <Select
                         value={selectedHotelId || "all"}
                         onValueChange={(val) => setSelectedHotelId(val === "all" ? "" : val)}
                     >
-                        <SelectTrigger className="w-full sm:w-64 h-9 rounded-xl border-border/60 bg-background/80 text-xs">
+                        <SelectTrigger className="w-full sm:w-64 h-9 rounded-[6px] border-border bg-background text-xs">
                             <Building2 className="h-3.5 w-3.5 me-2 text-amber-500" />
                             <SelectValue placeholder={t('admin:organization.all_properties', 'Consolidated (Cluster)')} />
                         </SelectTrigger>
@@ -186,57 +187,57 @@ export default function OrganizationalControlCenter() {
 
             {/* Comprehensive Hierarchy Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="flex flex-wrap h-auto gap-1.5 bg-card/60 p-1.5 rounded-2xl border border-border/60 backdrop-blur-xl shadow-xs">
+                <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/40 p-1 rounded-[8px] border border-border shadow-none">
                     {/* 1. Profile & Entitlements */}
-                    <TabsTrigger value="profile" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="profile" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Building className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_profile', 'Profile & Plan')}</span>
                     </TabsTrigger>
 
                     {/* 2. Brands */}
-                    <TabsTrigger value="brands" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="brands" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Crown className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_brands', 'Brands')}</span>
                     </TabsTrigger>
 
                     {/* 3. Hotels */}
-                    <TabsTrigger value="hotels" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="hotels" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Building2 className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_hotels', 'Hotels')}</span>
                     </TabsTrigger>
 
                     {/* 4. Departments */}
-                    <TabsTrigger value="departments" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="departments" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Briefcase className="h-3.5 w-3.5" />
                         <span>{t('admin:departments', 'Departments')}</span>
                     </TabsTrigger>
 
                     {/* 5. Roles Matrix */}
-                    <TabsTrigger value="roles" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="roles" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Shield className="h-3.5 w-3.5" />
                         <span>{t('admin:roles.title', 'Roles')}</span>
                     </TabsTrigger>
 
                     {/* 6. Memberships */}
-                    <TabsTrigger value="memberships" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="memberships" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Users className="h-3.5 w-3.5" />
                         <span>{t('admin:user_memberships', 'Memberships')}</span>
                     </TabsTrigger>
 
                     {/* 7. Org Chart */}
-                    <TabsTrigger value="orgchart" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="orgchart" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <GitBranch className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_orgchart', 'Org Chart')}</span>
                     </TabsTrigger>
 
                     {/* 8. Assignments */}
-                    <TabsTrigger value="assignments" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="assignments" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <Users className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_assignments', 'Assignments')}</span>
                     </TabsTrigger>
 
                     {/* 10. Audit History */}
-                    <TabsTrigger value="history" className="gap-1.5 py-2 px-3 rounded-xl text-xs font-bold data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-amber-600 data-[state=active]:text-slate-950 transition-all shadow-xs">
+                    <TabsTrigger value="history" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
                         <History className="h-3.5 w-3.5" />
                         <span>{t('admin:organization.tab_history', 'History')}</span>
                     </TabsTrigger>
@@ -556,7 +557,7 @@ function AssignmentsTable({
     }
 
     return (
-        <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-6 shadow-md backdrop-blur-2xl">
+        <div className="rounded-[8px] border border-border bg-card p-6 shadow-none">
             <div className="pb-4 border-b border-border/40">
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                     <Users className="h-4 w-4 text-amber-500" />
@@ -567,7 +568,7 @@ function AssignmentsTable({
                 </p>
             </div>
             <div className="mt-4">
-                <div className="rounded-2xl border border-border/60 overflow-hidden bg-background/40">
+                <div className="rounded-[6px] border border-border overflow-hidden bg-card">
                     <Table>
                         <TableHeader className="bg-muted/40">
                             <TableRow className="border-border/40 hover:bg-transparent">
@@ -667,7 +668,7 @@ function OrgChangeHistory() {
 
     if (isLoading) {
         return (
-            <div className="rounded-3xl border border-border/60 bg-card/60 p-8 flex items-center justify-center">
+            <div className="rounded-[8px] border border-border bg-card p-8 flex items-center justify-center">
                 <RefreshCw className="h-6 w-6 animate-spin text-amber-500 me-2" />
                 <span className="text-xs font-semibold">{t('common:loading', 'Loading...')}</span>
             </div>

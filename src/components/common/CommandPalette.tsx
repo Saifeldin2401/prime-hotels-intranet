@@ -92,24 +92,24 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <>
             <CommandGroup heading={isRTL ? 'إجراءات التعلم السريعة' : 'Learning Actions'}>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/courses'))}
-                onClick={() => runCommand(() => navigate('/courses'))}
+                onSelect={() => runCommand(() => navigate('/learn/courses'))}
+                onClick={() => runCommand(() => navigate('/learn/courses'))}
                 className="cursor-pointer"
               >
                 <Compass className="me-2 h-4 w-4 text-amber-500" />
                 <span>{isRTL ? 'دليل ومكتبة الدورات التدريبية' : 'Explore Course Catalog'}</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/learning/my'))}
-                onClick={() => runCommand(() => navigate('/learning/my'))}
+                onSelect={() => runCommand(() => navigate('/learn/my'))}
+                onClick={() => runCommand(() => navigate('/learn/my'))}
                 className="cursor-pointer"
               >
                 <BookOpen className="me-2 h-4 w-4 text-amber-500" />
                 <span>{isRTL ? 'مساري التعليمي ومقرراتي' : 'My Learning Curriculum'}</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/training/certificates'))}
-                onClick={() => runCommand(() => navigate('/training/certificates'))}
+                onSelect={() => runCommand(() => navigate('/learn/certificates'))}
+                onClick={() => runCommand(() => navigate('/learn/certificates'))}
                 className="cursor-pointer"
               >
                 <Award className="me-2 h-4 w-4 text-amber-500" />
@@ -137,8 +137,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <span>{isRTL ? 'الملف المهني' : 'My Profile'}</span>
               </CommandItem>
               <CommandItem
-                onSelect={() => runCommand(() => navigate('/training/paths'))}
-                onClick={() => runCommand(() => navigate('/training/paths'))}
+                onSelect={() => runCommand(() => navigate('/learn/paths'))}
+                onClick={() => runCommand(() => navigate('/learn/paths'))}
                 className="cursor-pointer"
               >
                 <GraduationCap className="me-2 h-4 w-4 text-slate-400" />

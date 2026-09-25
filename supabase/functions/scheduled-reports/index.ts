@@ -64,25 +64,10 @@ const fetchReportData = async (
     typeof filters?.date_to === "string" ? filters.date_to : undefined;
 
   switch (reportType) {
-    case "operations": {
-      // maintenance_tickets no longer exists in the schema (module never
-      // shipped in the current multi-tenant model) — that section is
-      // reported empty rather than issuing a query guaranteed to error.
-      const tasks = await applyDateRange(
-        supabaseClient
-          .from("tasks")
-          .select("id,title,status,priority,created_at")
-          .eq("organization_id", organizationId)
-          .limit(500),
-        "created_at",
-        dateFrom,
-        dateTo,
-      );
-      return {
-        tasks: tasks.data || [],
-        maintenance_tickets: [],
-      };
-    }
+    case "operations":
+      // The operations domain (tasks, maintenance) was removed from the
+      // product; fail the run explicitly instead of emailing an empty report.
+      throw new Error("The operations report is no longer available.");
     case "hr": {
       // leave_requests no longer exists in the schema — reported empty
       // rather than issuing a query guaranteed to error.
@@ -104,11 +89,11 @@ const fetchReportData = async (
     case "training": {
       // learning_progress_v (a compatibility view over training_progress) has
       // no organization_id column, so scoping goes through the org's
-      // training_modules instead.
+      // courses instead.
       const [assignments, orgModules] = await Promise.all([
         applyDateRange(
           supabaseClient
-            .from("training_assignment_rules")
+            .from("assignments")
             .select("id,status,due_date,created_at,target_type,recipient_count")
             .eq("organization_id", organizationId)
             .eq("is_deleted", false)
@@ -118,7 +103,7 @@ const fetchReportData = async (
           dateTo,
         ),
         supabaseClient
-          .from("training_modules")
+          .from("courses")
           .select("id")
           .eq("organization_id", organizationId),
       ]);

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import type { Json } from '@/lib/database.types'
+import type { Json } from '@/types/database.generated'
 import type {
   PlatformAccessSession,
   MasterContentDeployment,
@@ -109,7 +109,7 @@ export const platformService = {
 
       // 5. Master Courses count
       const { count: tmMasterCount } = await supabase
-        .from('training_modules')
+        .from('courses')
         .select('id', { count: 'exact', head: true })
         .eq('is_master_template', true)
         .eq('is_deleted', false)
@@ -554,7 +554,7 @@ export const platformService = {
 
   async getMasterCourses(): Promise<any[]> {
     const { data: tmData, error: tmError } = await supabase
-      .from('training_modules')
+      .from('courses')
       .select('*')
       .eq('is_master_template', true)
       .eq('is_deleted', false)
@@ -621,7 +621,7 @@ export const platformService = {
     actorId?: string
   }): Promise<any> {
     const { data, error } = await supabase
-      .from('training_modules')
+      .from('courses')
       .insert({
         title: params.title.trim(),
         description: params.description?.trim() || null,
@@ -736,7 +736,7 @@ export const platformService = {
     }
   ): Promise<any> {
     const { data: currentCourse, error: fetchErr } = await supabase
-      .from('training_modules')
+      .from('courses')
       .select('*')
       .eq('id', courseId)
       .single()
@@ -749,7 +749,7 @@ export const platformService = {
     const updatedBlueprint = params.blueprint ? { ...params.blueprint, version: newVersion } : { ...currentBp, version: newVersion }
 
     const { data: updatedCourse, error: updateErr } = await supabase
-      .from('training_modules')
+      .from('courses')
       .update({
         title: params.title !== undefined ? params.title : currentCourse.title,
         description: params.description !== undefined ? params.description : currentCourse.description,
@@ -1005,7 +1005,7 @@ export const platformService = {
       } else {
         // Fetch target Course / Module
         const { data: targetModule } = await supabase
-          .from('training_modules')
+          .from('courses')
           .select('*')
           .eq('id', targetContentId)
           .single()
@@ -1017,7 +1017,7 @@ export const platformService = {
 
         let masterModule: any = null
         const { data: tmMaster } = await supabase
-          .from('training_modules')
+          .from('courses')
           .select('*')
           .eq('id', masterId)
           .maybeSingle()
@@ -1186,7 +1186,7 @@ export const platformService = {
       } else {
         // Course / Training Module sync
         const { data: targetModule, error: targetErr } = await supabase
-          .from('training_modules')
+          .from('courses')
           .select('*')
           .eq('id', params.targetContentId)
           .single()
@@ -1198,7 +1198,7 @@ export const platformService = {
 
         let masterModule: any = null
         const { data: tmMaster } = await supabase
-          .from('training_modules')
+          .from('courses')
           .select('*')
           .eq('id', masterId)
           .maybeSingle()
@@ -1212,7 +1212,7 @@ export const platformService = {
 
         // Update target module
         await supabase
-          .from('training_modules')
+          .from('courses')
           .update({
             title: masterModule.title,
             description: masterModule.description,

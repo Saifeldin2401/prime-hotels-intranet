@@ -2,7 +2,7 @@ import { dehydrate, hydrate, type DehydratedState, type Query } from '@tanstack/
 
 import { queryClient } from '@/lib/queryClient'
 
-const QUERY_CACHE_KEY = 'altus_query_cache_v4'
+const QUERY_CACHE_KEY = 'altus_query_cache_v5'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5
 const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'learning-progress',
@@ -49,6 +49,37 @@ const filterDehydratedState = (state: DehydratedState): DehydratedState => ({
   } as Pick<Query, 'queryKey' | 'meta' | 'state'>)),
 })
 
+/**
+ * The snapshot belongs to one member in one organization. It is written with
+ * that scope and only restored for the same scope, and it is wiped on sign-out,
+ * so a second person on the same browser tab - or the same person after
+ * switching organization - never sees data cached for someone else.
+ */
+let currentUserId: string | null = null
+
+const scopeFor = (userId: string) => {
+  let tenant = ''
+  try {
+    tenant = window.localStorage.getItem(`active_tenant_id_${userId}`) ?? ''
+  } catch {
+    // Storage unavailable: scope by user alone.
+  }
+  return `${userId}|${tenant}`
+}
+
+export const setQueryCacheUser = (userId: string | null) => {
+  currentUserId = userId
+}
+
+export const clearQueryCache = () => {
+  queryClient.clear()
+  try {
+    window.sessionStorage.removeItem(QUERY_CACHE_KEY)
+  } catch {
+    // Ignore storage cleanup errors.
+  }
+}
+
 export const restoreQueryCache = () => {
   if (typeof window === 'undefined') return
 
@@ -58,6 +89,10 @@ export const restoreQueryCache = () => {
 
     const parsed = JSON.parse(raw)
     if (!parsed?.timestamp || !parsed?.state) return
+    if (!currentUserId || parsed.scope !== scopeFor(currentUserId)) {
+      window.sessionStorage.removeItem(QUERY_CACHE_KEY)
+      return
+    }
 
     if (Date.now() - parsed.timestamp > QUERY_CACHE_TTL_MS) {
       window.sessionStorage.removeItem(QUERY_CACHE_KEY)
@@ -71,7 +106,7 @@ export const restoreQueryCache = () => {
 }
 
 export const persistQueryCache = () => {
-  if (typeof window === 'undefined') return
+  if (typeof window === 'undefined' || !currentUserId) return
 
   try {
     const state = dehydrate(queryClient, {
@@ -80,7 +115,7 @@ export const persistQueryCache = () => {
 
     window.sessionStorage.setItem(
       QUERY_CACHE_KEY,
-      JSON.stringify({ timestamp: Date.now(), state }),
+      JSON.stringify({ timestamp: Date.now(), scope: scopeFor(currentUserId), state }),
     )
   } catch {
     try {

@@ -15,6 +15,7 @@ export default defineConfig([
     '.agents',
     '.cursor',
     '.codex',
+    '.kilo',
     'supabase/functions',
     'supabase/migrations',
     // Local-only vendored UI templates (already git-ignored). Not application
@@ -97,6 +98,8 @@ export default defineConfig([
       'src/lib/theme.ts',
       'src/**/*chart*.{ts,tsx}',
       'src/**/*Chart*.{ts,tsx}',
+      'src/ui/tokens/**/*.{ts,tsx}',
+      'src/ui/primitives/**/*.{ts,tsx}',
     ],
     rules: {
       'no-restricted-syntax': 'off',

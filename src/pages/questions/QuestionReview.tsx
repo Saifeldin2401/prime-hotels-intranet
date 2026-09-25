@@ -55,7 +55,7 @@ export function QuestionReview() {
         return (
             <div className="flex flex-col items-center justify-center h-96 text-center">
                 <p className="text-gray-500 mb-4">Question not found</p>
-                <Button variant="outline" onClick={() => navigate('/questions')}>
+                <Button variant="outline" onClick={() => navigate('/studio/quizzes')}>
                     {t('question_review.back_to_library')}
                 </Button>
             </div>
@@ -73,7 +73,7 @@ export function QuestionReview() {
                     title: t('question_review.toasts.approved_title'),
                     description: t('question_review.toasts.approved_desc')
                 })
-                navigate('/questions')
+                navigate('/studio/quizzes')
             }
         })
     }
@@ -86,7 +86,7 @@ export function QuestionReview() {
                     description: t('question_review.toasts.returned_desc')
                 })
                 setIsRejectDialogOpen(false)
-                navigate('/questions')
+                navigate('/studio/quizzes')
             }
         })
     }
@@ -96,7 +96,7 @@ export function QuestionReview() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => navigate('/questions')}>
+                    <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
                         <ArrowLeft className="h-4 w-4 me-2" />
                         {t('common:common.back')}
                     </Button>
@@ -115,7 +115,7 @@ export function QuestionReview() {
 
                 <div className="flex items-center gap-2">
                     <Button variant="outline" asChild>
-                        <Link to={`/questions/${question.id}/edit`}>
+                        <Link to={`/studio/questions/${question.id}/edit`}>
                             <FileEdit className="h-4 w-4 me-2" />
                             {t('common:common.edit')}
                         </Link>

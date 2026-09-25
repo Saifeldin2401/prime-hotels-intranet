@@ -43,10 +43,10 @@ describe('Multi-Tenant Isolation & Security Suite', () => {
 
       vi.mocked(supabase.from).mockReturnValue(mockQueryBuilder as any)
 
-      const resultTenantB = await supabase.from('training_modules').select('*').eq('organization_id', tenantBId)
+      const resultTenantB = await supabase.from('courses').select('*').eq('organization_id', tenantBId)
       expect(resultTenantB.data).toEqual([])
 
-      const resultTenantA = await supabase.from('training_modules').select('*').eq('organization_id', tenantAId)
+      const resultTenantA = await supabase.from('courses').select('*').eq('organization_id', tenantAId)
       expect(resultTenantA.data).toHaveLength(1)
       expect(resultTenantA.data?.[0].organization_id).toBe(tenantAId)
     })

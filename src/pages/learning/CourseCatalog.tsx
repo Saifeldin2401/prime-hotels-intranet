@@ -77,7 +77,7 @@ export default function CourseCatalog() {
         queryKey: ['catalog-published-modules', currentOrganization?.id],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('training_modules')
+                .from('courses')
                 .select('id, title, description, estimated_duration_minutes, difficulty_level, status, certificate_enabled, created_at')
                 .eq('status', 'published')
                 .eq('is_deleted', false)
@@ -171,7 +171,7 @@ export default function CourseCatalog() {
                 progressPercentage: userProg?.progress_percentage || 0,
                 isMandatory: false,
                 isOverdue: false,
-                actionUrl: `/courses/${mod.id}`,
+                actionUrl: `/learn/courses/${mod.id}`,
             }
         })
     }, [filteredModules, progressMap, isRTL])
@@ -179,7 +179,7 @@ export default function CourseCatalog() {
     // Self-enroll & Launch
     const handleLaunchCourse = async (moduleId: string) => {
         if (!user?.id) {
-            navigate(`/training/player/${moduleId}`)
+            navigate(`/learn/player/${moduleId}`)
             return
         }
 
@@ -201,10 +201,10 @@ export default function CourseCatalog() {
                 queryClient.invalidateQueries({ queryKey: ['catalog-user-progress'] })
                 queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
             }
-            navigate(`/training/player/${moduleId}`)
+            navigate(`/learn/player/${moduleId}`)
         } catch (err) {
             console.error('Error starting module:', err)
-            navigate(`/training/player/${moduleId}`)
+            navigate(`/learn/player/${moduleId}`)
         } finally {
             setEnrollingId(null)
             setPreviewModule(null)
@@ -212,42 +212,34 @@ export default function CourseCatalog() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50/60 dark:bg-slate-950 p-4 sm:p-6 lg:p-10">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div className="min-h-screen bg-[#F6F6F3] dark:bg-[#0D151D] p-4 sm:p-6 lg:p-8 font-sans">
+            <div className="max-w-7xl mx-auto space-y-6">
                 {/* Header Cockpit Banner */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-amber-950/40 p-8 sm:p-10 text-white shadow-2xl border border-amber-500/20">
-                    <img
-                        src="/assets/altus/concierge-frontdesk.jpg"
-                        alt="ALTUS Luxury Academy"
-                        className="absolute inset-0 h-full w-full object-cover opacity-15 mix-blend-luminosity pointer-events-none"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-transparent pointer-events-none" />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(217,119,6,0.15),transparent_50%)] pointer-events-none" />
-                    
+                <div className="relative overflow-hidden rounded-[8px] bg-[#15212E] p-6 sm:p-8 text-white border border-[#30404D]">
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-                        <div className="space-y-3">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3.5 py-1 text-xs font-semibold text-amber-400 backdrop-blur-md">
-                                <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                        <div className="space-y-2.5">
+                            <div className="inline-flex items-center gap-1.5 rounded-[6px] border border-[#86672C]/40 bg-[#86672C]/15 px-3 py-1 text-xs font-semibold text-[#D4AA55]">
+                                <Sparkles className="h-3.5 w-3.5 text-[#D4AA55]" />
                                 <span>{isRTL ? 'أكاديمية آلتوس للضيافة الفاخرة' : 'ALTUS Hospitality Academy'}</span>
                             </div>
-                            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white font-serif">
+                            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white font-sans">
                                 {isRTL ? 'كتالوج الدورات والمعايير الفندقية' : 'Curriculum & Operational Standards Catalog'}
                             </h1>
-                            <p className="text-sm sm:text-base text-slate-300 max-w-2xl leading-relaxed">
+                            <p className="text-sm text-[#929CA5] max-w-2xl leading-relaxed">
                                 {isRTL
                                     ? 'استكشف كافة البرامج التدريبية المعتمدة، معايير الخدمة الراقية، وإجراءات التشغيل القياسية المصممة وفقاً لأرقى معايير الضيافة السعودية والعالمية.'
                                     : 'Explore verified operational masterclasses, luxury guest etiquette, and standard operating procedures tailored for world-class hotel operations in KSA.'}
                             </p>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2.5">
                             <Button
                                 asChild
                                 variant="outline"
-                                className="border-amber-500/30 bg-white/5 text-white hover:bg-white/10 hover:border-amber-400 rounded-xl"
+                                className="border-[#30404D] bg-[#1E2C3A] text-white hover:bg-[#253545] rounded-[6px]"
                             >
-                                <Link to="/learning/my">
-                                    <BookOpen className="h-4 w-4 me-2 text-amber-400" />
+                                <Link to="/learn/my">
+                                    <BookOpen className="h-4 w-4 me-2 text-[#D4AA55]" />
                                     {isRTL ? 'دوراتي المسجلة' : 'My Learning'}
                                 </Link>
                             </Button>
@@ -256,10 +248,10 @@ export default function CourseCatalog() {
                                 <Button
                                     asChild
                                     variant="outline"
-                                    className="border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-700 rounded-xl"
+                                    className="border-[#30404D] bg-[#1E2C3A] text-slate-200 hover:bg-[#253545] rounded-[6px]"
                                 >
-                                    <Link to="/training/hub">
-                                        <GraduationCap className="h-4 w-4 me-2 text-amber-400" />
+                                    <Link to="/studio">
+                                        <GraduationCap className="h-4 w-4 me-2 text-[#D4AA55]" />
                                         {isRTL ? 'لوحة تحكم الأكاديمية' : 'LMS Control Center'}
                                     </Link>
                                 </Button>
@@ -268,26 +260,26 @@ export default function CourseCatalog() {
                     </div>
 
                     {/* Quick Stats Strip */}
-                    <div className="relative z-10 mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-white/10 text-xs">
+                    <div className="relative z-10 mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-[#30404D] text-xs">
                         <div>
-                            <span className="text-slate-400 block">{isRTL ? 'إجمالي البرامج المنشورة' : 'Total Published Courses'}</span>
-                            <span className="text-2xl font-bold text-amber-400">{rawModules?.length || 0}</span>
+                            <span className="text-[#929CA5] block">{isRTL ? 'إجمالي البرامج المنشورة' : 'Total Published Courses'}</span>
+                            <span className="text-xl font-mono font-bold text-[#D4AA55]">{rawModules?.length || 0}</span>
                         </div>
                         <div>
-                            <span className="text-slate-400 block">{isRTL ? 'دوراتك قيد التقدم' : 'Enrolled & In Progress'}</span>
-                            <span className="text-2xl font-bold text-emerald-400">
+                            <span className="text-[#929CA5] block">{isRTL ? 'دوراتك قيد التقدم' : 'Enrolled & In Progress'}</span>
+                            <span className="text-xl font-mono font-bold text-emerald-400">
                                 {userProgressList?.filter((p) => p.status === 'in_progress').length || 0}
                             </span>
                         </div>
                         <div>
-                            <span className="text-slate-400 block">{isRTL ? 'دورات أتممتها بنجاح' : 'Completed Modules'}</span>
-                            <span className="text-2xl font-bold text-cyan-400">
+                            <span className="text-[#929CA5] block">{isRTL ? 'دورات أتممتها بنجاح' : 'Completed Modules'}</span>
+                            <span className="text-xl font-mono font-bold text-cyan-400">
                                 {userProgressList?.filter((p) => p.status === 'completed').length || 0}
                             </span>
                         </div>
                         <div>
-                            <span className="text-slate-400 block">{isRTL ? 'شهادات الاعتماد' : 'Accredited Certificates'}</span>
-                            <span className="text-2xl font-bold text-hotel-gold">
+                            <span className="text-[#929CA5] block">{isRTL ? 'شهادات الاعتماد' : 'Accredited Certificates'}</span>
+                            <span className="text-xl font-mono font-bold text-[#D4AA55]">
                                 {rawModules?.filter((m) => m.certificate_enabled).length || (rawModules?.length || 0)}
                             </span>
                         </div>
@@ -295,7 +287,7 @@ export default function CourseCatalog() {
                 </div>
 
                 {/* Track Selector Pills */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                     {TRACKS.map((track) => {
                         const isSelected = selectedTrack === track.id
                         return (
@@ -303,10 +295,10 @@ export default function CourseCatalog() {
                                 key={track.id}
                                 onClick={() => setSelectedTrack(track.id)}
                                 className={cn(
-                                    'whitespace-nowrap px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-sm',
+                                    'whitespace-nowrap px-3.5 py-2 rounded-[6px] text-xs font-medium transition-colors border',
                                     isSelected
-                                        ? 'bg-hotel-gold text-slate-950 shadow-amber-500/20 shadow-md font-bold'
-                                        : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:border-amber-400/50'
+                                        ? 'bg-[#86672C] text-white border-[#86672C] font-semibold'
+                                        : 'bg-[#FFFFFF] dark:bg-[#15212E] text-[#15212E] dark:text-[#F4F2EC] border-[#DDDBD4] dark:border-[#30404D] hover:border-[#86672C]/40'
                                 )}
                             >
                                 {isRTL ? track.labelAr : track.labelEn}
@@ -316,8 +308,8 @@ export default function CourseCatalog() {
                 </div>
 
                 {/* Search & Filter Toolbar */}
-                <Card className="rounded-2xl border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm">
-                    <CardContent className="p-4 sm:p-5">
+                <Card className="rounded-[8px] border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] shadow-none">
+                    <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
                             {/* Search Input */}
                             <div className="relative w-full sm:w-96">
@@ -326,7 +318,7 @@ export default function CourseCatalog() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder={isRTL ? 'ابحث عن دورة، معيار فندقي، أو موضوع...' : 'Search courses, standards, or topics...'}
-                                    className="ps-10 rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-amber-500"
+                                    className="ps-10 rounded-[6px] bg-[#F6F6F3] dark:bg-[#0D151D] border-[#DDDBD4] dark:border-[#30404D] focus-visible:ring-[#86672C]"
                                 />
                                 {searchQuery && (
                                     <button
@@ -341,7 +333,7 @@ export default function CourseCatalog() {
                             {/* Filters & View Toggle */}
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                                 <Select value={difficultyFilter} onValueChange={setDifficultyFilter}>
-                                    <SelectTrigger className="w-36 rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-xs">
+                                    <SelectTrigger className="w-36 rounded-[6px] bg-[#F6F6F3] dark:bg-[#0D151D] border-[#DDDBD4] dark:border-[#30404D] text-xs">
                                         <SelectValue placeholder={isRTL ? 'المستوى' : 'Level'} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -352,14 +344,14 @@ export default function CourseCatalog() {
                                     </SelectContent>
                                 </Select>
 
-                                <div className="flex items-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-1">
+                                <div className="flex items-center rounded-[6px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#F6F6F3] dark:bg-[#0D151D] p-0.5">
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setViewMode('grid')}
                                         className={cn(
-                                            'h-7 px-2.5 rounded-lg text-xs',
-                                            viewMode === 'grid' && 'bg-white dark:bg-slate-900 shadow-sm font-bold text-amber-600 dark:text-amber-400'
+                                            'h-7 px-2.5 rounded-[4px] text-xs',
+                                            viewMode === 'grid' && 'bg-white dark:bg-slate-900 shadow-2xs font-bold text-[#86672C] dark:text-[#D4AA55]'
                                         )}
                                     >
                                         <LayoutGrid className="h-3.5 w-3.5 me-1" />
@@ -370,8 +362,8 @@ export default function CourseCatalog() {
                                         size="sm"
                                         onClick={() => setViewMode('table')}
                                         className={cn(
-                                            'h-7 px-2.5 rounded-lg text-xs',
-                                            viewMode === 'table' && 'bg-white dark:bg-slate-900 shadow-sm font-bold text-amber-600 dark:text-amber-400'
+                                            'h-7 px-2.5 rounded-[4px] text-xs',
+                                            viewMode === 'table' && 'bg-white dark:bg-slate-900 shadow-2xs font-bold text-[#86672C] dark:text-[#D4AA55]'
                                         )}
                                     >
                                         <List className="h-3.5 w-3.5 me-1" />
@@ -386,11 +378,11 @@ export default function CourseCatalog() {
                 {/* Results Section */}
                 {modulesLoading ? (
                     <div className="py-24 flex flex-col items-center justify-center space-y-4">
-                        <Loader2 className="h-10 w-10 animate-spin text-amber-500" />
+                        <Loader2 className="h-10 w-10 animate-spin text-[#86672C]" />
                         <p className="text-sm text-slate-500">{isRTL ? 'جاري تحميل كتالوج الدورات...' : 'Loading ALTUS curriculum catalog...'}</p>
                     </div>
                 ) : filteredModules.length === 0 ? (
-                    <div className="py-16 text-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 p-8">
+                    <div className="py-16 text-center rounded-[8px] border border-dashed border-[#DDDBD4] dark:border-[#30404D] p-8">
                         <BookOpen className="mx-auto h-12 w-12 text-slate-400 mb-3" />
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">
                             {isRTL ? 'لم يتم العثور على دورات مطابقة' : 'No matching courses found'}
@@ -407,7 +399,7 @@ export default function CourseCatalog() {
                                 setSelectedTrack('all')
                                 setDifficultyFilter('all')
                             }}
-                            className="mt-4 rounded-xl"
+                            className="mt-4 rounded-[6px]"
                         >
                             <RotateCcw className="h-4 w-4 me-2" />
                             {isRTL ? 'إعادة ضبط التصفية' : 'Reset Filters'}
@@ -428,7 +420,7 @@ export default function CourseCatalog() {
                                     <div className="mt-2 flex items-center justify-between px-1">
                                         <button
                                             onClick={() => raw && setPreviewModule(raw)}
-                                            className="text-xs font-semibold text-slate-500 hover:text-amber-600 transition-colors flex items-center gap-1"
+                                            className="text-xs font-semibold text-slate-500 hover:text-[#86672C] dark:hover:text-[#D4AA55] transition-colors flex items-center gap-1"
                                         >
                                             <Compass className="h-3.5 w-3.5" />
                                             {isRTL ? 'نظرة سريعة على المحتوى' : 'Quick Syllabus'}
@@ -451,19 +443,19 @@ export default function CourseCatalog() {
 
                 {/* Course Preview Dialog */}
                 <Dialog open={!!previewModule} onOpenChange={(open) => !open && setPreviewModule(null)}>
-                    <DialogContent className="max-w-2xl rounded-3xl p-6 sm:p-8">
+                    <DialogContent className="max-w-2xl rounded-[10px] p-6 sm:p-8 bg-[#FFFFFF] dark:bg-[#15212E] border border-[#DDDBD4] dark:border-[#30404D]">
                         {previewModule && (
                             <div className="space-y-6">
                                 <DialogHeader className="space-y-3">
                                     <div className="flex items-center gap-2">
-                                        <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30">
+                                        <Badge className="bg-[#86672C]/10 text-[#86672C] dark:text-[#D4AA55] border border-[#86672C]/30 rounded-[4px]">
                                             {isRTL ? 'أكاديمية آلتوس' : 'ALTUS Academy'}
                                         </Badge>
-                                        <Badge variant="outline">
+                                        <Badge variant="outline" className="rounded-[4px]">
                                             {previewModule.difficulty_level || (isRTL ? 'تأسيسي' : 'Foundational')}
                                         </Badge>
                                     </div>
-                                    <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white font-serif">
+                                    <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white font-sans">
                                         {previewModule.title}
                                     </DialogTitle>
                                     <DialogDescription className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
@@ -475,23 +467,23 @@ export default function CourseCatalog() {
                                 </DialogHeader>
 
                                 {/* Meta details */}
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-[8px] bg-[#F6F6F3] dark:bg-[#0D151D] border border-[#DDDBD4] dark:border-[#30404D] text-xs">
                                     <div>
-                                        <span className="text-slate-400 block">{isRTL ? 'المدة التقديرية' : 'Estimated Time'}</span>
+                                        <span className="text-[#929CA5] block">{isRTL ? 'المدة التقديرية' : 'Estimated Time'}</span>
                                         <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 mt-0.5">
-                                            <Clock className="h-3.5 w-3.5 text-amber-500" />
+                                            <Clock className="h-3.5 w-3.5 text-[#86672C] dark:text-[#D4AA55]" />
                                             {previewModule.estimated_duration_minutes || 20} {isRTL ? 'دقيقة' : 'mins'}
                                         </span>
                                     </div>
                                     <div>
-                                        <span className="text-slate-400 block">{isRTL ? 'الاعتماد والشهادة' : 'Accreditation'}</span>
+                                        <span className="text-[#929CA5] block">{isRTL ? 'الاعتماد والشهادة' : 'Accreditation'}</span>
                                         <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1 mt-0.5">
-                                            <Award className="h-3.5 w-3.5 text-amber-500" />
+                                            <Award className="h-3.5 w-3.5 text-[#86672C] dark:text-[#D4AA55]" />
                                             {isRTL ? 'شهادة رقمية معتمدة' : 'Official Certificate'}
                                         </span>
                                     </div>
                                     <div>
-                                        <span className="text-slate-400 block">{isRTL ? 'حالة التسجيل' : 'Enrollment Status'}</span>
+                                        <span className="text-[#929CA5] block">{isRTL ? 'حالة التسجيل' : 'Enrollment Status'}</span>
                                         <span className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 block">
                                             {progressMap.get(previewModule.id)?.status === 'completed'
                                                 ? (isRTL ? 'مكتمل بنجاح' : 'Completed')
@@ -502,28 +494,28 @@ export default function CourseCatalog() {
                                     </div>
                                 </div>
 
-                                <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-2">
+                                <DialogFooter className="flex flex-col sm:flex-row gap-2.5 pt-2">
                                     <Button
                                         variant="outline"
                                         onClick={() => setPreviewModule(null)}
-                                        className="rounded-xl"
+                                        className="rounded-[6px]"
                                     >
                                         {isRTL ? 'إغلاق' : 'Close'}
                                     </Button>
                                     <Button
                                         asChild
                                         variant="outline"
-                                        className="rounded-xl border-amber-500/30 hover:border-amber-400"
+                                        className="rounded-[6px] border-[#DDDBD4] dark:border-[#30404D]"
                                     >
-                                        <Link to={`/courses/${previewModule.id}`}>
-                                            <BookOpen className="h-4 w-4 me-2 text-amber-500" />
+                                        <Link to={`/learn/courses/${previewModule.id}`}>
+                                            <BookOpen className="h-4 w-4 me-2 text-[#86672C] dark:text-[#D4AA55]" />
                                             {isRTL ? 'صفحة تفاصيل الدورة والمنهج' : 'Course Details & Syllabus'}
                                         </Link>
                                     </Button>
                                     <Button
                                         onClick={() => handleLaunchCourse(previewModule.id)}
                                         disabled={enrollingId === previewModule.id}
-                                        className="rounded-xl bg-hotel-gold text-slate-950 hover:bg-hotel-gold-dark font-bold shadow-md"
+                                        className="rounded-[6px] bg-[#86672C] text-white hover:bg-[#725725] font-semibold shadow-none"
                                     >
                                         {enrollingId === previewModule.id ? (
                                             <Loader2 className="h-4 w-4 animate-spin me-2" />

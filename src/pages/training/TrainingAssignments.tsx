@@ -55,7 +55,7 @@ function TrainingAssignmentsPanelInner() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/training/assignments/rules')}
+                  onClick={() => navigate('/manage/assignments/rules')}
                   className="hidden md:flex"
                 >
                   <Settings className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />

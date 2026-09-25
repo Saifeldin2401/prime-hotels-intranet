@@ -4,6 +4,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { MetricCard } from '@/ui/components/MetricCard'
 import {
     Table,
     TableBody,
@@ -20,7 +21,7 @@ import {
   TrendingUp, 
   GraduationCap, 
   Award, 
-  CheckCircle2,
+  CheckCircle2, 
   Sparkles,
   BarChart3
 } from 'lucide-react'
@@ -40,12 +41,12 @@ function TopicBreakdown({ userId, name }: { userId: string; name: string }) {
     })
 
     return (
-        <Card className="rounded-3xl border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/40 backdrop-blur-2xl shadow-md">
+        <Card className="rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] shadow-none">
             <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-base font-bold flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-amber-500" />
+                      <BarChart3 className="h-4 w-4 text-[#86672C] dark:text-[#D4AA55]" />
                       <span>Strengths &amp; Gaps Analysis — {name}</span>
                     </CardTitle>
                     <CardDescription className="text-xs">
@@ -56,13 +57,13 @@ function TopicBreakdown({ userId, name }: { userId: string; name: string }) {
             </CardHeader>
             <CardContent>
                 {isLoading ? (
-                    <Skeleton className="h-40 w-full rounded-2xl" />
+                    <Skeleton className="h-40 w-full rounded-[6px]" />
                 ) : error ? (
                     <p className="text-sm text-destructive">Failed to load breakdown.</p>
                 ) : !data || data.length === 0 ? (
                     <EmptyState size="sm" title="No question attempts yet for this learner" />
                 ) : (
-                    <div className="rounded-2xl border border-border/50 overflow-hidden bg-background/50">
+                    <div className="rounded-[6px] border border-[#DDDBD4] dark:border-[#30404D] overflow-hidden bg-background">
                       <Table>
                           <TableHeader>
                               <TableRow className="bg-muted/30">
@@ -188,77 +189,42 @@ export default function LearnerAnalyticsPanel() {
         <div className="space-y-6">
             {/* 1. Executive Summary Telemetry Deck */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'إجمالي المتعلمين النشطين' : 'Active Learners'}</span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500">
-                          <Users className="h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline justify-between">
-                        <span className="text-3xl font-black font-serif text-foreground">{formatNumber(summaryStats.totalLearners)}</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                          <TrendingUp className="h-3 w-3" />
-                          {isRTL ? 'نشط الآن' : '+14% MoM'}
-                        </span>
-                    </div>
-                </div>
+                <MetricCard
+                    label={isRTL ? 'إجمالي المتعلمين النشطين' : 'Active Learners'}
+                    value={formatNumber(summaryStats.totalLearners)}
+                    icon={<Users className="h-4 w-4" />}
+                    trend={{ value: isRTL ? 'نشط الآن' : '+14% MoM', isPositive: true }}
+                />
 
-                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'متوسط التقدم العام' : 'Avg Progression'}</span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500">
-                          <GraduationCap className="h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline justify-between">
-                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.avgProgress}%</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                          <Sparkles className="h-3 w-3" />
-                          {isRTL ? 'معياري' : 'Curriculum'}
-                        </span>
-                    </div>
-                </div>
+                <MetricCard
+                    label={isRTL ? 'متوسط التقدم العام' : 'Avg Progression'}
+                    value={`${summaryStats.avgProgress}%`}
+                    icon={<GraduationCap className="h-4 w-4" />}
+                    secondaryText={isRTL ? 'المناهج المعتمدة' : 'Curriculum benchmark'}
+                />
 
-                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'متوسط نتائج التقييم' : 'Mean Quiz Score'}</span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                          <Award className="h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline justify-between">
-                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.avgQuiz}%</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                          <CheckCircle2 className="h-3 w-3" />
-                          {isRTL ? 'موثق' : 'Top Tier'}
-                        </span>
-                    </div>
-                </div>
+                <MetricCard
+                    label={isRTL ? 'متوسط نتائج التقييم' : 'Mean Quiz Score'}
+                    value={`${summaryStats.avgQuiz}%`}
+                    icon={<Award className="h-4 w-4" />}
+                    secondaryText={isRTL ? 'موثق' : 'Top Tier standard'}
+                />
 
-                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-card/90 to-card/50 p-4 shadow-sm backdrop-blur-xl transition-all hover:border-amber-500/30">
-                    <div className="flex items-center justify-between text-muted-foreground">
-                        <span className="text-xs font-bold uppercase tracking-wider">{isRTL ? 'معدل اجتياز الاختبارات' : 'Overall Pass Rate'}</span>
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-teal-500">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </div>
-                    </div>
-                    <div className="mt-3 flex items-baseline justify-between">
-                        <span className="text-3xl font-black font-serif text-foreground">{summaryStats.passRate}%</span>
-                        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-600 dark:text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-full">
-                          {isRTL ? 'معيار 5 نجوم' : 'Benchmark'}
-                        </span>
-                    </div>
-                </div>
+                <MetricCard
+                    label={isRTL ? 'معدل اجتياز الاختبارات' : 'Overall Pass Rate'}
+                    value={`${summaryStats.passRate}%`}
+                    icon={<CheckCircle2 className="h-4 w-4" />}
+                    secondaryText={isRTL ? 'معيار 5 نجوم' : '5-star benchmark'}
+                />
             </div>
 
             {/* 2. Learner Directory Table Card */}
-            <Card className="rounded-3xl border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/40 backdrop-blur-2xl shadow-md">
-                <CardHeader>
+            <Card className="rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] shadow-none">
+                <CardHeader className="pb-3 border-b border-[#DDDBD4]/50 dark:border-[#30404D]/50">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div>
                         <CardTitle className="text-base font-bold flex items-center gap-2">
-                          <Users className="h-4 w-4 text-amber-500" />
+                          <Users className="h-4 w-4 text-[#86672C] dark:text-[#B79A62]" />
                           <span>{isRTL ? 'سجل أداء الموظفين والمتعلمين' : 'Learner Performance Directory'}</span>
                         </CardTitle>
                         <CardDescription className="text-xs">
@@ -274,7 +240,7 @@ export default function LearnerAnalyticsPanel() {
                           placeholder={isRTL ? 'بحث بالاسم أو المسمى...' : 'Filter by name or title...'}
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="h-9 ps-8 text-xs rounded-xl bg-background/60 border-border/60"
+                          className="h-9 ps-8 text-xs rounded-[6px] bg-background border-border"
                         />
                       </div>
                     </div>
@@ -311,7 +277,7 @@ export default function LearnerAnalyticsPanel() {
                                       >
                                           <TableCell>
                                               <div className="flex items-center gap-3">
-                                                  <Avatar className="h-8 w-8 rounded-xl border border-amber-500/30">
+                                                  <Avatar className="h-8 w-8 rounded-[6px] border border-border">
                                                       <AvatarFallback className="bg-amber-500/10 text-amber-600 font-bold text-xs">
                                                           {initials}
                                                       </AvatarFallback>
@@ -330,7 +296,7 @@ export default function LearnerAnalyticsPanel() {
                                               <div className="flex items-center gap-2">
                                                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/60">
                                                       <div
-                                                          className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-emerald-500 transition-all duration-500"
+                                                          className="h-full rounded-full bg-[#86672C] dark:bg-[#B79A62] transition-all duration-500"
                                                           style={{ width: `${Math.min(100, Math.max(0, row.avg_progress))}%` }}
                                                       />
                                                   </div>
@@ -378,7 +344,7 @@ export default function LearnerAnalyticsPanel() {
             {selected ? (
                 <TopicBreakdown userId={selected.user_id} name={selected.full_name ?? 'Learner'} />
             ) : (
-                <div className="rounded-2xl border border-border/50 bg-card/40 p-4 text-xs text-muted-foreground flex items-center gap-2">
+                <div className="rounded-[8px] border border-border bg-card p-4 text-xs text-muted-foreground flex items-center gap-2">
                     <Badge variant="outline" className="border-amber-500/30 text-amber-600 bg-amber-500/10 font-bold">
                       Tip
                     </Badge> 

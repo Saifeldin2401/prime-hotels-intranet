@@ -22,35 +22,35 @@ export const trainingManagerBlueprint: RoleBlueprint = {
       id: 'task_lms_catalog',
       titleKey: 'wizard.tasks.training_manager.catalog.title',
       descriptionKey: 'wizard.tasks.training_manager.catalog.desc',
-      actionRoute: '/training',
+      actionRoute: '/learn/my',
       actionKey: 'wizard.actions.course_catalog'
     },
     {
       id: 'task_lms_create_module',
       titleKey: 'wizard.tasks.training_manager.create_module.title',
       descriptionKey: 'wizard.tasks.training_manager.create_module.desc',
-      actionRoute: '/training/builder',
+      actionRoute: '/studio/courses/new',
       actionKey: 'wizard.actions.module_builder'
     },
     {
       id: 'task_lms_learning_paths',
       titleKey: 'wizard.tasks.training_manager.paths.title',
       descriptionKey: 'wizard.tasks.training_manager.paths.desc',
-      actionRoute: '/training/paths',
+      actionRoute: '/learn/paths',
       actionKey: 'wizard.actions.learning_paths'
     },
     {
       id: 'task_lms_compliance_reports',
       titleKey: 'wizard.tasks.training_manager.compliance.title',
       descriptionKey: 'wizard.tasks.training_manager.compliance.desc',
-      actionRoute: '/training/reports',
+      actionRoute: '/manage/reports',
       actionKey: 'wizard.actions.compliance_reports'
     },
     {
       id: 'task_lms_certificates',
       titleKey: 'wizard.tasks.training_manager.certificates.title',
       descriptionKey: 'wizard.tasks.training_manager.certificates.desc',
-      actionRoute: '/training/certificates',
+      actionRoute: '/learn/certificates',
       actionKey: 'wizard.actions.certificates'
     }
   ],
@@ -80,13 +80,13 @@ export const trainingManagerBlueprint: RoleBlueprint = {
       id: 'tour_course_builder',
       titleKey: 'wizard.tours.course_builder.title',
       descriptionKey: 'wizard.tours.course_builder.desc',
-      route: '/training/builder'
+      route: '/studio/courses/new'
     },
     {
       id: 'tour_training_reports',
       titleKey: 'wizard.tours.training_reports.title',
       descriptionKey: 'wizard.tours.training_reports.desc',
-      route: '/training/reports'
+      route: '/manage/reports'
     }
   ]
 }

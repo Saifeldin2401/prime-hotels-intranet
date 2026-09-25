@@ -59,8 +59,7 @@ export const createMockSupabaseClient = (): MockSupabaseClient => {
       single: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockReturnThis(),
       csv: vi.fn().mockReturnThis(),
-      match: vi.fn().mockReturnThis(),
-      then: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: vi.fn((onFulfilled, onRejected) => Promise.resolve({ data: [], error: null }).then(onFulfilled, onRejected)),
     }),
     auth: {
       getSession: vi.fn().mockResolvedValue({

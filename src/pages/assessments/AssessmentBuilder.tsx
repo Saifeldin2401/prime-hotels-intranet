@@ -35,7 +35,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
 // TODO(assessment-slice): `assessment_type` (formative | summative) is a UI-only
-// toggle for now. Add the `training_assignment_rules`/quiz DB column + persist in
+// toggle for now. Add the `assignments`/quiz DB column + persist in
 // a later slice, then wire `assessmentType` into the CreateQuizDTO payload.
 type AssessmentType = 'formative' | 'summative'
 
@@ -157,7 +157,7 @@ export default function AssessmentBuilder() {
                 description: t('training:quizzes.builder.load_error'),
                 variant: 'destructive',
             })
-            navigate('/assessments')
+            navigate('/studio/quizzes')
         } finally {
             setLoading(false)
         }
@@ -205,7 +205,7 @@ export default function AssessmentBuilder() {
                 savedQuiz = await learningService.createQuiz(quizPayload)
                 await ensureSavedQuizIntegrity(savedQuiz.id, quizPayload.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_created') })
-                navigate(`/assessments/builder/${savedQuiz.id}`, { replace: true })
+                navigate(`/studio/quizzes/${savedQuiz.id}`, { replace: true })
             }
         } catch (error) {
             console.error(error)
@@ -238,7 +238,7 @@ export default function AssessmentBuilder() {
                     <p className="text-muted-foreground">{t('training:quizzes.builder.subtitle')}</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => navigate('/assessments')}>{t('common.cancel')}</Button>
+                    <Button variant="outline" onClick={() => navigate('/studio/quizzes')}>{t('common.cancel')}</Button>
                     <Button onClick={handleSave} disabled={saving}>
                         {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
                     </Button>
@@ -421,7 +421,7 @@ export default function AssessmentBuilder() {
                                             />
                                         </DialogContent>
                                     </Dialog>
-                                    <Button variant="outline" onClick={() => navigate('/assessments/questions/new')}>
+                                    <Button variant="outline" onClick={() => navigate('/studio/questions/new')}>
                                         <Plus className="me-2 h-4 w-4" /> {t('training:quizzes.builder.author_question', 'Author question')}
                                     </Button>
                                     <Button variant="outline" onClick={() => setShowSelector(true)}>

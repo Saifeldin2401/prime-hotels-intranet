@@ -49,15 +49,15 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
 
     const PrimaryIcon = primary?.icon ? ICONS[primary.icon] : null
     const intentClass = primary?.intent === 'success'
-        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+        ? 'bg-pc-success hover:bg-pc-success/90 text-white rounded-[6px]'
         : primary?.intent === 'destructive'
-            ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground'
-            : 'bg-hotel-gold hover:bg-hotel-gold-dark text-white'
+            ? 'bg-pc-danger hover:bg-pc-danger/90 text-white rounded-[6px]'
+            : 'bg-pc-ink hover:bg-pc-ink/90 text-pc-surface rounded-[6px]'
 
     return (
         <footer
             className={cn(
-                'z-20 shrink-0 border-t border-border/60 bg-card/95 backdrop-blur-xl',
+                'z-20 shrink-0 border-t border-pc-border bg-pc-surface shadow-none',
                 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
             )}
         >

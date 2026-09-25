@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTenant } from '@/contexts/TenantContext'
-import { ROUTES, getGroupConfig, type NavigationGroup } from '@/config/navigation'
+import { getGroupConfig, getOwningRoute } from '@/config/navigation'
 import { Building2, Building, Crown, ChevronDown, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -37,37 +37,13 @@ export function TenantBreadcrumbs() {
   const isPlatformPath = location.pathname.startsWith('/platform')
   const showPlatformBreadcrumb = (isPlatformScope || isPlatformPath) && isPlatformAdmin
 
-  // Identify matching route configuration
-  const activeRoute = React.useMemo(() => {
-    // 1. Exact match
-    const exact = ROUTES.find((r) => r.path === location.pathname)
-    if (exact) return exact
-
-    // 2. Child routes check
-    for (const r of ROUTES) {
-      if (r.children) {
-        const childMatch = r.children.find((c) => c.path === location.pathname)
-        if (childMatch) {
-          return {
-            ...childMatch,
-            group: r.group,
-          }
-        }
-      }
-    }
-
-    // 3. Prefix match (longest path wins)
-    const prefixes = ROUTES.filter(
-      (r) => r.path !== '/' && location.pathname.startsWith(r.path)
-    ).sort((a, b) => b.path.length - a.path.length)
-
-    return prefixes[0] || null
-  }, [location.pathname])
+  // The canonical route that owns this URL (longest prefix wins)
+  const activeRoute = React.useMemo(() => getOwningRoute(location.pathname) ?? null, [location.pathname])
 
   // Get active domain group config
   const groupConfig = React.useMemo(() => {
     if (!activeRoute?.group) return null
-    return getGroupConfig(activeRoute.group as NavigationGroup)
+    return getGroupConfig(activeRoute.group)
   }, [activeRoute])
 
   // Don't display empty breadcrumb on root landing or missing context
@@ -192,7 +168,7 @@ export function TenantBreadcrumbs() {
           )}
 
           {/* Level 3: SaaS Domain / Section Group */}
-          {groupConfig && groupConfig.id !== 'home_workspace' && groupConfig.id !== 'platform_operations' && (
+          {groupConfig && groupConfig.id !== 'account' && groupConfig.id !== 'platform_operations' && (
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>

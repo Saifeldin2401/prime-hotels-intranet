@@ -175,10 +175,14 @@ export default function AssignmentManager() {
     useEffect(() => {
         loadAssignments()
 
-        // Handle pre-filled quiz assignment
+        // Pre-filled assignment from Studio (?course=) or the quiz bank (?quiz=)
         const quizId = searchParams.get('quiz')
+        const courseId = searchParams.get('course')
         if (quizId) {
             setFormData(prev => ({ ...prev, content_type: 'quiz', content_id: quizId }))
+            setShowModal(true)
+        } else if (courseId) {
+            setFormData(prev => ({ ...prev, content_type: 'module', content_id: courseId }))
             setShowModal(true)
         }
     }, [searchParams])
@@ -356,7 +360,7 @@ export default function AssignmentManager() {
         <div className="space-y-6 animate-fade-in">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Assignment Manager</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t('training:assignments', 'Assignments')}</h1>
                     <p className="text-muted-foreground mt-2">
                         Target quizzes and content to specific staff, roles, or departments.
                     </p>
@@ -415,7 +419,7 @@ export default function AssignmentManager() {
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="quiz">Quiz</SelectItem>
-                                        <SelectItem value="module">Training Module</SelectItem>
+                                        <SelectItem value="module">Course</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -427,7 +431,7 @@ export default function AssignmentManager() {
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="quiz">Quiz</SelectItem>
-                                        <SelectItem value="module">Training Module</SelectItem>
+                                        <SelectItem value="module">Course</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

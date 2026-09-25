@@ -32,7 +32,7 @@ const EMPTY: AccountContextShape = {
   primary_organization_id: null,
   is_multi_org: false,
   all_orgs_suspended: false,
-  recommended_destination: '/home/learner',
+  recommended_destination: '/learn',
 }
 
 interface AccountContextValue {
@@ -147,7 +147,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       primaryOrganizationId: ctx.primary_organization_id ?? null,
       isMultiOrg: !!ctx.is_multi_org,
       allOrgsSuspended: !!ctx.all_orgs_suspended,
-      recommendedDestination: ctx.recommended_destination || '/home/learner',
+      recommendedDestination: ctx.recommended_destination || '/learn',
       refresh: resolve,
     }
   }, [ctx, loading, authLoading, resolveFailed, resolve])
@@ -168,7 +168,7 @@ const FALLBACK_ACCOUNT_VALUE: AccountContextValue = {
   primaryOrganizationId: null,
   isMultiOrg: false,
   allOrgsSuspended: false,
-  recommendedDestination: '/home/learner',
+  recommendedDestination: '/learn',
   refresh: async () => {},
 }
 

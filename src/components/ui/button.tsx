@@ -6,22 +6,22 @@ import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
   // Tokenized base. Tactile press feedback (active:scale-[0.98]) with Apple/Emil snappy transition curve. Motion is auto-disabled via prefers-reduced-motion.
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-[transform,background-color,border-color,color,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold tracking-[-0.01em] ring-offset-background transition-[transform,background-color,border-color,color,box-shadow] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 motion-reduce:transform-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+        default: "bg-primary text-primary-foreground shadow-sm shadow-primary/20 hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
+          "bg-destructive text-destructive-foreground shadow-sm shadow-destructive/20 hover:bg-destructive/90 hover:shadow-md hover:shadow-destructive/20",
         outline:
-          "border border-input bg-background/80 hover:bg-accent hover:text-accent-foreground shadow-sm",
+          "border border-input bg-background/90 shadow-sm hover:border-ring/40 hover:bg-accent hover:text-accent-foreground",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground", // Transparent by default — recedes until hovered
         link: "text-primary underline-offset-4 hover:underline",
-        gold: "bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm",
-        navy: "bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm",
-        copper: "bg-altus-copper text-white hover:bg-altus-copper/90 shadow-sm",
+        gold: "bg-hotel-gold text-white shadow-sm shadow-hotel-gold/25 hover:bg-hotel-gold-dark hover:shadow-md",
+        navy: "bg-hotel-navy text-white shadow-sm shadow-hotel-navy/25 hover:bg-hotel-navy-light hover:shadow-md",
+        copper: "bg-altus-copper text-white shadow-sm shadow-altus-copper/25 hover:bg-altus-copper/90 hover:shadow-md",
         sand: "bg-altus-sand text-hotel-navy hover:bg-altus-sand/80 shadow-sm",
       },
       size: {

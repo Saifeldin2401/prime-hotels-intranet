@@ -36,7 +36,7 @@ export const knowledgeManagerBlueprint: RoleBlueprint = {
       id: 'task_sop_reviews',
       titleKey: 'wizard.tasks.knowledge_manager.reviews.title',
       descriptionKey: 'wizard.tasks.knowledge_manager.reviews.desc',
-      actionRoute: '/knowledge/reviews',
+      actionRoute: '/studio/review',
       actionKey: 'wizard.actions.review_queue'
     },
     {
