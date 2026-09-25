@@ -13,8 +13,8 @@ import {
 import { useTranslation } from 'react-i18next'
 
 const languages = [
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦' }
+  { code: 'en', nameKey: 'language.en', flag: '🇺🇸' },
+  { code: 'ar', nameKey: 'language.ar', flag: '🇸🇦' }
 ]
 
 interface LanguageSwitcherProps {
@@ -47,7 +47,7 @@ export function LanguageSwitcher({ className, variant = "outline", showLabel = t
           {showLabel && (
             <>
               <span className="me-2">{currentLanguage.flag}</span>
-              {currentLanguage.name}
+              {t(currentLanguage.nameKey)}
               <ChevronDown className="h-4 w-4 ms-2" />
             </>
           )}
@@ -61,7 +61,7 @@ export function LanguageSwitcher({ className, variant = "outline", showLabel = t
             className="flex items-center gap-2"
           >
             <span>{language.flag}</span>
-            <span>{language.name}</span>
+            <span>{t(language.nameKey)}</span>
             {language.code === currentLang && (
               <span className="text-green-600">✓</span>
             )}
