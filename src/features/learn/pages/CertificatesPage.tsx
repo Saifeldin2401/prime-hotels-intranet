@@ -1,10 +1,11 @@
 /**
  * Learn > My certificates.
  *
- * A proof wallet. What is valid now, what is about to lapse and how to renew
- * it, and for each certificate the three things people actually need: the
- * verification code, the PDF, and a public verification link. Lapsed and
- * replaced certificates stay available as history, out of the way.
+ * A proof wallet shown as a wall of framed certificates. What is valid now,
+ * what is about to lapse and how to renew it, and for each certificate the
+ * things people actually need: the verification code, the PDF, a public
+ * verification link and a way to share it. Lapsed and replaced certificates
+ * stay available as history, out of the way.
  */
 
 import { useMemo, useState } from 'react'
@@ -17,6 +18,8 @@ import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificat
 import { cn } from '@/lib/utils'
 import type { Certificate } from '@/services/certificateService'
 import { EmptyState, ErrorState, Skeleton, WorkspaceHeader } from '@/ui'
+
+import { CertificateCard } from '../gamification/components/CertificateCard'
 
 const SOON_DAYS = 60
 const DAY = 24 * 60 * 60 * 1000
@@ -51,6 +54,21 @@ export default function CertificatesPage() {
       toast.success(t('certs.copied', 'Verification code copied'))
     } catch {
       toast.error(t('certs.copyFailed', 'Could not copy. Select the code and copy it manually.'))
+    }
+  }
+
+  const share = async (c: Certificate) => {
+    const url = `${window.location.origin}/verify/${encodeURIComponent(c.verificationCode)}`
+    const text = t('certs.shareText', 'I earned the "{{title}}" certificate. Verify it here:', { title: c.title })
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: c.title, text, url })
+        return
+      }
+      await navigator.clipboard.writeText(`${text} ${url}`)
+      toast.success(t('certs.linkCopied', 'Verification link copied'))
+    } catch (err) {
+      if ((err as Error)?.name !== 'AbortError') toast.error(t('certs.shareFailed', 'Could not share. Copy the verification code instead.'))
     }
   }
 
@@ -135,7 +153,7 @@ export default function CertificatesPage() {
         <ErrorState title={t('certs.errorTitle', 'Your certificates could not be loaded')} message={t('certs.errorHint', 'Check your connection and try again. Your certificates are safe.')} onRetry={() => void certs.refetch()} />
       ) : valid.length === 0 && past.length === 0 ? (
         <EmptyState
-          icon={<Award className="h-6 w-6" aria-hidden="true" />}
+          illustration="certificate"
           title={t('certs.emptyTitle', 'No certificates yet')}
           description={t('certs.emptyBody', 'Courses that award a certificate issue it automatically when you finish them.')}
           action={<Link to="/learn/courses" className="text-sm font-semibold text-ds-accent hover:underline">{t('certs.explore', 'Explore courses')}</Link>}
@@ -145,9 +163,20 @@ export default function CertificatesPage() {
           <section aria-labelledby="certs-valid" className="space-y-3">
             <h2 id="certs-valid" className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">{t('certs.validTitle', 'Valid now')}</h2>
             {valid.length > 0 ? (
-              <ul className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
-                {valid.map((c) => <Row key={c.id} c={c} />)}
-              </ul>
+              <div className="grid gap-6 sm:grid-cols-2">
+                {valid.map((c) => (
+                  <CertificateCard
+                    key={c.id}
+                    certificate={c}
+                    expiringSoon={!!c.expiryDate && new Date(c.expiryDate).getTime() - now < SOON_DAYS * DAY}
+                    renewHref={renewHref(c)}
+                    downloading={download.isPending && download.variables === c.id}
+                    onDownload={() => download.mutate(c.id)}
+                    onCopy={(value) => void copy(value)}
+                    onShare={() => void share(c)}
+                  />
+                ))}
+              </div>
             ) : (
               <p className="rounded-[6px] border border-dashed border-ds-border px-4 py-5 text-sm text-ds-muted">{t('certs.noneValid', 'None of your certificates are currently valid. Renew them from the course.')}</p>
             )}

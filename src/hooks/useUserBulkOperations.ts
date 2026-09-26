@@ -148,24 +148,33 @@ export function useUserBulkOperations() {
 
             await Promise.all(userIds.map(async (userId) => {
                 try {
-                    // RLS (has_profile_access) silently matches 0 rows - not an error - when the
-                    // caller lacks access to this profile. Assert an affected row so a blocked
-                    // update isn't reported as a successful deactivation.
-                    const { data: updatedRows, error } = await supabase
-                        .from('profiles')
-                        .update({
-                            is_active: false,
-                            account_status: 'suspended',
-                            suspend_reason: reason || 'Bulk deactivation',
-                            suspended_at: new Date().toISOString(),
-                            suspended_until: suspendUntil || null,
+                    if (currentOrganization?.id) {
+                        const { data: deactivated, error } = await supabase.rpc('remove_tenant_member', {
+                            p_org_id: currentOrganization.id,
+                            p_user_id: userId,
                         })
-                        .eq('id', userId)
-                        .select('id')
+                        if (error) throw error
+                        if (!deactivated) {
+                            throw new Error('Member not found or already deactivated in this organization')
+                        }
+                    } else {
+                        // Platform fallback if not operating inside a specific tenant
+                        const { data: updatedRows, error } = await supabase
+                            .from('profiles')
+                            .update({
+                                is_active: false,
+                                account_status: 'suspended',
+                                suspend_reason: reason || 'Bulk deactivation',
+                                suspended_at: new Date().toISOString(),
+                                suspended_until: suspendUntil || null,
+                            })
+                            .eq('id', userId)
+                            .select('id')
 
-                    if (error) throw error
-                    if (!updatedRows || updatedRows.length === 0) {
-                        throw new Error('Insufficient privilege to deactivate this user')
+                        if (error) throw error
+                        if (!updatedRows || updatedRows.length === 0) {
+                            throw new Error('Insufficient privilege to deactivate this user')
+                        }
                     }
 
                     if (note && note.trim()) {
@@ -243,25 +252,34 @@ export function useUserBulkOperations() {
 
             await Promise.all(userIds.map(async (userId) => {
                 try {
-                    // RLS (has_profile_access) silently matches 0 rows - not an error - when the
-                    // caller lacks access to this profile. Assert an affected row so a blocked
-                    // update isn't reported as a successful activation.
-                    const { data: updatedRows, error } = await supabase
-                        .from('profiles')
-                        .update({
-                            is_active: true,
-                            account_status: 'active',
-                            suspended_at: null,
-                            suspended_by: null,
-                            suspend_reason: null,
-                            suspended_until: null,
+                    if (currentOrganization?.id) {
+                        const { data: activated, error } = await supabase.rpc('activate_tenant_member', {
+                            p_org_id: currentOrganization.id,
+                            p_user_id: userId,
                         })
-                        .eq('id', userId)
-                        .select('id')
+                        if (error) throw error
+                        if (!activated) {
+                            throw new Error('Member not found in this organization')
+                        }
+                    } else {
+                        // Platform fallback if not operating inside a specific tenant
+                        const { data: updatedRows, error } = await supabase
+                            .from('profiles')
+                            .update({
+                                is_active: true,
+                                account_status: 'active',
+                                suspended_at: null,
+                                suspended_by: null,
+                                suspend_reason: null,
+                                suspended_until: null,
+                            })
+                            .eq('id', userId)
+                            .select('id')
 
-                    if (error) throw error
-                    if (!updatedRows || updatedRows.length === 0) {
-                        throw new Error('Insufficient privilege to activate this user')
+                        if (error) throw error
+                        if (!updatedRows || updatedRows.length === 0) {
+                            throw new Error('Insufficient privilege to activate this user')
+                        }
                     }
 
                     if (note && note.trim()) {

@@ -5,6 +5,8 @@
  * (overdue and mandatory work), continue where I left off, due soon, then
  * saved knowledge and certificates. Every item leads to an action and every
  * number comes from the member's own data - nothing decorative or invented.
+ * The momentum strip (level, streak, next badge) and the leaderboard are
+ * derived on the server from the same learning records.
  */
 
 import { useMemo, useState } from 'react'
@@ -21,6 +23,12 @@ import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useMyAssignments } from '@/hooks/useTraining'
 import type { LearningAssignment } from '@/types/learning'
 import { cn } from '@/lib/utils'
+import { Celebration, useMilestones } from '@/features/learn/gamification/components/Celebration'
+import { CourseCover } from '@/features/learn/gamification/components/CourseCover'
+import { FirstRunWelcomeModal } from '@/features/learn/gamification/components/FirstRunWelcomeModal'
+import { LeaderboardPanel } from '@/features/learn/gamification/components/LeaderboardPanel'
+import { MomentumPanel } from '@/features/learn/gamification/components/MomentumPanel'
+import { useMyLearningStats, useWelcomeSeen } from '@/features/learn/gamification/gamificationHooks'
 import {
     ActionQueue,
     EmptyState,
@@ -69,6 +77,11 @@ export default function LearnerHome() {
         (m) => m.organization_id === currentOrganization?.id,
     )?.department_id ?? undefined
     const roleArticlesQuery = useArticles({ departmentId, limit: 5 })
+    const statsQuery = useMyLearningStats()
+    const milestones = useMilestones(statsQuery.data, user?.id, currentOrganization?.id)
+    const welcomeSeenQuery = useWelcomeSeen()
+    const [welcomeDismissed, setWelcomeDismissed] = useState(false)
+    const showWelcome = !welcomeDismissed && welcomeSeenQuery.isSuccess && welcomeSeenQuery.data === false
 
     const formatDate = (iso: string) =>
         new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
@@ -179,6 +192,8 @@ export default function LearnerHome() {
                 </p>
             </header>
 
+            {!statsQuery.isError && <MomentumPanel stats={statsQuery.data} isLoading={statsQuery.isLoading} />}
+
             <div className="grid gap-8 lg:grid-cols-12 items-start">
                 <div className="lg:col-span-8 space-y-8">
                     {/* 1. Required now */}
@@ -209,10 +224,17 @@ export default function LearnerHome() {
                         <section aria-labelledby="my-day-continue" className="space-y-3">
                             <SectionHeader
                             headingId="my-day-continue" title={t('training:myDay.continue', 'Continue where you left off')} />
-                            <div className="flex flex-col gap-4 rounded-xl border border-ds-border bg-ds-surface p-4 sm:flex-row sm:items-center">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-ds-accent-soft text-ds-accent">
-                                    <PlayCircle className="h-5 w-5" aria-hidden="true" />
-                                </div>
+                            <div className="group flex flex-col gap-4 rounded-xl border border-ds-border bg-ds-surface p-4 sm:flex-row sm:items-center">
+                                <CourseCover
+                                    course={{ id: continueLearning.content_id, title: continueLearning.courses?.title }}
+                                    className="h-28 w-full sm:h-20 sm:w-32"
+                                >
+                                    <span className="absolute inset-0 flex items-center justify-center">
+                                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-ds-surface/90 text-ds-accent shadow">
+                                            <PlayCircle className="h-5 w-5" aria-hidden="true" />
+                                        </span>
+                                    </span>
+                                </CourseCover>
                                 <div className="min-w-0 flex-1 space-y-2">
                                     <p className="truncate text-sm font-semibold text-ds-ink">
                                         {continueLearning.courses?.title ?? t('training:untitledAssignment', 'Untitled item')}
@@ -260,6 +282,19 @@ export default function LearnerHome() {
                 </div>
 
                 <aside className="lg:col-span-4 space-y-8">
+                    <section aria-labelledby="my-day-board" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-board"
+                            title={t('training:game.board.title', 'Leaderboard')}
+                            action={
+                                <Link to="/learn/achievements" className="text-xs font-semibold text-ds-accent hover:underline">
+                                    {t('training:game.board.seeAll', 'See all')}
+                                </Link>
+                            }
+                        />
+                        <LeaderboardPanel compact />
+                    </section>
+
                     <section aria-labelledby="my-day-role-knowledge" className="space-y-3">
                         <SectionHeader
                             headingId="my-day-role-knowledge"
@@ -292,7 +327,7 @@ export default function LearnerHome() {
                             </ul>
                         ) : (
                             <EmptyState
-                                icon={<BookOpen className="h-5 w-5" aria-hidden="true" />}
+                                illustration="knowledge"
                                 title={t('training:myDay.noRoleKnowledge', 'No articles for your department yet')}
                                 description={t('training:myDay.noRoleKnowledgeHint', 'Your knowledge manager publishes SOPs here. Search the knowledge base in the meantime.')}
                             />
@@ -328,7 +363,7 @@ export default function LearnerHome() {
                             </ul>
                         ) : (
                             <EmptyState
-                                icon={<BookMarked className="h-5 w-5" aria-hidden="true" />}
+                                illustration="saved"
                                 title={t('training:myDay.noSaved', 'No saved articles')}
                                 description={t('training:myDay.noSavedHint', 'Save the SOPs you use most to find them here.')}
                             />
@@ -363,6 +398,9 @@ export default function LearnerHome() {
                     </section>
                 </aside>
             </div>
+
+            <Celebration milestone={milestones.current} onClose={milestones.dismiss} />
+            <FirstRunWelcomeModal isOpen={showWelcome} onClose={() => setWelcomeDismissed(true)} />
         </div>
     )
 }

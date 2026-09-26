@@ -12,6 +12,7 @@ const TrainingPaths = lazy(() => import('@/pages/training/TrainingPaths'))
 const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
 const AssessmentPlayer = lazy(() => import('@/pages/assessments/AssessmentPlayer'))
 const CertificatesPage = lazy(() => import('@/features/learn/pages/CertificatesPage'))
+const AchievementsPage = lazy(() => import('@/features/learn/pages/AchievementsPage'))
 const KnowledgeHubPage = lazy(() => import('@/features/knowledge/pages/KnowledgeHubPage'))
 const KnowledgeRead = lazy(() => import('@/pages/knowledge/KnowledgeRead'))
 const DocumentLibrary = lazy(() => import('@/pages/documents/DocumentLibrary'))
@@ -31,6 +32,7 @@ export const LearnRoutes = () => (
         <Route path="/learn/player/:id" element={page(<TrainingPlayer />)} />
         <Route path="/learn/quizzes/:id" element={page(<AssessmentPlayer />)} />
         <Route path="/learn/certificates" element={page(<CertificatesPage />)} />
+        <Route path="/learn/achievements" element={page(<AchievementsPage />)} />
 
         <Route path="/knowledge" element={page(<KnowledgeHubPage />, { capability: 'knowledge.read' })} />
         <Route path="/knowledge/:id" element={page(<KnowledgeRead />, { capability: 'knowledge.read' })} />

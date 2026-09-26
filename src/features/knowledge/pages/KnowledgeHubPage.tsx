@@ -3,7 +3,8 @@
  *
  * Search first. With no query, the hub is organized by how people actually
  * look for an SOP: what they are required to read, what applies to their
- * role, what changed recently, what colleagues use most, and - for
+ * role, what is trending this week, what changed recently, what colleagues
+ * use most, and - for
  * publishers - what is past its review date. Every result shows the signals
  * that make an article trustworthy (see ArticleTrustRow).
  */
@@ -11,7 +12,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
-import { BookMarked, FileCheck2, Search, X } from 'lucide-react'
+import { BookMarked, FileCheck2, Flame, Search, Users, X, type LucideIcon } from 'lucide-react'
 
 import { useTenant } from '@/contexts/TenantContext'
 import { useAccountContext } from '@/hooks/useAccountContext'
@@ -22,7 +23,11 @@ import { cn } from '@/lib/utils'
 import type { KnowledgeArticle } from '@/types/knowledge'
 import { EmptyState, Skeleton } from '@/ui'
 
+import { CourseCover } from '@/features/learn/gamification/components/CourseCover'
+
+import { usePopularArticles } from '../api/popularApi'
 import { ArticleTrustRow } from '../components/ArticleTrustRow'
+import { knowledgeTypeStyle } from '../knowledgeTypes'
 
 type TypeFilter = 'all' | 'sop' | 'guide' | 'policy' | 'required' | 'saved'
 
@@ -50,7 +55,8 @@ function Section({ id, title, action, children }: { id: string; title: string; a
 }
 
 export default function KnowledgeHubPage() {
-  const { t } = useTranslation('knowledge')
+  const { t, i18n } = useTranslation('knowledge')
+  const i18nArabic = i18n.language?.startsWith('ar')
   const [searchParams, setSearchParams] = useSearchParams()
   const [now] = useState(() => Date.now())
   const { currentOrganization } = useTenant()
@@ -80,6 +86,7 @@ export default function KnowledgeHubPage() {
   const roleArticles = useArticles({ departmentId, limit: 6 })
   const reading = useRequiredReading()
   const bookmarks = useBookmarks()
+  const trending = usePopularArticles(7, 6)
 
   const all = useMemo(() => results.data ?? [], [results.data])
   const pendingReadingIds = useMemo(
@@ -116,13 +123,13 @@ export default function KnowledgeHubPage() {
     setSearchParams(params)
   }
 
-  const filters: { id: TypeFilter; label: string; count?: number }[] = [
+  const filters: { id: TypeFilter; label: string; count?: number; icon?: LucideIcon; tone?: string }[] = [
     { id: 'all', label: t('hub.filter.all', 'All') },
-    { id: 'sop', label: t('hub.filter.sop', 'SOPs') },
-    { id: 'guide', label: t('hub.filter.guide', 'Guides') },
-    { id: 'policy', label: t('hub.filter.policy', 'Policies') },
-    { id: 'required', label: t('hub.filter.required', 'Required reading'), count: pendingReadingIds.size },
-    { id: 'saved', label: t('hub.filter.saved', 'Saved'), count: savedIds.size },
+    { id: 'sop', label: t('hub.filter.sop', 'SOPs'), icon: knowledgeTypeStyle('sop').icon, tone: knowledgeTypeStyle('sop').text },
+    { id: 'guide', label: t('hub.filter.guide', 'Guides'), icon: knowledgeTypeStyle('guide').icon, tone: knowledgeTypeStyle('guide').text },
+    { id: 'policy', label: t('hub.filter.policy', 'Policies'), icon: knowledgeTypeStyle('policy').icon, tone: knowledgeTypeStyle('policy').text },
+    { id: 'required', label: t('hub.filter.required', 'Required reading'), count: pendingReadingIds.size, icon: FileCheck2, tone: 'text-ds-warning' },
+    { id: 'saved', label: t('hub.filter.saved', 'Saved'), count: savedIds.size, icon: BookMarked, tone: 'text-ds-brass' },
   ]
 
   const scope = currentOrganization?.name ?? ''
@@ -130,7 +137,8 @@ export default function KnowledgeHubPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-10">
       {/* Search first */}
-      <header className="space-y-5 border-b border-ds-border pb-8">
+      <header className="relative space-y-5 overflow-hidden rounded-2xl border border-ds-border bg-gradient-to-br from-ds-accent-soft via-ds-surface to-ds-brass/10 p-5 sm:p-8">
+        <div aria-hidden="true" className="pointer-events-none absolute -end-16 -top-16 h-56 w-56 rounded-full bg-ds-brass/10 blur-2xl" />
         <div className="space-y-2">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-accent">{t('hub.eyebrow', 'Knowledge')}</p>
           <h1 className="font-editorial text-[34px] font-semibold leading-tight text-ds-ink sm:text-[42px]">
@@ -171,6 +179,7 @@ export default function KnowledgeHubPage() {
                 filter === f.id ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong'
               )}
             >
+              {f.icon && <f.icon aria-hidden="true" className={cn('h-3.5 w-3.5', filter === f.id ? 'text-current' : f.tone)} />}
               {f.label}
               {!!f.count && <span className="font-mono text-xs tabular-nums opacity-70">{f.count}</span>}
             </button>
@@ -196,7 +205,7 @@ export default function KnowledgeHubPage() {
             <ArticleList articles={shown} now={now} />
           ) : (
             <EmptyState
-              icon={<Search className="h-5 w-5" aria-hidden="true" />}
+              illustration="search"
               title={query ? t('hub.noResults', 'No articles match "{{q}}"', { q: query }) : t('hub.noResultsFilter', 'No articles here yet')}
               description={t('hub.noResultsHint', 'Try fewer words or another type. If an SOP should exist, tell your knowledge manager.')}
               action={
@@ -209,7 +218,7 @@ export default function KnowledgeHubPage() {
         </Section>
       ) : all.length === 0 ? (
         <EmptyState
-          icon={<BookMarked className="h-6 w-6" aria-hidden="true" />}
+          illustration="knowledge"
           title={t('hub.emptyTitle', 'No knowledge published yet')}
           description={can('content.author')
             ? t('hub.emptyAuthor', 'Write the first SOP, guide or policy for your teams.')
@@ -227,6 +236,42 @@ export default function KnowledgeHubPage() {
                 {t('hub.requiredHint', 'Read these and confirm you have understood them.')}
               </div>
               <ArticleList articles={required.slice(0, 5)} now={now} />
+            </Section>
+          )}
+
+          {(trending.data ?? []).length > 0 && (
+            <Section id="kb-trending" title={t('hub.trendingTitle', 'Trending this week')}>
+              <ul className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 [scrollbar-width:thin]">
+                {(trending.data ?? []).map((a, i) => {
+                  const style = knowledgeTypeStyle(a.content_type)
+                  const Icon = style.icon
+                  return (
+                    <li key={a.id} className="w-60 shrink-0 snap-start">
+                      <Link
+                        to={`/knowledge/${a.id}`}
+                        className="group flex h-full flex-col overflow-hidden rounded-xl border border-ds-border bg-ds-surface transition-[box-shadow,transform] hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent motion-reduce:hover:translate-y-0"
+                      >
+                        <CourseCover course={{ id: a.id, title: a.title }} className="h-28 w-full rounded-none">
+                          <span className="absolute start-2 top-2 inline-flex items-center gap-1 rounded-full bg-ds-surface/95 px-2 py-0.5 text-[11px] font-semibold text-ds-ink">
+                            {i === 0 && <Flame aria-hidden="true" className="h-3 w-3 text-ds-warning" />}
+                            #{i + 1}
+                          </span>
+                          <span className={cn('absolute bottom-2 start-2 inline-flex h-7 w-7 items-center justify-center rounded-md', style.soft, style.text)}>
+                            <Icon aria-hidden="true" className="h-4 w-4" />
+                          </span>
+                        </CourseCover>
+                        <span className="flex flex-1 flex-col gap-1.5 p-3">
+                          <span className="line-clamp-2 text-sm font-semibold leading-snug text-ds-ink group-hover:underline">{(i18nArabic && a.title_ar) || a.title}</span>
+                          <span className="mt-auto inline-flex items-center gap-1 text-xs text-ds-muted">
+                            <Users aria-hidden="true" className="h-3.5 w-3.5" />
+                            {t('hub.readers', '{{count}} readers', { count: a.readers })}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
             </Section>
           )}
 

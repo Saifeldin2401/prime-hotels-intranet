@@ -651,6 +651,8 @@ Deno.serve(async (req: Request) => {
       authError = { message: e.message || e.toString(), details: e };
     }
 
+    let userId = authData?.user?.id;
+
     if (authError) {
       const isAlreadyRegistered =
         String(authError.message || '').toLowerCase().includes('already been registered') ||
@@ -659,17 +661,83 @@ Deno.serve(async (req: Request) => {
       if (isAlreadyRegistered) {
         const { data: existingProfile } = await adminClient
           .from("profiles")
-          .select("id")
+          .select("id, email, full_name")
           .eq("email", normalizedEmail)
           .maybeSingle();
 
         if (existingProfile?.id) {
+          userId = existingProfile.id;
+          console.log(`User already exists globally (${userId}). Establishing tenant membership in org: ${targetOrgId}`);
+
+          // Assign organization membership for existing user in targetOrgId
+          if (targetOrgId) {
+            let mappedMembershipRole = "learner";
+            if (
+              normalizedRole === "administrator" ||
+              normalizedRole === "corporate_admin" ||
+              normalizedRole === "super_admin"
+            )
+              mappedMembershipRole = "organization_admin";
+            else if (
+              normalizedRole === "regional_admin" ||
+              normalizedRole === "property_manager" ||
+              normalizedRole === "training_manager" ||
+              normalizedRole === "regional_hr" ||
+              normalizedRole === "property_hr"
+            )
+              mappedMembershipRole = "training_manager";
+            else if (
+              normalizedRole === "knowledge_manager" ||
+              normalizedRole === "department_head" ||
+              normalizedRole === "author"
+            )
+              mappedMembershipRole = "author";
+            else if (
+              normalizedRole === "manager" ||
+              normalizedRole === "staff" ||
+              normalizedRole === "learner"
+            )
+              mappedMembershipRole = "learner";
+
+            const membershipFields = {
+              role: mappedMembershipRole,
+              department_id: departmentIds[0] || null,
+              is_active: true,
+              is_primary: true,
+            };
+
+            const { data: existingMembership } = await adminClient
+              .from("organization_memberships")
+              .select("id")
+              .eq("user_id", userId)
+              .eq("organization_id", targetOrgId)
+              .limit(1)
+              .maybeSingle();
+
+            const { error: membershipError } = existingMembership
+              ? await adminClient
+                  .from("organization_memberships")
+                  .update(membershipFields)
+                  .eq("id", existingMembership.id)
+              : await adminClient
+                  .from("organization_memberships")
+                  .insert({ ...membershipFields, user_id: userId, organization_id: targetOrgId });
+
+            if (membershipError) {
+              console.error("Organization membership assignment failed for existing user:", membershipError);
+              return new Response(
+                JSON.stringify({ error: "Failed to assign organization membership: " + membershipError.message }),
+                { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+          }
+
           return new Response(
             JSON.stringify({
               success: true,
-              userId: existingProfile.id,
+              userId: userId,
               isExisting: true,
-              message: "User account already exists. Existing profile resolved.",
+              message: "Existing user joined organization successfully.",
             }),
             {
               status: 200,
@@ -689,7 +757,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const userId = authData?.user?.id;
     if (!userId) {
       return new Response(
         JSON.stringify({ error: "User creation did not return a user id." }),
@@ -702,7 +769,6 @@ Deno.serve(async (req: Request) => {
     console.log(`User created: ${userId}`);
 
     // 2. Update Profile (Job Title, Phone, Active, Reporting To)
-    // Retry logic could be added here if trigger is slow, but usually it's immediate within transaction or shortly after
     const profileUpdate: Record<string, unknown> = {
       phone: phone || null,
       job_title: normalizedJobTitle,
@@ -740,29 +806,6 @@ Deno.serve(async (req: Request) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         },
       );
-    }
-
-    // 3. Assign Role (user_roles)
-    const roleToAssign = normalizedRole;
-    if (roleToAssign) {
-      const roleRow: Record<string, unknown> = { user_id: userId, role: roleToAssign };
-      if (targetOrgId) roleRow.organization_id = targetOrgId;
-      const { error: roleError } = await adminClient
-        .from("user_roles")
-        .insert(roleRow);
-
-      if (roleError) {
-        console.error("Role assignment failed:", roleError);
-        return new Response(
-          JSON.stringify({
-            error: "Failed to assign role: " + roleError.message,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
     }
 
     // 4/5. The department lives directly on organization_memberships. Only a

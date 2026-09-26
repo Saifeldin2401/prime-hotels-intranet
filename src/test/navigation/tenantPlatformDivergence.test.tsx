@@ -99,7 +99,7 @@ describe('Workspace navigation and platform separation', () => {
       expect(getWorkspaceRoutes('MANAGE', learner)).toEqual([])
       expect(getWorkspaceRoutes('ORGANIZATION', learner)).toEqual([])
       expect(getWorkspaceRoutes('LEARN', learner).map((r) => r.path)).toEqual([
-        '/learn', '/learn/my', '/learn/courses', '/learn/paths', '/knowledge', '/learn/certificates',
+        '/learn', '/learn/my', '/learn/courses', '/learn/paths', '/knowledge', '/learn/certificates', '/learn/achievements',
       ])
 
       const author = { capabilities: [...LEARNER, 'content.author'] as Capability[], isPlatformOperator: false }

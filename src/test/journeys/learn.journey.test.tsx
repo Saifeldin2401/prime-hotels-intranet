@@ -61,7 +61,7 @@ describe('journey: learn', () => {
         renderJourney(<LearnerHome />, { route: '/learn' })
         expect(screen.getByRole('heading', { level: 1, name: /Dana/ })).toBeInTheDocument()
         const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-        expect(headings).toEqual(['Required now', 'Due soon', 'Latest knowledge', 'Saved knowledge', 'Your record'])
+        expect(headings).toEqual(['Required now', 'Due soon', 'Leaderboard', 'Latest knowledge', 'Saved knowledge', 'Your record'])
         // Only the member's own progress is requested, never the organization's.
         expect(useLearningProgress).toHaveBeenCalledWith({ userId: USER_ID })
     })

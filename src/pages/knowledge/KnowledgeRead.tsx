@@ -103,6 +103,7 @@ import {
 } from 'lucide-react'
 import { marked } from 'marked'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ReadingProgress } from '@/features/knowledge/components/ReadingProgress'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -610,20 +611,6 @@ export default function KnowledgeRead() {
         }
     }, [article?.content])
 
-    const [readingProgress, setReadingProgress] = useState(0)
-
-    // Reading Progress Logic
-    useEffect(() => {
-        const handleScroll = () => {
-            const winScroll = document.body.scrollTop || document.documentElement.scrollTop
-            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight
-            const scrolled = (winScroll / height) * 100
-            setReadingProgress(scrolled)
-        }
-        window.addEventListener('scroll', handleScroll, { passive: true })
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [])
-
     // Estimated Reading Time
     const readingTime = useMemo(() => {
         if (!article?.content) return 1
@@ -819,6 +806,7 @@ export default function KnowledgeRead() {
             readerTheme === 'dark' && "kb-theme-dark",
             isFocusMode && (readerTheme === 'light' ? "bg-white" : "bg-[var(--kb-bg-main)]")
         )}>
+            <ReadingProgress targetRef={contentRef} />
             {/* Focus Mode Overlay */}
             <div className={cn("kb-focus-overlay", isFocusMode && "active")} />
 
@@ -1053,14 +1041,6 @@ export default function KnowledgeRead() {
                     }
                 }
             `}</style>
-            {/* Reading Progress Bar */}
-            <div className="fixed top-0 start-0 w-full h-1 z-50 pointer-events-none print:hidden">
-                <div
-                    className="h-full bg-ds-brass transition-all duration-150"
-                    style={{ width: `${readingProgress}%` }}
-                />
-            </div>
-
             {/* Header - Back Navigation & Actions */}
             <div className={cn(
                 "bg-ds-surface border-b border-ds-border text-ds-ink sticky top-14 z-30 kb-focus-transition print:hidden",

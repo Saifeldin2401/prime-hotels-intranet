@@ -8,6 +8,7 @@ export function useProfiles(filters?: {
     search?: string
     department_id?: string
     department_ids?: string[]
+    organization_id?: string
     limit?: number // Max records to fetch, defaults to 200
 }) {
     const normalizedFilters = filters
@@ -29,6 +30,9 @@ export function useProfiles(filters?: {
                 }
             }
 
+            const isOrgScoped = !!filters?.organization_id
+            const omJoin = isOrgScoped ? 'organization_memberships!inner' : 'organization_memberships'
+
             let query = supabase
                 .from('profiles')
                 .select(`
@@ -45,7 +49,7 @@ export function useProfiles(filters?: {
                     created_at,
                     updated_at,
                     reporting_to,
-                    organization_memberships(
+                    ${omJoin}(
                         role,
                         organization_id,
                         is_active,
@@ -57,6 +61,12 @@ export function useProfiles(filters?: {
                 .eq('is_active', true)
                 .order('full_name')
 
+            if (filters?.organization_id) {
+                query = query
+                    .eq('organization_memberships.organization_id', filters.organization_id)
+                    .eq('organization_memberships.is_active', true)
+            }
+
             if (filters?.department_id) {
                 query = query.not('organization_memberships', 'is', null).eq('organization_memberships.department_id', filters.department_id)
             }
@@ -65,22 +75,22 @@ export function useProfiles(filters?: {
                 query = query.not('organization_memberships', 'is', null).in('organization_memberships.department_id', filters.department_ids)
             }
 
-            // In a real app, strict RLS would handle this, but for now we might filter here
-            // For now, let everyone see everyone for directory purposes.
-
             // Apply limit to prevent fetching too many records
             const maxRecords = filters?.limit || 200
             const { data, error } = await query.limit(maxRecords)
 
             if (error) throw error
 
-            // Transform to simpler structure if needed, or return as is.
-            // The types might need adjusting if we want nice nested objects.
-            return (data || []).map((profile: any) => ({
-                ...profile,
-                roles: [...new Set(appRolesFromMemberships(profile.organization_memberships).map((r) => r.role))],
-                departments: (profile.organization_memberships || []).map((om: any) => om.department).filter(Boolean)
-            }))
+            return (data || []).map((profile: any) => {
+                const memberships = (profile.organization_memberships || []).filter((om: any) =>
+                    filters?.organization_id ? om.organization_id === filters.organization_id : true
+                )
+                return {
+                    ...profile,
+                    roles: [...new Set(appRolesFromMemberships(memberships).map((r) => r.role))],
+                    departments: memberships.map((om: any) => om.department).filter(Boolean)
+                }
+            })
         }
     })
 }

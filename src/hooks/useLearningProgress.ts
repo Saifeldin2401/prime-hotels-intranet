@@ -67,8 +67,7 @@ export function useLearningProgress(options: { userId?: string | null } = {}) {
             email,
             avatar_url,
             organization_memberships (
-              department:departments ( id, name ),
-              hotel:hotels ( id, name )
+              department:departments ( id, name )
             )
           )
         `)
@@ -117,7 +116,6 @@ export function useLearningProgress(options: { userId?: string | null } = {}) {
                     avatar_url: string | null
                     organization_memberships?: Array<{
                         department: LearningProgressDept | null
-                        hotel: { id: string; name: string } | null
                     }> | null
                 } | null
 
@@ -150,7 +148,6 @@ export function useLearningProgress(options: { userId?: string | null } = {}) {
                             email: rawProfile.email,
                             avatar_url: rawProfile.avatar_url ?? undefined,
                             user_departments: rawProfile.organization_memberships?.map(om => ({ departments: om.department })) ?? undefined,
-                            user_properties: rawProfile.organization_memberships?.map(om => ({ properties: om.hotel ? { name: om.hotel.name } : null })) ?? undefined
                         }
                         : undefined,
                     courses: trainingModule

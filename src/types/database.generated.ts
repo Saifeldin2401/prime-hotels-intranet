@@ -5994,6 +5994,7 @@ export type Database = {
           job_title: string | null
           language: string
           last_login_at: string | null
+          learner_welcome_seen_at: string | null
           locked_until: string | null
           mfa_required: boolean | null
           national_id: string | null
@@ -6005,6 +6006,7 @@ export type Database = {
           phone_extension: string | null
           reporting_to: string | null
           salary_grade: string | null
+          show_on_leaderboard: boolean
           staff_id: string | null
           suspend_reason: string | null
           suspended_at: string | null
@@ -6037,6 +6039,7 @@ export type Database = {
           job_title?: string | null
           language?: string
           last_login_at?: string | null
+          learner_welcome_seen_at?: string | null
           locked_until?: string | null
           mfa_required?: boolean | null
           national_id?: string | null
@@ -6048,6 +6051,7 @@ export type Database = {
           phone_extension?: string | null
           reporting_to?: string | null
           salary_grade?: string | null
+          show_on_leaderboard?: boolean
           staff_id?: string | null
           suspend_reason?: string | null
           suspended_at?: string | null
@@ -6080,6 +6084,7 @@ export type Database = {
           job_title?: string | null
           language?: string
           last_login_at?: string | null
+          learner_welcome_seen_at?: string | null
           locked_until?: string | null
           mfa_required?: boolean | null
           national_id?: string | null
@@ -6091,6 +6096,7 @@ export type Database = {
           phone_extension?: string | null
           reporting_to?: string | null
           salary_grade?: string | null
+          show_on_leaderboard?: boolean
           staff_id?: string | null
           suspend_reason?: string | null
           suspended_at?: string | null
@@ -11207,6 +11213,7 @@ export type Database = {
         Args: { p_module_id: string }
         Returns: boolean
       }
+      _can_read_learning_game: { Args: { p_org_id: string }; Returns: boolean }
       _grade_question_answer: {
         Args: {
           p_question_id: string
@@ -11245,6 +11252,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      _learning_days: {
+        Args: { p_org_id: string; p_tz: string; p_user_id: string }
+        Returns: {
+          day: string
+        }[]
+      }
+      _learning_point_events: {
+        Args: { p_org_id: string }
+        Returns: {
+          kind: string
+          occurred_at: string
+          points: number
+          ref_id: string
+          user_id: string
+        }[]
+      }
       _legacy_platform_fallback: {
         Args: { _user_id: string }
         Returns: boolean
@@ -11275,6 +11298,10 @@ export type Database = {
         Returns: string
       }
       _safe_uuid: { Args: { p_value: string }; Returns: string }
+      activate_tenant_member: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
       approve_pending_user: {
         Args: { p_approve?: boolean; p_user_id: string }
         Returns: Json
@@ -11440,7 +11467,6 @@ export type Database = {
           p_course_id: string
           p_department_id?: string
           p_due_date?: string
-          p_hotel_id?: string
           p_instructions?: string
           p_notify_on_due?: boolean
           p_organization_id: string
@@ -11593,7 +11619,6 @@ export type Database = {
         Args: {
           p_brand_id?: string
           p_dept_id?: string
-          p_hotel_id?: string
           p_limit?: number
           p_offset?: number
           p_org_id: string
@@ -11608,8 +11633,6 @@ export type Database = {
           department_name: string
           email: string
           full_name: string
-          hotel_id: string
-          hotel_name: string
           id: string
           job_title: string
           role: string
@@ -11619,7 +11642,6 @@ export type Database = {
         Args: {
           p_brand_id?: string
           p_dept_id?: string
-          p_hotel_id?: string
           p_individual_user_ids?: string[]
           p_org_id: string
           p_role?: string
@@ -11771,7 +11793,6 @@ export type Database = {
           p_department_id?: string
           p_include_inactive?: boolean
           p_management_level?: string
-          p_property_id?: string
           p_role?: Database["public"]["Enums"]["app_role"]
           p_search?: string
           p_sort?: string
@@ -11793,10 +11814,6 @@ export type Database = {
           phone_extension: string
           primary_department_id: string
           primary_department_name: string
-          primary_property_id: string
-          primary_property_name: string
-          property_ids: string[]
-          property_names: string[]
           roles: Database["public"]["Enums"]["app_role"][]
           staff_id: string
           updated_at: string
@@ -11821,7 +11838,6 @@ export type Database = {
           manager_name: string
           manager_title: string
           phone_extension: string
-          property_names: string[]
           roles: Database["public"]["Enums"]["app_role"][]
           skills: string[]
           staff_id: string
@@ -11916,6 +11932,23 @@ export type Database = {
           training_module_id: string
         }[]
       }
+      get_learning_leaderboard: {
+        Args: {
+          p_limit?: number
+          p_org_id: string
+          p_period?: string
+          p_scope?: string
+        }
+        Returns: {
+          avatar_url: string
+          department_name: string
+          full_name: string
+          is_me: boolean
+          points: number
+          rank: number
+          user_id: string
+        }[]
+      }
       get_master_content_adoption: {
         Args: { p_content_type?: string; p_master_id: string }
         Returns: Json
@@ -11947,6 +11980,14 @@ export type Database = {
         }[]
       }
       get_my_capabilities: { Args: { p_org_id: string }; Returns: string[] }
+      get_my_course_points: {
+        Args: { p_course_id: string; p_org_id: string }
+        Returns: Json
+      }
+      get_my_learning_stats: {
+        Args: { p_org_id: string; p_tz?: string }
+        Returns: Json
+      }
       get_my_managed_department_ids: {
         Args: never
         Returns: {
@@ -11991,7 +12032,7 @@ export type Database = {
         }
       }
       get_org_hierarchy: {
-        Args: { p_property_id?: string; p_root_user_id?: string }
+        Args: { p_root_user_id?: string }
         Returns: {
           depth: number
           email: string
@@ -12035,6 +12076,7 @@ export type Database = {
       get_platform_user_directory: {
         Args: {
           p_limit?: number
+          p_member_scope?: string
           p_offset?: number
           p_org_id?: string
           p_role?: string
@@ -12054,6 +12096,16 @@ export type Database = {
           primary_organization_id: string
           primary_organization_name: string
           total_count: number
+        }[]
+      }
+      get_popular_articles: {
+        Args: { p_days?: number; p_limit?: number; p_org_id: string }
+        Returns: {
+          content_type: string
+          id: string
+          readers: number
+          title: string
+          title_ar: string
         }[]
       }
       get_questions_for_attempt: {
@@ -12123,9 +12175,7 @@ export type Database = {
       get_setting: { Args: { p_key: string; p_org_id: string }; Returns: Json }
       get_sidebar_counts: {
         Args: {
-          p_current_property_id?: string
           p_department_ids?: string[]
-          p_property_ids?: string[]
           p_role?: string
           p_user_id: string
         }
@@ -12144,6 +12194,23 @@ export type Database = {
           user_name: string
           verified: boolean
         }[]
+      }
+      get_team_leaderboard: {
+        Args: { p_org_id: string; p_period?: string }
+        Returns: {
+          completion_rate: number
+          department_id: string
+          department_name: string
+          is_my_team: boolean
+          member_count: number
+          points: number
+          points_per_member: number
+          rank: number
+        }[]
+      }
+      get_team_momentum: {
+        Args: { p_department_id?: string; p_org_id: string; p_weeks?: number }
+        Returns: Json
       }
       get_tenant_email_context: { Args: { p_org_id: string }; Returns: Json }
       get_top_events: {
@@ -12544,6 +12611,7 @@ export type Database = {
         Returns: undefined
       }
       mark_all_notifications_as_read: { Args: never; Returns: undefined }
+      mark_learner_welcome_seen: { Args: never; Returns: string }
       mark_notification_as_read: {
         Args: { notification_id: string }
         Returns: undefined
@@ -12608,7 +12676,6 @@ export type Database = {
         Args: {
           p_active?: boolean
           p_department_id?: string
-          p_hotel_id?: string
           p_org_id: string
           p_role: string
           p_user_id: string
@@ -12647,6 +12714,10 @@ export type Database = {
       remove_document_from_kb: {
         Args: { p_document_id: string; p_reason?: string; p_user_id: string }
         Returns: Json
+      }
+      remove_tenant_member: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
       }
       request_id_from_storage_path: {
         Args: { p_path: string }
@@ -12711,48 +12782,14 @@ export type Database = {
           p_department_id?: string
           p_limit?: number
           p_offset?: number
-          p_property_id?: string
-          p_query: string
+          p_query?: string
           p_requires_acknowledgment?: boolean
           p_status?: string
         }
         Returns: {
-          author_avatar: string
-          author_name: string
-          category_id: string
-          compliance_level: string
-          content: string
-          content_type: string
-          created_by: string
-          current_version: number
-          department_id: string
-          description: string
-          download_count: number
-          estimated_read_time: number
-          file_extension: string
-          file_size: number
-          file_url: string
           id: string
-          linked_quiz_id: string
-          linked_training_id: string
-          next_review_date: string
-          passing_score: number
-          priority: string
-          published_at: string
-          quiz_enabled: boolean
           rank: number
-          requires_acknowledgment: boolean
-          requires_quiz: boolean
-          review_frequency_months: number
-          role: Database["public"]["Enums"]["app_role"]
-          sop_code: string
-          status: Database["public"]["Enums"]["document_status"]
-          subcategory_id: string
-          summary: string
-          title: string
-          updated_at: string
-          view_count: number
-          visibility: string
+          total_count: number
         }[]
       }
       secure_search_documents: {
@@ -12767,7 +12804,6 @@ export type Database = {
           p_include_deleted?: boolean
           p_limit?: number
           p_offset?: number
-          p_property_id?: string
           p_search_query: string
           p_sort_by?: string
           p_sort_order?: string
@@ -12793,7 +12829,6 @@ export type Database = {
           id: string
           is_archived: boolean
           is_deleted: boolean
-          property_id: string
           status: string
           title: string
           updated_at: string
@@ -12806,7 +12841,6 @@ export type Database = {
           p_department_id?: string
           p_is_active?: boolean
           p_limit?: number
-          p_property_id?: string
           p_role?: string
           p_search_query: string
         }
@@ -12839,6 +12873,10 @@ export type Database = {
       set_feature_flag_default: {
         Args: { p_enabled: boolean; p_key: string }
         Returns: undefined
+      }
+      set_leaderboard_visibility: {
+        Args: { p_visible: boolean }
+        Returns: boolean
       }
       set_org_feature_override: {
         Args: {

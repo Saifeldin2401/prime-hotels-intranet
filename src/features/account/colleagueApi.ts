@@ -27,7 +27,6 @@ export interface PublicProfile {
   manager_id: string | null
   manager_name: string | null
   manager_title: string | null
-  property_names: string[] | null
   department_names: string[] | null
   roles: string[] | null
   skills: string[] | null

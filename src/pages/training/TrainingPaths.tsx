@@ -24,7 +24,7 @@ import type {
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCapabilities } from '@/hooks/useCapabilities'
-import { WorkspaceHeader, headerActionClass } from '@/ui'
+import { SpotIllustration, WorkspaceHeader, headerActionClass } from '@/ui'
 import {
     BookOpen,
     Briefcase,
@@ -455,6 +455,7 @@ export default function TrainingPaths() {
             </div>
           ) : (
             <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+              <SpotIllustration name="path" className="mx-auto mb-3 h-24 w-32" />
               <h3 className="text-base font-semibold text-ds-ink">{t('pathsPage.emptyMine', 'You are not following a learning path yet')}</h3>
               <p className="mx-auto mt-1 max-w-md text-sm text-ds-muted">{t('pathsPage.emptyMineBody', 'Paths assigned to you appear here. You can also join an open path yourself.')}</p>
               <button type="button" onClick={() => setActiveTab('explore')} className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-ds-ink px-4 text-sm font-semibold text-ds-on-ink hover:bg-ds-ink/90">
@@ -487,11 +488,11 @@ export default function TrainingPaths() {
               })}
             </div>
           ) : (
-            <EmptyState
-              icon={BookOpen}
-              title={t('noPaths', 'No Paths Found')}
-              description={t('no_paths_desc', 'No published learning paths are currently available.')}
-            />
+            <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+              <SpotIllustration name="path" className="mx-auto mb-3 h-24 w-32" />
+              <h3 className="text-base font-semibold text-ds-ink">{t('noPaths', 'No Paths Found')}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-ds-muted">{t('no_paths_desc', 'No published learning paths are currently available.')}</p>
+            </div>
           )}
         </TabsContent>
 

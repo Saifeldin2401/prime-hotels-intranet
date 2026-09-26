@@ -1506,7 +1506,8 @@
             "roleplay": "Role-play",
             "document": "Document",
             "embed": "Embedded content"
-        }
+        },
+        "completedBadge": "Completed"
     },
     "reviewQueue": {
         "approved": "“{{title}}” is approved and published.",
@@ -1733,5 +1734,205 @@
         "eyebrow": "Manage · Assignments",
         "title": "Automatic rules",
         "context": "Assign a course to everyone with a role, including people who join later."
+    },
+    "game": {
+        "momentum": "Your momentum",
+        "viewAchievements": "Achievements",
+        "title": "Achievements",
+        "summary": "{{earned}} of {{total}} badges · {{points}} points",
+        "loadError": "Your achievements could not be loaded.",
+        "levelProgress": "Level {{level}}, {{pct}}% of the way to level {{next}}",
+        "lvl": "Lvl",
+        "level": "Level",
+        "pts": "pts",
+        "total": "Total",
+        "toNextLevel": "{{count}} pts to level {{level}}",
+        "levelSection": "Level",
+        "streakSection": "Streak",
+        "nextBadge": "Next badge",
+        "allBadges": "Every badge earned. Remarkable.",
+        "thisWeek": "+{{count}} pts this week",
+        "record": "Your record",
+        "badgesTitle": "Badges",
+        "badgesCount": "{{earned}} of {{total}} earned",
+        "badgeEarnedOn": "Earned {{date}}",
+        "recent": "Recent points",
+        "noRecent": "No points yet.",
+        "startCourse": "Start a course",
+        "streak": {
+            "days": "{{count}}-day streak",
+            "keptToday": "You learned today. Come back tomorrow to keep it going.",
+            "keepAlive": "Learn something today to keep your streak.",
+            "start": "Complete a lesson today to start a streak.",
+            "best": "Best: {{count}} days",
+            "bestLong": "Longest streak: {{count}} days",
+            "explain": "Any lesson, quiz or required reading counts as a learning day.",
+            "lastSevenDays": "Last seven days",
+            "learned": "learned",
+            "notYet": "no learning"
+        },
+        "counts": {
+            "lessons": "Lessons",
+            "courses": "Courses",
+            "quizzes": "Quizzes passed",
+            "certificates": "Certificates",
+            "readings": "Readings",
+            "onTime": "On time"
+        },
+        "levels": {
+            "newcomer": "Newcomer",
+            "explorer": "Explorer",
+            "apprentice": "Apprentice",
+            "practitioner": "Practitioner",
+            "specialist": "Specialist",
+            "expert": "Expert",
+            "mentor": "Mentor",
+            "master": "Master"
+        },
+        "badges": {
+            "first_steps": {
+                "title": "First steps",
+                "description": "Complete your first lesson"
+            },
+            "course_1": {
+                "title": "Course complete",
+                "description": "Finish your first course"
+            },
+            "course_5": {
+                "title": "Committed",
+                "description": "Finish 5 courses"
+            },
+            "course_10": {
+                "title": "Scholar",
+                "description": "Finish 10 courses"
+            },
+            "quiz_5": {
+                "title": "Quiz whiz",
+                "description": "Pass 5 different quizzes"
+            },
+            "perfect_score": {
+                "title": "Perfectionist",
+                "description": "Score 100% on a quiz"
+            },
+            "certified": {
+                "title": "Certified",
+                "description": "Earn your first certificate"
+            },
+            "on_time_3": {
+                "title": "Punctual",
+                "description": "Finish 3 assigned courses before their due date"
+            },
+            "reader_5": {
+                "title": "Well read",
+                "description": "Acknowledge 5 required readings"
+            },
+            "streak_3": {
+                "title": "On a roll",
+                "description": "Learn 3 days in a row"
+            },
+            "streak_7": {
+                "title": "Week warrior",
+                "description": "Learn 7 days in a row"
+            },
+            "streak_30": {
+                "title": "Unstoppable",
+                "description": "Learn 30 days in a row"
+            },
+            "points_1000": {
+                "title": "High achiever",
+                "description": "Earn 1,000 points"
+            }
+        },
+        "board": {
+            "title": "Leaderboard",
+            "subtitle": "Teams are ranked by points per member, so small teams can win too.",
+            "seeAll": "See all",
+            "week": "Week",
+            "month": "Month",
+            "all": "All time",
+            "boardLabel": "Leaderboard",
+            "people": "People",
+            "teams": "Teams",
+            "periodLabel": "Period",
+            "scopeLabel": "Who",
+            "everyone": "Everyone",
+            "myTeam": "My team",
+            "error": "The leaderboard could not be loaded.",
+            "emptyPeople": "No one on the board yet",
+            "emptyPeopleHint": "Complete a lesson to put your name up here.",
+            "emptyTeams": "No teams to compare yet",
+            "emptyTeamsHint": "Teams appear once members are placed in departments.",
+            "member": "Member",
+            "you": "(you)",
+            "yourTeam": "(your team)",
+            "members_one": "{{count}} member",
+            "members_other": "{{count}} members",
+            "completion": "{{pct}}% completion",
+            "perMember": "pts / member",
+            "hideMe": "Hide me from leaderboards",
+            "showMe": "Show me on leaderboards (colleagues currently cannot see you)"
+        },
+        "rules": {
+            "title": "How points work",
+            "lesson": "Complete a lesson (once per lesson)",
+            "course": "Finish a course (+25 when you score 90% or more)",
+            "onTime": "Finish assigned training by its due date",
+            "quizPass": "Pass a quiz for the first time",
+            "quizPerfect": "Score 100% on a quiz",
+            "certificate": "Earn a certificate",
+            "reading": "Acknowledge required reading",
+            "fair": "Points come only from real learning records, so retaking the same lesson or quiz does not earn them twice."
+        },
+        "kind": {
+            "lesson": "Lesson completed",
+            "course": "Course completed",
+            "onTime": "Finished on time",
+            "quizPass": "Quiz passed",
+            "quizPerfect": "Perfect score",
+            "certificate": "Certificate earned",
+            "reading": "Reading acknowledged"
+        },
+        "celebrate": {
+            "badgeEyebrow": "Badge unlocked",
+            "levelEyebrow": "Level up",
+            "levelTitle": "You reached level {{level}}",
+            "levelBody": "You are now a {{title}}. Keep learning to reach the next level.",
+            "continue": "Keep going"
+        }
+    },
+    "team": {
+        "eyebrow": "Manage",
+        "title": "Team progress",
+        "export": "Export CSV",
+        "errorTitle": "Team progress could not be loaded",
+        "errorHint": "Check your connection and try again. If it persists, your reporting access may have changed.",
+        "empty": "No departments yet",
+        "emptyBody": "Departments appear here once they exist and have people placed in them.",
+        "setup": "Set up departments",
+        "headline": "{{dept}} has the most overdue training ({{count}}). {{below}} of {{total}} departments are below {{target}}% completion.",
+        "headlineClear": "No overdue training. {{below}} of {{total}} departments are below {{target}}% completion.",
+        "noTraining": "No training assigned",
+        "completedOf": "{{done}} of {{assigned}} · {{rate}}%",
+        "barLabel": "{{rate}}% of assigned training completed",
+        "people": "{{count}} people",
+        "noLead": "No manager",
+        "momentumTitle": "Learning momentum",
+        "activeLearners": "Active learners",
+        "participationRate": "team participation this week",
+        "learningNow": "Learning right now",
+        "activeSessions": "Learners with active sessions",
+        "trendTitle": "8-week activity",
+        "col": {
+            "department": "Department",
+            "completionTarget": "Completion (line = {{target}}%)",
+            "overdue": "Overdue",
+            "sopShort": "SOPs read",
+            "lead": "Lead",
+            "people": "People",
+            "assigned": "Assigned",
+            "completed": "Completed",
+            "completion": "Completion %",
+            "sop": "SOP acknowledgement %"
+        }
     }
 }

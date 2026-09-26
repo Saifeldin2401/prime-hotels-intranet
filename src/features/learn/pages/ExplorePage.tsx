@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils'
 import { EmptyState, ErrorState, ProgressBar, Skeleton, WorkspaceHeader } from '@/ui'
 
 import { useCatalog } from '../catalogHooks'
+import { CourseCover } from '../gamification/components/CourseCover'
 import type { CatalogCourse } from '../catalogApi'
 
 type StateFilter = 'all' | 'not_started' | 'in_progress' | 'completed'
@@ -147,7 +148,7 @@ export default function ExplorePage() {
         <ErrorState title={t('explore.errorTitle', 'Courses could not be loaded')} message={t('explore.errorHint', 'Check your connection and try again.')} onRetry={() => void catalog.refetch()} />
       ) : courses.length === 0 ? (
         <EmptyState
-          icon={<Search className="h-5 w-5" aria-hidden="true" />}
+          illustration={counts.all === 0 ? 'courses' : 'search'}
           title={counts.all === 0 ? t('explore.emptyTitle', 'No courses published yet') : t('explore.noMatch', 'No courses match')}
           description={counts.all === 0 ? t('explore.emptyBody', 'Your training team has not published any courses yet.') : t('explore.noMatchBody', 'Try other words or another filter.')}
           action={counts.all > 0 ? (
@@ -165,6 +166,18 @@ export default function ExplorePage() {
                   to={`/learn/courses/${c.id}`}
                   className="group flex flex-col gap-3 px-4 py-4 hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent sm:flex-row sm:items-center sm:gap-6"
                 >
+                  <CourseCover course={c} className="h-36 w-full sm:h-20 sm:w-32">
+                    {s === 'completed' && (
+                      <span className="absolute bottom-1.5 start-1.5 inline-flex items-center gap-1 rounded bg-ds-surface/90 px-1.5 py-0.5 text-[11px] font-semibold text-ds-success">
+                        <CheckCircle2 aria-hidden="true" className="h-3 w-3" />{t('explore.done', 'Completed')}
+                      </span>
+                    )}
+                    {s === 'in_progress' && (
+                      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1 bg-ds-surface/60">
+                        <span className="block h-full bg-ds-accent" style={{ width: `${Math.round(p?.pct ?? 0)}%` }} />
+                      </span>
+                    )}
+                  </CourseCover>
                   <div className="min-w-0 flex-1 space-y-1">
                     <p className="text-[15px] font-semibold text-ds-ink group-hover:underline">{c.title}</p>
                     {c.description && <p className="line-clamp-2 text-sm text-ds-ink-secondary">{c.description}</p>}

@@ -1377,6 +1377,7 @@ export const platformService = {
     role?: string
     limit?: number
     offset?: number
+    memberScope?: 'customers_only' | 'operators_only' | 'all'
   }): Promise<{
     users: Array<{
       id: string
@@ -1416,7 +1417,8 @@ export const platformService = {
       p_org_id: params?.organizationId || null,
       p_role: params?.role || null,
       p_limit: params?.limit || 100,
-      p_offset: params?.offset || 0
+      p_offset: params?.offset || 0,
+      p_member_scope: params?.memberScope || 'customers_only',
     })
 
     if (error) {

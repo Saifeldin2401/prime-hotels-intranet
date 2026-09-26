@@ -6,7 +6,7 @@
  * canonical URL for its job. Retired URLs live only in
  * src/routes/legacyRedirects.tsx and never appear here.
  *
- *   LEARN         My day - My learning - Courses - Paths - Knowledge - Certificates
+ *   LEARN         My day - My learning - Courses - Paths - Knowledge - Certificates - Achievements
  *   STUDIO        Courses - Quizzes - Review
  *   MANAGE        Compliance - Assignments - Team progress - Certificates - Evidence
  *   ORGANIZATION  Overview - People - Hotels & departments - Settings - Audit
@@ -48,6 +48,7 @@ import {
     Settings,
     Shield,
     ShieldCheck,
+    Trophy,
     Upload,
     User,
     Users,
@@ -156,6 +157,9 @@ export const ROUTES: RouteConfig[] = [
     { path: '/learn/certificates', title: 'my_certificates', icon: Award, group: 'learn', order: 6,
       description: 'Certificates you have earned and their verification codes',
       keywords: ['certificates', 'accreditation'] },
+    { path: '/learn/achievements', title: 'workspace.achievements', icon: Trophy, group: 'learn', order: 7,
+      description: 'Your level, streak, badges and team leaderboards',
+      keywords: ['achievements', 'badges', 'points', 'streak', 'leaderboard', 'level'] },
 
     // -------------------------------------------------------------------------
     // STUDIO - "What needs authoring or review?"

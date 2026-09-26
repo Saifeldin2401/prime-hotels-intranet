@@ -4,6 +4,7 @@ export interface CatalogCourse {
   id: string
   title: string
   description: string | null
+  category?: string | null
   estimated_duration_minutes: number | null
   difficulty_level: string | null
   certificate_enabled: boolean | null
@@ -17,7 +18,7 @@ export interface CatalogCourse {
 export async function fetchCatalog(organizationId: string): Promise<CatalogCourse[]> {
   const { data, error } = await supabase
     .from('courses')
-    .select('id, title, description, estimated_duration_minutes, difficulty_level, certificate_enabled, created_at')
+    .select('id, title, description, category, estimated_duration_minutes, difficulty_level, certificate_enabled, created_at')
     .eq('status', 'published')
     .eq('is_deleted', false)
     .or(`organization_id.eq.${organizationId},is_master_template.eq.true`)

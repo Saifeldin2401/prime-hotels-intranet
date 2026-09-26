@@ -265,7 +265,8 @@
         "media_library": "Media",
         "articles": "Articles",
         "courses": "Courses",
-        "platform_statistics": "Platform statistics"
+        "platform_statistics": "Platform statistics",
+        "achievements": "Achievements"
     },
     "mainNavigation": "Main navigation",
     "shell": {

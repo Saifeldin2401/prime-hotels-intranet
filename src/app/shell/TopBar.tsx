@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { Award, ChevronDown, Compass, Crown, LogOut, Menu, PlayCircle, Search, Settings, UserRound } from 'lucide-react'
+import { Award, ChevronDown, Compass, Crown, LogOut, Menu, PlayCircle, Search, Settings, Trophy, UserRound } from 'lucide-react'
 
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
@@ -138,6 +138,7 @@ export function TopBar({ onOpenSearch, onOpenContext, onOpenMobileMenu }: TopBar
           items={[
             { id: 'profile', label: t('my_profile', 'My profile'), icon: <UserRound className="h-4 w-4" />, onClick: () => navigate('/profile') },
             { id: 'certificates', label: t('my_certificates', 'Certificates'), icon: <Award className="h-4 w-4" />, onClick: () => navigate('/learn/certificates') },
+            { id: 'achievements', label: t('workspace.achievements', 'Achievements'), icon: <Trophy className="h-4 w-4" />, onClick: () => navigate('/learn/achievements') },
             { id: 'settings', label: t('settings', 'Settings'), icon: <Settings className="h-4 w-4" />, onClick: () => navigate('/settings') },
             { id: 'd1', label: null, divider: true },
             { id: 'guide', label: t('shell.roleGuide', 'What can I do here?'), icon: <Compass className="h-4 w-4" />, onClick: () => setTimeout(() => openWhatCanIDo(), 50) },

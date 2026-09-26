@@ -663,6 +663,8 @@ export const aiCourseEngineService = {
         .from('lessons')
         .insert({
           training_module_id: moduleId,
+          // trg_set_org fills this from the course when it is null.
+          organization_id: userOrgId as string,
           block_type: draft.blockType,
           title: draft.title || 'Lesson block',
           content: draft.content || '',

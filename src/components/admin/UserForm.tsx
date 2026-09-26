@@ -93,7 +93,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
   const managerListId = useId()
 
   const [targetOrgId, setTargetOrgId] = useState<string>(
-    user?.organization_id || initialOrgId || currentOrganization?.id || organizations[0]?.id || ''
+    currentOrganization?.id || initialOrgId || user?.organization_id || organizations[0]?.id || ''
   )
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
@@ -419,13 +419,15 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
       setOriginalRole(appRole)
     }
 
-    if (membershipData) {
-      setSelectedDepartments(
-        membershipData
-          .map((m: any) => m.department_id)
-          .filter((id): id is string => typeof id === 'string' && isValidUUID(id))
-      )
-    }
+    const orgMemberships = currentOrganization?.id
+      ? (membershipData || []).filter((m) => m.organization_id === currentOrganization.id)
+      : (membershipData || [])
+
+    setSelectedDepartments(
+      orgMemberships
+        .map((m: any) => m.department_id)
+        .filter((id): id is string => typeof id === 'string' && isValidUUID(id))
+    )
 
     // Load reporting_to
     const { data: profileData } = await supabase
@@ -448,10 +450,12 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
     setIsActive(sourceUser.is_active !== false) // Default to true if undefined
     setReportingTo(sourceUser.reporting_to || null)
     setStaffId(sourceUser.staff_id || '')
-    if (sourceUser.organization_id) {
+    if (currentOrganization?.id) {
+      setTargetOrgId(currentOrganization.id)
+    } else if (sourceUser.organization_id) {
       setTargetOrgId(sourceUser.organization_id)
     }
-  }, [])
+  }, [currentOrganization?.id])
 
   useEffect(() => {
     if (user) {
@@ -529,7 +533,6 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
           full_name: fullName,
           phone: phone || null,
           job_title: jobTitle || null,
-          is_active: isActive,
           reporting_to: reportingTo && isValidUUID(reportingTo) ? reportingTo : null,
         })
         .eq('id', user.id)
@@ -539,13 +542,14 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
       // Roles live on organization_memberships (user_roles is a read-only view).
       const primaryDeptId = selectedDepartments.find((id) => isValidUUID(id)) || null
 
-      const finalOrgId = targetOrgId || user?.organization_id || currentOrganization?.id
+      const finalOrgId = currentOrganization?.id || targetOrgId || user?.organization_id
       if (finalOrgId) {
-        const { error: orgErr } = await supabase
-          .from('profiles')
-          .update({ organization_id: finalOrgId })
-          .eq('id', user.id)
-        if (orgErr) throw orgErr
+        if (!user.organization_id) {
+          await supabase
+            .from('profiles')
+            .update({ organization_id: finalOrgId })
+            .eq('id', user.id)
+        }
 
         const { data: existing, error: existingErr } = await supabase
           .from('organization_memberships')
@@ -567,7 +571,7 @@ export function UserForm({ user, initialOrgId, onClose }: UserFormProps) {
         const membershipFields = {
           department_id: primaryDeptId,
           role: membershipRole,
-          is_active: true,
+          is_active: isActive,
           is_primary: true,
           updated_at: new Date().toISOString(),
         }

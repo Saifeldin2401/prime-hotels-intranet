@@ -271,6 +271,10 @@ export default {
           "0%": { transform: "scale(1)" },
           "100%": { transform: "scale(1.05)" },
         },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 200ms cubic-bezier(0.23, 1, 0.32, 1)",
@@ -282,6 +286,7 @@ export default {
         "scale-in": "scale-in 200ms cubic-bezier(0.23, 1, 0.32, 1)",
         "scale-out": "scale-out 150ms cubic-bezier(0.23, 1, 0.32, 1)",
         "ken-burns": "ken-burns 20s cubic-bezier(0.23, 1, 0.32, 1) infinite alternate",
+        "float": "float 5s ease-in-out infinite",
       },
     },
   },

@@ -115,30 +115,26 @@ export default function UserManagement() {
       if (!currentOrganization?.id) return []
 
       const { data, error } = await supabase
-        .from('profiles')
+        .from('organization_memberships')
         .select(`
-          *,
-          organizations (
+          id,
+          organization_id,
+          user_id,
+          department_id,
+          role,
+          is_primary,
+          is_active,
+          created_at,
+          user:profiles!organization_memberships_user_id_fkey (*),
+          department:departments!organization_memberships_department_id_fkey (
             id,
             name,
             name_ar
           ),
-          organization_memberships (
+          organization:organizations!organization_memberships_organization_id_fkey (
             id,
-            organization_id,
-            department_id,
-            role,
-            is_primary,
-            department:departments (
-              id,
-              name,
-              name_ar
-            ),
-            organization:organizations (
-              id,
-              name,
-              name_ar
-            )
+            name,
+            name_ar
           )
         `)
         .eq('organization_id', currentOrganization.id)
@@ -146,38 +142,32 @@ export default function UserManagement() {
 
       if (error) throw error
 
-      return (data || []).map((p: any) => {
-        // Roles come from the user's membership in the organization being managed.
-        const orgMemberships = (p.organization_memberships || []).filter(
-          (m: any) => m.organization_id === currentOrganization.id
-        )
-        const rolesList = [...new Set(orgMemberships.map((m: any) => membershipToAppRole(m.role)))]
-        const primaryAppRole = rolesList[0] || 'learner'
+      return (data || [])
+        .filter((m: any) => m.user)
+        .map((m: any) => {
+          const p = m.user
+          const appRole = membershipToAppRole(m.role)
+          const dept = m.department
+            ? [
+                {
+                  id: m.department.id,
+                  name: isRTL && m.department.name_ar ? m.department.name_ar : m.department.name,
+                },
+              ]
+            : []
 
-        const deptMap = new Map<string, { id: string; name: string }>()
+          const orgInfo = m.organization || currentOrganization
 
-        if (Array.isArray(p.organization_memberships)) {
-          p.organization_memberships.forEach((m: any) => {
-            if (m.department?.id && m.department?.name) {
-              deptMap.set(m.department.id, {
-                id: m.department.id,
-                name: isRTL && m.department.name_ar ? m.department.name_ar : m.department.name,
-              })
-            }
-          })
-        }
-
-        const orgInfo = p.organizations 
-          || p.organization_memberships?.[0]?.organization 
-          || currentOrganization
-
-        return {
-          ...p,
-          role: primaryAppRole,
-          organizations: orgInfo,
-          departments: Array.from(deptMap.values()),
-        } as Profile
-      })
+          return {
+            ...p,
+            role: appRole,
+            is_active: m.is_active,
+            membership_id: m.id,
+            organizations: orgInfo,
+            departments: dept,
+            organization_memberships: [m],
+          } as Profile
+        })
     },
   })
 
@@ -213,6 +203,7 @@ export default function UserManagement() {
     const channel = supabase
       .channel('admin-users-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleInvalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'organization_memberships' }, scheduleInvalidate)
       .subscribe()
 
     return () => {
@@ -251,12 +242,18 @@ export default function UserManagement() {
 
   const deleteUserMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ is_active: false })
-        .eq('id', id)
+      if (!currentOrganization?.id) {
+        throw new Error(t('form.error.select_org', 'Tenant context required.'))
+      }
+      const { data, error } = await supabase.rpc('remove_tenant_member', {
+        p_org_id: currentOrganization.id,
+        p_user_id: id,
+      })
 
       if (error) throw error
+      if (!data) {
+        throw new Error('Member not found or already deactivated in this organization.')
+      }
     },
     onSuccess: () => {
       refetch()
@@ -266,6 +263,36 @@ export default function UserManagement() {
     onError: (error: Error) => {
       toast({
         title: t('bulk.deactivate_failed_title', 'Deactivation Failed'),
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const activateUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentOrganization?.id) {
+        throw new Error(t('form.error.select_org', 'Tenant context required.'))
+      }
+      const { data, error } = await supabase.rpc('activate_tenant_member', {
+        p_org_id: currentOrganization.id,
+        p_user_id: id,
+      })
+      if (error) throw error
+      if (!data) {
+        throw new Error('Member not found in this organization.')
+      }
+    },
+    onSuccess: () => {
+      refetch()
+      toast({
+        title: t('user_management.activated_title', 'Member Activated'),
+        description: t('user_management.activated_desc', 'User was activated in this organization successfully.'),
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('bulk.activate_failed_title', 'Activation Failed'),
         description: error.message,
         variant: 'destructive',
       })
@@ -950,10 +977,17 @@ export default function UserManagement() {
                           {t('account_actions.resend_credentials', 'Resend sign-in details')}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => { setUserToDelete(user); setDeleteConfirmOpen(true) }} className="gap-2 text-ds-danger focus:text-ds-danger">
-                          <Trash2 aria-hidden="true" className="h-4 w-4" />
-                          {t('bulk.deactivate', 'Deactivate')}
-                        </DropdownMenuItem>
+                        {user.is_active ? (
+                          <DropdownMenuItem onClick={() => { setUserToDelete(user); setDeleteConfirmOpen(true) }} className="gap-2 text-ds-danger focus:text-ds-danger">
+                            <Trash2 aria-hidden="true" className="h-4 w-4" />
+                            {t('bulk.deactivate', 'Deactivate')}
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => activateUserMutation.mutate(user.id)} className="gap-2 text-ds-success focus:text-ds-success">
+                            <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                            {t('bulk.activate', 'Activate')}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem onClick={() => { setUserToHardDelete(user); setHardDeleteConfirmOpen(true) }} className="gap-2 text-ds-danger focus:text-ds-danger">
                           <UserX aria-hidden="true" className="h-4 w-4" />
                           {t('bulk.hard_delete', 'Delete permanently')}

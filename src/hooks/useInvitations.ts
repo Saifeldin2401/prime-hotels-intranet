@@ -64,11 +64,17 @@ export function useInvitations(): UseInvitationsReturn {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('user_invitations')
         .select('*')
         .in('status', ['pending', 'expired'])
         .order('invited_at', { ascending: false });
+
+      if (currentOrganization?.id) {
+        query = query.eq('organization_id', currentOrganization.id);
+      }
+
+      const { data, error: fetchError } = await query;
 
       if (fetchError) {
         throw fetchError;
@@ -76,7 +82,7 @@ export function useInvitations(): UseInvitationsReturn {
 
       setInvitations(data as UserInvitation[] || []);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch invitations'));
+      setError(err instanceof Error ? err : new Error('Failed to load invitations'));
       toast({
         title: 'Error',
         description: 'Failed to load invitations',
@@ -85,7 +91,7 @@ export function useInvitations(): UseInvitationsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [currentOrganization?.id, toast]);
 
   // Load invitations on mount
   useEffect(() => {
@@ -96,34 +102,47 @@ export function useInvitations(): UseInvitationsReturn {
     try {
       setIsCreating(true);
 
-      // Check if email already has a pending invitation
+      const orgId = currentOrganization?.id;
+      if (!orgId) {
+        toast({
+          title: 'Organization Required',
+          description: 'Please select an organization before sending invitations.',
+          variant: 'destructive',
+        });
+        return false;
+      }
+
+      // Check if email already has a pending invitation for THIS organization
       const { data: existingInvite } = await supabase
         .from('user_invitations')
         .select('id')
         .eq('email', data.email.toLowerCase())
+        .eq('organization_id', orgId)
         .eq('status', 'pending')
         .maybeSingle();
 
       if (existingInvite) {
         toast({
           title: 'Invitation Exists',
-          description: 'This email already has a pending invitation.',
+          description: 'This email already has a pending invitation for this organization.',
           variant: 'destructive',
         });
         return false;
       }
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', data.email.toLowerCase())
-        .maybeSingle();
+      // Check if user is already an active member of THIS organization
+      const { data: existingMemberships } = await supabase
+        .from('organization_memberships')
+        .select('id, user:profiles!inner(email)')
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
+        .eq('profiles.email', data.email.toLowerCase())
+        .limit(1);
 
-      if (existingUser) {
+      if (existingMemberships && existingMemberships.length > 0) {
         toast({
-          title: 'User Exists',
-          description: 'A user with this email already exists.',
+          title: 'Member Exists',
+          description: 'A user with this email is already an active member of this organization.',
           variant: 'destructive',
         });
         return false;

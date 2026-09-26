@@ -9,6 +9,7 @@ import {
   type PersistLearningAssignmentsResult
 } from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
 import type { TrainingModule } from '@/lib/types'
 import { learningService } from '@/services/learningService'
 import type { ModuleAssigneeRosterEntry } from '@/types/learning'
@@ -385,6 +386,7 @@ export function TrainingAssignmentsProvider({
   hideHeaderActions = false,
 }: TrainingAssignmentsProviderProps) {
   const { profile } = useAuth()
+  const { currentOrganization } = useTenant()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('training')
@@ -527,33 +529,54 @@ export function TrainingAssignmentsProvider({
   })
 
   const { data: userDepartments } = useQuery({
-    queryKey: ['user-departments', 'memberships'],
+    queryKey: ['user-departments', 'memberships', currentOrganization?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('organization_memberships')
         .select('user_id, department:departments(id, name)')
         .eq('is_active', true)
+      if (currentOrganization?.id) {
+        query = query.eq('organization_id', currentOrganization.id)
+      }
+      const { data, error } = await query
       if (error) throw error
       return data
     }
   })
 
   const { data: users } = useQuery({
-    queryKey: ['users-list'],
+    queryKey: ['users-list', currentOrganization?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('id, full_name, email').order('full_name')
+      if (currentOrganization?.id) {
+        const { data, error } = await supabase
+          .from('organization_memberships')
+          .select('user:profiles!organization_memberships_user_id_fkey(id, full_name, email)')
+          .eq('organization_id', currentOrganization.id)
+          .eq('is_active', true)
+        if (error) throw error
+        return (data || [])
+          .map((m: any) => m.user)
+          .filter(Boolean)
+          .sort((a: any, b: any) => (a.full_name || '').localeCompare(b.full_name || ''))
+      }
+      const { data, error } = await supabase.from('profiles').select('id, full_name, email').eq('is_active', true).order('full_name')
       if (error) throw error
       return data || []
     }
   })
 
   const { data: departments } = useQuery({
-    queryKey: ['departments-list'],
+    queryKey: ['departments-list', currentOrganization?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('departments')
         .select('id, name')
+        .eq('is_active', true)
         .order('name')
+      if (currentOrganization?.id) {
+        query = query.eq('organization_id', currentOrganization.id)
+      }
+      const { data, error } = await query
       if (error) throw error
       return (data || []).map((d) => ({ id: d.id, name: d.name, rawName: d.name }))
     }

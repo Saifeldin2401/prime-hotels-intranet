@@ -74,7 +74,7 @@ export default function PlatformUserDirectory() {
   const [selectedRole, setSelectedRole] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'suspended' | 'locked'>('all')
   const [selectedSecurityFilter, setSelectedSecurityFilter] = useState<'all' | 'locked' | 'reset_pending'>('all')
-  const [selectedOperatorFilter, setSelectedOperatorFilter] = useState<'all' | 'operators_only' | 'learners_only'>('all')
+  const [selectedOperatorFilter, setSelectedOperatorFilter] = useState<'customers_only' | 'operators_only' | 'all'>('customers_only')
   const DIRECTORY_PAGE_SIZE = 100
   const [directoryPage, setDirectoryPage] = useState(0)
 
@@ -165,7 +165,7 @@ export default function PlatformUserDirectory() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['platform-global-user-directory', search, selectedOrgId, selectedRole, directoryPage],
+    queryKey: ['platform-global-user-directory', search, selectedOrgId, selectedRole, selectedOperatorFilter, directoryPage],
     enabled: activeTab === 'customer_directory',
     queryFn: () =>
       platformService.getPlatformUserDirectory({
@@ -174,6 +174,7 @@ export default function PlatformUserDirectory() {
         role: selectedRole !== 'all' ? selectedRole : undefined,
         limit: DIRECTORY_PAGE_SIZE,
         offset: directoryPage * DIRECTORY_PAGE_SIZE,
+        memberScope: selectedOperatorFilter,
       }),
     staleTime: 1000 * 15,
   })
@@ -616,13 +617,6 @@ export default function PlatformUserDirectory() {
         list = list.filter((u) => !!u.force_password_reset)
       }
     }
-    if (selectedOperatorFilter !== 'all') {
-      if (selectedOperatorFilter === 'operators_only') {
-        list = list.filter((u) => !!u.is_platform_user || !!u.platform_role)
-      } else if (selectedOperatorFilter === 'learners_only') {
-        list = list.filter((u) => !u.is_platform_user && !u.platform_role)
-      }
-    }
     const sorted = [...list]
     if (sortBy === 'name') {
       sorted.sort((a, b) => (a.full_name || a.email || '').localeCompare(b.full_name || b.email || ''))
@@ -632,7 +626,7 @@ export default function PlatformUserDirectory() {
       sorted.sort((a, b) => (b.membership_count || 0) - (a.membership_count || 0))
     }
     return sorted
-  }, [users, selectedStatus, selectedSecurityFilter, selectedOperatorFilter, sortBy])
+  }, [users, selectedStatus, selectedSecurityFilter, sortBy])
 
   const filteredOperators = useMemo(() => {
     if (!search) return platformOperators
@@ -756,7 +750,7 @@ export default function PlatformUserDirectory() {
               className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none"
             >
               <span>{t('admin:platformPeople.customers', 'Customer members')}</span>
-              <span className="ms-1.5 font-mono text-xs tabular-nums">{users.length}</span>
+              <span className="ms-1.5 font-mono text-xs tabular-nums">{directoryTotalCount || platformStats?.totalLearners || 0}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1263,14 +1257,20 @@ export default function PlatformUserDirectory() {
                 <Label className="text-[11px] font-semibold text-muted-foreground mb-1 block">
                   {t('admin:platform_user_mgmt.filter_operator_type', 'Account Type')}
                 </Label>
-                <Select value={selectedOperatorFilter} onValueChange={(v) => setSelectedOperatorFilter(v as any)}>
+                <Select
+                  value={selectedOperatorFilter}
+                  onValueChange={(v) => {
+                    setSelectedOperatorFilter(v as any)
+                    setDirectoryPage(0)
+                  }}
+                >
                   <SelectTrigger className="h-9 text-xs rounded-xl bg-background/70">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="customers_only">{t('admin:platform_user_mgmt.filter_tenant_only', 'Tenant Users Only')}</SelectItem>
                     <SelectItem value="all">{t('admin:platform_user_mgmt.filter_operator_all', 'All Account Types')}</SelectItem>
                     <SelectItem value="operators_only">{t('admin:platform_user_mgmt.filter_operator_only', 'Platform Operators Only')}</SelectItem>
-                    <SelectItem value="learners_only">{t('admin:platform_user_mgmt.filter_tenant_only', 'Tenant Users Only')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1459,7 +1459,7 @@ export default function PlatformUserDirectory() {
                   </TableHead>
                   <TableHead className="text-xs font-bold">{t('admin:user_and_contact', 'User & Identity')}</TableHead>
                   <TableHead className="text-xs font-bold">{t('admin:primary_tenant_memberships', 'Primary Organization')}</TableHead>
-                  <TableHead className="text-xs font-bold">{t('admin:platform_role', 'Platform Role')}</TableHead>
+                  <TableHead className="text-xs font-bold">{t('admin:role', 'Role')}</TableHead>
                   <TableHead className="text-xs font-bold">{t('admin:platform_user_mgmt.account_status_label', 'Status & Telemetry')}</TableHead>
                   <TableHead className="text-xs font-bold">{t('admin:created_date', 'Joined')}</TableHead>
                   <TableHead className="text-xs font-bold text-end">{t('admin:actions', 'Actions')}</TableHead>
@@ -1541,6 +1541,10 @@ export default function PlatformUserDirectory() {
                             <Badge variant="secondary" className="text-[10px] font-bold capitalize bg-ds-warning-soft text-ds-warning border border-ds-warning/30">
                               <ShieldCheck className="h-3 w-3 me-1 text-ds-warning" />
                               {u.platform_role.replace(/_/g, ' ')}
+                            </Badge>
+                          ) : u.memberships?.[0]?.role ? (
+                            <Badge variant="secondary" className="text-[10px] font-semibold capitalize bg-ds-accent/10 text-ds-accent border border-ds-accent/20">
+                              {u.memberships[0].role.replace(/_/g, ' ')}
                             </Badge>
                           ) : (
                             <span className="text-[11px] text-muted-foreground">{t('admin:no_operator_role', 'None (Tenant User)')}</span>

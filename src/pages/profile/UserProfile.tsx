@@ -71,7 +71,6 @@ export default function UserProfile() {
   const reports = Array.isArray(profile.direct_reports) ? profile.direct_reports : []
   const certifications = profile.certifications ?? []
   const place = [
-    { label: t('profile:colleague.hotels', 'Hotel'), value: (profile.property_names ?? []).join(', ') },
     { label: t('profile:colleague.departments', 'Department'), value: (profile.department_names ?? []).join(', ') },
     {
       label: t('profile:reports_to', 'Reports to'),

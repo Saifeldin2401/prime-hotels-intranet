@@ -19,6 +19,7 @@ import { EmptyState, ErrorState, ProgressBar, Skeleton } from '@/ui'
 
 import { useCourse, useCourseLessons, useMyCourseProgress } from '../courseHooks'
 import type { CourseLesson, CourseProgress } from '../courseApi'
+import { CourseCover } from '../gamification/components/CourseCover'
 
 type LearnerState = 'not_started' | 'in_progress' | 'completed'
 
@@ -81,6 +82,7 @@ export default function CourseDetailPage() {
   if (!course.data) {
     return (
       <EmptyState
+        illustration="courses"
         title={t('courseDetail.notFound', 'Course not available')}
         description={t('courseDetail.notFoundHint', 'It may have been retired, or it is not published for your organization.')}
         action={<Link to="/learn/courses" className="text-sm font-semibold text-ds-accent hover:underline">{t('courseDetail.backToExplore', 'Explore courses')}</Link>}
@@ -173,6 +175,19 @@ export default function CourseDetailPage() {
 
           {/* What is it? */}
           <header className="space-y-4">
+            <CourseCover course={c} className="h-44 w-full rounded-xl sm:h-56">
+              {state === 'in_progress' && (
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-1.5 bg-ds-surface/50">
+                  <span className="block h-full bg-ds-accent" style={{ width: `${pct}%` }} />
+                </span>
+              )}
+              {state === 'completed' && (
+                <span className="absolute bottom-3 start-3 inline-flex items-center gap-1.5 rounded-md bg-ds-surface/95 px-2.5 py-1 text-xs font-semibold text-ds-success">
+                  <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" />
+                  {t('courseDetail.completedBadge', 'Completed')}
+                </span>
+              )}
+            </CourseCover>
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-accent">{t('courseDetail.eyebrow', 'Course')}</p>
             <h1 className="font-editorial text-[36px] font-semibold leading-[1.1] text-ds-ink sm:text-[46px]">{c.title}</h1>
             {c.description && <p className="max-w-prose text-[17px] leading-relaxed text-ds-ink-secondary">{c.description}</p>}

@@ -17,6 +17,8 @@ import { cn } from '@/lib/utils'
 import type { LearningAssignment } from '@/types/learning'
 import { EmptyState, ErrorState, ProgressBar, Skeleton, WorkspaceHeader } from '@/ui'
 
+import { CourseCover } from '../gamification/components/CourseCover'
+
 type Filter = 'all' | 'mandatory' | 'courses' | 'quizzes'
 type Bucket = 'overdue' | 'week' | 'later' | 'undated'
 const DAY = 24 * 60 * 60 * 1000
@@ -83,8 +85,17 @@ export default function MyLearningPage() {
     return (
       <li>
         <Link to={hrefOf(a)} className="group grid gap-3 px-4 py-4 hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-center sm:gap-6">
-          <span className="flex min-w-0 items-start gap-3">
-            <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ds-muted" />
+          <span className="flex min-w-0 items-center gap-3">
+            <CourseCover course={{ id: a.content_id, title: a.content_title }} className="h-12 w-[72px]">
+              <span className="absolute bottom-1 start-1 inline-flex h-5 w-5 items-center justify-center rounded bg-ds-surface/90 text-ds-ink">
+                <Icon aria-hidden="true" className="h-3 w-3" />
+              </span>
+              {completed && (
+                <span className="absolute inset-0 flex items-center justify-center bg-ds-success/40">
+                  <CheckCircle2 aria-hidden="true" className="h-5 w-5 text-white" />
+                </span>
+              )}
+            </CourseCover>
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-medium text-ds-ink group-hover:underline">{a.content_title ?? t('untitledAssignment', 'Untitled item')}</span>
               <span className="block truncate text-xs text-ds-muted">
@@ -156,7 +167,7 @@ export default function MyLearningPage() {
         <ErrorState title={t('plan.errorTitle', 'Your learning could not be loaded')} message={t('plan.errorHint', 'Check your connection and try again.')} onRetry={() => void query.refetch()} />
       ) : openCount === 0 && done.length === 0 ? (
         <EmptyState
-          icon={<BookOpen className="h-6 w-6" aria-hidden="true" />}
+          illustration={text || filter !== 'all' ? 'search' : 'courses'}
           title={text || filter !== 'all' ? t('plan.noMatch', 'Nothing matches') : t('plan.emptyTitle', 'Nothing assigned to you yet')}
           description={text || filter !== 'all' ? t('plan.noMatchBody', 'Try another search or filter.') : t('plan.emptyBody', 'When your manager assigns training it appears here with its due date. You can also explore courses yourself.')}
           action={<Link to="/learn/courses" className="text-sm font-semibold text-ds-accent hover:underline">{t('plan.explore', 'Explore courses')}</Link>}

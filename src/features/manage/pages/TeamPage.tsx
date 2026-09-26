@@ -11,13 +11,14 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Download } from 'lucide-react'
+import { ChevronRight, Download, TrendingUp, Users, Zap } from 'lucide-react'
 
 import { useTenant } from '@/contexts/TenantContext'
 import { cn } from '@/lib/utils'
 import { exportService } from '@/services/exportService'
 import { EmptyState, ErrorState, Skeleton, WorkspaceHeader, headerActionClass } from '@/ui'
 
+import { useTeamMomentum } from '../hooks'
 import { fetchDepartmentStandings, type DepartmentStanding } from '../teamApi'
 
 const TARGET = 70
@@ -33,6 +34,9 @@ export default function TeamPage() {
     staleTime: 60 * 1000,
     queryFn: () => fetchDepartmentStandings(orgId as string),
   })
+
+  const momentumQuery = useTeamMomentum()
+  const momentum = momentumQuery.data
 
   const rows = useMemo(() => {
     return [...(query.data ?? [])].sort((a, b) => b.overdue - a.overdue || (a.trainingRate ?? 101) - (b.trainingRate ?? 101))
@@ -100,12 +104,74 @@ export default function TeamPage() {
         <ErrorState title={t('team.errorTitle', 'Team progress could not be loaded')} message={t('team.errorHint', 'Check your connection and try again. If it persists, your reporting access may have changed.')} onRetry={() => void query.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState
+          illustration="team"
           title={t('team.empty', 'No departments yet')}
           description={t('team.emptyBody', 'Departments appear here once they exist and have people placed in them.')}
           action={<Link to="/admin/structure?tab=departments" className="text-sm font-semibold text-ds-accent hover:underline">{t('team.setup', 'Set up departments')}</Link>}
         />
       ) : (
         <>
+          {momentum && momentum.members > 0 && (
+            <section aria-label={t('team.momentumTitle', 'Learning momentum')} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-col rounded-xl border border-ds-border bg-ds-surface p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ds-muted">{t('team.activeLearners', 'Active learners')}</span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-ds-success-soft text-ds-success">
+                    <Users className="h-4 w-4" />
+                  </span>
+                </div>
+                <p className="mt-2 text-2xl font-bold tracking-tight text-ds-ink">
+                  {momentum.active_this_week} <span className="text-sm font-normal text-ds-muted">/ {momentum.members}</span>
+                </p>
+                <p className="mt-1 text-xs text-ds-muted">
+                  {Math.round((momentum.active_this_week / Math.max(1, momentum.members)) * 100)}% {t('team.participationRate', 'team participation this week')}
+                </p>
+              </div>
+
+              <div className="flex flex-col rounded-xl border border-ds-border bg-ds-surface p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ds-muted">{t('team.learningNow', 'Learning right now')}</span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-ds-warning-soft text-ds-warning">
+                    <Zap className="h-4 w-4" />
+                  </span>
+                </div>
+                <p className="mt-2 text-2xl font-bold tracking-tight text-ds-ink">
+                  {momentum.learning_now}
+                </p>
+                <p className="mt-1 text-xs text-ds-muted">
+                  {t('team.activeSessions', 'Learners with active sessions')}
+                </p>
+              </div>
+
+              <div className="flex flex-col rounded-xl border border-ds-border bg-ds-surface p-4 sm:col-span-2 lg:col-span-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-ds-muted">{t('team.trendTitle', '8-week activity')}</span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-ds-accent-soft text-ds-accent">
+                    <TrendingUp className="h-4 w-4" />
+                  </span>
+                </div>
+                <div className="mt-3 flex h-8 items-end gap-1.5">
+                  {momentum.weeks.map((w, idx) => {
+                    const maxPts = Math.max(1, ...momentum.weeks.map((x) => x.points))
+                    const heightPct = Math.max(12, Math.round((w.points / maxPts) * 100))
+                    return (
+                      <div
+                        key={w.week_start || idx}
+                        title={`${w.points} pts (${w.active_learners} active)`}
+                        className="group relative flex-1 rounded-t bg-ds-accent/80 transition-colors hover:bg-ds-accent"
+                        style={{ height: `${heightPct}%` }}
+                      />
+                    )
+                  })}
+                </div>
+                <div className="mt-1.5 flex justify-between text-[10px] text-ds-muted font-mono">
+                  <span>8w ago</span>
+                  <span>This week</span>
+                </div>
+              </div>
+            </section>
+          )}
+
           {headline && <p className="max-w-3xl text-lg leading-relaxed text-ds-ink">{headline}</p>}
 
           <ol className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">

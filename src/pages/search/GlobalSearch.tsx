@@ -147,7 +147,7 @@ export default function GlobalSearch() {
 
       {!organizationId ? (
         <EmptyState
-          icon={<Search className="h-6 w-6" aria-hidden="true" />}
+          illustration="search"
           title={t('find.noOrgTitle', 'Choose an organization to search')}
           description={t('find.noOrgBody', 'Search stays inside one organization so results are relevant and private.')}
         />
@@ -161,7 +161,7 @@ export default function GlobalSearch() {
         </div>
       ) : total === 0 ? (
         <EmptyState
-          icon={<Search className="h-6 w-6" aria-hidden="true" />}
+          illustration="search"
           title={t('find.noneTitle', 'Nothing matches “{{query}}”', { query })}
           description={t('find.noneBody', 'Try fewer or different words, or browse Knowledge and Courses directly.')}
           action={

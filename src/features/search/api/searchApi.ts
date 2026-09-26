@@ -162,8 +162,15 @@ export async function searchProfiles({
   const escapedQuery = escapeSearchQuery(trimmed)
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, job_title')
-    .eq('organization_id', organizationId)
+    .select(`
+      id,
+      full_name,
+      email,
+      job_title,
+      organization_memberships!inner(organization_id, is_active)
+    `)
+    .eq('organization_memberships.organization_id', organizationId)
+    .eq('organization_memberships.is_active', true)
     .or(`full_name.ilike.%${escapedQuery}%,email.ilike.%${escapedQuery}%`)
     .limit(limit)
 
@@ -171,7 +178,12 @@ export async function searchProfiles({
     console.warn('Search profiles error:', error)
     return []
   }
-  return (data || []) as SearchProfileResult[]
+  return (data || []).map((p: any) => ({
+    id: p.id,
+    full_name: p.full_name,
+    email: p.email,
+    job_title: p.job_title,
+  })) as SearchProfileResult[]
 }
 
 export async function searchAllTenantContent(params: SearchParams): Promise<GlobalSearchResults> {

@@ -48,7 +48,7 @@ describe('journey: explore', () => {
 
     it('shows the learner’s progress and filters by it', () => {
         renderJourney(<ExplorePage />, { route: '/learn/courses' })
-        expect(within(screen.getByText('Allergen Handling').closest('a') as HTMLElement).getByText('Completed')).toBeInTheDocument()
+        expect(within(screen.getByText('Allergen Handling').closest('a') as HTMLElement).getAllByText('Completed').length).toBeGreaterThanOrEqual(1)
         expect(screen.getByText('40%')).toBeInTheDocument()
 
         fireEvent.click(screen.getByRole('button', { name: /In progress/ }))

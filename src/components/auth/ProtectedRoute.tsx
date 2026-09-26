@@ -54,22 +54,6 @@ export function ProtectedRoute({
     }
   }, [user, loading, location.pathname, location.search, location.hash])
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">{t('status.loading')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
-    return <Navigate to={loginUrl} replace />
-  }
-
   const isRegisteredUser =
     account.isPlatformOperator ||
     account.tenantMemberships.length > 0 ||
@@ -87,6 +71,22 @@ export function ProtectedRoute({
       void signOut()
     }
   }, [user, account.loading, account.resolveFailed, isRegisteredUser, signOut])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">{t('status.loading')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
+    return <Navigate to={loginUrl} replace />
+  }
 
   if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
     const unregEmail = user.email ? encodeURIComponent(user.email) : ''

@@ -5,6 +5,8 @@ import { AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { KnowledgeArticle } from '@/types/knowledge'
 
+import { knowledgeTypeStyle } from '../knowledgeTypes'
+
 const SCOPE_KEY: Record<string, string> = {
   global: 'All organizations',
   organization: 'Whole organization',
@@ -31,6 +33,8 @@ export function ArticleTrustRow({ article, now }: { article: KnowledgeArticle; n
   const effective = date(article.last_published_at ?? article.published_at)
   const reviewed = date(article.last_reviewed_at)
   const reviewOverdue = !!article.next_review_date && Date.parse(article.next_review_date) < now
+  const typeStyle = knowledgeTypeStyle(article.content_type)
+  const TypeIcon = typeStyle.icon
   const scope = article.department?.name
     ?? t(`hub.scope.${article.scope_type ?? 'organization'}`, SCOPE_KEY[article.scope_type ?? 'organization'] ?? '')
 
@@ -38,11 +42,14 @@ export function ArticleTrustRow({ article, now }: { article: KnowledgeArticle; n
     <li>
       <Link
         to={`/knowledge/${article.id}`}
-        className="group flex gap-4 px-4 py-4 transition-colors hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent"
+        className={cn('group flex gap-4 border-s-4 px-4 py-4 transition-colors hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent', typeStyle.border)}
       >
+        <span aria-hidden="true" className={cn('mt-0.5 hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:flex', typeStyle.soft, typeStyle.text)}>
+          <TypeIcon className="h-4 w-4" />
+        </span>
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-ds-muted">
-            <span className="text-ds-accent">{t(`content_types_short.${article.content_type}`, article.content_type.toUpperCase())}</span>
+            <span className={typeStyle.text}>{t(`content_types_short.${article.content_type}`, article.content_type.toUpperCase())}</span>
             {(article.sop_code || article.code) && <span className="font-mono normal-case tracking-normal">{article.sop_code || article.code}</span>}
             {article.requires_acknowledgment && (
               <span className="rounded-[3px] bg-ds-warning-soft px-1.5 py-0.5 text-ds-warning">{t('hub.required', 'Required')}</span>
