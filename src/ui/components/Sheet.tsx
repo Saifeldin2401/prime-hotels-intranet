@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
+import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 
 export interface SheetProps {
@@ -10,6 +11,8 @@ export interface SheetProps {
   footer?: React.ReactNode
   side?: 'end' | 'start' | 'bottom'
   size?: 'sm' | 'md' | 'lg' | 'full'
+  /** Accessible name for the close control. */
+  closeLabel?: string
   className?: string
 }
 
@@ -20,6 +23,17 @@ const sizeMap = {
   full: 'max-w-full',
 }
 
+const sideStyles = {
+  end: 'inset-y-0 end-0 h-full border-s data-[state=open]:animate-in data-[state=open]:slide-in-from-right rtl:data-[state=open]:slide-in-from-left',
+  start: 'inset-y-0 start-0 h-full border-e data-[state=open]:animate-in data-[state=open]:slide-in-from-left rtl:data-[state=open]:slide-in-from-right',
+  bottom: 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-[8px] border-t data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom',
+}
+
+/**
+ * Side sheet for work that keeps the page in view (context switching, a
+ * record's details, filters on mobile). Built on Radix Dialog, so focus is
+ * trapped while open and returned to the trigger on close.
+ */
 export const Sheet: React.FC<SheetProps> = ({
   isOpen,
   onClose,
@@ -29,82 +43,43 @@ export const Sheet: React.FC<SheetProps> = ({
   footer,
   side = 'end',
   size = 'md',
+  closeLabel = 'Close',
   className = '',
-}) => {
-  const sheetRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      window.addEventListener('keydown', handleKeyDown)
-    }
-    return () => {
-      document.body.style.overflow = ''
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
-
-  const sideStyles = {
-    end: 'inset-y-0 end-0 rounded-s-[12px]',
-    start: 'inset-y-0 start-0 rounded-e-[12px]',
-    bottom: 'inset-x-0 bottom-0 max-h-[85vh] rounded-t-[12px]',
-  }
-
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-50 overflow-hidden font-sans"
-    >
-      {/* Solid backdrop - NO backdrop-blur per Section 13 */}
-      <div
-        className="fixed inset-0 bg-black/50 transition-opacity duration-200 motion-reduce:transition-none"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        ref={sheetRef}
-        className={`fixed z-10 w-full ${sizeMap[size]} ${sideStyles[side]} bg-ds-surface border-ds-border border shadow-2xl shadow-black/20 dark:shadow-black/60 flex flex-col overflow-hidden transition-transform duration-200 motion-reduce:transition-none ${className}`}
+}) => (
+  <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-ds-ink/40 data-[state=open]:animate-in data-[state=open]:fade-in-0 motion-reduce:animate-none" />
+      <DialogPrimitive.Content
+        className={`fixed z-50 flex w-full flex-col overflow-hidden border-ds-border bg-ds-surface font-sans shadow-xl shadow-black/10 duration-200 motion-reduce:animate-none ${sizeMap[size]} ${sideStyles[side]} ${className}`}
+        {...(description ? {} : { 'aria-describedby': undefined })}
       >
-        <div className="flex items-start justify-between p-5 pb-3 border-b border-ds-border/60">
-          <div className="space-y-1 pe-6">
-            {title && (
-              <h2 className="text-base font-semibold text-ds-ink">
-                {title}
-              </h2>
+        <div className="flex items-start justify-between gap-4 border-b border-ds-border px-5 py-4">
+          <div className="min-w-0 space-y-1">
+            {title ? (
+              <DialogPrimitive.Title className="text-base font-semibold text-ds-ink">{title}</DialogPrimitive.Title>
+            ) : (
+              <DialogPrimitive.Title className="sr-only">{closeLabel}</DialogPrimitive.Title>
             )}
             {description && (
-              <p className="text-xs text-ds-muted">
-                {description}
-              </p>
+              <DialogPrimitive.Description className="text-xs text-ds-muted">{description}</DialogPrimitive.Description>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close sheet"
-            className="p-1 rounded-[4px] text-ds-muted hover:text-ds-ink transition-colors"
+          <DialogPrimitive.Close
+            aria-label={closeLabel}
+            className="-me-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[4px] text-ds-muted transition-colors hover:bg-ds-surface-subtle hover:text-ds-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
           >
-            <X className="w-4 h-4" />
-          </button>
+            <X className="h-4 w-4" aria-hidden="true" />
+          </DialogPrimitive.Close>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">{children}</div>
 
         {footer && (
-          <div className="px-5 py-3 bg-ds-background/50 border-t border-ds-border/60 flex items-center justify-end gap-2.5 shrink-0">
+          <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-ds-border bg-ds-background/60 px-5 py-3">
             {footer}
           </div>
         )}
-      </div>
-    </div>
-  )
-}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  </DialogPrimitive.Root>
+)

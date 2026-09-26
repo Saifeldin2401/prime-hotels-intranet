@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React from 'react'
+import * as MenuPrimitive from '@radix-ui/react-dropdown-menu'
 
 export interface DropdownMenuItemConfig {
   id: string
@@ -11,89 +12,49 @@ export interface DropdownMenuItemConfig {
 }
 
 export interface DropdownMenuProps {
+  /** A single focusable element (usually a button) that opens the menu. */
   trigger: React.ReactNode
   items: DropdownMenuItemConfig[]
   align?: 'start' | 'end'
+  /** Optional content above the items, e.g. who is signed in. */
+  header?: React.ReactNode
   className?: string
 }
 
-export const DropdownMenu: React.FC<DropdownMenuProps> = ({
-  trigger,
-  items,
-  align = 'end',
-  className = '',
-}) => {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleOutsideClick)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [isOpen])
-
-  return (
-    <div ref={menuRef} className={`relative inline-flex ${className}`}>
-      <div onClick={() => setIsOpen(!isOpen)} role="button" tabIndex={0}>
-        {trigger}
-      </div>
-
-      {isOpen && (
-        <div
-          role="menu"
-          className={`absolute z-50 mt-1.5 min-w-[180px] p-1 bg-ds-surface border border-ds-border rounded-[8px] shadow-lg shadow-black/10 dark:shadow-black/40 font-sans transition-all duration-150 motion-reduce:transition-none ${
-            align === 'end' ? 'end-0' : 'start-0'
-          }`}
-        >
-          {items.map((item) => {
-            if (item.divider) {
-              return (
-                <div
-                  key={item.id}
-                  className="my-1 border-t border-ds-border/60"
-                  role="separator"
-                />
-              )
-            }
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="menuitem"
-                disabled={item.disabled}
-                onClick={() => {
-                  if (!item.disabled) {
-                    item.onClick?.()
-                    setIsOpen(false)
-                  }
-                }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[6px] text-start transition-colors duration-150 min-h-[36px] ${
-                  item.destructive
-                    ? 'text-ds-danger hover:bg-ds-danger-soft/40'
-                    : 'text-ds-ink hover:bg-ds-surface-subtle'
-                } ${item.disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {item.icon && <span className="shrink-0">{item.icon}</span>}
-                <span className="truncate">{item.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+/**
+ * Action menu on Radix: arrow-key navigation, typeahead, Escape to close and
+ * focus returned to the trigger.
+ */
+export const DropdownMenu: React.FC<DropdownMenuProps> = ({ trigger, items, align = 'end', header, className = '' }) => (
+  <MenuPrimitive.Root>
+    <MenuPrimitive.Trigger asChild>{trigger}</MenuPrimitive.Trigger>
+    <MenuPrimitive.Portal>
+      <MenuPrimitive.Content
+        align={align}
+        sideOffset={6}
+        className={`z-50 min-w-[220px] rounded-[6px] border border-ds-border bg-ds-surface p-1 font-sans shadow-lg shadow-black/10 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 motion-reduce:animate-none ${className}`}
+      >
+        {header && <div className="px-3 pb-2 pt-2.5">{header}</div>}
+        {items.map((item) =>
+          item.divider ? (
+            <MenuPrimitive.Separator key={item.id} className="my-1 h-px bg-ds-border" />
+          ) : (
+            <MenuPrimitive.Item
+              key={item.id}
+              disabled={item.disabled}
+              onSelect={() => item.onClick?.()}
+              className={`flex min-h-[40px] cursor-pointer select-none items-center gap-2.5 rounded-[4px] px-3 text-sm outline-none transition-colors data-[disabled]:cursor-not-allowed data-[disabled]:opacity-40 ${
+                item.destructive
+                  ? 'text-ds-danger data-[highlighted]:bg-ds-danger-soft'
+                  : 'text-ds-ink data-[highlighted]:bg-ds-surface-subtle'
+              }`}
+            >
+              {item.icon && <span className="shrink-0 text-ds-muted" aria-hidden="true">{item.icon}</span>}
+              <span className="truncate">{item.label}</span>
+            </MenuPrimitive.Item>
+          )
+        )}
+      </MenuPrimitive.Content>
+    </MenuPrimitive.Portal>
+  </MenuPrimitive.Root>
+)

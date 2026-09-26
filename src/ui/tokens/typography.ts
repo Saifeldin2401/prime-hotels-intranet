@@ -1,12 +1,16 @@
 /**
  * Ratified typography scale for Altus Connect.
- * Uses IBM Plex Sans with native companion IBM Plex Sans Arabic and IBM Plex Mono.
+ * DM Sans for the Latin interface, IBM Plex Sans Arabic as a first-class Arabic
+ * face, Cormorant Garamond for rare editorial moments (greeting, course and
+ * article titles), IBM Plex Mono for codes and aligned figures.
  * Reference: Section 7 & 8 of Technical UI/UX Design Implementation Specification.
  */
 
 export const typography = {
   fontFamilies: {
-    sans: "'IBM Plex Sans', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    sans: "'DM Sans', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    arabic: "'IBM Plex Sans Arabic', 'DM Sans', sans-serif",
+    editorial: "'Cormorant Garamond', 'IBM Plex Sans Arabic', Georgia, serif",
     mono: "'IBM Plex Mono', monospace",
   },
   scale: {
