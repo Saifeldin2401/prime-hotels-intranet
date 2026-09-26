@@ -1,4 +1,4 @@
-﻿import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { CheckCircle2 } from 'lucide-react';
 import { useState, useCallback, memo } from 'react';
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
@@ -98,15 +98,38 @@ function FloatingInputComponent({
           isRTL ? 'pe-10 text-end' : 'ps-10 text-start',
           rightElement ? (isRTL ? 'ps-11' : 'pe-11') : '',
           isFocused
-            ? 'border-ds-brass ring-2 ring-ds-brass/20 shadow-xs'
+            ? 'border-ds-brass shadow-xs'
             : isActive
             ? 'border-ds-border-strong'
             : 'border-ds-border hover:border-ds-border-strong',
-          valid === true && 'border-ds-success focus:ring-ds-success/20',
-          valid === false && value && 'border-ds-danger focus:ring-ds-danger/20',
+          valid === true && 'border-ds-success',
+          valid === false && value && 'border-ds-danger',
           disabled && 'opacity-50 cursor-not-allowed bg-slate-50'
         )}
       />
+
+      {/* Focus ripple ring */}
+      <LazyMotion features={domAnimation}>
+        <AnimatePresence>
+          {isFocused && (
+            <m.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className={cn(
+                'absolute inset-0 rounded-lg pointer-events-none',
+                valid === true
+                  ? 'ring-2 ring-ds-success/20'
+                  : valid === false && value
+                  ? 'ring-2 ring-ds-danger/20'
+                  : 'ring-2 ring-ds-brass/20'
+              )}
+              aria-hidden="true"
+            />
+          )}
+        </AnimatePresence>
+      </LazyMotion>
 
       {/* Floating Label (with peer selector to immediately float if browser autofills) */}
       <label

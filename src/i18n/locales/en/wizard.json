@@ -459,7 +459,11 @@
     "reset_error": "An error occurred during reset",
     "event_simulator_title": "Operational Event Guidance Simulator",
     "event_simulator_desc": "Trigger and preview real-time, event-driven guidance walkthroughs for critical hospitality events.",
-    "simulate_event_btn": "Simulate Event Guidance"
+    "simulate_event_btn": "Simulate Event Guidance",
+    "eyebrow": "Organization",
+    "title_short": "Onboarding guides",
+    "context": "The guided first steps each role sees. Preview them as that role before people meet them.",
+    "simulate_button_short": "Preview as this role"
   },
   "roles": {
     "learner": "Employee & Learner",

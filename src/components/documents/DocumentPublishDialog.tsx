@@ -29,7 +29,6 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
-import { useProperty } from '@/contexts/PropertyContext';
 import { useCategories } from '@/hooks/useKnowledge';
 import { useDepartments } from '@/hooks/useDepartments';
 import {
@@ -66,15 +65,9 @@ const VISIBILITY_OPTIONS: {
     icon: Users,
   },
   {
-    value: 'property',
-    label: 'Hotel Wide',
-    description: 'Visible to all staff at the selected hotel',
-    icon: Building,
-  },
-  {
     value: 'all_properties',
     label: 'Organization-Wide',
-    description: 'Visible to all staff across all tenant hotels',
+    description: 'Visible to everyone in the organization',
     icon: Globe,
   },
 ];
@@ -87,9 +80,8 @@ export function DocumentPublishDialog({
 }: DocumentPublishDialogProps) {
   const { t } = useTranslation();
   const { user, primaryRole } = useAuth();
-  const { currentProperty } = useProperty();
   const { data: categories } = useCategories();
-  const { departments } = useDepartments(currentProperty?.id);
+  const { departments } = useDepartments();
   const publishMutation = usePublishDocumentToKnowledge();
 
   const canPublish = useCanPublishToKnowledge(document);
@@ -100,7 +92,7 @@ export function DocumentPublishDialog({
   // Form state - initialized from document prop
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [visibility, setVisibility] = useState<KnowledgeVisibility>('property');
+  const [visibility, setVisibility] = useState<KnowledgeVisibility>('all_properties');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
   const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false);
@@ -124,7 +116,7 @@ export function DocumentPublishDialog({
         });
         setTitle(smart.title);
         setDescription(smart.description);
-        setVisibility('property');
+        setVisibility('all_properties');
         setDepartmentId(document.department_id || '');
         setCategoryId('');
         setRequiresAcknowledgment(false);
@@ -185,7 +177,6 @@ export function DocumentPublishDialog({
       title: title.trim(),
       description: description.trim() || undefined,
       visibility,
-      propertyId: currentProperty?.id,
       departmentId: visibility === 'department' ? departmentId : undefined,
       categoryId: categoryId || undefined,
       requiresAcknowledgment,

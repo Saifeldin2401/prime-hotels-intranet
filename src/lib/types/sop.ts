@@ -1,4 +1,4 @@
-import type { Department, Profile, Property } from './profile'
+import type { Department, Profile } from './profile'
 
 // SOP System Interfaces
 type SOPStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'archived'
@@ -11,7 +11,6 @@ interface SOPDocument {
   version: number
   status: SOPStatus
   category: string | null
-  property_id: string | null
   department_id: string | null
   created_by: string | null
   approved_by: string | null
@@ -23,7 +22,6 @@ interface SOPDocument {
   updated_at: string
 
   // Relations
-  property?: Property
   department?: Department
   created_by_profile?: Profile
   approved_by_profile?: Profile

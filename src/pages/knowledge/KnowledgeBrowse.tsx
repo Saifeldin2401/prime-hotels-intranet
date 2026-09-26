@@ -46,7 +46,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
-import { PageHeader } from '@/ui/components/PageHeader'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { SearchField } from '@/ui/components/SearchField'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import { KnowledgeSidebar, AIArticleStudioModal } from '@/components/knowledge'
@@ -339,18 +339,6 @@ export default function KnowledgeBrowse() {
         }
     }
 
-    const breadcrumbItems = useMemo(() => {
-        const items = [{ label: t('library.title', 'Knowledge Library'), href: '/knowledge' }]
-        if (activeDept) items.push({ label: t('library.department', 'Department'), href: undefined })
-        if (activeType) items.push({ label: t(`content_types.${activeType}`, activeType), href: undefined })
-        if (activeMaster) items.push({ label: t('viewer.master_sop', 'Master SOPs'), href: undefined })
-        if (activeFeatured) items.push({ label: t('library.featured', 'Featured'), href: undefined })
-        if (activeBookmarks) items.push({ label: t('library.bookmarks', 'My Bookmarks'), href: undefined })
-        if (activeRequired) items.push({ label: t('library.required_reading', 'Required Reading'), href: undefined })
-        if (searchQuery) items.push({ label: t('library.search_results', 'Search: {{q}}', { q: searchQuery }), href: undefined })
-        return items
-    }, [activeDept, activeType, activeMaster, activeFeatured, activeBookmarks, activeRequired, searchQuery, t])
-
     const departmentsList = useMemo(() => {
         if (!deptCounts) return []
         return Object.entries(deptCounts).map(([id, dept]) => ({
@@ -361,52 +349,32 @@ export default function KnowledgeBrowse() {
     }, [deptCounts])
 
     return (
-        <div className="space-y-6 animate-fade-in max-w-7xl mx-auto font-sans">
-            {/* Standard Architectural PageHeader */}
-            <PageHeader
+        <div className="mx-auto max-w-7xl space-y-6">
+            <WorkspaceHeader
+                eyebrow={t('articleLibrary.eyebrow', 'Studio')}
                 title={
-                    activeDept ? t('library.browsing_dept', 'Browsing Department') :
+                    activeDept ? t('library.browsing_dept', 'Browsing department') :
                     activeType ? t('library.browsing_type', 'Browsing {{type}}', { type: t(`content_types.${activeType}`, activeType) }) :
-                    activeMaster ? t('viewer.master_sop', 'Master Standard Operating Procedures') :
-                    activeRequired ? t('library.required_reading', 'Required Reading') :
-                    searchQuery ? t('library.search_results_title', 'Search Results') :
-                    t('library.master_library', 'Knowledge Base & SOP Standards')
+                    activeMaster ? t('viewer.master_sop', 'Master procedures') :
+                    activeRequired ? t('library.required_reading', 'Required reading') :
+                    searchQuery ? t('library.search_results_title', 'Search results') :
+                    t('articleLibrary.title', 'Articles')
                 }
-                subtitle={t('hero_description', 'Access verified standard operating procedures, luxury service benchmarks, and brand policies across all hotel properties.')}
-                breadcrumbs={breadcrumbItems}
-                badge={
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[6px] bg-[#86672C]/10 text-[#86672C] dark:text-[#D4AA55] border border-[#86672C]/20 text-[11px] font-semibold uppercase tracking-wider">
-                        <Layers className="h-3 w-3" />
-                        <span>ALTUS KNOWLEDGE REPOSITORY</span>
-                    </span>
-                }
-                primaryAction={canManage ? (
-                    <Link to="/studio/articles/new">
-                        <Button 
-                            data-tour="knowledge-create-sop-btn"
-                            size="sm" 
-                            className="bg-[#86672C] hover:bg-[#725725] text-white font-medium rounded-[6px] gap-1.5 shadow-none"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            <span>{t('library.create_new', 'New Article')}</span>
-                        </Button>
-                    </Link>
-                ) : undefined}
-                secondaryActions={canManage ? (
-                    <Button
-                        onClick={() => setIsAiStudioOpen(true)}
-                        size="sm"
-                        variant="outline"
-                        className="border-[#DDDBD4] dark:border-[#30404D] text-[#15212E] dark:text-[#F4F2EC] hover:bg-[#ECEBE8] dark:hover:bg-[#1E2C3A] rounded-[6px] gap-1.5 font-medium"
-                    >
-                        <Sparkles className="h-3.5 w-3.5 text-[#86672C] dark:text-[#D4AA55]" />
-                        <span className="hidden sm:inline">AI Article Studio</span>
-                    </Button>
+                context={t('articleLibrary.context', 'Every procedure, policy and guide in your organization: drafts, in review and published.')}
+                actions={canManage ? (
+                    <>
+                        <button type="button" onClick={() => setIsAiStudioOpen(true)} className={`${headerActionClass.secondary} hidden sm:inline-flex`}>
+                            <Sparkles aria-hidden="true" className="h-4 w-4" />{t('articleLibrary.draftWithAi', 'Draft with AI')}
+                        </button>
+                        <Link to="/studio/articles/new" data-tour="knowledge-create-sop-btn" className={headerActionClass.primary}>
+                            <Plus aria-hidden="true" className="h-4 w-4" />{t('library.create_new', 'New article')}
+                        </Link>
+                    </>
                 ) : undefined}
             />
 
             {/* Controlled Search & Category Section */}
-            <div className="bg-[#15212E] text-white p-5 sm:p-6 rounded-[8px] border border-[#30404D] space-y-4">
+            <div className="space-y-4">
                 <div data-tour="knowledge-search-bar" className="w-full">
                     <SearchField
                         placeholder={t('search_placeholder', 'Search SOPs, luxury benchmarks, checklists, policies...')}
@@ -419,8 +387,8 @@ export default function KnowledgeBrowse() {
 
                 {/* Visual Category Chips (Front Office, Housekeeping, F&B, Safety, Maintenance, Sustainability, HR & Training, Technology) */}
                 <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-[#929CA5]">
-                        {t('library.categories', 'Operational Categories')}
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">
+                        {t('library.categories', 'Categories')}
                     </div>
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
                         {VISUAL_CATEGORIES.map(cat => {
@@ -432,13 +400,13 @@ export default function KnowledgeBrowse() {
                                     type="button"
                                     onClick={() => handleCategoryClick(cat)}
                                     className={cn(
-                                        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-medium whitespace-nowrap transition-colors border select-none cursor-pointer",
+                                        "shrink-0 inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent",
                                         active
-                                            ? "bg-[#86672C] text-white border-[#86672C]"
-                                            : "bg-[#1E2C3A] text-[#CDCFD0] border-[#30404D] hover:bg-[#253545] hover:text-white"
+                                            ? "border-ds-ink bg-ds-ink text-ds-on-ink"
+                                            : "border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong"
                                     )}
                                 >
-                                    <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white" : "text-[#D4AA55]")} />
+                                    <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0 opacity-70" />
                                     <span>{t(cat.nameKey, cat.defaultName)}</span>
                                 </button>
                             )
@@ -447,7 +415,7 @@ export default function KnowledgeBrowse() {
                 </div>
 
                 {/* Content Type Chips */}
-                <div data-tour="knowledge-categories" className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-[#30404D]/60 scrollbar-thin">
+                <div data-tour="knowledge-categories" className="flex items-center gap-1 overflow-x-auto border-b border-ds-border scrollbar-thin">
                     {CATEGORY_CHIPS.map(chip => {
                         const Icon = chip.icon
                         const isActive = isCurrentChipActive(chip.type)
@@ -457,10 +425,10 @@ export default function KnowledgeBrowse() {
                                 type="button"
                                 onClick={() => setChipFilter(chip.type)}
                                 className={cn(
-                                    "shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-medium whitespace-nowrap transition-colors border select-none cursor-pointer",
+                                    "-mb-px shrink-0 inline-flex min-h-[40px] items-center gap-1.5 border-b-2 px-3 text-sm whitespace-nowrap transition-colors select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent",
                                     isActive
-                                        ? "bg-white text-[#15212E] border-white font-semibold"
-                                        : "bg-transparent text-[#929CA5] border-transparent hover:text-white hover:bg-[#1E2C3A]"
+                                        ? "border-ds-ink text-ds-ink"
+                                        : "border-transparent text-ds-muted hover:text-ds-ink"
                                 )}
                             >
                                 <Icon className="h-3 w-3 shrink-0" />
@@ -472,12 +440,12 @@ export default function KnowledgeBrowse() {
             </div>
 
             {/* Toolbar & Controls Bar */}
-            <div className="bg-[#FFFFFF] dark:bg-[#15212E] border border-[#DDDBD4] dark:border-[#30404D] rounded-[8px] p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shadow-none">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3 flex-wrap">
                     <Button
                         variant="outline"
                         size="sm"
-                        className="gap-2 lg:hidden border-[#DDDBD4] dark:border-[#30404D] rounded-[6px]"
+                        className="gap-2 lg:hidden border-ds-border rounded-[6px]"
                         onClick={() => setMobileSidebarOpen(true)}
                     >
                         <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -489,8 +457,7 @@ export default function KnowledgeBrowse() {
                             <span>{t('common.loading', 'Loading articles...')}</span>
                         ) : (
                             <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                                {t(filteredArticles.length === 1 ? 'article_count' : 'article_count_plural', {
+                                                                {t(filteredArticles.length === 1 ? 'article_count' : 'article_count_plural', {
                                     count: filteredArticles.length,
                                     defaultValue: `${filteredArticles.length} articles`
                                 })}
@@ -503,10 +470,10 @@ export default function KnowledgeBrowse() {
                             variant="ghost"
                             size="sm"
                             onClick={clearFilters}
-                            className="h-8 text-xs text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/40 gap-1.5 font-semibold rounded-[6px]"
+                            className="h-9 gap-1.5 text-sm text-ds-muted hover:text-ds-ink"
                         >
                             <FilterX className="h-3.5 w-3.5" />
-                            <span>{t('library.clear_filters', 'Clear All Filters')}</span>
+                            <span>{t('library.clear_filters', 'Clear filters')}</span>
                         </Button>
                     )}
                 </div>
@@ -523,8 +490,8 @@ export default function KnowledgeBrowse() {
                                 setSearchParams(newParams)
                             }}
                         >
-                            <SelectTrigger className="h-9 w-[170px] bg-muted/60 border-[#DDDBD4] dark:border-[#30404D] text-xs font-medium text-foreground rounded-[6px]">
-                                <Building2 className="h-3.5 w-3.5 me-2 text-[#86672C] dark:text-[#D4AA55]" />
+                            <SelectTrigger className="h-9 w-[170px] bg-muted/60 border-ds-border text-xs font-medium text-foreground rounded-[6px]">
+                                <Building2 className="h-3.5 w-3.5 me-2 text-ds-accent" />
                                 <SelectValue placeholder={t('library.all_departments', 'All Departments')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -540,7 +507,7 @@ export default function KnowledgeBrowse() {
 
                     {/* Sort Selector */}
                     <Select value={sortBy} onValueChange={setSortBy}>
-                        <SelectTrigger className="h-9 w-[155px] bg-muted/60 border-[#DDDBD4] dark:border-[#30404D] text-xs font-medium text-foreground rounded-[6px]">
+                        <SelectTrigger className="h-9 w-[155px] bg-muted/60 border-ds-border text-xs font-medium text-foreground rounded-[6px]">
                             <ArrowUpDown className="h-3.5 w-3.5 me-2 text-muted-foreground" />
                             <SelectValue />
                         </SelectTrigger>
@@ -552,7 +519,7 @@ export default function KnowledgeBrowse() {
                     </Select>
 
                     {/* View Mode Toggle */}
-                    <div className="flex bg-muted p-0.5 rounded-[6px] border border-[#DDDBD4] dark:border-[#30404D]">
+                    <div className="flex bg-muted p-0.5 rounded-[6px] border border-ds-border">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -579,15 +546,15 @@ export default function KnowledgeBrowse() {
             {showHub && (featured?.length || recentArticles?.length) ? (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {featured && featured.length > 0 && (
-                        <section className="rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] p-5">
-                            <h2 className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-[#86672C] dark:text-[#D4AA55]">
+                        <section className="rounded-[8px] border border-ds-border bg-ds-surface p-5">
+                            <h2 className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ds-accent">
                                 <span className="flex items-center gap-2">
-                                    <Star className="h-4 w-4 text-[#86672C] fill-[#86672C] dark:text-[#D4AA55] dark:fill-[#D4AA55]" />
+                                    <Star className="h-4 w-4 text-ds-accent fill-ds-accent" />
                                     {t('featured', 'Featured Procedures')}
                                 </span>
                                 <span className="text-[10px] font-mono text-muted-foreground">{featured.length} VIP standards</span>
                             </h2>
-                            <div className="divide-y divide-[#DDDBD4] dark:divide-[#30404D] overflow-hidden rounded-[6px] border border-[#DDDBD4] dark:border-[#30404D] bg-card">
+                            <div className="divide-y divide-[#DDDBD4] dark:divide-[#30404D] overflow-hidden rounded-[6px] border border-ds-border bg-card">
                                 {featured.slice(0, 5).map(a => (
                                     <Link
                                         key={a.id}
@@ -595,15 +562,15 @@ export default function KnowledgeBrowse() {
                                         className="group flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-[6px] bg-[#86672C]/10 flex items-center justify-center text-[#86672C] dark:text-[#D4AA55] shrink-0">
+                                            <div className="w-8 h-8 rounded-[6px] bg-ds-accent/10 flex items-center justify-center text-ds-accent shrink-0">
                                                 <FileText className="h-4 w-4" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="font-semibold text-foreground group-hover:text-[#86672C] dark:group-hover:text-[#D4AA55] transition-colors truncate">{a.title}</p>
+                                                <p className="font-semibold text-foreground group-hover:text-ds-accent transition-colors truncate">{a.title}</p>
                                                 <p className="text-xs text-muted-foreground truncate">{a.department?.name || t('general_category', 'General')}</p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#86672C] dark:group-hover:text-[#D4AA55] transition-colors shrink-0 rtl:rotate-180" />
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-ds-accent transition-colors shrink-0 rtl:rotate-180" />
                                     </Link>
                                 ))}
                             </div>
@@ -611,15 +578,15 @@ export default function KnowledgeBrowse() {
                     )}
 
                     {recentArticles && recentArticles.length > 0 && (
-                        <section className="rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] p-5">
+                        <section className="rounded-[8px] border border-ds-border bg-ds-surface p-5">
                             <h2 className="mb-4 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-foreground">
                                 <span className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-[#86672C] dark:text-[#D4AA55]" />
+                                    <Clock className="h-4 w-4 text-ds-accent" />
                                     {t('recent', 'Recently Updated')}
                                 </span>
                                 <span className="text-[10px] text-muted-foreground font-mono">Live Sync</span>
                             </h2>
-                            <div className="divide-y divide-[#DDDBD4] dark:divide-[#30404D] overflow-hidden rounded-[6px] border border-[#DDDBD4] dark:border-[#30404D] bg-card">
+                            <div className="divide-y divide-[#DDDBD4] dark:divide-[#30404D] overflow-hidden rounded-[6px] border border-ds-border bg-card">
                                 {recentArticles.slice(0, 5).map(a => (
                                     <Link
                                         key={a.id}
@@ -627,15 +594,15 @@ export default function KnowledgeBrowse() {
                                         className="group flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted/50 transition-colors"
                                     >
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <div className="w-8 h-8 rounded-[6px] bg-[#1E2C3A] flex items-center justify-center text-[#929CA5] shrink-0">
+                                            <div className="w-8 h-8 rounded-[6px] bg-ds-ink flex items-center justify-center text-ds-muted shrink-0">
                                                 <Clock className="h-4 w-4" />
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="font-semibold text-foreground group-hover:text-[#86672C] dark:group-hover:text-[#D4AA55] transition-colors truncate">{a.title}</p>
+                                                <p className="font-semibold text-foreground group-hover:text-ds-accent transition-colors truncate">{a.title}</p>
                                                 <p className="text-xs text-muted-foreground truncate">{new Date(a.updated_at).toLocaleDateString()}</p>
                                             </div>
                                         </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-[#86672C] dark:group-hover:text-[#D4AA55] transition-colors shrink-0 rtl:rotate-180" />
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-ds-accent transition-colors shrink-0 rtl:rotate-180" />
                                     </Link>
                                 ))}
                             </div>
@@ -681,7 +648,7 @@ export default function KnowledgeBrowse() {
                                 <div key={article.id} className="group relative h-full">
                                     <Link to={`/knowledge/${article.id}`} className="block h-full">
                                         <Card className={cn(
-                                            "h-full overflow-hidden transition-colors duration-150 border border-[#DDDBD4] dark:border-[#30404D] hover:border-[#86672C]/40 dark:hover:border-[#B79A62]/40 bg-[#FFFFFF] dark:bg-[#15212E] rounded-[8px] flex flex-col justify-between shadow-none",
+                                            "h-full overflow-hidden transition-colors duration-150 border border-ds-border hover:border-ds-accent/40 bg-ds-surface rounded-[8px] flex flex-col justify-between shadow-none",
                                             viewMode === 'list' && "sm:flex-row sm:items-center sm:p-0"
                                         )}>
                                             <CardContent className={cn(
@@ -693,14 +660,14 @@ export default function KnowledgeBrowse() {
                                                     <div className="flex items-center justify-between gap-2 flex-wrap">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                             {/* Content Type Pill */}
-                                                            <Badge className="bg-[#86672C]/10 text-[#86672C] dark:text-[#D4AA55] border border-[#86672C]/20 text-[10px] font-semibold uppercase tracking-wider h-5 px-2 py-0 rounded-[4px]">
+                                                            <Badge className="bg-ds-accent/10 text-ds-accent border border-ds-accent/20 text-[10px] font-semibold uppercase tracking-wider h-5 px-2 py-0 rounded-[4px]">
                                                                 <Icon className="h-3 w-3 me-1" />
                                                                 {t(`content_types.${article.content_type}`, article.content_type)}
                                                             </Badge>
 
                                                             {/* Department Badge */}
                                                             {article.department?.name && (
-                                                                <Badge variant="outline" className="bg-muted/60 text-muted-foreground border-[#DDDBD4] dark:border-[#30404D] text-[10px] font-medium h-5 px-2 py-0 rounded-[4px]">
+                                                                <Badge variant="outline" className="bg-muted/60 text-muted-foreground border-ds-border text-[10px] font-medium h-5 px-2 py-0 rounded-[4px]">
                                                                     <Briefcase className="h-2.5 w-2.5 me-1 text-muted-foreground" />
                                                                     {article.department.name}
                                                                 </Badge>
@@ -708,14 +675,14 @@ export default function KnowledgeBrowse() {
 
                                                             {/* Master SOP Indicators */}
                                                             {article.is_master_template && (
-                                                                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] h-5 py-0 flex items-center gap-1 font-semibold rounded-[4px]">
-                                                                    <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                                                                <Badge className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[10px] h-5 py-0 flex items-center gap-1 font-semibold rounded-[4px]">
+                                                                    <Sparkles className="h-2.5 w-2.5 text-ds-warning" />
                                                                     {t('viewer.master_sop', 'Master SOP')}
                                                                 </Badge>
                                                             )}
                                                             {article.master_source_id && (
-                                                                <Badge className="bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30 text-[10px] h-5 py-0 flex items-center gap-1 font-semibold rounded-[4px]">
-                                                                    <Crown className="h-2.5 w-2.5 text-indigo-500" />
+                                                                <Badge className="bg-ds-accent-soft text-ds-accent border-ds-accent/30 text-[10px] h-5 py-0 flex items-center gap-1 font-semibold rounded-[4px]">
+                                                                    <Crown className="h-2.5 w-2.5 text-ds-accent" />
                                                                     {t('from_master', 'From Master')}
                                                                 </Badge>
                                                             )}
@@ -726,7 +693,7 @@ export default function KnowledgeBrowse() {
                                                                         e.stopPropagation()
                                                                         setSyncModalState({ open: true, article })
                                                                     }}
-                                                                    className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] h-5 py-0 flex items-center gap-1 font-semibold cursor-pointer shadow-none rounded-[4px]"
+                                                                    className="bg-ds-warning hover:bg-ds-warning text-white text-[10px] h-5 py-0 flex items-center gap-1 font-semibold cursor-pointer shadow-none rounded-[4px]"
                                                                 >
                                                                     <span>Update Available</span>
                                                                 </Badge>
@@ -736,13 +703,13 @@ export default function KnowledgeBrowse() {
                                                         {/* Top Right Highlights */}
                                                         <div className="flex items-center gap-1.5 shrink-0">
                                                             {isPendingAck && (
-                                                                <Badge className="bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30 text-[10px] font-semibold h-5 py-0 rounded-[4px]">
+                                                                <Badge className="bg-ds-danger-soft text-ds-danger border-ds-danger/30 text-[10px] font-semibold h-5 py-0 rounded-[4px]">
                                                                     {t('library.required', 'Required')}
                                                                 </Badge>
                                                             )}
                                                             {article.featured && (
                                                                 <span title="Featured procedure">
-                                                                    <Star className="h-4 w-4 text-[#86672C] fill-[#86672C] dark:text-[#D4AA55] dark:fill-[#D4AA55]" />
+                                                                    <Star className="h-4 w-4 text-ds-accent fill-ds-accent" />
                                                                 </span>
                                                             )}
                                                             <button
@@ -752,17 +719,17 @@ export default function KnowledgeBrowse() {
                                                                     e.stopPropagation()
                                                                     toggleBookmark.mutate(article.id)
                                                                 }}
-                                                                className="p-1 rounded text-muted-foreground hover:text-[#86672C] dark:hover:text-[#D4AA55] transition-colors"
+                                                                className="p-1 rounded text-muted-foreground hover:text-ds-accent transition-colors"
                                                                 title={isBookmarked ? "Remove Bookmark" : "Save Bookmark"}
                                                             >
-                                                                <Star className={cn("h-4 w-4", isBookmarked ? "text-[#86672C] fill-[#86672C] dark:text-[#D4AA55] dark:fill-[#D4AA55]" : "text-muted-foreground hover:text-[#86672C]")} />
+                                                                <Star className={cn("h-4 w-4", isBookmarked ? "text-ds-accent fill-ds-accent" : "text-muted-foreground hover:text-ds-accent")} />
                                                             </button>
                                                         </div>
                                                     </div>
 
                                                     {/* Title & Description */}
                                                     <div>
-                                                        <h3 className="font-sans text-base sm:text-lg font-bold text-foreground group-hover:text-[#86672C] dark:group-hover:text-[#D4AA55] transition-colors line-clamp-2 leading-snug">
+                                                        <h3 className="font-sans text-base sm:text-lg font-bold text-foreground group-hover:text-ds-accent transition-colors line-clamp-2 leading-snug">
                                                             {article.title}
                                                         </h3>
                                                         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed">
@@ -772,11 +739,11 @@ export default function KnowledgeBrowse() {
                                                 </div>
 
                                                 {/* Bottom Metadata & Authorship */}
-                                                <div className="mt-4 pt-3 border-t border-[#DDDBD4] dark:border-[#30404D] flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                                                <div className="mt-4 pt-3 border-t border-ds-border flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
                                                     <div className="flex items-center gap-2 min-w-0">
-                                                        <Avatar className="h-5 w-5 border border-[#DDDBD4] dark:border-[#30404D]">
+                                                        <Avatar className="h-5 w-5 border border-ds-border">
                                                             <AvatarImage src={article.author?.avatar_url} />
-                                                            <AvatarFallback className="bg-[#15212E] text-white text-[9px] font-bold">
+                                                            <AvatarFallback className="bg-ds-ink text-white text-[9px] font-bold">
                                                                 {article.author?.full_name?.charAt(0) || 'A'}
                                                             </AvatarFallback>
                                                         </Avatar>
@@ -821,7 +788,7 @@ export default function KnowledgeBrowse() {
                                                     type="button"
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 bg-card shadow-sm border border-[#DDDBD4] dark:border-[#30404D] text-foreground hover:bg-[#15212E] hover:text-white transition-colors rounded-[6px]"
+                                                    className="h-8 w-8 bg-card shadow-sm border border-ds-border text-foreground hover:bg-ds-ink hover:text-white transition-colors rounded-[6px]"
                                                     title={t('library.edit', { defaultValue: 'Edit Procedure' })}
                                                 >
                                                     <Pencil className="h-3.5 w-3.5" />
@@ -831,7 +798,7 @@ export default function KnowledgeBrowse() {
                                                 type="button"
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 bg-card shadow-sm border border-[#DDDBD4] dark:border-[#30404D] text-rose-600 hover:bg-rose-600 hover:text-white transition-colors rounded-[6px]"
+                                                className="h-8 w-8 bg-card shadow-sm border border-ds-border text-ds-danger hover:bg-ds-danger hover:text-white transition-colors rounded-[6px]"
                                                 title={t('library.delete', { defaultValue: 'Delete Procedure' })}
                                                 onClick={(e) => {
                                                     e.preventDefault()
@@ -849,11 +816,11 @@ export default function KnowledgeBrowse() {
                     </div>
                 ) : (
                     /* Architectural Empty State */
-                    <div className="rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#FFFFFF] dark:bg-[#15212E] p-10 text-center max-w-xl mx-auto shadow-none">
-                        <div className="w-12 h-12 bg-[#86672C]/10 rounded-[6px] flex items-center justify-center mx-auto mb-4 text-[#86672C] dark:text-[#D4AA55] border border-[#86672C]/20">
-                            {activeBookmarks ? <Star className="h-6 w-6 text-[#86672C] dark:text-[#D4AA55]" /> :
-                                activeRequired ? <CheckCircle2 className="h-6 w-6 text-emerald-500" /> :
-                                    <Search className="h-6 w-6 text-[#86672C] dark:text-[#D4AA55]" />}
+                    <div className="rounded-[8px] border border-ds-border bg-ds-surface p-10 text-center max-w-xl mx-auto shadow-none">
+                        <div className="w-12 h-12 bg-ds-accent/10 rounded-[6px] flex items-center justify-center mx-auto mb-4 text-ds-accent border border-ds-accent/20">
+                            {activeBookmarks ? <Star className="h-6 w-6 text-ds-accent" /> :
+                                activeRequired ? <CheckCircle2 className="h-6 w-6 text-ds-success" /> :
+                                    <Search className="h-6 w-6 text-ds-accent" />}
                         </div>
                         <h3 className="text-lg font-bold text-foreground">
                             {activeBookmarks ? t('library.no_bookmarks', 'No saved bookmarks yet') :
@@ -869,7 +836,7 @@ export default function KnowledgeBrowse() {
                             {hasAnyFilter && (
                                 <Button
                                     variant="outline"
-                                    className="border-[#DDDBD4] dark:border-[#30404D] text-foreground hover:bg-muted font-medium rounded-[6px]"
+                                    className="border-ds-border text-foreground hover:bg-muted font-medium rounded-[6px]"
                                     onClick={clearFilters}
                                 >
                                     <RefreshCw className="h-4 w-4 me-2" />
@@ -878,7 +845,7 @@ export default function KnowledgeBrowse() {
                             )}
                             {canManage && (
                                 <Link to="/studio/articles/new">
-                                    <Button className="bg-[#86672C] hover:bg-[#725725] text-white font-medium rounded-[6px] shadow-none">
+                                    <Button className="bg-ds-ink hover:bg-[#725725] text-ds-on-ink font-medium rounded-[6px] shadow-none">
                                         <Plus className="h-4 w-4 me-2" />
                                         {t('library.create_new', 'Draft New SOP')}
                                     </Button>
@@ -929,7 +896,7 @@ export default function KnowledgeBrowse() {
                             } catch {}
                         }
 
-                        formattedContent = `<div class="ai-schematic-card my-6 p-4 rounded-xl border bg-slate-950 text-center text-slate-300">\n${svgOrImg}\n<p class="text-xs text-slate-400 mt-2 italic">${article.visual_asset.caption || 'Operational SOP Vector Schematic'}</p>\n</div>\n\n${formattedContent}`
+                        formattedContent = `<div class="ai-schematic-card my-6 p-4 rounded-xl border bg-ds-ink text-center text-ds-muted">\n${svgOrImg}\n<p class="text-xs text-ds-muted mt-2 italic">${article.visual_asset.caption || 'Operational SOP Vector Schematic'}</p>\n</div>\n\n${formattedContent}`
                     }
 
                     navigate('/studio/articles/new', {

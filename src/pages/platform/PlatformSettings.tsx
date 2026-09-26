@@ -1,3 +1,4 @@
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,7 +45,7 @@ function SettingRow({
     <div className="p-3 rounded-xl border space-y-2">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">{s.key}</div>
+          <div className="font-mono text-[11px] font-semibold text-ds-ink truncate">{s.key}</div>
           {s.description && <div className="text-[10px] text-muted-foreground">{s.description}</div>}
         </div>
         {isBool ? (
@@ -145,22 +146,20 @@ export default function PlatformSettings() {
   }, [settings])
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-2xl border shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600"><Settings className="h-5 w-5" /></div>
-          <div>
-            <h1 className="text-xl font-bold">Platform Configuration</h1>
-            <p className="text-xs text-muted-foreground">Feature flags, global settings, notification policies, and operator session policy.</p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => { refetchSettings(); refetchCfg(); refetchNotifs() }} className="text-xs h-9">
-          <RefreshCw className="h-3.5 w-3.5 me-1.5" /> Refresh
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6 pb-12">
+      <WorkspaceHeader
+        eyebrow="Platform"
+        title="Configuration"
+        context="Feature flags, global settings, notification policy and operator sessions."
+        actions={
+          <button type="button" onClick={() => { refetchSettings(); refetchCfg(); refetchNotifs() }} className={headerActionClass.secondary} aria-label="Refresh">
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+          </button>
+        }
+      />
 
       {!canConfig && (
-        <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-[11px] text-amber-800 dark:text-amber-200">
+        <div role="status" className="rounded-[6px] border border-ds-warning/30 bg-ds-warning-soft px-4 py-3 text-sm text-ds-ink">
           Your platform role is read-only for configuration. Editing requires the <strong>config.manage</strong> permission.
         </div>
       )}
@@ -169,16 +168,16 @@ export default function PlatformSettings() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Card
           onClick={() => navigate('/platform/ai-settings')}
-          className="p-4 rounded-xl border border-purple-500/30 hover:border-purple-500/60 bg-purple-500/5 hover:bg-purple-500/10 cursor-pointer transition-all flex items-center justify-between shadow-xs"
+          className="p-4 rounded-xl border border-ds-accent/30 hover:border-ds-accent/30 bg-ds-accent-soft hover:bg-ds-accent-soft cursor-pointer transition-all flex items-center justify-between shadow-xs"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-ds-accent-soft text-ds-accent flex items-center justify-center shrink-0">
               <Bot className="h-5 w-5" />
             </div>
             <div>
               <div className="font-bold text-xs flex items-center gap-1.5">
                 <span>AI Course Engine & Multi-Provider Gateways</span>
-                <Badge variant="outline" className="text-[9px] border-purple-400/40 text-purple-600 dark:text-purple-300">
+                <Badge variant="outline" className="text-[9px] border-ds-accent/30 text-ds-accent">
                   Global
                 </Badge>
               </div>
@@ -187,21 +186,21 @@ export default function PlatformSettings() {
               </p>
             </div>
           </div>
-          <ExternalLink className="h-4 w-4 text-purple-500 shrink-0 ms-2" />
+          <ExternalLink className="h-4 w-4 text-ds-accent shrink-0 ms-2" />
         </Card>
 
         <Card
           onClick={() => navigate('/platform/email-templates')}
-          className="p-4 rounded-xl border border-cyan-500/30 hover:border-cyan-500/60 bg-cyan-500/5 hover:bg-cyan-500/10 cursor-pointer transition-all flex items-center justify-between shadow-xs"
+          className="p-4 rounded-xl border border-ds-accent/30 hover:border-ds-accent/30 bg-ds-accent-soft hover:bg-ds-accent-soft cursor-pointer transition-all flex items-center justify-between shadow-xs"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-ds-accent-soft text-ds-accent flex items-center justify-center shrink-0">
               <Mail className="h-5 w-5" />
             </div>
             <div>
               <div className="font-bold text-xs flex items-center gap-1.5">
                 <span>System Notification & Email Templates</span>
-                <Badge variant="outline" className="text-[9px] border-cyan-400/40 text-cyan-600 dark:text-cyan-300">
+                <Badge variant="outline" className="text-[9px] border-ds-accent/30 text-ds-accent">
                   Resend
                 </Badge>
               </div>
@@ -210,14 +209,14 @@ export default function PlatformSettings() {
               </p>
             </div>
           </div>
-          <ExternalLink className="h-4 w-4 text-cyan-500 shrink-0 ms-2" />
+          <ExternalLink className="h-4 w-4 text-ds-accent shrink-0 ms-2" />
         </Card>
       </div>
 
       {/* Feature flags */}
       <Card className="border shadow-sm">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2"><Flag className="h-4 w-4 text-emerald-600" /> Feature Flags (platform defaults)</CardTitle>
+          <CardTitle className="text-sm font-bold flex items-center gap-2"><Flag className="h-4 w-4 text-ds-success" /> Feature Flags (platform defaults)</CardTitle>
           <CardDescription className="text-xs">
             The default availability of each capability. Per-tenant overrides and plan gating are managed per organization.
           </CardDescription>
@@ -237,7 +236,7 @@ export default function PlatformSettings() {
                       )}
                     </div>
                     <div className="text-[10px] text-muted-foreground">{f.description}</div>
-                    <div className="text-[9px] font-mono text-slate-400 mt-0.5">{f.key}</div>
+                    <div className="text-[9px] font-mono text-ds-muted mt-0.5">{f.key}</div>
                   </div>
                   <Switch
                     checked={f.default_enabled}
@@ -254,7 +253,7 @@ export default function PlatformSettings() {
       {/* Notification policies */}
       <Card className="border shadow-sm">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2"><Bell className="h-4 w-4 text-amber-600" /> Platform Notification Policies</CardTitle>
+          <CardTitle className="text-sm font-bold flex items-center gap-2"><Bell className="h-4 w-4 text-ds-warning" /> Platform Notification Policies</CardTitle>
           <CardDescription className="text-xs">
             Platform defaults and tenant override permissions for automated notifications and alerts.
           </CardDescription>
@@ -272,7 +271,7 @@ export default function PlatformSettings() {
                       <Badge variant="outline" className="text-[9px] capitalize">{np.category}</Badge>
                     </div>
                     {np.description && <div className="text-[10px] text-muted-foreground leading-snug">{np.description}</div>}
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400 pt-1">
+                    <div className="flex items-center gap-2 text-[10px] text-ds-muted pt-1">
                       <span className="font-mono">{np.key}</span>
                       <span>•</span>
                       <span>{np.allow_tenant_override ? 'Tenant overrides allowed' : 'Locked by platform'}</span>
@@ -296,7 +295,7 @@ export default function PlatformSettings() {
       {/* Operator session policy */}
       <Card className="border shadow-sm">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-blue-600" /> Operator Assisted-Access Policy</CardTitle>
+          <CardTitle className="text-sm font-bold flex items-center gap-2"><Clock className="h-4 w-4 text-ds-accent" /> Operator Assisted-Access Policy</CardTitle>
           <CardDescription className="text-xs">
             Server-enforced parameters for platform operators entering customer environments. {canSessionCfg ? '' : 'Editing requires the System Owner role.'}
           </CardDescription>
@@ -335,8 +334,8 @@ export default function PlatformSettings() {
             <Switch checked={!!cfg?.require_session_reason} disabled={!canSessionCfg}
               onCheckedChange={(v) => cfgMutation.mutate({ require_session_reason: v })} />
           </div>
-          <div className="sm:col-span-2 flex items-center gap-2 p-3 rounded-xl bg-slate-500/5 border">
-            <ShieldCheck className="h-3.5 w-3.5 text-slate-500 shrink-0" />
+          <div className="sm:col-span-2 flex items-center gap-2 p-3 rounded-xl bg-ds-ink border">
+            <ShieldCheck className="h-3.5 w-3.5 text-ds-muted shrink-0" />
             <span className="text-[10px] text-muted-foreground">
               Legacy role fallback (super_admin / corporate_admin auto-operator):{' '}
               <strong>{cfg?.legacy_role_fallback_enabled ? 'ENABLED' : 'disabled'}</strong>
@@ -349,7 +348,7 @@ export default function PlatformSettings() {
       {/* Global system settings */}
       <Card className="border shadow-sm">
         <CardHeader className="p-5 pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2"><Settings className="h-4 w-4 text-slate-600" /> Global System Settings</CardTitle>
+          <CardTitle className="text-sm font-bold flex items-center gap-2"><Settings className="h-4 w-4 text-ds-muted" /> Global System Settings</CardTitle>
           <CardDescription className="text-xs">Platform-wide defaults from <span className="font-mono">system_settings</span>. (Per-tenant overrides land in a later phase.)</CardDescription>
         </CardHeader>
         <CardContent className="p-5 pt-2 space-y-5">

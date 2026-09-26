@@ -16,18 +16,17 @@ export function DocumentRecommendations({ className }: { className?: string } = 
       if (!user?.id) return [];
 
       const [{ data: memberships }, { data: roleRows }] = await Promise.all([
-        supabase.from('organization_memberships').select('department_id, hotel_id').eq('user_id', user.id).eq('is_active', true),
+        supabase.from('organization_memberships').select('department_id').eq('user_id', user.id).eq('is_active', true),
         supabase.from('user_roles').select('role').eq('user_id', user.id),
       ])
 
       const departmentIds = [...new Set((memberships || []).map((m: any) => m.department_id).filter(Boolean))]
       const roles = [...new Set((roleRows || []).map((r) => r.role).filter(Boolean))]
-      const propertyIds = [...new Set((memberships || []).map((m: any) => m.hotel_id).filter(Boolean))]
 
       // Build query for recommended documents
       let query = supabase
         .from('documents')
-        .select('id, title, visibility, property_id, department_id, role, featured, updated_at')
+        .select('id, title, visibility, department_id, role, featured, updated_at')
         .eq('status', 'PUBLISHED')
         .eq('is_deleted', false)
         .neq('created_by', user.id) // Exclude user's own documents
@@ -35,10 +34,8 @@ export function DocumentRecommendations({ className }: { className?: string } = 
         .order('updated_at', { ascending: false })
         .limit(8);
 
-      const orParts: string[] = ['visibility.eq.all_properties']
-      if (propertyIds.length > 0) {
-        orParts.push(`and(visibility.eq.property,property_id.in.(${propertyIds.join(',')}))`)
-      }
+      // 'property' is the retired per-hotel visibility; treat it as organization-wide.
+      const orParts: string[] = ['visibility.in.(all_properties,property)']
       if (departmentIds.length > 0) {
         orParts.push(`and(visibility.eq.department,department_id.in.(${departmentIds.join(',')}))`)
       }
@@ -60,9 +57,8 @@ export function DocumentRecommendations({ className }: { className?: string } = 
   const getRecommendationReason = (doc) => {
     switch (doc.visibility) {
       case 'all_properties':
-        return 'All Properties'
       case 'property':
-        return 'Your Property'
+        return 'Everyone'
       case 'department':
         return 'Your Department'
       case 'role':

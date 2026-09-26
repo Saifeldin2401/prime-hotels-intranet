@@ -72,7 +72,6 @@ export function TrainingTrackCommandCenter({
 
     // Sub-tab state
     const [subTab, setSubTab] = useState<TrackSubTab>('overview')
-    const [selectedPropertyId, setSelectedPropertyId] = useState<string>('all')
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('all')
     const [timeframe, setTimeframe] = useState<TimeframeOption>('30d')
     
@@ -90,29 +89,11 @@ export function TrainingTrackCommandCenter({
     const [recertTarget, setRecertTarget] = useState<any | null>(null)
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
-    // Fetch Properties / Hotels
-    const { data: properties = [] } = useQuery({
-        queryKey: ['properties-list-tracking', 'hotels'],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('hotels')
-                .select('id, name')
-                .eq('is_deleted', false)
-                .order('name')
-            if (error) throw error
-            return data || []
-        }
-    })
-
     // Fetch Departments
     const { data: departments = [] } = useQuery({
-        queryKey: ['departments-list-tracking', selectedPropertyId],
+        queryKey: ['departments-list-tracking'],
         queryFn: async () => {
-            let query = supabase.from('departments').select('id, name, property_id').order('name')
-            if (selectedPropertyId !== 'all') {
-                query = query.eq('property_id', selectedPropertyId)
-            }
-            const { data, error } = await query
+            const { data, error } = await supabase.from('departments').select('id, name').order('name')
             if (error) throw error
             return data || []
         }
@@ -120,7 +101,7 @@ export function TrainingTrackCommandCenter({
 
     // Fetch Comprehensive Real Progress, Certificates & Module Data
     const { data: rawData, isLoading, refetch } = useQuery({
-        queryKey: ['track-command-center-data', selectedPropertyId, selectedDepartmentId, timeframe],
+        queryKey: ['track-command-center-data', selectedDepartmentId, timeframe],
         queryFn: async () => {
             // 1. Fetch modules
             const { data: modules, error: modErr } = await supabase
@@ -157,9 +138,8 @@ export function TrainingTrackCommandCenter({
                         full_name,
                         email,
                         organization_memberships (
-                            hotel_id,
                             department_id,
-                            department:departments (id, name, hotel_id)
+                            department:departments (id, name)
                         )
                     )
                 `)
@@ -205,7 +185,6 @@ export function TrainingTrackCommandCenter({
                     training_module_id,
                     training_progress_id,
                     organization_id,
-                    property_id,
                     department_id,
                     status,
                     created_at,
@@ -291,14 +270,10 @@ export function TrainingTrackCommandCenter({
             return row.assignment_id ? (dueDateByAssignmentId.get(row.assignment_id) ?? null) : null
         }
 
-        // Filter rows by property and department
+        // Filter rows by department
         const filteredProgress = progressRows.filter((row: any) => {
             const profile = row.profiles as any
             const memberships = profile?.organization_memberships || []
-            if (selectedPropertyId !== 'all') {
-                const hasProp = memberships.some((m: any) => m.hotel_id === selectedPropertyId || m.department?.hotel_id === selectedPropertyId)
-                if (!hasProp) return false
-            }
             if (selectedDepartmentId !== 'all') {
                 const hasDept = memberships.some((m: any) => m.department_id === selectedDepartmentId || m.department?.id === selectedDepartmentId)
                 if (!hasDept) return false
@@ -337,7 +312,6 @@ export function TrainingTrackCommandCenter({
 
         // Filter certificates for Pillar 4
         const filteredCertificates = certificates.filter((cert: any) => {
-            if (selectedPropertyId !== 'all' && cert.property_id && cert.property_id !== selectedPropertyId) return false
             if (selectedDepartmentId !== 'all' && cert.department_id && cert.department_id !== selectedDepartmentId) return false
             
             if (certSearch) {
@@ -529,7 +503,7 @@ export function TrainingTrackCommandCenter({
 
                 questionMap.set(q.id, {
                     id: q.id,
-                    text: q.question_text || 'Hotel SOP Assessment Question',
+                    text: q.question_text || 'SOP assessment question',
                     type: q.question_type || 'multiple_choice',
                     category: categoryTag,
                     explanation: q.explanation || 'Refer to the Altus Standard Operating Procedures repository.',
@@ -581,7 +555,7 @@ export function TrainingTrackCommandCenter({
             knowledgeGaps,
             filteredCertificates
         }
-    }, [rawData, selectedPropertyId, selectedDepartmentId, certSearch, certStatusFilter, isRTL])
+    }, [rawData, selectedDepartmentId, certSearch, certStatusFilter, isRTL])
 
     // Action: 1-Click Recertification Trigger
     const recertifyMutation = useMutation({
@@ -633,8 +607,6 @@ export function TrainingTrackCommandCenter({
                 trainingModuleId: certRecord.training_module_id,
                 trainingProgressId: certRecord.training_progress_id,
                 organizationId: certRecord.organization_id,
-                propertyId: certRecord.property_id,
-                propertyName: certRecord.metadata?.propertyName,
                 departmentId: certRecord.department_id,
                 departmentName: certRecord.metadata?.departmentName,
                 status: certRecord.status || 'active',
@@ -677,11 +649,11 @@ export function TrainingTrackCommandCenter({
             return
         }
 
-        let csv = 'Certificate No,Recipient Name,Email,Course Title,Type,Score,Issue Date,Expiry Date,Verification Code,Status,Property,Department\n'
+        let csv = 'Certificate No,Recipient Name,Email,Course Title,Type,Score,Issue Date,Expiry Date,Verification Code,Status,Department\n'
         metrics.filteredCertificates.forEach((c: any) => {
             const exp = c.expiry_date ? new Date(c.expiry_date).toISOString().slice(0, 10) : 'Lifetime'
             const iss = c.completion_date ? new Date(c.completion_date).toISOString().slice(0, 10) : '-'
-            csv += `"${c.certificate_number}","${c.recipient_name}","${c.recipient_email || ''}","${c.title}","${c.certificate_type}","${c.score ?? '-'}","${iss}","${exp}","${c.verification_code}","${c.status}","${c.metadata?.propertyName || 'Altus Hospitality'}","${c.metadata?.departmentName || ''}"\n`
+            csv += `"${c.certificate_number}","${c.recipient_name}","${c.recipient_email || ''}","${c.title}","${c.certificate_type}","${c.score ?? '-'}","${iss}","${exp}","${c.verification_code}","${c.status}","${c.metadata?.departmentName || ''}"\n`
         })
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -720,19 +692,6 @@ export function TrainingTrackCommandCenter({
                             {isRTL ? 'تصفية المركز' : 'Scope Filters'}
                         </span>
                     </div>
-
-                    {/* Property Selector */}
-                    <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-                        <SelectTrigger className="h-9 w-[180px] bg-slate-50 text-xs font-semibold">
-                            <SelectValue placeholder={isRTL ? 'نطاق المؤسسة' : 'Organization Scope'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">{isRTL ? 'نطاق المؤسسة (كافة الفنادق)' : 'Organization Scope (All Hotels)'}</SelectItem>
-                            {properties.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
 
                     {/* Department Selector */}
                     <Select value={selectedDepartmentId} onValueChange={setSelectedDepartmentId}>

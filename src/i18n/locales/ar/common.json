@@ -94,7 +94,7 @@
         "please_login": "يرجى تسجيل الدخول للوصول لهذه الصفحة",
         "view_profile": "عرض الملف الشخصي",
         "visibility": {
-            "all_properties": "موحد (المجموعة)",
+            "all_properties": "المؤسسة بالكامل",
             "property_specific": "فندق محدد",
             "department_specific": "قسم محدد",
             "role_specific": "دور محدد"
@@ -428,7 +428,7 @@
         "verifying_access": "جاري التحقق من الوصول..."
     },
     "visibility": {
-        "all_properties": "موحد (المجموعة)",
+        "all_properties": "المؤسسة بالكامل",
         "department_specific": "قسم محدد",
         "property_specific": "فندق محدد",
         "role_specific": "دور محدد"
@@ -647,5 +647,59 @@
     "priority.low": "منخفض",
     "priority.medium": "متوسط",
     "priority.high": "عالي",
-    "priority.urgent": "عاجل"
+    "priority.urgent": "عاجل",
+    "organization": "المؤسسة",
+    "inbox": {
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "week": "في وقت سابق هذا الأسبوع",
+        "older": "أقدم",
+        "filter": {
+            "all": "الكل",
+            "unread": "غير المقروءة",
+            "training": "التدريب",
+            "certificates": "الشهادات",
+            "knowledge": "المعرفة",
+            "reviews": "المراجعات"
+        },
+        "eyebrow": "الوارد",
+        "title": "الإشعارات",
+        "unread": "{{count}} غير مقروءة",
+        "allRead": "لا جديد لديك.",
+        "markAll": "تعليم الكل كمقروء",
+        "filterLabel": "تصفية الإشعارات",
+        "emptyTitle": "لا توجد إشعارات بعد",
+        "emptyFilter": "لا شيء هنا",
+        "emptyBody": "ستظهر هنا الإسنادات والشهادات والقراءة الإلزامية وقرارات المراجعة.",
+        "emptyFilterBody": "لا توجد إشعارات من هذا النوع. جرّب تصفية أخرى.",
+        "unreadLabel": "غير مقروء",
+        "remove": "إزالة الإشعار"
+    },
+    "find": {
+        "eyebrow": "البحث",
+        "title": "البحث",
+        "titleFor": "نتائج «{{query}}»",
+        "scope": "داخل {{org}}: المعرفة والدورات والاختبارات والشهادات والأشخاص.",
+        "label": "البحث",
+        "placeholder": "ابحث في الإجراءات والدورات والاختبارات والأشخاص…",
+        "noOrgTitle": "اختر مؤسسة للبحث",
+        "noOrgBody": "يبقى البحث داخل مؤسسة واحدة لتكون النتائج ذات صلة وخاصة.",
+        "hint": "اكتب كلمة من إجراء أو عنوان دورة أو اسم زميل.",
+        "noneTitle": "لا توجد نتائج لـ «{{query}}»",
+        "noneBody": "جرّب كلمات أقل أو مختلفة، أو تصفح المعرفة والدورات مباشرة.",
+        "filterLabel": "عرض النتائج حسب النوع",
+        "all": "الكل",
+        "showAll": "عرض الكل ({{count}})",
+        "minutes": "{{count}} دقيقة",
+        "passMark": "درجة النجاح {{pct}}%",
+        "certificate": "شهادة",
+        "member": "عضو",
+        "kind": {
+            "knowledge": "المعرفة",
+            "courses": "الدورات",
+            "quizzes": "الاختبارات",
+            "certificates": "الشهادات",
+            "people": "الأشخاص"
+        }
+    }
 }

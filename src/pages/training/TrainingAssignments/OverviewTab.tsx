@@ -26,12 +26,9 @@ export function OverviewTab() {
     setOverviewSearch,
     overviewFilterDept,
     setOverviewFilterDept,
-    overviewFilterProp,
-    setOverviewFilterProp,
     overviewFilterStatus,
     setOverviewFilterStatus,
     departments,
-    properties,
     progressMetrics,
     employeeTrackingSummary,
     employeeProgressGroups,
@@ -68,7 +65,6 @@ export function OverviewTab() {
           </div>
           <GroupedDepartmentSelector
             departments={departments}
-            properties={properties}
             value={overviewFilterDept}
             onValueChange={setOverviewFilterDept}
             placeholder={t('filterByDept')}
@@ -76,17 +72,6 @@ export function OverviewTab() {
             generalValue="all"
             className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200"
           />
-          <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
-            <SelectTrigger className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200">
-              <SelectValue placeholder={t('filterByProp')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('allProperties')}</SelectItem>
-              {properties?.map(p => (
-                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
             <SelectTrigger className="w-full sm:w-[150px] bg-slate-50/50 border-slate-200">
               <SelectValue placeholder={t('filterByStatus')} />
@@ -101,13 +86,12 @@ export function OverviewTab() {
         </div>
 
         <div className="flex gap-2 w-full md:w-auto justify-end">
-          {(overviewSearch || overviewFilterDept !== 'all' || overviewFilterProp !== 'all' || overviewFilterStatus !== 'all') && (
+          {(overviewSearch || overviewFilterDept !== 'all' || overviewFilterStatus !== 'all') && (
             <Button
               variant="ghost"
               onClick={() => {
                 setOverviewSearch('')
                 setOverviewFilterDept('all')
-                setOverviewFilterProp('all')
                 setOverviewFilterStatus('all')
               }}
               className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"

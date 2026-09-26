@@ -7,6 +7,7 @@
  *
  * Persistence still targets the `unified_*` quiz engine via `learningService`.
  */
+import { PageHeader } from '@/components/layout/PageHeader'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { QuestionSelector } from '@/components/questions/QuestionSelector'
 import { Button } from '@/components/ui/button'
@@ -231,28 +232,29 @@ export default function AssessmentBuilder() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 pb-20">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold">{id ? t('training:quizzes.builder.edit_title') : t('training:quizzes.builder.create_new_title')}</h1>
-                    <p className="text-muted-foreground">{t('training:quizzes.builder.subtitle')}</p>
-                </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => navigate('/studio/quizzes')}>{t('common.cancel')}</Button>
-                    <Button onClick={handleSave} disabled={saving}>
-                        {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
-                    </Button>
-                </div>
-            </div>
+        <div className="mx-auto max-w-4xl space-y-6 pb-20">
+            <PageHeader
+                backTo="/studio/quizzes?section=assessments"
+                title={id ? t('training:quizzes.builder.edit_title') : t('training:quizzes.builder.create_new_title')}
+                description={t('training:quizzes.builder.subtitle')}
+                actions={
+                    <>
+                        <Button variant="outline" className="min-h-[44px]" onClick={() => navigate('/studio/quizzes')}>{t('common.cancel')}</Button>
+                        <Button className="min-h-[44px] bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90" onClick={handleSave} disabled={saving}>
+                            {saving ? t('training:quizzes.builder.saving') : <><Save aria-hidden="true" className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
+                        </Button>
+                    </>
+                }
+            />
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList>
+                <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-ds-border bg-transparent p-0">
                     <TabsTrigger value="settings">{t('training:quizzes.builder.settings_tab')}</TabsTrigger>
                     <TabsTrigger value="questions">{t('training:quizzes.builder.questions_tab')} ({questions.length})</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="settings" className="space-y-6 mt-6">
-                    <div className="grid gap-6 p-6 border rounded-lg bg-white">
+                    <div className="grid gap-6 rounded-[6px] border border-ds-border bg-ds-surface p-6">
                         <div className="space-y-2">
                             <Label>{t('training:quizzes.builder.quiz_title_label')}</Label>
                             <Input
@@ -387,17 +389,17 @@ export default function AssessmentBuilder() {
 
                 <TabsContent value="questions" className="space-y-6 mt-6">
                     {!id ? (
-                        <div className="text-center py-16 border border-dashed rounded-lg bg-amber-50 border-amber-200">
+                        <div className="text-center py-16 border border-dashed rounded-lg bg-ds-warning-soft border-ds-warning/30">
                             <div className="mb-4 text-4xl">💾</div>
-                            <h3 className="text-lg font-semibold text-amber-900 mb-2">{t('training:quizzes.builder.save_first_title')}</h3>
-                            <p className="text-amber-700 mb-6 max-w-md mx-auto">
+                            <h3 className="text-lg font-semibold text-ds-warning mb-2">{t('training:quizzes.builder.save_first_title')}</h3>
+                            <p className="text-ds-warning mb-6 max-w-md mx-auto">
                                 {t('training:quizzes.builder.save_first_desc')}
                             </p>
                             <Button onClick={handleSave} disabled={saving || !quiz.title}>
                                 {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_now')}</>}
                             </Button>
                             {!quiz.title && (
-                                <p className="text-xs text-amber-600 mt-2">{t('training:quizzes.builder.enter_title_error')}</p>
+                                <p className="text-xs text-ds-warning mt-2">{t('training:quizzes.builder.enter_title_error')}</p>
                             )}
                         </div>
                     ) : (
@@ -408,7 +410,7 @@ export default function AssessmentBuilder() {
                                     <Dialog open={showAIModal} onOpenChange={setShowAIModal}>
                                         <DialogTrigger asChild>
                                             <Button variant="outline" className="gap-2">
-                                                <Sparkles className="h-4 w-4 text-purple-500" />
+                                                <Sparkles className="h-4 w-4 text-ds-accent" />
                                                 {t('training:quizzes.builder.generate_ai')}
                                             </Button>
                                         </DialogTrigger>
@@ -452,10 +454,10 @@ export default function AssessmentBuilder() {
                                             <div className="flex-1">
                                                 <p className="font-medium">{q.question?.question_text}</p>
                                                 <div className="flex gap-2 mt-1">
-                                                    <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                                                    <span className="text-xs bg-ds-surface-subtle px-2 py-0.5 rounded text-ds-muted">
                                                         {q.question?.question_type}
                                                     </span>
-                                                    <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-600">
+                                                    <span className="text-xs bg-ds-surface-subtle px-2 py-0.5 rounded text-ds-muted">
                                                         {q.points_override || q.question?.points} {t_ext('pts', 'pts')}</span>
                                                 </div>
                                             </div>
@@ -466,7 +468,7 @@ export default function AssessmentBuilder() {
                                                     variant="ghost"
                                                     size="icon"
                                                     aria-label={t('accessibility.remove_question', 'Remove Question')}
-                                                    className="text-red-500 hover:text-red-600"
+                                                    className="text-ds-danger hover:text-ds-danger"
                                                     onClick={() => handleRemoveQuestion(q.question_id)}
                                                 >
                                                     <Trash2 className="h-4 w-4" />

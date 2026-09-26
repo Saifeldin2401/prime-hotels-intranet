@@ -1,460 +1,265 @@
-import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Textarea } from '@/components/ui/textarea'
-import { useAuth } from '@/hooks/useAuth'
-import { getReportingLineDisplay } from '@/lib/displayHelpers'
-import { supabase } from '@/lib/supabase'
-import { cn } from '@/lib/utils'
-import { differenceInMonths, differenceInYears, format } from 'date-fns'
-import { Award, BookOpen, Briefcase, Building, Calendar, CheckCircle2, Compass, FileText, Key, Loader2, Mail, Phone, Save, Shield, Star, Upload, User as UserIcon } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+/**
+ * My profile - how colleagues see and reach you.
+ *
+ * One column: who you are, the details you can change, the record your
+ * organization keeps (read-only, clearly marked), sign-in, then skills.
+ * Nothing here is gamified; completeness is a short note, not a meter.
+ */
+
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import { differenceInMonths, format } from 'date-fns'
+import { ar, enGB } from 'date-fns/locale'
+import { Camera, Key, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-// ─── Profile Completion ────────────────────────────────────────────────────────
-function computeCompletion(p: {
-    full_name?: string | null
-    avatar_url?: string | null
-    phone?: string | null
-    nationality?: string | null
-    bio?: string | null
-    phone_extension?: string | null
-    job_title?: string | null
-    hire_date?: string | null
-}): { percent: number; missing: string[] } {
-    const fields: Array<{ label: string; value: string | null | undefined }> = [
-        { label: 'Full Name', value: p.full_name },
-        { label: 'Profile Photo', value: p.avatar_url },
-        { label: 'Phone', value: p.phone },
-        { label: 'Nationality', value: p.nationality },
-        { label: 'Bio / About', value: p.bio },
-        { label: 'Phone Extension', value: p.phone_extension },
-        { label: 'Job Title', value: p.job_title },
-        { label: 'Joining Date', value: p.hire_date },
-    ]
-    const missing = fields.filter(f => !f.value).map(f => f.label)
-    const percent = Math.round(((fields.length - missing.length) / fields.length) * 100)
-    return { percent, missing }
-}
+import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { setOwnAvatarUrl, updateOwnProfile, uploadOwnAvatar } from '@/features/account/profileApi'
+import { useAuth } from '@/hooks/useAuth'
+import { getReportingLineDisplay } from '@/lib/displayHelpers'
+import { cn } from '@/lib/utils'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
+
+const PRESETS = ['/assets/altus/learner-female.jpg', '/assets/altus/learner-male.jpg']
+
+const fieldClass =
+  'min-h-[44px] w-full rounded-md border border-ds-border bg-ds-surface px-3 text-sm text-ds-ink placeholder:text-ds-muted focus:border-ds-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent'
 
 export default function MyProfile() {
-    const { user, profile: authProfile, refreshSession } = useAuth()
-    const { t, i18n } = useTranslation('profile')
-    const navigate = useNavigate()
-    const isRTL = i18n.dir() === 'rtl'
-    const [loading, setLoading] = useState(false)
-    const [uploading, setUploading] = useState(false)
-    const fileInputRef = useRef<HTMLInputElement>(null)
+  const { user, profile, refreshSession } = useAuth()
+  const { t, i18n } = useTranslation('profile')
+  const dfLocale = i18n.language?.startsWith('ar') ? ar : enGB
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
-    // Form state
-    const [fullName, setFullName] = useState('')
-    const [phone, setPhone] = useState('')
-    const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-    const [nationality, setNationality] = useState('')
-    const [bio, setBio] = useState('')
-    const [phoneExtension, setPhoneExtension] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [phoneExtension, setPhoneExtension] = useState('')
+  const [nationality, setNationality] = useState('')
+  const [bio, setBio] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
-    useEffect(() => {
-        if (authProfile) {
-            setFullName(authProfile.full_name || '')
-            setPhone(authProfile.phone || '')
-            setAvatarUrl(authProfile.avatar_url)
-            setNationality(authProfile.nationality || '')
-            setBio(authProfile.bio || '')
-            setPhoneExtension(authProfile.phone_extension || '')
-        }
-    }, [authProfile])
+  useEffect(() => {
+    if (!profile) return
+    setFullName(profile.full_name || '')
+    setPhone(profile.phone || '')
+    setPhoneExtension(profile.phone_extension || '')
+    setNationality(profile.nationality || '')
+    setBio(profile.bio || '')
+    setAvatarUrl(profile.avatar_url)
+  }, [profile])
 
-    // Compute completion from live form values
-    const completion = computeCompletion({
-        full_name: fullName,
-        avatar_url: avatarUrl,
-        phone,
-        nationality,
-        bio,
-        phone_extension: phoneExtension,
-        job_title: authProfile?.job_title,
-        hire_date: authProfile?.hire_date,
-    })
+  const dirty = !!profile && (
+    fullName !== (profile.full_name || '') || phone !== (profile.phone || '') ||
+    phoneExtension !== (profile.phone_extension || '') || nationality !== (profile.nationality || '') ||
+    bio !== (profile.bio || ''))
 
-    const handleUpdateProfile = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!user) return
-        try {
-            setLoading(true)
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    full_name: fullName,
-                    phone,
-                    nationality,
-                    bio: bio || null,
-                    phone_extension: phoneExtension || null,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', user.id)
-            if (error) throw error
-            await refreshSession()
-            toast.success(t('messages.profile_updated', 'Profile Updated'), {
-                description: t('messages.profile_updated_desc', 'Your profile has been updated successfully.')
-            })
-        } catch (error) {
-            console.error('Error updating profile:', error)
-            toast.error(t('common:messages.error_action_failed', 'Failed to update profile'))
-        } finally {
-            setLoading(false)
-        }
+  const missing = [
+    !avatarUrl && t('me.missing.photo', 'a photo'),
+    !phone && t('me.missing.phone', 'a phone number'),
+    !bio && t('me.missing.bio', 'a short introduction'),
+  ].filter(Boolean) as string[]
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!user) return
+    setSaving(true)
+    try {
+      await updateOwnProfile(user.id, {
+        full_name: fullName.trim(), phone, nationality,
+        bio: bio.trim() || null, phone_extension: phoneExtension.trim() || null,
+      })
+      await refreshSession()
+      toast.success(t('me.saved', 'Profile saved'))
+    } catch (err) {
+      console.error('Error updating profile:', err)
+      toast.error(t('me.saveFailed', 'Your changes were not saved. Try again.'))
+    } finally {
+      setSaving(false)
     }
+  }
 
-    const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        try {
-            setUploading(true)
-            if (!event.target.files || event.target.files.length === 0) throw new Error('You must select an image to upload.')
-            if (!user?.id) throw new Error('User not authenticated')
-            const file = event.target.files[0]
-            if (!file.type.startsWith('image/')) throw new Error('Only image files are allowed.')
-            if (file.size > 5 * 1024 * 1024) throw new Error('Image must be smaller than 5 MB.')
-
-            const fileExt = file.name.split('.').pop()
-            const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { cacheControl: '3600', upsert: false })
-            if (uploadError) throw uploadError
-
-            // eslint-disable-next-line no-restricted-properties -- 'avatars' is one of the two intentionally public buckets; avatar_url is read as a plain <img src> in ~42 places and must be durable.
-            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
-
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ avatar_url: urlData.publicUrl })
-                .eq('id', user.id)
-            if (updateError) throw updateError
-
-            setAvatarUrl(urlData.publicUrl)
-            await refreshSession()
-            toast.success(t('messages.avatar_updated', 'Avatar Updated'))
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to upload avatar'))
-        } finally {
-            setUploading(false)
-        }
+  const changePhoto = async (file: File | undefined, preset?: string) => {
+    if (!user?.id || (!file && !preset)) return
+    setUploading(true)
+    try {
+      const url = preset ?? await uploadOwnAvatar(user.id, file as File)
+      if (preset) await setOwnAvatarUrl(user.id, preset)
+      setAvatarUrl(url)
+      await refreshSession()
+      toast.success(t('me.photoSaved', 'Photo updated'))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('me.saveFailed', 'Your changes were not saved. Try again.'))
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
 
-    const handleSetPresetAvatar = async (presetUrl: string) => {
-        if (!user?.id) return
-        try {
-            setUploading(true)
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ avatar_url: presetUrl })
-                .eq('id', user.id)
-            if (updateError) throw updateError
+  const tenure = (() => {
+    if (!profile?.hire_date) return null
+    const months = differenceInMonths(new Date(), new Date(profile.hire_date))
+    return months >= 12
+      ? t('me.tenureYears', '{{years}} yr {{months}} mo', { years: Math.floor(months / 12), months: months % 12 })
+      : t('me.tenureMonths', '{{count}} mo', { count: months })
+  })()
 
-            setAvatarUrl(presetUrl)
-            await refreshSession()
-            toast.success(isRTL ? 'تم تعيين الصورة الرسمية' : 'Official avatar preset selected')
-        } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : t('common:messages.error_action_failed', 'Failed to update avatar'))
-        } finally {
-            setUploading(false)
-        }
-    }
+  const notSet = t('me.notSet', 'Not set')
+  const record: { label: string; value: string | null | undefined }[] = [
+    { label: t('job_title', 'Job title'), value: profile?.job_title },
+    { label: t('reports_to', 'Reports to'), value: getReportingLineDisplay(profile) },
+    { label: t('staff_id', 'Staff ID'), value: profile?.staff_id },
+    {
+      label: t('hire_date', 'Joined'),
+      value: profile?.hire_date
+        ? `${format(new Date(profile.hire_date), 'd MMMM yyyy', { locale: dfLocale })}${tenure ? ` · ${tenure}` : ''}`
+        : null,
+    },
+    { label: t('email', 'Email'), value: user?.email },
+  ]
 
-    const getTenure = () => {
-        if (!authProfile?.hire_date) return null
-        const hireDate = new Date(authProfile.hire_date)
-        const years = differenceInYears(new Date(), hireDate)
-        const months = differenceInMonths(new Date(), hireDate) % 12
-        if (years > 0) return `${years}y ${months}m`
-        return `${months}m`
-    }
+  const displayName = profile?.full_name || user?.email || ''
 
-    const tenure = getTenure()
+  return (
+    <div className="mx-auto max-w-3xl space-y-10">
+      <WorkspaceHeader
+        eyebrow={t('me.eyebrow', 'Account')}
+        title={t('me.title', 'My profile')}
+        context={t('me.context', 'What colleagues see when they look you up.')}
+      />
 
-    return (
-        <div className="container mx-auto py-0 max-w-5xl">
-            {/* Hero Header */}
-            <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-indigo-900 rounded-b-2xl overflow-hidden mb-8">
-                <div className="absolute top-0 end-0 w-1/3 h-full bg-indigo-500/10 -skew-x-12 transform translate-x-1/2" />
-                <div className="absolute -bottom-16 -start-16 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
-                <div className="relative z-10 px-8 pt-10 pb-20">
-                    <div className="flex flex-col md:flex-row items-center md:items-end gap-6">
-                        {/* Avatar */}
-                        <div className="flex flex-col items-center gap-2">
-                            <div className="relative group">
-                                <Avatar className="w-28 h-28 text-4xl ring-4 ring-white/20 shadow-2xl">
-                                    <AvatarImage src={avatarUrl || undefined} className="object-cover object-center" />
-                                    <AvatarFallback className="bg-indigo-700 text-white text-3xl">
-                                        {fullName ? fullName.charAt(0).toUpperCase() : <UserIcon className="w-12 h-12" />}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={uploading}
-                                    title={isRTL ? 'رفع صورة شخصية' : 'Upload custom photo'}
-                                    className="absolute bottom-0 end-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-                                >
-                                    {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                </button>
-                                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
-                            </div>
-
-                            {/* Official ALTUS Avatar Presets */}
-                            <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
-                                <button
-                                    type="button"
-                                    onClick={() => handleSetPresetAvatar('/assets/altus/learner-male.jpg')}
-                                    title={isRTL ? 'الصورة الرسمية (رجال)' : 'ALTUS Male Executive Preset'}
-                                    className={cn(
-                                        "w-6 h-6 rounded-full overflow-hidden border transition-all",
-                                        avatarUrl === '/assets/altus/learner-male.jpg' ? "border-amber-400 ring-2 ring-amber-400/50 scale-110" : "border-white/30 opacity-70 hover:opacity-100"
-                                    )}
-                                >
-                                    <img src="/assets/altus/learner-male.jpg" alt="Male preset" className="w-full h-full object-cover" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleSetPresetAvatar('/assets/altus/learner-female.jpg')}
-                                    title={isRTL ? 'الصورة الرسمية (سيدات)' : 'ALTUS Female Executive Preset'}
-                                    className={cn(
-                                        "w-6 h-6 rounded-full overflow-hidden border transition-all",
-                                        avatarUrl === '/assets/altus/learner-female.jpg' ? "border-amber-400 ring-2 ring-amber-400/50 scale-110" : "border-white/30 opacity-70 hover:opacity-100"
-                                    )}
-                                >
-                                    <img src="/assets/altus/learner-female.jpg" alt="Female preset" className="w-full h-full object-cover" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Name / Role Info */}
-                        <div className="text-center md:text-start flex-1">
-                            <h1 className="text-3xl font-bold text-white mb-1">{authProfile?.full_name || user?.email}</h1>
-                            <p className="text-white/70 text-lg mb-3">{authProfile?.job_title || t('not_specified', 'Not specified')}</p>
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                                <Badge className="bg-white/10 text-white/90 border-white/20 hover:bg-white/15">
-                                    <Briefcase className="w-3 h-3 me-1.5" />
-                                    {authProfile?.role?.replace('_', ' ') || t('staff', 'Staff')}
-                                </Badge>
-                                {authProfile?.property?.name && (
-                                    <Badge className="bg-white/10 text-white/90 border-white/20 hover:bg-white/15">
-                                        <Building className="w-3 h-3 me-1.5" />
-                                        {authProfile.property.name}
-                                    </Badge>
-                                )}
-                                {tenure && (
-                                    <Badge className="bg-indigo-500/30 text-indigo-200 border-indigo-400/30 hover:bg-indigo-500/40">
-                                        <Calendar className="w-3 h-3 me-1.5" />
-                                        {tenure}
-                                    </Badge>
-                                )}
-                                <Badge variant={authProfile?.is_active ? "default" : "secondary"} className={authProfile?.is_active ? "bg-emerald-500/20 text-emerald-300 border-emerald-400/30" : ""}>
-                                    {authProfile?.is_active ? t('active') : t('inactive')}
-                                </Badge>
-                            </div>
-                        </div>
-
-                        {/* Quick info pills */}
-                        <div className="hidden md:flex flex-col gap-2 text-sm text-white/60">
-                            {user?.email && (
-                                <span className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {user.email}</span>
-                            )}
-                            {authProfile?.staff_id && (
-                                <span className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> {authProfile.staff_id}</span>
-                            )}
-                            {phoneExtension && (
-                                <span className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> Ext. {phoneExtension}</span>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Profile Completion Banner */}
-            {completion.percent < 100 && (
-                <div className="px-4 mb-6 -mt-12 relative z-20">
-                    <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
-                        <CardContent className="py-4 px-5">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-amber-500" />
-                                    <span className="text-sm font-semibold text-amber-800">Profile {completion.percent}% Complete</span>
-                                </div>
-                                <span className="text-xs text-amber-600">{completion.missing.length} field{completion.missing.length !== 1 ? 's' : ''} missing</span>
-                            </div>
-                            <Progress value={completion.percent} className="h-2 bg-amber-200" />
-                            {completion.missing.length > 0 && (
-                                <p className="text-xs text-amber-700 mt-2">
-                                    Missing: {completion.missing.slice(0, 4).join(', ')}{completion.missing.length > 4 ? ` +${completion.missing.length - 4} more` : ''}
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
-
-            {/* Tabs */}
-            <div className={`px-4 relative z-20 ${completion.percent < 100 ? 'pt-2' : '-mt-12'}`}>
-                <Tabs defaultValue="personal" className="space-y-6">
-                    <TabsList className="bg-white shadow-lg rounded-xl border border-gray-100 grid w-full grid-cols-2 lg:w-[360px] p-1 h-auto">
-                        <TabsTrigger value="personal" className="py-2.5 text-sm">
-                            <UserIcon className="w-4 h-4 me-2" />{t('personal_info')}
-                        </TabsTrigger>
-                        <TabsTrigger value="skills" className="py-2.5 text-sm">
-                            <Star className="w-4 h-4 me-2" />{t('skills', 'Skills')}
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="personal" className="space-y-6">
-                        <Card className="border-gray-100 shadow-sm">
-                            <CardHeader>
-                                <CardTitle>{t('personal_info')}</CardTitle>
-                                <CardDescription>{t('personal_info_desc')}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleUpdateProfile} className="space-y-8">
-                                    {/* General Info */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <UserIcon className="w-4 h-4 text-indigo-500" />
-                                            <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-500">{t('general_info')}</h3>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="fullName">{t('full_name')}</Label>
-                                                <Input id="fullName" name="name" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="email">{t('email')}</Label>
-                                                <Input id="email" name="email" autoComplete="email" value={user?.email || ''} disabled className="bg-gray-50" />
-                                            </div>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="phone">{t('phone_number')}</Label>
-                                                <Input id="phone" name="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="phoneExtension">Phone Extension</Label>
-                                                <Input id="phoneExtension" placeholder="e.g. 1234" value={phoneExtension} onChange={(e) => setPhoneExtension(e.target.value)} style={{ direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }} />
-                                            </div>
-                                        </div>
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="nationality">{t('nationality')}</Label>
-                                            <Input id="nationality" name="country-name" autoComplete="country-name" value={nationality} onChange={(e) => setNationality(e.target.value)} />
-                                        </div>
-
-                                        {/* Bio */}
-                                        <div className="grid gap-2">
-                                            <Label htmlFor="bio">
-                                                <span className="flex items-center gap-1.5">
-                                                    <FileText className="w-3.5 h-3.5" />
-                                                    Bio / About Me
-                                                    <span className="text-xs text-gray-400 font-normal">(visible to colleagues)</span>
-                                                </span>
-                                            </Label>
-                                            <Textarea
-                                                id="bio"
-                                                placeholder="Share a little about yourself, your role, and what you enjoy at work..."
-                                                value={bio}
-                                                onChange={(e) => setBio(e.target.value)}
-                                                rows={3}
-                                                maxLength={500}
-                                            />
-                                            <p className="text-xs text-gray-400 text-end">{bio.length}/500</p>
-                                        </div>
-                                    </div>
-
-                                    <Separator />
-
-                                    {/* Organizational Info (read-only) */}
-                                    <div className="space-y-4">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Briefcase className="w-4 h-4 text-indigo-500" />
-                                            <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-500">{t('org_info')}</h3>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>{t('job_title')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.job_title || t('not_specified', 'Not specified')}</div>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label>{t('staff_id', 'Staff ID')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{authProfile?.staff_id || t('not_assigned', 'Not assigned')}</div>
-                                            </div>
-                                        </div>
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                            <div className="grid gap-2">
-                                                <Label>{t('hire_date', 'Hire Date')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">
-                                                    {authProfile?.hire_date ? format(new Date(authProfile.hire_date), 'MMMM d, yyyy') : t('not_specified', 'Not specified')}
-                                                </div>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                <Label>{t('reports_to')}</Label>
-                                                <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium text-gray-700 border border-gray-100">{getReportingLineDisplay(authProfile) || t('not_specified', 'Not specified')}</div>
-                                            </div>
-                                        </div>
-                                        <div className="grid gap-2 pt-4">
-                                            <Label className="text-xs font-semibold uppercase tracking-wider text-gray-400">{isRTL ? 'روابط التعلم السريعة' : 'Learning Quick Links'}</Label>
-                                            <div className="flex flex-wrap gap-2 mt-1">
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/my')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
-                                                    <BookOpen className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'مساري التعليمي' : 'My Learning'}
-                                                </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/courses')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
-                                                    <Compass className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'دليل الدورات' : 'Course Catalog'}
-                                                </Button>
-                                                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/learn/certificates')} className="hover:bg-amber-500/10 hover:text-amber-600 hover:border-amber-500/30">
-                                                    <Award className="w-3.5 h-3.5 me-2 text-amber-500" />{isRTL ? 'الشهادات والاعتمادات' : 'My Certificates'}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex justify-end pt-4 border-t border-gray-100">
-                                        <Button type="submit" disabled={loading} className="bg-hotel-navy hover:bg-hotel-navy-light text-white">
-                                            {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Save className="w-4 h-4 me-2" />}
-                                            {t('save_changes')}
-                                        </Button>
-                                    </div>
-                                </form>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="border-gray-100 shadow-sm">
-                            <CardHeader>
-                                <CardTitle>{t('security')}</CardTitle>
-                                <CardDescription>{t('security_desc')}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-1">
-                                        <Label>{t('password')}</Label>
-                                        <p className="text-sm text-gray-500">{t('password_desc')}</p>
-                                    </div>
-                                    <Button variant="outline" onClick={() => navigate('/change-password')}>
-                                        <Key className="w-4 h-4 me-2" />{t('change_password')}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="skills">
-                        <UserSkillsDisplay />
-                    </TabsContent>
-                </Tabs>
-            </div>
+      {/* Identity */}
+      <section aria-label={t('me.identity', 'Photo and name')} className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div className="relative w-fit">
+          <Avatar className="h-24 w-24 text-3xl">
+            <AvatarImage src={avatarUrl || undefined} className="object-cover" alt="" />
+            <AvatarFallback className="bg-ds-ink text-2xl text-ds-on-ink">{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            aria-label={t('me.uploadPhoto', 'Upload a photo')}
+            className="absolute -bottom-1 -end-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-ds-border bg-ds-surface text-ds-ink shadow-sm hover:border-ds-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+          >
+            {uploading ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Camera aria-hidden="true" className="h-4 w-4" />}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => changePhoto(e.target.files?.[0])} disabled={uploading} />
         </div>
-    )
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xl font-semibold text-ds-ink">{displayName}</p>
+          <p className="text-sm text-ds-muted">
+            {[profile?.job_title, profile?.departments?.[0]?.name].filter(Boolean).join(' · ') || notSet}
+          </p>
+          <div className="mt-3 flex items-center gap-2 text-xs text-ds-muted">
+            <span>{t('me.orPortrait', 'Or use an Altus portrait:')}</span>
+            {PRESETS.map((src) => (
+              <button
+                key={src}
+                type="button"
+                disabled={uploading}
+                onClick={() => changePhoto(undefined, src)}
+                aria-pressed={avatarUrl === src}
+                aria-label={t('me.usePortrait', 'Use this portrait')}
+                className={cn('h-8 w-8 overflow-hidden rounded-full border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent',
+                  avatarUrl === src ? 'border-ds-accent' : 'border-transparent opacity-70 hover:opacity-100')}
+              >
+                <img src={src} alt="" className="h-full w-full object-cover" />
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {missing.length > 0 && (
+        <p className="border-s-2 border-ds-accent ps-3 text-sm text-ds-ink-secondary">
+          {t('me.missingNote', 'Colleagues find you faster with {{items}}.', { items: missing.join(', ') })}
+        </p>
+      )}
+
+      {/* Editable details */}
+      <section aria-labelledby="me-about" className="space-y-4">
+        <div>
+          <h2 id="me-about" className="text-lg font-semibold text-ds-ink">{t('me.about', 'About you')}</h2>
+          <p className="text-sm text-ds-muted">{t('me.aboutHint', 'You can change these yourself.')}</p>
+        </div>
+        <form onSubmit={save} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="text-sm font-medium text-ds-ink">{t('full_name', 'Full name')}</span>
+              <input className={fieldClass} autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-ds-ink">{t('phone_number', 'Phone')}</span>
+              <input className={fieldClass} dir="ltr" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-ds-ink">{t('me.extension', 'Desk extension')}</span>
+              <input className={fieldClass} dir="ltr" inputMode="numeric" value={phoneExtension} onChange={(e) => setPhoneExtension(e.target.value)} />
+            </label>
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="text-sm font-medium text-ds-ink">{t('nationality', 'Nationality')}</span>
+              <input className={fieldClass} autoComplete="country-name" value={nationality} onChange={(e) => setNationality(e.target.value)} />
+            </label>
+            <label className="block space-y-1.5 sm:col-span-2">
+              <span className="flex items-baseline justify-between text-sm font-medium text-ds-ink">
+                {t('me.bio', 'Introduction')}
+                <span className="font-mono text-xs font-normal tabular-nums text-ds-muted">{bio.length}/500</span>
+              </span>
+              <textarea
+                className={cn(fieldClass, 'min-h-[96px] py-2')}
+                rows={3}
+                maxLength={500}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder={t('me.bioPlaceholder', 'Your role, your team and what colleagues can ask you about.')}
+              />
+            </label>
+          </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={saving || !dirty} className={cn(headerActionClass.primary, 'disabled:opacity-50')}>
+              {saving && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
+              {t('save_changes', 'Save changes')}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      {/* Organization record */}
+      <section aria-labelledby="me-record" className="space-y-3">
+        <div>
+          <h2 id="me-record" className="text-lg font-semibold text-ds-ink">{t('me.record', 'Your record')}</h2>
+          <p className="text-sm text-ds-muted">{t('me.recordHint', 'Kept by your organization. Ask your administrator to change these.')}</p>
+        </div>
+        <dl className="divide-y divide-ds-border rounded-[6px] border border-ds-border bg-ds-surface">
+          {record.map((r) => (
+            <div key={r.label} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-4">
+              <dt className="text-sm text-ds-muted sm:w-40 sm:shrink-0">{r.label}</dt>
+              <dd className={cn('min-w-0 break-words text-sm', r.value ? 'text-ds-ink' : 'text-ds-muted')}>{r.value || notSet}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
+      {/* Sign-in */}
+      <section aria-labelledby="me-signin" className="flex flex-col gap-3 border-t border-ds-border pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 id="me-signin" className="text-lg font-semibold text-ds-ink">{t('me.signin', 'Sign-in')}</h2>
+          <p className="text-sm text-ds-muted">{t('password_desc', 'Change the password you use to sign in.')}</p>
+        </div>
+        <Link to="/change-password" className={headerActionClass.secondary}>
+          <Key aria-hidden="true" className="h-4 w-4" />{t('change_password', 'Change password')}
+        </Link>
+      </section>
+
+      {/* Skills */}
+      <section aria-labelledby="me-skills" className="space-y-3 border-t border-ds-border pt-8">
+        <h2 id="me-skills" className="text-lg font-semibold text-ds-ink">{t('skills', 'Skills')}</h2>
+        <UserSkillsDisplay />
+      </section>
+    </div>
+  )
 }

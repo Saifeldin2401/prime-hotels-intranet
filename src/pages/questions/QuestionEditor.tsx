@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,7 +26,7 @@ import { useCreateQuestion, useQuestion, useQuestionsPassRates, useUpdateQuestio
 import type { QuestionDifficulty } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowDown, ArrowUp, GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -247,25 +248,19 @@ export function QuestionEditor() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
-                    <ArrowLeft className="h-4 w-4 me-2" />
-                    Back
-                </Button>
-                <div className="flex-1">
-                    <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Question' : 'Create Question'}</h1>
-                    <p className="text-gray-500">Define the question content, options, and settings</p>
-                </div>
-                {passRate && passRate.totalAttempts > 0 && (
-                    <Badge
-                        variant="outline"
-                        className={passRate.totalAttempts >= 5 && passRate.accuracyRate < 50 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-600'}
-                    >
-                        {passRate.totalAttempts >= 5 && passRate.accuracyRate < 50 && <AlertCircle className="h-3 w-3 me-1" />}
-                        {Math.round(passRate.accuracyRate)}% pass rate ({passRate.totalAttempts} attempts)
-                    </Badge>
-                )}
-            </div>
+            <PageHeader
+                backTo="/studio/quizzes"
+                title={isEditMode ? 'Edit question' : 'New question'}
+                description="The question, its answer options and when it is used."
+                actions={passRate && passRate.totalAttempts > 0 ? (
+                    <span className={passRate.totalAttempts >= 5 && passRate.accuracyRate < 50
+                        ? 'inline-flex items-center gap-1 rounded-[3px] bg-ds-danger-soft px-2 py-1 text-xs font-medium text-ds-danger'
+                        : 'text-xs text-ds-muted'}>
+                        {passRate.totalAttempts >= 5 && passRate.accuracyRate < 50 && <AlertCircle aria-hidden="true" className="h-3 w-3" />}
+                        {Math.round(passRate.accuracyRate)}% answered correctly · {passRate.totalAttempts} attempts
+                    </span>
+                ) : undefined}
+            />
 
             <Form onSubmit={form.handleSubmit(onSubmit)}>
                 <div className="space-y-6">
@@ -335,7 +330,7 @@ export function QuestionEditor() {
                                                                 <Badge className={`bg-${config.color}-100 text-${config.color}-700 hover:bg-${config.color}-200`}>
                                                                     {config.label}
                                                                 </Badge>
-                                                                <span className="text-xs text-gray-500">({config.points} pts)</span>
+                                                                <span className="text-xs text-ds-muted">({config.points} pts)</span>
                                                             </div>
                                                         </SelectItem>
                                                     ))}
@@ -416,8 +411,8 @@ export function QuestionEditor() {
                             {(watchedType === 'mcq' || watchedType === 'mcq_multi') && (
                                 <div className="space-y-4">
                                     {fields.map((field, index) => (
-                                        <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg bg-gray-50/50">
-                                            <div className="mt-3 cursor-grab text-gray-400">
+                                        <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg bg-ds-surface-subtle">
+                                            <div className="mt-3 cursor-grab text-ds-muted">
                                                 <GripVertical className="h-4 w-4" />
                                             </div>
 
@@ -459,7 +454,7 @@ export function QuestionEditor() {
                                                         variant="ghost"
                                                         size="icon"
                                                         aria-label={t('accessibility.delete_option', 'Delete Option')}
-                                                        className="text-red-500 hover:text-red-600 h-10 w-10"
+                                                        className="text-ds-danger hover:text-ds-danger h-10 w-10"
                                                         onClick={() => remove(index)}
                                                         disabled={fields.length <= 2}
                                                     >
@@ -493,7 +488,7 @@ export function QuestionEditor() {
                                     </Button>
 
                                     {form.formState.errors.root && (
-                                        <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                                        <div className="flex items-center gap-2 text-ds-danger text-sm mt-2">
                                             <AlertCircle className="h-4 w-4" />
                                             {form.formState.errors.root.message}
                                         </div>
@@ -575,8 +570,8 @@ export function QuestionEditor() {
                                         The order below is the correct sequence — learners will see these items shuffled and must arrange them to match.
                                     </p>
                                     {fields.map((field, index) => (
-                                        <div key={field.id} className="flex gap-3 items-center p-4 border rounded-lg bg-gray-50/50">
-                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 font-bold text-gray-600">
+                                        <div key={field.id} className="flex gap-3 items-center p-4 border rounded-lg bg-ds-surface-subtle">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ds-surface-subtle font-bold text-ds-muted">
                                                 {index + 1}
                                             </span>
                                             <FormField
@@ -630,7 +625,7 @@ export function QuestionEditor() {
                                                 variant="ghost"
                                                 size="icon"
                                                 aria-label={t('accessibility.delete_option', 'Delete step')}
-                                                className="text-red-500 hover:text-red-600 h-10 w-10"
+                                                className="text-ds-danger hover:text-ds-danger h-10 w-10"
                                                 onClick={() => remove(index)}
                                                 disabled={fields.length <= 2}
                                             >
@@ -648,7 +643,7 @@ export function QuestionEditor() {
                                         Add Step
                                     </Button>
                                     {form.formState.errors.root && (
-                                        <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                                        <div className="flex items-center gap-2 text-ds-danger text-sm mt-2">
                                             <AlertCircle className="h-4 w-4" />
                                             {form.formState.errors.root.message}
                                         </div>
@@ -662,7 +657,7 @@ export function QuestionEditor() {
                                         Each row is one pair — learners see the left item and choose the matching right item from a shuffled list.
                                     </p>
                                     {fields.map((field, index) => (
-                                        <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg bg-gray-50/50">
+                                        <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg bg-ds-surface-subtle">
                                             <div className="flex-1 grid grid-cols-2 gap-3">
                                                 <FormField
                                                     control={form.control}
@@ -694,7 +689,7 @@ export function QuestionEditor() {
                                                 variant="ghost"
                                                 size="icon"
                                                 aria-label={t('accessibility.delete_option', 'Delete pair')}
-                                                className="text-red-500 hover:text-red-600 h-10 w-10"
+                                                className="text-ds-danger hover:text-ds-danger h-10 w-10"
                                                 onClick={() => remove(index)}
                                                 disabled={fields.length <= 2}
                                             >
@@ -712,7 +707,7 @@ export function QuestionEditor() {
                                         Add Pair
                                     </Button>
                                     {form.formState.errors.root && (
-                                        <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                                        <div className="flex items-center gap-2 text-ds-danger text-sm mt-2">
                                             <AlertCircle className="h-4 w-4" />
                                             {form.formState.errors.root.message}
                                         </div>

@@ -5,7 +5,7 @@
  * and knowledge gap analysis across the organization.
  */
 
-import { PageHeader } from '@/components/layout/PageHeader'
+import { WorkspaceHeader } from '@/ui'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,21 +22,16 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDepartments } from '@/hooks/useDepartments'
-import { useProperty } from '@/contexts/PropertyContext'
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
 import {
-    AlertTriangle,
     Award,
-    BookOpen,
     Brain,
     CheckCircle,
     ListFilter,
     TrendingDown,
-    TrendingUp,
     Users
 } from 'lucide-react'
 import { useState } from 'react'
@@ -80,39 +75,7 @@ interface KnowledgeGap {
     weakAreas: string[]
 }
 
-const StatCard = ({
-    title,
-    value,
-    icon: Icon,
-    trend,
-    color = 'blue'
-}: {
-    title: string
-    value: string | number
-    icon
-    trend?: string
-    color?: string
-}) => (
-    <Card>
-        <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm text-muted-foreground">{title}</p>
-                    <p className="text-3xl font-bold mt-1">{value}</p>
-                    {trend && (
-                        <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                            <TrendingUp className="w-3 h-3" />
-                            {trend}
-                        </p>
-                    )}
-                </div>
-                <div className={`p-3 rounded-full bg-${color}-100`}>
-                    <Icon className={`w-6 h-6 text-${color}-600`} />
-                </div>
-            </div>
-        </CardContent>
-    </Card>
-)
+const TAB_CLASS = 'min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none'
 
 interface FunnelBlock {
     blockId: string
@@ -173,7 +136,7 @@ function ModuleFunnelDialog({
                             return (
                                 <div key={block.blockId}>
                                     {index > 0 && drop > 15 && (
-                                        <div className="flex items-center gap-1.5 text-xs text-rose-600 mb-1.5 ps-1">
+                                        <div className="flex items-center gap-1.5 text-xs text-ds-danger mb-1.5 ps-1">
                                             <TrendingDown className="w-3.5 h-3.5" />
                                             {t('analytics.dropOffAmount', '{{percent}}% drop-off here', { percent: Math.round(drop) })}
                                         </div>
@@ -204,10 +167,8 @@ export default function TrainingAnalytics() {
     const [departmentFilter, setDepartmentFilter] = useState<string>('all')
     const [myTeamOnly, setMyTeamOnly] = useState(false)
     const [funnelModule, setFunnelModule] = useState<{ id: string; title: string } | null>(null)
-    const { currentProperty } = useProperty()
     const { departments } = useDepartments()
 
-    const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty!.id : null
     const departmentId = departmentFilter !== 'all' ? departmentFilter : null
 
     // No employee-level manager relationship exists in this schema -- "my team" is built on
@@ -228,7 +189,7 @@ export default function TrainingAnalytics() {
     // 20260805000000_training_analytics_correctness.sql for why this replaced a
     // client-side rules/progress-row computation that was wrong on both counts.
     const { data: summary } = useQuery({
-        queryKey: ['training-analytics-summary', timeRange, departmentId, propertyId, myTeamOnly],
+        queryKey: ['training-analytics-summary', timeRange, departmentId, myTeamOnly],
         queryFn: async (): Promise<AnalyticsSummary> => {
             const startDate = timeRange === 'all'
                 ? null
@@ -237,7 +198,6 @@ export default function TrainingAnalytics() {
             const { data, error } = await supabase.rpc('get_training_analytics_summary', {
                 p_start_date: startDate,
                 p_department_id: departmentId,
-                p_property_id: propertyId,
                 p_my_team_only: myTeamOnly
             })
             if (error) throw error
@@ -269,11 +229,10 @@ export default function TrainingAnalytics() {
     // Fetch module performance -- one round trip instead of the old 2N-query loop,
     // and now actually ordered before the top-10 cut.
     const { data: modulePerformance } = useQuery({
-        queryKey: ['training-module-performance', departmentId, propertyId],
+        queryKey: ['training-module-performance', departmentId],
         queryFn: async (): Promise<ModulePerformance[]> => {
             const { data, error } = await supabase.rpc('get_training_module_performance', {
                 p_department_id: departmentId,
-                p_property_id: propertyId,
                 p_limit: 10
             })
             if (error) throw error
@@ -353,12 +312,11 @@ export default function TrainingAnalytics() {
     // Certificates approaching expiry (recertification is auto-processed nightly by
     // process_certificate_expirations -- this is the "who's coming due" early-warning view).
     const { data: expiringCertificates } = useQuery({
-        queryKey: ['expiring-certificates', departmentId, propertyId],
+        queryKey: ['expiring-certificates', departmentId],
         queryFn: async (): Promise<ExpiringCertificate[]> => {
             const { data, error } = await supabase.rpc('get_expiring_certificates', {
                 p_within_days: 90,
-                p_department_id: departmentId,
-                p_property_id: propertyId
+                p_department_id: departmentId
             })
             if (error) throw error
 
@@ -377,12 +335,11 @@ export default function TrainingAnalytics() {
     // Weekly completion trend -- everything else on this page was a snapshot; this is the
     // first real "are we getting better" signal, backed by actual completed_at history.
     const { data: completionTrend, isLoading: isTrendLoading } = useQuery({
-        queryKey: ['training-completion-trend', departmentId, propertyId, myTeamOnly],
+        queryKey: ['training-completion-trend', departmentId, myTeamOnly],
         queryFn: async () => {
             const { data, error } = await supabase.rpc('get_training_completion_trend', {
                 p_weeks: 12,
                 p_department_id: departmentId,
-                p_property_id: propertyId,
                 p_my_team_only: myTeamOnly
             })
             if (error) throw error
@@ -393,96 +350,75 @@ export default function TrainingAnalytics() {
         }
     })
 
+    const figures: { label: string; value: string | number; tone?: 'danger' }[] = [
+        { label: t('analytics.totalAssignees', 'People assigned'), value: summary?.totalAssignees ?? 0 },
+        { label: t('completionRate'), value: `${summary?.completionRate ?? 0}%` },
+        { label: t('averageScore'), value: `${summary?.averageScore ?? 0}%` },
+        { label: t('overdue'), value: summary?.overdueAssignments ?? 0, tone: (summary?.overdueAssignments ?? 0) > 0 ? 'danger' : undefined },
+    ]
+
     return (
-        <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
-            <PageHeader
-                title={t('analytics.title')}
-                description={t('analytics.description')}
-                actions={
-                    <div className="flex items-center gap-3">
-                        {isManager && (
-                            <Button
-                                variant={myTeamOnly ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setMyTeamOnly(prev => !prev)
-                                    setDepartmentFilter('all')
-                                }}
-                                className={myTeamOnly ? 'bg-hotel-navy hover:bg-hotel-navy-dark' : ''}
-                            >
-                                <Users className="w-4 h-4 me-1.5" />
-                                {t('analytics.myTeam', 'My Team')}
-                            </Button>
-                        )}
-                        <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={myTeamOnly}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('analytics.allDepartments', 'All Departments')}</SelectItem>
-                                {departments.map((dept) => (
-                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select value={timeRange} onValueChange={(v) => setTimeRange(v as '7d' | '30d' | '90d' | 'all')}>
-                            <SelectTrigger className="w-[140px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="7d">{t('analytics.last7Days')}</SelectItem>
-                                <SelectItem value="30d">{t('analytics.last30Days')}</SelectItem>
-                                <SelectItem value="90d">{t('analytics.last90Days')}</SelectItem>
-                                <SelectItem value="all">{t('analytics.allTime')}</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                }
+        <div className="mx-auto max-w-6xl space-y-8">
+            <WorkspaceHeader
+                eyebrow={t('trends.eyebrow', 'Manage')}
+                title={t('trends.title', 'Compliance trends')}
+                context={t('trends.context', 'Is training getting done, and where are people struggling?')}
             />
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    title={t('analytics.totalAssignees', 'People Assigned')}
-                    value={summary?.totalAssignees || 0}
-                    icon={Users}
-                    color="blue"
-                />
-                <StatCard
-                    title={t('completionRate')}
-                    value={`${summary?.completionRate || 0}%`}
-                    icon={CheckCircle}
-                    color="green"
-                />
-                <StatCard
-                    title={t('averageScore')}
-                    value={`${summary?.averageScore || 0}%`}
-                    icon={Award}
-                    color="purple"
-                />
-                <StatCard
-                    title={t('overdue')}
-                    value={summary?.overdueAssignments || 0}
-                    icon={AlertTriangle}
-                    color="red"
-                />
+            <div role="group" aria-label={t('trends.filters', 'Filters')} className="flex flex-wrap items-center gap-2">
+                {isManager && (
+                    <button
+                        type="button"
+                        aria-pressed={myTeamOnly}
+                        onClick={() => { setMyTeamOnly((prev) => !prev); setDepartmentFilter('all') }}
+                        className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent ${myTeamOnly ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong'}`}
+                    >
+                        <Users aria-hidden="true" className="h-4 w-4" />{t('analytics.myTeam', 'My team')}
+                    </button>
+                )}
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={myTeamOnly}>
+                    <SelectTrigger className="min-h-[40px] w-[200px]" aria-label={t('trends.department', 'Department')}>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t('analytics.allDepartments', 'All departments')}</SelectItem>
+                        {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Select value={timeRange} onValueChange={(v) => setTimeRange(v as '7d' | '30d' | '90d' | 'all')}>
+                    <SelectTrigger className="min-h-[40px] w-[160px]" aria-label={t('trends.period', 'Period')}>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="7d">{t('analytics.last7Days')}</SelectItem>
+                        <SelectItem value="30d">{t('analytics.last30Days')}</SelectItem>
+                        <SelectItem value="90d">{t('analytics.last90Days')}</SelectItem>
+                        <SelectItem value="all">{t('analytics.allTime')}</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-600" />
-                        {t('analytics.completionTrendTitle', 'Completions Over Time (12 Weeks)')}
-                    </CardTitle>
-                    <CardDescription>
-                        {t('analytics.completionTrendDesc', 'Modules completed per week, based on actual completion history.')}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
+            <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border lg:grid-cols-4">
+                {figures.map((f) => (
+                    <div key={f.label} className="bg-ds-surface px-4 py-4">
+                        <dt className="text-xs text-ds-muted">{f.label}</dt>
+                        <dd className={`mt-1 font-mono text-2xl tabular-nums ${f.tone === 'danger' ? 'text-ds-danger' : 'text-ds-ink'}`}>{f.value}</dd>
+                    </div>
+                ))}
+            </dl>
+
+            <section aria-labelledby="trends-chart" className="space-y-3">
+                <div>
+                    <h2 id="trends-chart" className="text-lg font-semibold text-ds-ink">{t('analytics.completionTrendTitle', 'Completions over time (12 weeks)')}</h2>
+                    <p className="text-sm text-ds-muted">{t('analytics.completionTrendDesc', 'Modules completed per week, based on actual completion history.')}</p>
+                </div>
+                <div className="rounded-[6px] border border-ds-border bg-ds-surface p-4">
                     {isTrendLoading ? (
                         <Skeleton className="h-[220px] w-full" />
                     ) : !completionTrend || completionTrend.every(w => w.completed === 0) ? (
-                        <p className="text-center text-sm text-muted-foreground py-10">
+                        <p className="py-10 text-center text-sm text-ds-muted">
                             {t('analytics.noTrendData', 'No completions recorded in this period yet.')}
                         </p>
                     ) : (
@@ -491,51 +427,48 @@ export default function TrainingAnalytics() {
                                 <AreaChart data={completionTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                                     <defs>
                                         <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#0B1C3E" stopOpacity={0.6} />
-                                            <stop offset="95%" stopColor="#0B1C3E" stopOpacity={0} />
+                                            <stop offset="5%" stopColor="#15212E" stopOpacity={0.35} />
+                                            <stop offset="95%" stopColor="#15212E" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4DF" />
                                     <XAxis
                                         dataKey="week"
                                         tickFormatter={(str) => {
                                             const d = new Date(str)
                                             return `${d.getDate()}/${d.getMonth() + 1}`
                                         }}
-                                        stroke="#9ca3af"
+                                        stroke="#6B7580"
                                         fontSize={12}
                                         tickLine={false}
                                         axisLine={false}
+                                        reversed={isRTL}
                                     />
-                                    <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <YAxis stroke="#6B7580" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} orientation={isRTL ? 'right' : 'left'} />
                                     <Tooltip
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        contentStyle={{ borderRadius: '6px', border: '1px solid #E4E4DF', boxShadow: 'none' }}
                                         labelFormatter={(label) => new Date(label).toLocaleDateString()}
                                     />
-                                    <Area type="monotone" dataKey="completed" stroke="#0B1C3E" strokeWidth={2} fill="url(#colorCompletions)" name={t('completed', 'Completed')} />
+                                    <Area type="monotone" dataKey="completed" stroke="#15212E" strokeWidth={2} fill="url(#colorCompletions)" name={t('completed', 'Completed')} />
                                 </AreaChart>
                             </ResponsiveContainer>
                         </ChartViewport>
                     )}
-                </CardContent>
-            </Card>
+                </div>
+            </section>
 
-            {/* Tabs for different views */}
             <Tabs defaultValue="modules" className="space-y-4">
-                <TabsList>
-                    <TabsTrigger value="modules" className="gap-2">
-                        <BookOpen className="w-4 h-4" />
+                <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-ds-border bg-transparent p-0">
+                    <TabsTrigger value="modules" className={TAB_CLASS}>
                         {t('analytics.modulePerformance')}
                     </TabsTrigger>
-                    <TabsTrigger value="gaps" className="gap-2">
-                        <Brain className="w-4 h-4" />
+                    <TabsTrigger value="gaps" className={TAB_CLASS}>
                         {t('analytics.knowledgeGaps')}
                     </TabsTrigger>
-                    <TabsTrigger value="expiring" className="gap-2">
-                        <Award className="w-4 h-4" />
-                        {t('analytics.expiringCertifications', 'Expiring Certifications')}
+                    <TabsTrigger value="expiring" className={TAB_CLASS}>
+                        {t('analytics.expiringCertifications', 'Expiring certifications')}
                         {expiringCertificates && expiringCertificates.length > 0 && (
-                            <Badge variant="destructive" className="ms-1">{expiringCertificates.length}</Badge>
+                            <span className="ms-1.5 rounded-[3px] bg-ds-warning-soft px-1.5 font-mono text-xs tabular-nums text-ds-warning">{expiringCertificates.length}</span>
                         )}
                     </TabsTrigger>
                 </TabsList>
@@ -558,7 +491,7 @@ export default function TrainingAnalytics() {
                                     modulePerformance?.map((module) => (
                                         <div
                                             key={module.id}
-                                            className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                                            className="p-4 border rounded-lg hover:bg-ds-surface-subtle transition-colors"
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className="font-medium">{module.title}</h4>
@@ -619,7 +552,7 @@ export default function TrainingAnalytics() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Brain className="w-5 h-5 text-orange-500" />
+                                <Brain className="w-5 h-5 text-ds-warning" />
                                 {t('analytics.gapAnalysisTitle')}
                             </CardTitle>
                             <CardDescription>
@@ -630,8 +563,8 @@ export default function TrainingAnalytics() {
                             <div className="space-y-4">
                                 {knowledgeGaps?.length === 0 ? (
                                     <div className="text-center py-8">
-                                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                                        <p className="font-medium text-green-700">
+                                        <CheckCircle className="w-12 h-12 text-ds-success mx-auto mb-3" />
+                                        <p className="font-medium text-ds-success">
                                             {t('analytics.noGapsDetected')}
                                         </p>
                                         <p className="text-sm text-muted-foreground">
@@ -642,25 +575,25 @@ export default function TrainingAnalytics() {
                                     knowledgeGaps?.map((gap, index) => (
                                         <div
                                             key={index}
-                                            className="p-4 border border-orange-200 bg-orange-50 rounded-lg"
+                                            className="p-4 border border-ds-warning/30 bg-ds-warning-soft rounded-lg"
                                         >
                                             <div className="flex items-center justify-between mb-2">
-                                                <h4 className="font-medium text-orange-900">
+                                                <h4 className="font-medium text-ds-warning">
                                                     {gap.label}
                                                 </h4>
                                                 <Badge variant="destructive">
                                                     {t('analytics.accuracy', { percent: gap.averageAccuracy })}
                                                 </Badge>
                                             </div>
-                                            <p className="text-sm text-orange-700 mb-2">
+                                            <p className="text-sm text-ds-warning mb-2">
                                                 {t('analytics.basedOnAttempts', { count: gap.questionCount })}
                                             </p>
                                             {gap.weakAreas.length > 0 && (
                                                 <div className="mt-2">
-                                                    <p className="text-xs font-medium text-orange-800 mb-1">
+                                                    <p className="text-xs font-medium text-ds-warning mb-1">
                                                         {t('analytics.frequentlyMissed')}
                                                     </p>
-                                                    <ul className="text-xs text-orange-600 space-y-1">
+                                                    <ul className="text-xs text-ds-warning space-y-1">
                                                         {gap.weakAreas.map((q, i) => (
                                                             <li key={i} className="truncate">
                                                                 • {q}
@@ -681,7 +614,7 @@ export default function TrainingAnalytics() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Award className="w-5 h-5 text-amber-500" />
+                                <Award className="w-5 h-5 text-ds-warning" />
                                 {t('analytics.expiringCertificationsTitle', 'Certifications Expiring Soon')}
                             </CardTitle>
                             <CardDescription>
@@ -692,8 +625,8 @@ export default function TrainingAnalytics() {
                             <div className="space-y-3">
                                 {!expiringCertificates || expiringCertificates.length === 0 ? (
                                     <div className="text-center py-8">
-                                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                                        <p className="font-medium text-green-700">
+                                        <CheckCircle className="w-12 h-12 text-ds-success mx-auto mb-3" />
+                                        <p className="font-medium text-ds-success">
                                             {t('analytics.noExpiringCertifications', 'No certifications expiring soon.')}
                                         </p>
                                     </div>
@@ -705,11 +638,11 @@ export default function TrainingAnalytics() {
                                                 key={cert.certificateId}
                                                 className={cn(
                                                     "flex items-center justify-between p-4 border rounded-lg",
-                                                    urgent ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"
+                                                    urgent ? "border-ds-danger/30 bg-ds-danger-soft" : "border-ds-warning/30 bg-ds-warning-soft"
                                                 )}
                                             >
                                                 <div>
-                                                    <h4 className="font-medium text-slate-900">{cert.recipientName}</h4>
+                                                    <h4 className="font-medium text-ds-ink">{cert.recipientName}</h4>
                                                     <p className="text-sm text-muted-foreground">{cert.title}</p>
                                                 </div>
                                                 <div className="text-end">

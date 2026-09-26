@@ -62,7 +62,7 @@ export const SYSTEM_PAGES: SearchablePage[] = [
         id: 'page-lms-admin',
         title: 'LMS Admin Hub',
         description: 'Design, build, assign, and track learning programs',
-        url: '/studio',
+        url: '/studio/courses',
         keywords: ['training admin', 'builder', 'assignments', 'learning management', 'lms'],
         icon: 'GraduationCap',
         category: 'Learning'

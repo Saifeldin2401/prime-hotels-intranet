@@ -1,20 +1,20 @@
 import {
     Select,
     SelectContent,
-    SelectGroup,
     SelectItem,
-    SelectLabel,
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import type { Department } from '@/lib/types'
-import { Building2 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
+interface SelectorDepartment {
+    id: string
+    name: string
+}
+
 interface GroupedDepartmentSelectorProps {
-    departments
-    properties
+    departments: SelectorDepartment[] | undefined
     value: string
     onValueChange: (value: string) => void
     placeholder?: string
@@ -26,12 +26,11 @@ interface GroupedDepartmentSelectorProps {
 }
 
 /**
- * A reusable component that displays departments grouped by their property.
- * This resolves issues with duplicate department names across different hotels.
+ * Pick one department of the organization, alphabetically, with an optional
+ * "all departments" choice first. (Kept under its old name for existing callers.)
  */
 export function GroupedDepartmentSelector({
     departments,
-    properties,
     value,
     onValueChange,
     placeholder,
@@ -42,61 +41,24 @@ export function GroupedDepartmentSelector({
     className
 }: GroupedDepartmentSelectorProps) {
     const { t } = useTranslation('common')
-
-    const groupedDepartments = useMemo(() => {
-        if (!departments) return {}
-
-        return departments.reduce((acc, dept) => {
-            const property = properties?.find(p => p.id === dept.property_id)
-            const propertyName = property?.name || t('common.unknown_property', 'Other / Unknown Property')
-
-            if (!acc[propertyName]) {
-                acc[propertyName] = []
-            }
-            acc[propertyName].push(dept)
-            return acc
-        }, {} as Record<string, Department[]>)
-    }, [departments, properties, t])
-
-    // Sort properties alphabetically, but put Head Office first if it exists
-    const sortedPropertyNames = useMemo(() => {
-        return Object.keys(groupedDepartments).sort((a, b) => {
-            if (a.includes('Head Office') || a.includes('HEAD OFFICE')) return -1
-            if (b.includes('Head Office') || b.includes('HEAD OFFICE')) return 1
-            return a.localeCompare(b)
-        })
-    }, [groupedDepartments])
+    const sorted = useMemo(() => [...(departments ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [departments])
 
     return (
         <Select value={value} onValueChange={onValueChange} disabled={disabled}>
             <SelectTrigger className={className}>
-                <SelectValue placeholder={placeholder || t('common.select_department', 'Select Department')} />
+                <SelectValue placeholder={placeholder || t('common.select_department', 'Select department')} />
             </SelectTrigger>
-            <SelectContent className="max-h-[80vh]">
+            <SelectContent className="max-h-[60vh]">
                 {showGeneral && (
                     <SelectItem value={generalValue}>
-                        {generalLabel || t('common.general_department', 'General / All Departments')}
+                        {generalLabel || t('common.general_department', 'All departments')}
                     </SelectItem>
                 )}
-
-                {sortedPropertyNames.map(propertyName => (
-                    <SelectGroup key={propertyName}>
-                        <SelectLabel className="flex items-center gap-2 text-hotel-gold bg-muted/30 py-2 mt-1 first:mt-0 font-bold uppercase text-[10px] tracking-wider cursor-default">
-                            <Building2 className="w-3 h-3" />
-                            {propertyName}
-                        </SelectLabel>
-                        {groupedDepartments[propertyName]
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(dept => (
-                                <SelectItem key={dept.id} value={dept.id} className="ps-10">
-                                    {dept.name}
-                                </SelectItem>
-                            ))}
-                    </SelectGroup>
+                {sorted.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                 ))}
-
-                {(!departments || departments.length === 0) && (
-                    <div className="p-4 text-center text-sm text-muted-foreground italic">
+                {sorted.length === 0 && (
+                    <div className="p-4 text-center text-sm text-ds-muted">
                         {t('common.no_departments_found', 'No departments found')}
                     </div>
                 )}

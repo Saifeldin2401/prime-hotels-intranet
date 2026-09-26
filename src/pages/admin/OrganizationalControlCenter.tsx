@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useQuery } from '@tanstack/react-query'
 import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
 import { OrgChartStats, OrgChartTree } from '@/components/admin/OrgChartTree'
@@ -23,13 +25,11 @@ import { supabase } from '@/lib/supabase'
 import { cn, escapeSearchQuery, formatDateTime } from '@/lib/utils'
 import { OrganizationProfileSettings } from './components/OrganizationProfileSettings'
 import { SubscriptionEntitlementsCard } from './components/SubscriptionEntitlementsCard'
-import { HotelsManagement } from './components/HotelsManagement'
 import { BrandsManagement } from './components/BrandsManagement'
 import { DepartmentsManagement } from './components/DepartmentsManagement'
 import { RolesManagement } from './components/RolesManagement'
 import { MembershipsManagement } from './components/MembershipsManagement'
 import { OrgStructureTree } from '@/components/org/OrgStructureTree'
-import { TenantOnboardingGuide } from '@/components/onboarding/TenantOnboardingGuide'
 import {
     Building,
     Building2,
@@ -41,7 +41,8 @@ import {
     Shield,
     Users,
     Briefcase,
-    FolderTree
+    FolderTree,
+    Network,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -72,18 +73,23 @@ function getPersonName(relation: PersonRelation | PersonRelation[] | null | unde
 
 export default function OrganizationalControlCenter() {
     const { t } = useTranslation(['admin', 'common', 'nav'])
-    const { currentOrganization, availableHotels, refreshTenantData } = useTenant()
-    const [activeTab, setActiveTab] = useState('profile')
+    const { currentOrganization, refreshTenantData } = useTenant()
+    // ?tab= makes each part of the structure linkable (Organization overview
+    // links straight to departments or memberships).
+    const [searchParams, setSearchParams] = useSearchParams()
+    const activeTab = searchParams.get('tab') ?? 'structure'
+    const setActiveTab = (tab: string) => {
+        const next = new URLSearchParams(searchParams)
+        next.set('tab', tab)
+        setSearchParams(next, { replace: true })
+    }
     const [searchTerm, setSearchTerm] = useState('')
-    const [selectedHotelId, setSelectedHotelId] = useState<string>('')
     const [selectedEmployee, setSelectedEmployee] = useState<OrgTreeNode | null>(null)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
     const [viewMode, setViewMode] = useState<'hierarchy' | 'department' | 'structure'>('department')
 
     // Fetch hierarchy data for org tree
-    const { data: hierarchyData, isLoading: isLoadingHierarchy, refetch: refetchHierarchy } = useOrgHierarchy(
-        selectedHotelId || undefined
-    )
+    const { data: hierarchyData, isLoading: isLoadingHierarchy, refetch: refetchHierarchy } = useOrgHierarchy()
 
     // Build tree structure
     const treeNodes = hierarchyData ? buildOrgTree(hierarchyData) : []
@@ -111,45 +117,16 @@ export default function OrganizationalControlCenter() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Executive Control Header Banner */}
-            <div className="relative overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#15212E] p-6 sm:p-8 text-[#F4F2EC] shadow-none">
-                <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40 text-xs font-semibold px-2.5 py-0.5 rounded-[4px]">
-                                <Building2 className="me-1.5 h-3.5 w-3.5" />
-                                {t('admin:organization.title', 'Organizational Control Center')}
-                            </Badge>
-                            {currentOrganization && (
-                                <span className="inline-flex items-center gap-1 rounded-[4px] border border-[#30404D] bg-[#1E2D3D] px-2.5 py-0.5 text-xs font-mono text-[#929CA5]">
-                                    {currentOrganization.name}
-                                </span>
-                            )}
-                        </div>
-
-                        <h1 className="text-2xl font-bold tracking-tight text-[#F4F2EC] sm:text-3xl lg:text-4xl font-serif">
-                            {t('admin:organization.title', 'Organizational Control Center')}
-                        </h1>
-                        <p className="text-xs text-[#929CA5] sm:text-sm font-normal max-w-2xl leading-relaxed">
-                            {t('admin:organization.description', 'Manage enterprise hierarchy, hotels, brands, departments, tenant roles, and reporting structures.')}
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <Button 
-                            variant="outline" 
-                            onClick={handleGlobalRefresh}
-                            className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
-                        >
-                            <RefreshCw className="h-3.5 w-3.5 me-1.5 text-[#B79A62]" />
-                            <span>{t('common:refresh', 'Refresh')}</span>
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Exceptions first: what is still blocking this organization's setup */}
-            <TenantOnboardingGuide />
+            <WorkspaceHeader
+                eyebrow={t('admin:structure.eyebrow', 'Organization')}
+                title={t('admin:structure.title_org', 'Structure')}
+                context={currentOrganization?.name ?? null}
+                actions={
+                    <button type="button" onClick={handleGlobalRefresh} className={headerActionClass.secondary}>
+                        <RefreshCw aria-hidden="true" className="h-4 w-4" />{t('common:refresh', 'Refresh')}
+                    </button>
+                }
+            />
 
             {/* Quick Filters for Org Chart / Assignments */}
             {(activeTab === 'orgchart' || activeTab === 'assignments') && (
@@ -163,86 +140,55 @@ export default function OrganizationalControlCenter() {
                             className="h-9 ps-9 rounded-[6px] border-border bg-background text-xs"
                         />
                     </div>
-                    <Select
-                        value={selectedHotelId || "all"}
-                        onValueChange={(val) => setSelectedHotelId(val === "all" ? "" : val)}
-                    >
-                        <SelectTrigger className="w-full sm:w-64 h-9 rounded-[6px] border-border bg-background text-xs">
-                            <Building2 className="h-3.5 w-3.5 me-2 text-amber-500" />
-                            <SelectValue placeholder={t('admin:organization.all_properties', 'Consolidated (Cluster)')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all" className="text-xs">
-                                {t('admin:organization.all_properties', 'Consolidated (Cluster)')}
-                            </SelectItem>
-                            {availableHotels?.map((hotel) => (
-                                <SelectItem key={hotel.id} value={hotel.id} className="text-xs">
-                                    {hotel.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                 </div>
             )}
 
             {/* Comprehensive Hierarchy Navigation Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/40 p-1 rounded-[8px] border border-border shadow-none">
-                    {/* 1. Profile & Entitlements */}
-                    <TabsTrigger value="profile" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Building className="h-3.5 w-3.5" />
-                        <span>{t('admin:organization.tab_profile', 'Profile & Plan')}</span>
+                <TabsList className="flex h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto rounded-none border-b border-ds-border bg-transparent p-0">
+                    <TabsTrigger value="structure" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Network aria-hidden="true" className="h-4 w-4" />
+                        <span>{t('admin:structure.tab_structure', 'Structure')}</span>
                     </TabsTrigger>
-
-                    {/* 2. Brands */}
-                    <TabsTrigger value="brands" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Crown className="h-3.5 w-3.5" />
-                        <span>{t('admin:organization.tab_brands', 'Brands')}</span>
-                    </TabsTrigger>
-
-                    {/* 3. Hotels */}
-                    <TabsTrigger value="hotels" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Building2 className="h-3.5 w-3.5" />
-                        <span>{t('admin:organization.tab_hotels', 'Hotels')}</span>
-                    </TabsTrigger>
-
-                    {/* 4. Departments */}
-                    <TabsTrigger value="departments" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Briefcase className="h-3.5 w-3.5" />
+                    <TabsTrigger value="departments" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Briefcase aria-hidden="true" className="h-4 w-4" />
                         <span>{t('admin:departments', 'Departments')}</span>
                     </TabsTrigger>
-
-                    {/* 5. Roles Matrix */}
-                    <TabsTrigger value="roles" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Shield className="h-3.5 w-3.5" />
+                    <TabsTrigger value="brands" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Crown aria-hidden="true" className="h-4 w-4" />
+                        <span>{t('admin:organization.tab_brands', 'Brands')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="memberships" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Users aria-hidden="true" className="h-4 w-4" />
+                        <span>{t('admin:structure.tab_people', 'People & placement')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="orgchart" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <GitBranch aria-hidden="true" className="h-4 w-4" />
+                        <span>{t('admin:structure.tab_reporting', 'Reporting lines')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="roles" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Shield aria-hidden="true" className="h-4 w-4" />
                         <span>{t('admin:roles.title', 'Roles')}</span>
                     </TabsTrigger>
-
-                    {/* 6. Memberships */}
-                    <TabsTrigger value="memberships" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{t('admin:user_memberships', 'Memberships')}</span>
-                    </TabsTrigger>
-
-                    {/* 7. Org Chart */}
-                    <TabsTrigger value="orgchart" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <GitBranch className="h-3.5 w-3.5" />
-                        <span>{t('admin:organization.tab_orgchart', 'Org Chart')}</span>
-                    </TabsTrigger>
-
-                    {/* 8. Assignments */}
-                    <TabsTrigger value="assignments" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <Users className="h-3.5 w-3.5" />
+                    <TabsTrigger value="assignments" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Users aria-hidden="true" className="h-4 w-4" />
                         <span>{t('admin:organization.tab_assignments', 'Assignments')}</span>
                     </TabsTrigger>
-
-                    {/* 10. Audit History */}
-                    <TabsTrigger value="history" className="gap-1.5 py-2 px-3 rounded-[6px] text-xs font-semibold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs transition-colors">
-                        <History className="h-3.5 w-3.5" />
+                    <TabsTrigger value="history" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <History aria-hidden="true" className="h-4 w-4" />
                         <span>{t('admin:organization.tab_history', 'History')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="profile" className="min-h-[40px] gap-1.5 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        <Building aria-hidden="true" className="h-4 w-4" />
+                        <span>{t('admin:structure.tab_profile', 'Profile & plan')}</span>
                     </TabsTrigger>
                 </TabsList>
 
+
+                {/* Structure: organization > department */}
+                <TabsContent value="structure" className="mt-6">
+                    <OrgStructureTree orgId={currentOrganization?.id || ''} />
+                </TabsContent>
 
                 {/* Tab 1: Profile & Subscription Entitlements */}
                 <TabsContent value="profile" className="mt-6 space-y-6">
@@ -253,11 +199,6 @@ export default function OrganizationalControlCenter() {
                 {/* Tab 2: Brands Management */}
                 <TabsContent value="brands" className="mt-6">
                     <BrandsManagement />
-                </TabsContent>
-
-                {/* Tab 3: Hotels & Locations */}
-                <TabsContent value="hotels" className="mt-6">
-                    <HotelsManagement />
                 </TabsContent>
 
                 {/* Tab 4: Departments */}
@@ -324,7 +265,6 @@ export default function OrganizationalControlCenter() {
                         <OrgStructureTree orgId={currentOrganization?.id || ''} />
                     ) : viewMode === 'department' ? (
                         <OrgByDepartment
-                            selectedPropertyId={selectedHotelId || undefined}
                             searchTerm={searchTerm}
                             onEmployeeClick={(emp) => {
                                 setSelectedEmployee({
@@ -382,7 +322,6 @@ export default function OrganizationalControlCenter() {
                 {/* Tab 8: Assignments */}
                 <TabsContent value="assignments" className="mt-6">
                     <AssignmentsTable
-                        hotelId={selectedHotelId || undefined}
                         searchTerm={searchTerm}
                         onEditEmployee={handleEditNode}
                     />
@@ -399,7 +338,6 @@ export default function OrganizationalControlCenter() {
                 open={isEditorOpen}
                 onOpenChange={setIsEditorOpen}
                 employee={selectedEmployee}
-                propertyId={selectedHotelId || undefined}
             />
         </div>
     )
@@ -430,41 +368,33 @@ function filterTreeNodes(nodes: OrgTreeNode[], term: string): OrgTreeNode[] {
 
 // Assignments Table Component (Clean Multi-Tenant Architecture)
 function AssignmentsTable({
-    hotelId,
     searchTerm,
     onEditEmployee
 }: {
-    hotelId?: string
     searchTerm: string
     onEditEmployee: (node: OrgTreeNode) => void
 }) {
     const { t } = useTranslation(['admin', 'common'])
-    const { currentOrganization, availableHotels } = useTenant()
+    const { currentOrganization } = useTenant()
 
     const { data: employees, isLoading } = useQuery({
-        queryKey: ['org-assignments-data', currentOrganization?.id, hotelId, searchTerm],
+        queryKey: ['org-assignments-data', currentOrganization?.id, searchTerm],
         queryFn: async () => {
             if (!currentOrganization?.id) return []
 
             // Query profiles in active organization memberships
-            let memberQuery = supabase
+            const memberQuery = supabase
                 .from('organization_memberships')
                 .select(`
                     id,
                     user_id,
                     role,
-                    hotel_id,
                     department_id,
-                    hotel:hotels(name),
                     department:departments(name),
                     profile:profiles(id, full_name, email, job_title, staff_id, reporting_to, is_active)
                 `)
                 .eq('organization_id', currentOrganization.id)
                 .eq('is_active', true)
-
-            if (hotelId) {
-                memberQuery = memberQuery.eq('hotel_id', hotelId)
-            }
 
             const { data: memberRows, error: memberErr } = await memberQuery.limit(150)
 
@@ -489,7 +419,6 @@ function AssignmentsTable({
                     job_title: p.job_title,
                     staff_id: p.staff_id,
                     reporting_to: p.reporting_to,
-                    hotel_name: '—',
                     dept_name: '—',
                     role: 'learner',
                     manager: null
@@ -499,7 +428,6 @@ function AssignmentsTable({
             // Extract profiles and search filter
             let items = memberRows.map(m => {
                 const p = Array.isArray(m.profile) ? m.profile[0] : m.profile
-                const h = Array.isArray(m.hotel) ? m.hotel[0] : m.hotel
                 const d = Array.isArray(m.department) ? m.department[0] : m.department
                 return {
                     id: p?.id || m.user_id,
@@ -508,7 +436,6 @@ function AssignmentsTable({
                     job_title: p?.job_title || '—',
                     staff_id: p?.staff_id || '—',
                     reporting_to: p?.reporting_to || null,
-                    hotel_name: h?.name || 'All Locations',
                     dept_name: d?.name || '—',
                     role: m.role || 'learner',
                     manager: null as { full_name?: string; staff_id?: string } | null
@@ -560,11 +487,11 @@ function AssignmentsTable({
         <div className="rounded-[8px] border border-border bg-card p-6 shadow-none">
             <div className="pb-4 border-b border-border/40">
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                    <Users className="h-4 w-4 text-amber-500" />
+                    <Users className="h-4 w-4 text-ds-warning" />
                     <span>{t('admin:organization.employee_assignments', 'Employee Assignments & Hierarchy')}</span>
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                    {t('admin:organization.assignments_desc', 'View and manage employee locations, departments, and reporting managers.')}
+                    {t('admin:organization.assignments_desc', 'Each person’s department, role and manager.')}
                 </p>
             </div>
             <div className="mt-4">
@@ -576,7 +503,6 @@ function AssignmentsTable({
                                 <TableHead className="text-xs font-bold">{t('admin:organization.employee', 'Employee')}</TableHead>
                                 <TableHead className="text-xs font-bold">{t('admin:organization.job_title', 'Job Title')}</TableHead>
                                 <TableHead className="text-xs font-bold">{t('admin:organization.reports_to', 'Reports To')}</TableHead>
-                                <TableHead className="text-xs font-bold">{t('admin:organization.property', 'Hotel / Location')}</TableHead>
                                 <TableHead className="text-xs font-bold">{t('admin:organization.department', 'Department')}</TableHead>
                                 <TableHead className="text-xs font-bold">{t('admin:organization.role', 'Tenant Role')}</TableHead>
                                 <TableHead></TableHead>
@@ -601,13 +527,10 @@ function AssignmentsTable({
                                         )}
                                     </TableCell>
                                     <TableCell className="text-xs text-muted-foreground">
-                                        {emp.hotel_name}
-                                    </TableCell>
-                                    <TableCell className="text-xs text-muted-foreground">
                                         {emp.dept_name}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline" className="text-[11px] capitalize border-amber-500/30 bg-amber-500/5 text-foreground font-medium">
+                                        <Badge variant="outline" className="text-[11px] capitalize border-ds-warning/30 bg-ds-warning-soft text-foreground font-medium">
                                             {emp.role.replace(/_/g, ' ')}
                                         </Badge>
                                     </TableCell>
@@ -615,7 +538,7 @@ function AssignmentsTable({
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            className="h-8 rounded-xl px-2.5 text-xs font-semibold text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
+                                            className="h-8 rounded-xl px-2.5 text-xs font-semibold text-muted-foreground hover:text-ds-warning hover:bg-ds-warning-soft"
                                             onClick={() => onEditEmployee({
                                                 id: emp.id,
                                                 full_name: emp.full_name,
@@ -654,7 +577,7 @@ function OrgChangeHistory() {
                     id, entity_type, entity_id, action, details, created_at,
                     changed_by_profile:profiles!user_id(full_name)
                 `)
-                .in('entity_type', ['profiles', 'employee_promotions', 'employee_transfers', 'user_departments', 'user_properties', 'organization_memberships', 'departments', 'hotels', 'brands'])
+                .in('entity_type', ['profiles', 'employee_promotions', 'employee_transfers', 'user_departments', 'organization_memberships', 'departments', 'brands'])
                 .order('created_at', { ascending: false })
                 .limit(50)
 
@@ -669,17 +592,17 @@ function OrgChangeHistory() {
     if (isLoading) {
         return (
             <div className="rounded-[8px] border border-border bg-card p-8 flex items-center justify-center">
-                <RefreshCw className="h-6 w-6 animate-spin text-amber-500 me-2" />
+                <RefreshCw className="h-6 w-6 animate-spin text-ds-warning me-2" />
                 <span className="text-xs font-semibold">{t('common:loading', 'Loading...')}</span>
             </div>
         )
     }
 
     return (
-        <div className="rounded-3xl border border-border/60 bg-gradient-to-b from-card/95 via-card/75 to-card/45 p-6 shadow-md backdrop-blur-2xl">
+        <div className="rounded-3xl border border-border/60 p-6 shadow-md backdrop-blur-2xl">
             <div className="pb-4 border-b border-border/40">
                 <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                    <History className="h-4 w-4 text-amber-500" />
+                    <History className="h-4 w-4 text-ds-warning" />
                     <span>{t('organization.change_history', 'Change History & Governance Trail')}</span>
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -689,7 +612,7 @@ function OrgChangeHistory() {
             <div className="mt-4">
                 {!history || history.length === 0 ? (
                     <div className="text-center py-10 text-muted-foreground">
-                        <History className="h-10 w-10 mx-auto mb-3 opacity-40 text-amber-500" />
+                        <History className="h-10 w-10 mx-auto mb-3 opacity-40 text-ds-warning" />
                         <p className="text-xs font-semibold">{t('organization.no_history', 'No recent changes found')}</p>
                     </div>
                 ) : (
@@ -714,9 +637,9 @@ function OrgChangeHistory() {
                                             <Badge
                                                 variant="outline"
                                                 className={
-                                                    entry.action === 'create' ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]' :
-                                                    entry.action === 'update' ? 'border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-[10px]' :
-                                                    entry.action === 'delete' ? 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold text-[10px]' :
+                                                    entry.action === 'create' ? 'border-ds-success/30 bg-ds-success-soft text-ds-success font-bold text-[10px]' :
+                                                    entry.action === 'update' ? 'border-ds-accent/30 bg-ds-accent-soft text-ds-accent font-bold text-[10px]' :
+                                                    entry.action === 'delete' ? 'border-ds-danger/30 bg-ds-danger-soft text-ds-danger font-bold text-[10px]' :
                                                     'text-[10px]'
                                                 }
                                             >

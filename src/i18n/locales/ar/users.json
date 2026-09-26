@@ -176,5 +176,25 @@
     "no_members_match": "لا يوجد أعضاء يطابقون تصنيف الأدوار أو الحالة المحددة.",
     "learner_role_badge": "دارس",
     "trainer_role_badge": "مدير تدريب",
-    "admin_role_badge": "مسؤول منظمة"
+    "admin_role_badge": "مسؤول منظمة",
+    "people": {
+        "eyebrow": "المؤسسة",
+        "title": "أعضاء الفريق",
+        "contextSeats": "{{count}} عضواً · {{used}} من {{max}} مقعداً مستخدماً",
+        "context": "{{count}} عضواً",
+        "bulk": "استيراد من CSV",
+        "invite": "دعوة بالبريد",
+        "add": "إضافة عضو",
+        "seatsFull": "جميع المقاعد ({{max}}) مستخدمة. لا يمكن إضافة أشخاص جدد حتى تتحرر مقاعد أو تُرفع الخطة.",
+        "seatsNear": "تبقّى {{available}} مقاعد من {{max}}.",
+        "roleFilter": "تصفية حسب الدور",
+        "statusFilter": "تصفية حسب الحالة",
+        "anyStatus": "أي حالة",
+        "search": "الاسم أو البريد أو الرقم الوظيفي",
+        "showing": "{{count}} شخصاً",
+        "select": "تحديد {{name}}",
+        "neverSignedIn": "لم يسجل الدخول قط",
+        "noMatch": "لا أحد يطابق عوامل التصفية",
+        "noMatchBody": "جرّب دوراً أو حالة أو بحثاً آخر."
+    }
 }

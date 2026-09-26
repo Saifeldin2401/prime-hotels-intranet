@@ -101,21 +101,18 @@ export const DOCUMENT_STATUSES: Record<DocumentStatus, { label: string; color: s
   REJECTED: { label: 'Rejected', color: 'red' },
 }
 
+/** 'all_properties' is the stored name for "the whole organization". */
 export type DocumentVisibility =
   | 'all_properties'
-  | 'property'
   | 'department'
-  | 'group_department'
   | 'specific_departments'
   | 'role'
 
 export const DOCUMENT_VISIBILITY_OPTIONS: { value: DocumentVisibility; label: string }[] = [
-  { value: 'all_properties', label: 'Organization-Wide (All Hotels)' },
-  { value: 'property', label: 'Specific Hotel' },
-  { value: 'department', label: 'Specific Department (This Hotel)' },
-  { value: 'group_department', label: 'Specific Department (Organization-Wide)' },
-  { value: 'specific_departments', label: 'Specific Departments (Custom)' },
-  { value: 'role', label: 'Specific Role' },
+  { value: 'all_properties', label: 'Whole organization' },
+  { value: 'department', label: 'One department' },
+  { value: 'specific_departments', label: 'Several departments' },
+  { value: 'role', label: 'One role' },
 ]
 export type TrainingProgressStatus =
   | 'not_started'

@@ -38,9 +38,10 @@ describe('Phase 6: Design System Tokens & Primitives', () => {
   })
 
   describe('Typography & Shape Tokens', () => {
-    it('defines IBM Plex families and full typographic scale', () => {
-      expect(typography.fontFamilies.sans).toContain('IBM Plex Sans')
+    it('defines the Altus families and full typographic scale', () => {
+      expect(typography.fontFamilies.sans).toContain('DM Sans')
       expect(typography.fontFamilies.sans).toContain('IBM Plex Sans Arabic')
+      expect(typography.fontFamilies.editorial).toContain('Cormorant Garamond')
       expect(typography.fontFamilies.mono).toContain('IBM Plex Mono')
 
       expect(typography.scale.display.size).toBe('32px')

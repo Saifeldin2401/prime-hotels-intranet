@@ -2044,7 +2044,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         next.set('assignModuleId', savedModuleId)
       }
       next.set('openAssign', '1')
-      navigate(`/studio?${next.toString()}`)
+      navigate(`/studio/courses?${next.toString()}`)
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({

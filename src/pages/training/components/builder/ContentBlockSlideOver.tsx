@@ -680,7 +680,7 @@ export function ContentBlockSlideOver({
 
                   <div className={cn("flex items-center justify-between pt-2 border-t border-amber-200/50", isRTL ? "flex-row-reverse" : "")}>
                     <div>
-                      <p className="text-xs font-semibold text-hotel-navy">
+                      <p className="text-xs font-semibold text-ds-ink">
                         {t('builder.requiresInstructorApproval', 'Requires Trainer Approval')}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
@@ -712,7 +712,7 @@ export function ContentBlockSlideOver({
                   )}
                 >
                   <span>{t('builder.optionalSettings', 'Duration & Scoring Settings')}</span>
-                  <span className="text-[11px] font-semibold text-hotel-gold">
+                  <span className="text-[11px] font-semibold text-ds-brass">
                     {showAdvancedBlockOptions ? t('builder.hideOptionalSettings', 'Hide') : t('builder.showOptionalSettings', 'Configure')}
                   </span>
                 </button>
@@ -784,7 +784,7 @@ export function ContentBlockSlideOver({
               <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} className="text-xs font-semibold">
                 {t('cancel', 'Cancel')}
               </Button>
-              <Button onClick={saveContent} size="sm" className="text-xs font-bold bg-hotel-gold hover:bg-hotel-gold/90 text-hotel-navy">
+              <Button onClick={saveContent} size="sm" className="text-xs font-bold bg-ds-brass hover:bg-ds-accent-hover text-white">
                 {selectedContent ? t('save', 'Save Changes') : t('builder.addContent', 'Add to Section')}
               </Button>
             </div>

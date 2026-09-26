@@ -6,9 +6,7 @@
 
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useProperty } from '@/contexts/PropertyContext';
 import { useCreateDocument } from '@/hooks/useDocuments';
-import { isRealPropertyId } from '@/lib/propertyScope';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { RefreshCw, Link2, X, BookOpen, Upload } from 'lucide-react';
@@ -178,7 +176,6 @@ function UploadTab({
 }) {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const { currentProperty, propertyIds } = useProperty()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const createDocument = useCreateDocument()
@@ -208,17 +205,12 @@ function UploadTab({
 
       // 'documents' is a private bucket: store the object path, not a public URL
       // (which would 404). Readers sign it via resolveDocumentUrl.
-      const scopedPropertyId = isRealPropertyId(currentProperty?.id)
-        ? currentProperty.id
-        : (propertyIds[0] ?? undefined)
-
       const newDoc = await createDocument.mutateAsync({
         title: file.name.replace(/\.[^/.]+$/, ''),
         file_url: filePath,
         file_size: file.size,
         file_extension: fileExt.toLowerCase(),
-        property_id: scopedPropertyId,
-        visibility: scopedPropertyId ? 'property' : 'all_properties',
+        visibility: 'all_properties',
         content_type: 'document',
         status: 'DRAFT',
       })

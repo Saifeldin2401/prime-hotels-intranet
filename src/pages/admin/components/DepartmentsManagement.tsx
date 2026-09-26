@@ -47,29 +47,23 @@ import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Briefcase, Plus, Building2, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, Search } from 'lucide-react'
+import { Briefcase, Plus, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 interface DepartmentItem {
   id: string
   organization_id?: string
-  hotel_id?: string | null
-  property_id?: string | null
   name: string
   name_ar?: string | null
   code?: string | null
   is_active: boolean
   is_deleted?: boolean
   created_at?: string
-  hotel?: {
-    id: string
-    name: string
-  } | null
 }
 
 export function DepartmentsManagement() {
-  const { currentOrganization, availableHotels, isOrgAdmin } = useTenant()
+  const { currentOrganization, isOrgAdmin } = useTenant()
   const { toast } = useToast()
   const { t } = useTranslation(['admin', 'common'])
   const queryClient = useQueryClient()
@@ -79,12 +73,10 @@ export function DepartmentsManagement() {
   const [deletingDept, setDeletingDept] = useState<DepartmentItem | null>(null)
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterHotelId, setFilterHotelId] = useState<string>('all')
 
   const [name, setName] = useState('')
   const [nameAr, setNameAr] = useState('')
   const [code, setCode] = useState('')
-  const [hotelId, setHotelId] = useState<string>('org_wide')
   const [isSaving, setIsSaving] = useState(false)
 
   // Query departments for current organization
@@ -98,8 +90,6 @@ export function DepartmentsManagement() {
         .select(`
           id,
           organization_id,
-          hotel_id,
-          property_id,
           name,
           is_active,
           is_deleted,
@@ -114,7 +104,7 @@ export function DepartmentsManagement() {
         // Fallback: try fetching all active departments
         const { data: fallbackData } = await supabase
           .from('departments')
-          .select('id, property_id, name, is_active')
+          .select('id, name, is_active')
           .eq('is_active', true)
           .limit(50)
         return (fallbackData || []) as DepartmentItem[]
@@ -128,13 +118,6 @@ export function DepartmentsManagement() {
   // Filtered departments
   const filteredDepartments = useMemo(() => {
     return departments.filter(dept => {
-      const matchesHotel = filterHotelId === 'all' || 
-        (filterHotelId === 'org_wide' && !dept.hotel_id && !dept.property_id) ||
-        dept.hotel_id === filterHotelId ||
-        dept.property_id === filterHotelId
-
-      if (!matchesHotel) return false
-
       if (!searchTerm.trim()) return true
       const term = searchTerm.toLowerCase()
       return (
@@ -143,13 +126,12 @@ export function DepartmentsManagement() {
         (dept.code && dept.code.toLowerCase().includes(term))
       )
     })
-  }, [departments, filterHotelId, searchTerm])
+  }, [departments, searchTerm])
 
   const handleOpenAdd = () => {
     setName('')
     setNameAr('')
     setCode('')
-    setHotelId('org_wide')
     setIsAddOpen(true)
   }
 
@@ -158,7 +140,6 @@ export function DepartmentsManagement() {
     setName(dept.name)
     setNameAr(dept.name_ar || '')
     setCode(dept.code || '')
-    setHotelId(dept.hotel_id || dept.property_id || 'org_wide')
   }
 
   const handleSaveDepartment = async () => {
@@ -166,16 +147,12 @@ export function DepartmentsManagement() {
     setIsSaving(true)
 
     try {
-      const selectedHotelId = hotelId === 'org_wide' ? null : hotelId
-
       if (editingDept) {
         // Update
         const { error } = await supabase
           .from('departments')
           .update({
             name: name.trim(),
-            hotel_id: selectedHotelId,
-            property_id: selectedHotelId,
           })
           .eq('id', editingDept.id)
 
@@ -191,8 +168,6 @@ export function DepartmentsManagement() {
           .from('departments')
           .insert({
             organization_id: currentOrganization.id,
-            hotel_id: selectedHotelId,
-            property_id: selectedHotelId,
             name: name.trim(),
             is_active: true,
             is_deleted: false
@@ -288,7 +263,7 @@ export function DepartmentsManagement() {
             <CardTitle>{t('admin:departments_structure', 'Departments & Operational Units')}</CardTitle>
           </div>
           <CardDescription>
-            {t('admin:departments_structure_desc', 'Configure functional departments across the organization or per hotel location.')}
+            {t('admin:departments_structure_desc', 'The teams people belong to. Departments are organization-wide.')}
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
@@ -318,21 +293,6 @@ export function DepartmentsManagement() {
             />
           </div>
 
-          <Select value={filterHotelId} onValueChange={setFilterHotelId}>
-            <SelectTrigger className="w-full sm:w-[240px]">
-              <Building2 className="h-4 w-4 me-2 text-muted-foreground" />
-              <SelectValue placeholder="Scope by hotel" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('admin:all_locations', 'All Scopes')}</SelectItem>
-              <SelectItem value="org_wide">{t('admin:org_wide_only', 'Organization-Wide Only')}</SelectItem>
-              {availableHotels.map(hotel => (
-                <SelectItem key={hotel.id} value={hotel.id}>
-                  {hotel.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Table */}
@@ -353,14 +313,12 @@ export function DepartmentsManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('admin:department_name', 'Department')}</TableHead>
-                  <TableHead>{t('admin:scope_location', 'Location Scope')}</TableHead>
                   <TableHead>{t('admin:status', 'Status')}</TableHead>
                   {isOrgAdmin && <TableHead className="text-end">{t('admin:actions', 'Actions')}</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDepartments.map((dept) => {
-                  const targetHotel = availableHotels.find(h => h.id === (dept.hotel_id || dept.property_id))
                   return (
                     <TableRow key={dept.id}>
                       <TableCell className="font-medium">
@@ -373,18 +331,6 @@ export function DepartmentsManagement() {
                             {dept.name_ar && <div className="text-xs text-muted-foreground font-arabic">{dept.name_ar}</div>}
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        {targetHotel ? (
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Building2 className="h-3.5 w-3.5 text-primary" />
-                            <span>{targetHotel.name}</span>
-                          </div>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] bg-muted font-normal">
-                            {t('admin:org_wide', 'Organization-wide')}
-                          </Badge>
-                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={dept.is_active ? 'default' : 'secondary'}>
@@ -440,7 +386,7 @@ export function DepartmentsManagement() {
                 {editingDept ? t('admin:edit_department', 'Edit Department') : t('admin:add_new_department', 'Create Department')}
               </DialogTitle>
               <DialogDescription>
-                {t('admin:dept_dialog_desc', 'Set the department title and whether it applies across all locations or a specific hotel.')}
+                {t('admin:dept_dialog_desc', 'Name the department in English and Arabic.')}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -465,22 +411,6 @@ export function DepartmentsManagement() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dept-hotel">{t('admin:hotel_scope', 'Location Scope')}</Label>
-                <Select value={hotelId} onValueChange={setHotelId}>
-                  <SelectTrigger id="dept-hotel">
-                    <SelectValue placeholder="Select location scope" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="org_wide">{t('admin:all_locations_org', 'Organization-Wide (All Hotels)')}</SelectItem>
-                    {availableHotels.map(h => (
-                      <SelectItem key={h.id} value={h.id}>
-                        {h.name} {h.city ? `(${h.city})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => {

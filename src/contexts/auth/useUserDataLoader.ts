@@ -1,13 +1,12 @@
 import { supabase } from '@/lib/supabase'
 import { classifyAuthError } from '@/lib/authErrorUtils'
 import { appRolesFromMemberships } from '@/lib/membershipRoles'
-import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import type { Department, Profile, UserRole } from '@/lib/types'
 import { useCallback, useRef } from 'react'
 
 interface UserDataState {
   setProfile: (p: Profile | null) => void
   setRoles: (r: UserRole[]) => void
-  setProperties: (p: Property[]) => void
   setDepartments: (d: Department[]) => void
   setRolesLoading: (v: boolean) => void
   setRolesError: (v: string | null) => void
@@ -20,7 +19,7 @@ interface SessionHelpers {
 }
 
 /**
- * Internal hook: loads profile, roles, properties, and departments for a user.
+ * Internal hook: loads profile, roles and departments for a user.
  * Used exclusively by AuthContext — not part of the public API.
  */
 export function useUserDataLoader(
@@ -88,11 +87,11 @@ export function useUserDataLoader(
     return false
   }, [])
 
-  /** Loads all user data (profile, roles, properties, departments). */
+  /** Loads all user data (profile, roles, departments). */
   const loadUserData = useCallback(
     async (userId: string, isBackground = false) => {
       const { isAuthError, withTimeout, clearLocalSession } = session
-      const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading, setRolesError } = state
+      const { setProfile, setRoles, setDepartments, setRolesLoading, setRolesError } = state
 
       try {
         const loadId = ++loadSeqRef.current
@@ -169,19 +168,16 @@ export function useUserDataLoader(
           if (user) setProfile(buildFallbackProfile(user))
         }
 
-        // ── Load organization memberships (the only role source) and hotels ────
+        // ── Load organization memberships (the only role source) ────
         const membershipsPromise = supabase
           .from('organization_memberships')
-          .select('*, hotel:hotels(*), department:departments(*)')
+          .select('*, department:departments(*)')
           .eq('user_id', userId)
           .eq('is_active', true)
-        const hotelsPromise = supabase.from('hotels').select('*').eq('is_deleted', false)
 
-        const [membershipsResult, hotelsResult] = await Promise.allSettled([
+        const [membershipsResult] = await Promise.allSettled([
           withTimeout(membershipsPromise as any, 10000, 'Memberships load'),
-          withTimeout(hotelsPromise as any, 10000, 'Hotels load'),
         ]) as [
-          PromiseSettledResult<{ data?; error? }>,
           PromiseSettledResult<{ data?; error? }>,
         ]
 
@@ -208,14 +204,6 @@ export function useUserDataLoader(
         setRoles(userRoles)
         setRolesError(null)
         setRolesLoading(false)
-
-        // Handle hotels (properties alias)
-        if (hotelsResult.status === 'fulfilled') {
-          const { data: directHotels, error: hotelsError } = hotelsResult.value
-          if (!hotelsError && directHotels) {
-            setProperties(directHotels as any)
-          }
-        }
 
         // Handle departments from memberships
         if (membershipsResult.status === 'fulfilled') {

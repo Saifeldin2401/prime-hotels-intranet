@@ -147,10 +147,8 @@ export function ManageAssigneesDialog() {
                                   <div>
                                     <div className="font-medium">{entry.full_name}</div>
                                     <div className="text-xs text-muted-foreground">{entry.email || entry.department_name || t('unknownUser')}</div>
-                                    {(entry.department_name || entry.property_name) && (
-                                      <div className="text-xs text-muted-foreground">
-                                        {[entry.department_name, entry.property_name].filter(Boolean).join(' | ')}
-                                      </div>
+                                    {entry.department_name && entry.email && (
+                                      <div className="text-xs text-muted-foreground">{entry.department_name}</div>
                                     )}
                                   </div>
                                 </div>

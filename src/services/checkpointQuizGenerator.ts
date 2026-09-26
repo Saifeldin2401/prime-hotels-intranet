@@ -173,3 +173,42 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
 
     return linkedCount
 }
+
+export interface CreateCheckpointQuizParams {
+    title: string
+    description?: string
+    trainingModuleId: string
+    passingScorePercentage?: number
+    timeLimitMinutes?: number
+    maxAttempts?: number
+    createdBy?: string
+}
+
+export async function createCheckpointQuiz(params: CreateCheckpointQuizParams) {
+    const { data, error } = await supabase
+        .from('quizzes')
+        .insert({
+            title: params.title,
+            description: params.description ?? null,
+            training_module_id: params.trainingModuleId,
+            passing_score_percentage: params.passingScorePercentage ?? 80,
+            time_limit_minutes: params.timeLimitMinutes ?? 10,
+            max_attempts: params.maxAttempts ?? 3,
+            status: 'published',
+            created_by: params.createdBy ?? null,
+        })
+        .select()
+        .single()
+
+    if (error) throw error
+    return data
+}
+
+export async function deleteQuiz(quizId: string): Promise<void> {
+    const { error } = await supabase
+        .from('quizzes')
+        .delete()
+        .eq('id', quizId)
+
+    if (error) throw error
+}

@@ -1,501 +1,241 @@
-import { Badge } from '@/components/ui/badge'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+/**
+ * Search - one place to find an answer, a course or a person.
+ *
+ * The query stays editable at the top; results are compact rows grouped by
+ * kind, with a filter strip that shows how many of each were found. Knowledge
+ * comes first because most searches are for "how do we do X".
+ */
+
+import { useEffect, useState, type ComponentType, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useSearchParams } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ar, enGB } from 'date-fns/locale'
+import { Award, BookOpen, CheckSquare, GraduationCap, Search, User } from 'lucide-react'
+
 import { useTenant } from '@/contexts/TenantContext'
 import { useAnalytics } from '@/hooks/useAnalytics'
-import {
-  useGlobalSearch,
-  type SearchDocResult,
-  type SearchCourseResult,
-  type SearchQuizResult,
-  type SearchCertResult,
-  type SearchProfileResult,
-} from '@/features/search'
+import { useGlobalSearch } from '@/features/search'
 import { AnalyticsEvents } from '@/types/analytics'
-import { format } from 'date-fns'
-import { Award, BookOpen, CheckSquare, GraduationCap, Loader2, Search, User } from 'lucide-react'
-import { useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { cn } from '@/lib/utils'
+import { EmptyState, Skeleton, WorkspaceHeader } from '@/ui'
+
+type Kind = 'knowledge' | 'courses' | 'quizzes' | 'certificates' | 'people'
+type Filter = 'all' | Kind
+
+interface Row {
+  id: string
+  title: string
+  detail?: string | null
+  meta?: string | null
+  to?: string
+}
+
+const ICONS: Record<Kind, ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' }>> = {
+  knowledge: BookOpen,
+  courses: GraduationCap,
+  quizzes: CheckSquare,
+  certificates: Award,
+  people: User,
+}
+
+const TRACK_TYPE: Record<Kind, string> = {
+  knowledge: 'document',
+  courses: 'course',
+  quizzes: 'quiz',
+  certificates: 'certificate',
+  people: 'profile',
+}
 
 export default function GlobalSearch() {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get('q') || ''
-  const navigate = useNavigate()
-  const { t } = useTranslation(['common', 'admin'])
+  const { t, i18n } = useTranslation('common')
+  const dfLocale = i18n.language?.startsWith('ar') ? ar : enGB
   const { currentOrganization } = useTenant()
   const { track } = useAnalytics()
   const organizationId = currentOrganization?.id ?? null
+  const [draft, setDraft] = useState(query)
+  const [filter, setFilter] = useState<Filter>('all')
 
-  const { data: searchResults, isLoading } = useGlobalSearch(query, organizationId)
+  useEffect(() => { setDraft(query); setFilter('all') }, [query])
 
-  const documents = searchResults?.documents ?? []
-  const courses = searchResults?.courses ?? []
-  const quizzes = searchResults?.quizzes ?? []
-  const certificates = searchResults?.certificates ?? []
-  const profiles = searchResults?.profiles ?? []
+  const { data, isLoading } = useGlobalSearch(query, organizationId)
+  const day = (d?: string | null) => (d ? format(new Date(d), 'd MMM yyyy', { locale: dfLocale }) : null)
 
-  const totalResults =
-    documents.length +
-    courses.length +
-    quizzes.length +
-    certificates.length +
-    profiles.length
-  const hasResults = totalResults > 0
-  const canSearch = Boolean(organizationId && query.trim())
+  const groups: { kind: Kind; label: string; rows: Row[] }[] = [
+    {
+      kind: 'knowledge',
+      label: t('find.kind.knowledge', 'Knowledge'),
+      rows: (data?.documents ?? []).map((d) => ({
+        id: d.id, title: d.title, detail: d.description, meta: day(d.created_at), to: `/knowledge/${d.id}`,
+      })),
+    },
+    {
+      kind: 'courses',
+      label: t('find.kind.courses', 'Courses'),
+      rows: (data?.courses ?? []).map((c) => ({
+        id: c.id, title: c.title, detail: c.description,
+        meta: c.estimated_duration_minutes ? t('find.minutes', '{{count}} min', { count: c.estimated_duration_minutes }) : null,
+        to: `/learn/courses/${c.id}`,
+      })),
+    },
+    {
+      kind: 'quizzes',
+      label: t('find.kind.quizzes', 'Quizzes'),
+      rows: (data?.quizzes ?? []).map((q) => ({
+        id: q.id, title: q.title, detail: q.description,
+        meta: q.passing_score_percentage ? t('find.passMark', 'Pass mark {{pct}}%', { pct: q.passing_score_percentage }) : null,
+        to: `/learn/quizzes/${q.id}`,
+      })),
+    },
+    {
+      kind: 'certificates',
+      label: t('find.kind.certificates', 'Certificates'),
+      rows: (data?.certificates ?? []).map((c) => ({
+        id: c.id, title: c.title || t('find.certificate', 'Certificate'),
+        detail: [c.recipient_name, c.certificate_number].filter(Boolean).join(' · ') || null,
+        meta: day(c.issue_date), to: '/learn/certificates',
+      })),
+    },
+    {
+      kind: 'people',
+      label: t('find.kind.people', 'People'),
+      rows: (data?.profiles ?? []).map((p) => ({
+        id: p.id, title: p.full_name || p.email || t('find.member', 'Member'),
+        detail: p.job_title || (p.full_name ? p.email : null), to: `/profile/${p.id}`,
+      })),
+    },
+  ]
+  const total = groups.reduce((n, g) => n + g.rows.length, 0)
+  const visible = groups.filter((g) => g.rows.length > 0 && (filter === 'all' || filter === g.kind))
 
   useEffect(() => {
-    if (query && canSearch && !isLoading) {
-      track(
-        AnalyticsEvents.SEARCH,
-        {
-          query,
-          results_count: totalResults,
-        },
-        'search'
-      )
+    if (query && organizationId && !isLoading) {
+      track(AnalyticsEvents.SEARCH, { query, results_count: total }, 'search')
     }
-  }, [query, isLoading, totalResults, track, canSearch])
+  }, [query, isLoading, total, track, organizationId])
 
-  const handleResultClick = (type: string, id: string) => {
-    track(AnalyticsEvents.SEARCH_CLICK, { query, result_type: type, result_id: id }, 'search')
-  }
-
-  if (!query) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-        <div className="w-16 h-16 rounded-full bg-ds-brass/10 text-ds-brass flex items-center justify-center mb-4">
-          <Search className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-ds-ink">
-          {t('common:search.title', { defaultValue: 'Search Enterprise Knowledge & Training' })}
-        </h2>
-        <p className="text-ds-muted max-w-md mt-2">
-          {t('common:search.hint', {
-            defaultValue:
-              'Search across SOPs, official documents, courses, quizzes, certifications, and people.',
-          })}
-        </p>
-      </div>
-    )
-  }
-
-  if (!organizationId) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-6">
-        <div className="w-16 h-16 rounded-full bg-ds-brass/10 text-ds-brass flex items-center justify-center mb-4">
-          <Search className="w-8 h-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-ds-ink">
-          {t('common:search.select_tenant_title', {
-            defaultValue: 'Select an organization to search',
-          })}
-        </h2>
-        <p className="text-ds-muted max-w-md mt-2">
-          {t('common:search.select_tenant_desc', {
-            defaultValue:
-              'Search is scoped to an organization so results stay relevant and tenant data remains isolated.',
-          })}
-        </p>
-      </div>
-    )
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    const q = draft.trim()
+    setSearchParams(q ? { q } : {})
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-ds-ink">
-          {t('common:search.results_for', { defaultValue: 'Search Results for' })} "{query}"
-        </h1>
-        <p className="text-sm text-ds-muted mt-1">
-          {t('common:search.found_count', {
-            defaultValue: 'Found {{count}} matching items',
-            count: totalResults,
-          })}
+    <div className="mx-auto max-w-4xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('find.eyebrow', 'Search')}
+        title={query ? t('find.titleFor', 'Results for “{{query}}”', { query }) : t('find.title', 'Search')}
+        context={currentOrganization?.name
+          ? t('find.scope', 'Within {{org}}: knowledge, courses, quizzes, certificates and people.', { org: currentOrganization.name })
+          : null}
+      />
+
+      <form role="search" onSubmit={submit} className="relative">
+        <label htmlFor="global-search-input" className="sr-only">{t('find.label', 'Search')}</label>
+        <Search aria-hidden="true" className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-muted" />
+        <input
+          id="global-search-input"
+          type="search"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={t('find.placeholder', 'Search SOPs, courses, quizzes, people…')}
+          className="min-h-[48px] w-full rounded-md border border-ds-border bg-ds-surface ps-10 pe-4 text-base text-ds-ink placeholder:text-ds-muted focus:border-ds-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+        />
+      </form>
+
+      {!organizationId ? (
+        <EmptyState
+          icon={<Search className="h-6 w-6" aria-hidden="true" />}
+          title={t('find.noOrgTitle', 'Choose an organization to search')}
+          description={t('find.noOrgBody', 'Search stays inside one organization so results are relevant and private.')}
+        />
+      ) : !query ? (
+        <p className="text-sm text-ds-muted">
+          {t('find.hint', 'Type a word from a procedure, a course title or a colleague’s name.')}
         </p>
-      </div>
-
-      {isLoading ? (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-ds-brass" />
+      ) : isLoading ? (
+        <div className="space-y-2" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} variant="card" className="h-14" />)}
         </div>
-      ) : !hasResults ? (
-        <div className="text-center py-16 border border-ds-border rounded-xl bg-ds-surface-subtle">
-          <Search className="w-12 h-12 text-ds-muted mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-ds-ink">
-            {t('common:search.no_results', { defaultValue: 'No results found' })}
-          </h3>
-          <p className="text-ds-muted max-w-sm mx-auto mt-1">
-            {t('common:search.no_results_desc', {
-              defaultValue:
-                "We couldn't find anything matching '{{query}}'. Try searching with different keywords.",
-              query,
-            })}
-          </p>
-        </div>
+      ) : total === 0 ? (
+        <EmptyState
+          icon={<Search className="h-6 w-6" aria-hidden="true" />}
+          title={t('find.noneTitle', 'Nothing matches “{{query}}”', { query })}
+          description={t('find.noneBody', 'Try fewer or different words, or browse Knowledge and Courses directly.')}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link to="/knowledge" className="inline-flex min-h-[40px] items-center rounded-md border border-ds-border px-3.5 text-sm text-ds-ink hover:border-ds-border-strong">{t('find.kind.knowledge', 'Knowledge')}</Link>
+              <Link to="/learn/courses" className="inline-flex min-h-[40px] items-center rounded-md border border-ds-border px-3.5 text-sm text-ds-ink hover:border-ds-border-strong">{t('find.kind.courses', 'Courses')}</Link>
+            </div>
+          }
+        />
       ) : (
-        <Tabs defaultValue="all" className="w-full">
-          <TabsList className="grid grid-cols-2 md:grid-cols-6 h-auto p-1 gap-1 bg-ds-surface-subtle border border-ds-border">
-            <TabsTrigger value="all" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              {t('common:search.all', { defaultValue: 'All' })} ({totalResults})
-            </TabsTrigger>
-            <TabsTrigger value="knowledge" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              <BookOpen className="w-4 h-4 me-1.5 hidden sm:inline" />
-              {t('common:nav.knowledge_base', { defaultValue: 'Knowledge' })} ({documents.length})
-            </TabsTrigger>
-            <TabsTrigger value="courses" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              <GraduationCap className="w-4 h-4 me-1.5 hidden sm:inline" />
-              {t('common:nav.courses', { defaultValue: 'Courses' })} ({courses.length})
-            </TabsTrigger>
-            <TabsTrigger value="quizzes" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              <CheckSquare className="w-4 h-4 me-1.5 hidden sm:inline" />
-              {t('common:nav.quizzes', { defaultValue: 'Assessments' })} ({quizzes.length})
-            </TabsTrigger>
-            <TabsTrigger value="certificates" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              <Award className="w-4 h-4 me-1.5 hidden sm:inline" />
-              {t('common:nav.certificates', { defaultValue: 'Certificates' })} ({certificates.length})
-            </TabsTrigger>
-            <TabsTrigger value="people" className="py-2 data-[state=active]:bg-ds-surface data-[state=active]:text-ds-ink">
-              <User className="w-4 h-4 me-1.5 hidden sm:inline" />
-              {t('common:nav.people', { defaultValue: 'People' })} ({profiles.length})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ALL TAB */}
-          <TabsContent value="all" className="space-y-8 mt-6">
-            {documents.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-ds-ink">
-                  <BookOpen className="w-5 h-5 text-ds-brass" />
-                  {t('common:nav.knowledge_base', { defaultValue: 'Knowledge & SOPs' })}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {documents.slice(0, 3).map((doc) => (
-                    <DocumentCard
-                      key={doc.id}
-                      doc={doc}
-                      navigate={navigate}
-                      onClick={() => handleResultClick('document', doc.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {courses.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-ds-ink">
-                  <GraduationCap className="w-5 h-5 text-ds-brass" />
-                  {t('common:nav.courses', { defaultValue: 'Courses & Training' })}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {courses.slice(0, 3).map((course) => (
-                    <CourseCard
-                      key={course.id}
-                      course={course}
-                      navigate={navigate}
-                      onClick={() => handleResultClick('course', course.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {quizzes.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-ds-ink">
-                  <CheckSquare className="w-5 h-5 text-ds-brass" />
-                  {t('common:nav.quizzes', { defaultValue: 'Quizzes & Assessments' })}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {quizzes.slice(0, 3).map((quiz) => (
-                    <QuizCard
-                      key={quiz.id}
-                      quiz={quiz}
-                      navigate={navigate}
-                      onClick={() => handleResultClick('quiz', quiz.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {certificates.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-ds-ink">
-                  <Award className="w-5 h-5 text-ds-brass" />
-                  {t('common:nav.certificates', { defaultValue: 'Certificates' })}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {certificates.slice(0, 3).map((cert) => (
-                    <CertificateCard
-                      key={cert.id}
-                      cert={cert}
-                      navigate={navigate}
-                      onClick={() => handleResultClick('certificate', cert.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {profiles.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-ds-ink">
-                  <User className="w-5 h-5 text-ds-brass" />
-                  {t('common:nav.people', { defaultValue: 'People' })}
-                </h2>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {profiles.slice(0, 3).map((profile) => (
-                    <ProfileCard key={profile.id} profile={profile} />
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* KNOWLEDGE TAB */}
-          <TabsContent value="knowledge" className="space-y-4 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {documents.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  doc={doc}
-                  navigate={navigate}
-                  onClick={() => handleResultClick('document', doc.id)}
-                />
+        <>
+          <div role="group" aria-label={t('find.filterLabel', 'Show results of kind')} className="flex flex-wrap gap-2">
+            {[{ kind: 'all' as Filter, label: t('find.all', 'All'), count: total }, ...groups.map((g) => ({ kind: g.kind as Filter, label: g.label, count: g.rows.length }))]
+              .filter((f) => f.count > 0)
+              .map((f) => (
+                <button key={f.kind} type="button" aria-pressed={filter === f.kind} onClick={() => setFilter(f.kind)}
+                  className={cn('inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent',
+                    filter === f.kind ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong')}>
+                  {f.label}<span className="font-mono text-xs tabular-nums opacity-70">{f.count}</span>
+                </button>
               ))}
-            </div>
-          </TabsContent>
+          </div>
 
-          {/* COURSES TAB */}
-          <TabsContent value="courses" className="space-y-4 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {courses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  navigate={navigate}
-                  onClick={() => handleResultClick('course', course.id)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* QUIZZES TAB */}
-          <TabsContent value="quizzes" className="space-y-4 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {quizzes.map((quiz) => (
-                <QuizCard
-                  key={quiz.id}
-                  quiz={quiz}
-                  navigate={navigate}
-                  onClick={() => handleResultClick('quiz', quiz.id)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* CERTIFICATES TAB */}
-          <TabsContent value="certificates" className="space-y-4 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {certificates.map((cert) => (
-                <CertificateCard
-                  key={cert.id}
-                  cert={cert}
-                  navigate={navigate}
-                  onClick={() => handleResultClick('certificate', cert.id)}
-                />
-              ))}
-            </div>
-          </TabsContent>
-
-          {/* PEOPLE TAB */}
-          <TabsContent value="people" className="space-y-4 mt-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {profiles.map((profile) => (
-                <ProfileCard key={profile.id} profile={profile} />
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
+          <div className="space-y-8">
+            {visible.map((g) => {
+              const Icon = ICONS[g.kind]
+              const rows = filter === 'all' ? g.rows.slice(0, 5) : g.rows
+              return (
+                <section key={g.kind} aria-labelledby={`find-${g.kind}`} className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 id={`find-${g.kind}`} className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">
+                      {g.label} <span className="font-mono tabular-nums">{g.rows.length}</span>
+                    </h2>
+                    {filter === 'all' && g.rows.length > rows.length && (
+                      <button type="button" onClick={() => setFilter(g.kind)} className="text-sm font-medium text-ds-accent hover:underline">
+                        {t('find.showAll', 'Show all {{count}}', { count: g.rows.length })}
+                      </button>
+                    )}
+                  </div>
+                  <ul className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+                    {rows.map((r) => {
+                      const body = (
+                        <>
+                          <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ds-muted" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-ds-ink">{r.title}</span>
+                            {r.detail && <span className="mt-0.5 block line-clamp-1 text-sm text-ds-muted">{r.detail}</span>}
+                          </span>
+                          {r.meta && <span className="shrink-0 text-xs text-ds-muted">{r.meta}</span>}
+                        </>
+                      )
+                      return (
+                        <li key={r.id}>
+                          {r.to ? (
+                            <Link
+                              to={r.to}
+                              onClick={() => track(AnalyticsEvents.SEARCH_CLICK, { query, result_type: TRACK_TYPE[g.kind], result_id: r.id }, 'search')}
+                              className="flex items-start gap-3 px-4 py-3 hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent"
+                            >
+                              {body}
+                            </Link>
+                          ) : (
+                            <div className="flex items-start gap-3 px-4 py-3">{body}</div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </section>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
-  )
-}
-
-function DocumentCard({
-  doc,
-  navigate,
-  onClick,
-}: {
-  doc: SearchDocResult
-  navigate: (path: string) => void
-  onClick?: () => void
-}) {
-  return (
-    <Card
-      className="border-ds-border hover:border-ds-brass cursor-pointer transition-all hover:shadow-sm bg-ds-surface"
-      onClick={() => {
-        onClick?.()
-        navigate(`/knowledge/${doc.id}`)
-      }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <Badge
-            variant="outline"
-            className="bg-ds-brass/10 text-ds-brass border-ds-brass/20 text-xs"
-          >
-            {doc.document_type || 'SOP'}
-          </Badge>
-          <span className="text-xs text-ds-muted">
-            {doc.created_at ? format(new Date(doc.created_at), 'MMM d, yyyy') : ''}
-          </span>
-        </div>
-        <CardTitle className="text-base line-clamp-1 mt-1 text-ds-ink">{doc.title}</CardTitle>
-        {doc.description && (
-          <CardDescription className="line-clamp-2 text-ds-muted">
-            {doc.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-    </Card>
-  )
-}
-
-function CourseCard({
-  course,
-  navigate,
-  onClick,
-}: {
-  course: SearchCourseResult
-  navigate: (path: string) => void
-  onClick?: () => void
-}) {
-  return (
-    <Card
-      className="border-ds-border hover:border-ds-brass cursor-pointer transition-all hover:shadow-sm bg-ds-surface"
-      onClick={() => {
-        onClick?.()
-        navigate(`/learn/my/${course.id}`)
-      }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <Badge variant="secondary" className="text-xs bg-ds-surface-subtle text-ds-ink">
-            {course.difficulty_level || 'Intermediate'}
-          </Badge>
-          {course.estimated_duration_minutes && (
-            <span className="text-xs text-ds-muted">
-              {course.estimated_duration_minutes} mins
-            </span>
-          )}
-        </div>
-        <CardTitle className="text-base line-clamp-1 mt-1 text-ds-ink">{course.title}</CardTitle>
-        {course.description && (
-          <CardDescription className="line-clamp-2 text-ds-muted">
-            {course.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-    </Card>
-  )
-}
-
-function QuizCard({
-  quiz,
-  navigate,
-  onClick,
-}: {
-  quiz: SearchQuizResult
-  navigate: (path: string) => void
-  onClick?: () => void
-}) {
-  return (
-    <Card
-      className="border-ds-border hover:border-ds-brass cursor-pointer transition-all hover:shadow-sm bg-ds-surface"
-      onClick={() => {
-        onClick?.()
-        navigate(`/studio/quizzes`)
-      }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <Badge variant="outline" className="text-xs border-ds-border text-ds-ink">
-            Passing: {quiz.passing_score_percentage || 80}%
-          </Badge>
-          <span className="text-xs text-ds-muted">
-            {quiz.created_at ? format(new Date(quiz.created_at), 'MMM d, yyyy') : ''}
-          </span>
-        </div>
-        <CardTitle className="text-base line-clamp-1 mt-1 text-ds-ink">{quiz.title}</CardTitle>
-        {quiz.description && (
-          <CardDescription className="line-clamp-2 text-ds-muted">
-            {quiz.description}
-          </CardDescription>
-        )}
-      </CardHeader>
-    </Card>
-  )
-}
-
-function CertificateCard({
-  cert,
-  navigate,
-  onClick,
-}: {
-  cert: SearchCertResult
-  navigate: (path: string) => void
-  onClick?: () => void
-}) {
-  return (
-    <Card
-      className="border-ds-border hover:border-ds-brass cursor-pointer transition-all hover:shadow-sm bg-ds-surface"
-      onClick={() => {
-        onClick?.()
-        navigate(`/learn/certificates`)
-      }}
-    >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <Badge
-            variant="outline"
-            className="bg-ds-success-soft text-ds-success border-ds-success/20 text-xs"
-          >
-            {cert.certificate_number || 'Verified'}
-          </Badge>
-          <span className="text-xs text-ds-muted">
-            {cert.issue_date ? format(new Date(cert.issue_date), 'MMM d, yyyy') : ''}
-          </span>
-        </div>
-        <CardTitle className="text-base line-clamp-1 mt-1 text-ds-ink">
-          {cert.title || 'Course Certificate'}
-        </CardTitle>
-        <CardDescription className="line-clamp-1 text-ds-muted">
-          Recipient: {cert.recipient_name || 'Learner'}
-        </CardDescription>
-      </CardHeader>
-    </Card>
-  )
-}
-
-function ProfileCard({ profile }: { profile: SearchProfileResult }) {
-  return (
-    <Card className="border-ds-border bg-ds-surface">
-      <CardHeader className="flex flex-row items-center gap-4 py-4">
-        <div className="w-10 h-10 rounded-full bg-ds-brass/10 text-ds-brass flex items-center justify-center font-bold text-sm">
-          {profile.full_name?.[0] || <User className="w-5 h-5" />}
-        </div>
-        <div className="min-w-0 flex-1">
-          <CardTitle className="text-base truncate text-ds-ink">
-            {profile.full_name || 'User'}
-          </CardTitle>
-          <CardDescription className="truncate text-xs text-ds-muted">
-            {profile.job_title || profile.email}
-          </CardDescription>
-        </div>
-      </CardHeader>
-    </Card>
   )
 }

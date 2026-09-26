@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/layout/PageHeader'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,8 +16,7 @@ import { useTranslation } from 'react-i18next'
 // that could ever resolve who a "by job title" rule applied to. Role-based
 // rules are backed by a real relationship (user_roles) end to end.
 export default function TrainingAssignmentRules() {
-    const { t, i18n } = useTranslation(['training', 'common'])
-    const isRTL = i18n.dir() === 'rtl'
+    const { t } = useTranslation(['training', 'common'])
     const { data: rules, isLoading } = useTrainingRules()
     const { data: modules } = useTrainingModulesList()
 
@@ -116,12 +115,12 @@ export default function TrainingAssignmentRules() {
     }
 
     return (
-        <div className={`space-y-6 animate-fade-in ${isRTL ? 'text-end' : 'text-start'}`}>
-            <div className="flex items-center justify-between">
-                <PageHeader
-                    title={t('rules.title')}
-                    description={t('rules.description')}
-                />
+        <div className="mx-auto max-w-5xl space-y-6">
+            <WorkspaceHeader
+                eyebrow={t('rulesPage.eyebrow', 'Manage · Assignments')}
+                title={t('rulesPage.title', 'Automatic rules')}
+                context={t('rulesPage.context', 'Assign a course to everyone with a role, including people who join later.')}
+                actions={
                 <Dialog
                     open={isCreateOpen}
                     onOpenChange={(open) => {
@@ -130,10 +129,10 @@ export default function TrainingAssignmentRules() {
                     }}
                 >
                     <DialogTrigger asChild>
-                        <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                            <Plus className="w-4 h-4 me-2" />
+                        <button type="button" className={headerActionClass.primary}>
+                            <Plus aria-hidden="true" className="h-4 w-4" />
                             {t('rules.new_rule')}
-                        </Button>
+                        </button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader>
@@ -187,7 +186,8 @@ export default function TrainingAssignmentRules() {
                         </div>
                     </DialogContent>
                 </Dialog>
-            </div>
+                }
+            />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {isLoading ? (
@@ -198,10 +198,10 @@ export default function TrainingAssignmentRules() {
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
                                     <CardTitle className="text-lg font-bold flex items-center gap-2">
-                                        <Shield className="w-4 h-4 text-hotel-gold" />
+                                        <Shield className="w-4 h-4 text-ds-accent" />
                                         {rule.target_role ? t(`common:roles.${rule.target_role}`) : t('unknown')}
                                     </CardTitle>
-                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {t('rules.by_role')}</p>
+                                    <p className="text-sm text-ds-muted">{t('rules.auto_assigns_to')} {t('rules.by_role')}</p>
                                 </div>
                                 <Badge variant={rule.is_active ? 'default' : 'secondary'}>
                                     {rule.is_active ? t('common:status_options.active') : t('common:status_options.inactive')}
@@ -210,7 +210,7 @@ export default function TrainingAssignmentRules() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                <p className="font-medium text-hotel-navy">
+                                <p className="font-medium text-ds-ink">
                                     {modules?.find(m => m.id === rule.training_module_id)?.title || rule.training_module_id}
                                 </p>
                                 <div className="flex items-center gap-2 pt-2 border-t mt-4">
@@ -245,7 +245,7 @@ export default function TrainingAssignmentRules() {
                     </Card>
                 ))}
                 {!isLoading && rules?.length === 0 && (
-                    <div className="col-span-full text-center py-12 text-gray-500 border border-dashed rounded-lg">
+                    <div className="col-span-full text-center py-12 text-ds-muted border border-dashed rounded-lg">
                         <p>{t('rules.no_rules')}</p>
                         <Button variant="link" onClick={() => setIsCreateOpen(true)}>{t('rules.create_first')}</Button>
                     </div>

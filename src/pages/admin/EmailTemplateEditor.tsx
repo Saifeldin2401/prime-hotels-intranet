@@ -1,10 +1,10 @@
-import { Save, Plus, Trash2, Eye, Code } from 'lucide-react'
+import { ConfirmDialog } from '@/ui'
+import { Save, Plus, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -27,6 +27,7 @@ interface EmailTemplate {
 
 export default function EmailTemplateEditor() {
   const { t } = useTranslation(['admin', 'common'])
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
   const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -131,7 +132,6 @@ export default function EmailTemplateEditor() {
 
   const handleDelete = async () => {
     if (!selectedTemplate) return
-    if (!window.confirm('Are you sure you want to delete this template?')) return
 
     try {
       const { error } = await supabase
@@ -192,31 +192,30 @@ export default function EmailTemplateEditor() {
   }, [htmlTemplate, subjectTemplate])
 
   return (
-    <div className="container mx-auto py-6 max-w-[1400px]">
+    <div className="mx-auto max-w-7xl">
       <PageHeader
-        title="Email Template Editor"
-        description="Manage the HTML and Text structures for system email templates."
-        backTo="/admin"
+        title="Email templates"
+        description="The subject, HTML and plain-text versions of every email the platform sends."
         actions={
-          <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="w-4 h-4 me-2" />
+          <Button onClick={handleSave} disabled={isSaving} className="min-h-[44px] bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90">
+            <Save aria-hidden="true" className="me-2 h-4 w-4" />
             {t('actions.save', { ns: 'common', defaultValue: 'Save Template' })}
           </Button>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-12">
         {/* Sidebar */}
-        <Card className="md:col-span-3 h-[calc(100vh-200px)] flex flex-col overflow-hidden">
-          <div className="p-4 border-b flex items-center justify-between bg-muted/20">
-            <h3 className="font-semibold text-sm">Templates ({templates.length})</h3>
-            <Button variant="ghost" size="icon" onClick={handleNewTemplate}>
-              <Plus className="w-4 h-4" />
+        <div className="flex max-h-72 flex-col overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface md:col-span-3 md:max-h-none md:h-[calc(100vh-220px)]">
+          <div className="flex items-center justify-between border-b border-ds-border px-4 py-2">
+            <h2 className="text-sm font-semibold text-ds-ink">Templates <span className="font-mono text-xs font-normal tabular-nums text-ds-muted">{templates.length}</span></h2>
+            <Button variant="ghost" size="sm" className="min-h-[36px]" onClick={handleNewTemplate}>
+              <Plus aria-hidden="true" className="me-1 h-4 w-4" />New
             </Button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {isLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+              <div className="p-4 text-center text-sm text-ds-muted">Loading…</div>
             ) : templates.map(tmpl => (
               <button
                 key={tmpl.id}
@@ -224,8 +223,8 @@ export default function EmailTemplateEditor() {
                 className={cn(
                   "w-full text-start px-3 py-2 text-sm rounded-md transition-colors",
                   selectedTemplate?.id === tmpl.id
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "hover:bg-muted text-muted-foreground"
+                    ? "bg-ds-accent-soft font-medium text-ds-ink"
+                    : "text-ds-ink-secondary hover:bg-ds-surface-subtle"
                 )}
               >
                 {tmpl.template_key}
@@ -233,17 +232,16 @@ export default function EmailTemplateEditor() {
               </button>
             ))}
             {!isLoading && templates.length === 0 && (
-              <div className="p-4 text-center text-sm text-muted-foreground">No templates found</div>
+              <div className="p-4 text-center text-sm text-ds-muted">No templates yet</div>
             )}
           </div>
-        </Card>
+        </div>
 
         {/* Editor Area */}
-        <div className="md:col-span-9 h-[calc(100vh-200px)] flex flex-col space-y-4 overflow-hidden">
-          <Card className="flex-shrink-0">
-            <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex flex-col space-y-4 md:col-span-9 md:h-[calc(100vh-220px)] md:overflow-hidden">
+          <div className="grid shrink-0 grid-cols-1 gap-4 rounded-[6px] border border-ds-border bg-ds-surface p-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Template Key (Unique)</Label>
+                <Label>Template key</Label>
                 <Input 
                   value={templateKey} 
                   onChange={e => setTemplateKey(e.target.value)} 
@@ -251,26 +249,25 @@ export default function EmailTemplateEditor() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Subject Template (Variables allowed: {'{{name}}'})</Label>
+                <Label>Subject <span className="font-normal text-ds-muted">(variables like {'{{name}}'} allowed)</span></Label>
                 <Input 
                   value={subjectTemplate} 
                   onChange={e => setSubjectTemplate(e.target.value)} 
                   placeholder="Your action is required"
                 />
               </div>
-            </CardContent>
-          </Card>
+          </div>
 
-          <Card className="flex-1 overflow-hidden flex flex-col">
-            <div className="p-2 border-b flex items-center justify-between bg-muted/20">
-              <Tabs value={previewMode} onValueChange={(v) => setPreviewMode(v as any)} className="w-[400px]">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="code"><Code className="w-4 h-4 me-2" /> Code Editor</TabsTrigger>
-                  <TabsTrigger value="preview"><Eye className="w-4 h-4 me-2" /> Live Preview</TabsTrigger>
+          <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+            <div className="flex items-center justify-between border-b border-ds-border px-2">
+              <Tabs value={previewMode} onValueChange={(v) => setPreviewMode(v as any)}>
+                <TabsList className="h-auto gap-1 rounded-none bg-transparent p-0">
+                  <TabsTrigger value="code" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">Edit</TabsTrigger>
+                  <TabsTrigger value="preview" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">Preview</TabsTrigger>
                 </TabsList>
               </Tabs>
               {selectedTemplate && (
-                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
+                <Button variant="ghost" size="sm" className="min-h-[36px] text-ds-danger hover:bg-ds-danger-soft hover:text-ds-danger" onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="w-4 h-4 me-2" />
                   Delete
                 </Button>
@@ -280,7 +277,7 @@ export default function EmailTemplateEditor() {
               {previewMode === 'code' ? (
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x overflow-hidden">
                   <div className="flex flex-col h-full overflow-hidden">
-                    <div className="bg-muted p-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">HTML Template</div>
+                    <div className="border-b border-ds-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">HTML</div>
                     <Textarea 
                       className="flex-1 resize-none p-4 font-mono text-sm border-0 focus-visible:ring-0"
                       value={htmlTemplate}
@@ -289,7 +286,7 @@ export default function EmailTemplateEditor() {
                     />
                   </div>
                   <div className="flex flex-col h-full overflow-hidden">
-                    <div className="bg-muted p-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plain Text Template</div>
+                    <div className="border-b border-ds-border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">Plain text</div>
                     <Textarea 
                       className="flex-1 resize-none p-4 font-mono text-sm border-0 focus-visible:ring-0"
                       value={textTemplate}
@@ -299,9 +296,9 @@ export default function EmailTemplateEditor() {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 bg-gray-50 flex items-center justify-center p-6 overflow-hidden">
+                <div className="flex-1 bg-ds-surface-subtle flex items-center justify-center p-6 overflow-hidden">
                   <div className="w-full max-w-2xl h-full bg-white rounded-lg shadow-sm border overflow-hidden flex flex-col">
-                    <div className="bg-gray-100 p-3 border-b text-sm text-gray-500">
+                    <div className="bg-ds-surface-subtle p-3 border-b text-sm text-ds-muted">
                       <strong>Subject:</strong> {subjectTemplate || 'No subject'}
                     </div>
                     <iframe 
@@ -313,9 +310,21 @@ export default function EmailTemplateEditor() {
                 </div>
               )}
             </div>
-          </Card>
+          </div>
         </div>
       </div>
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={async () => {
+          await handleDelete()
+          setConfirmDelete(false)
+        }}
+        isDestructive
+        title={`Delete ${selectedTemplate?.template_key ?? 'this template'}?`}
+        description="Emails that use this template will stop sending until a template with the same key exists again."
+        confirmButtonText="Delete template"
+      />
     </div>
   )
 }

@@ -1,10 +1,10 @@
-import React, { Suspense, lazy, useEffect, useState, useMemo } from 'react'
+﻿import React, { Suspense, lazy, useEffect, useState, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Header } from '@/components/layout/Header'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { ContextSwitcher } from '@/app/shell/ContextSwitcher'
+import { ShellSidebar } from '@/app/shell/ShellSidebar'
+import { TopBar } from '@/app/shell/TopBar'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { PageTransition } from '@/components/layout/PageTransition'
-import { TenantBreadcrumbs } from '@/components/layout/TenantBreadcrumbs'
 import { PlatformImpersonationBanner } from '@/components/platform/PlatformImpersonationBanner'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { useTranslation } from 'react-i18next'
@@ -16,9 +16,6 @@ const CommandPalette = lazy(() =>
 )
 const KeyboardShortcutsModal = lazy(() =>
   import('@/components/common/KeyboardShortcutsModal').then((module) => ({ default: module.KeyboardShortcutsModal }))
-)
-const AltusCopilotDrawer = lazy(() =>
-  import('@/components/ai/AltusCopilotDrawer').then((module) => ({ default: module.AltusCopilotDrawer }))
 )
 import { 
   GuidedWizardModal, 
@@ -38,7 +35,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { i18n } = useTranslation()
   const isRtl = i18n.language === 'ar' || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl')
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [copilotOpen, setCopilotOpen] = useState(false)
+  const [contextOpen, setContextOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -116,48 +113,47 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <InsideAppLayoutContext.Provider value={true}>
-      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-[#F6F6F3] dark:bg-[#0D151D] text-[#15212E] dark:text-[#F4F2EC] antialiased">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-hidden bg-ds-background text-ds-ink antialiased">
         <a className="skip-to-content" href="#main-content">Skip to main content</a>
-        {/* Desktop Sidebar (Width: 248px, Dark navy/ink #15212E) */}
+
+        {/* Workspace rail (desktop) */}
         {!isImmersiveOrFocusedPage && (
-          <aside className="hidden lg:flex lg:w-[248px] lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-[#30404D] bg-[#15212E] shadow-none">
-            <Sidebar />
+          <aside className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-[264px] lg:flex-col">
+            <ShellSidebar />
           </aside>
         )}
 
-        {/* Main Content Area */}
-        <div className={`flex flex-1 flex-col min-w-0 w-full max-w-full overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-[248px]' : ''}`}>
+        <div className={`flex min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden ${!isImmersiveOrFocusedPage ? 'lg:ps-[264px]' : ''}`}>
           <PlatformImpersonationBanner />
           <RoleChangeAlertBanner />
-          {/* Top Header */}
-          <Header
+          <TopBar
             onOpenSearch={() => setCommandPaletteOpen(true)}
+            onOpenContext={() => setContextOpen(true)}
             onOpenMobileMenu={() => setMobileMenuOpen(true)}
           />
 
-          {/* Main Content Stage */}
-          <main id="main-content" tabIndex={-1} className="flex-1 px-4 sm:px-6 lg:px-8 xl:px-10 py-6 w-full max-w-full min-w-0 pb-24 lg:pb-12">
-            {!isImmersiveOrFocusedPage && <TenantBreadcrumbs />}
-            <PageTransition className="w-full min-w-0 max-w-[1680px] mx-auto">{children}</PageTransition>
+          <main id="main-content" tabIndex={-1} className="w-full min-w-0 max-w-full flex-1 px-4 py-6 pb-24 sm:px-6 lg:px-10 lg:pb-12">
+            <PageTransition className="mx-auto w-full min-w-0 max-w-[1440px]">{children}</PageTransition>
           </main>
 
-          {/* Mobile Bottom Navigation */}
           {!isImmersiveOrFocusedPage && (
             <MobileNavigation onOpenMenu={() => setMobileMenuOpen(true)} />
           )}
         </div>
 
-        {/* Mobile Navigation Drawer Sheet */}
+        {/* Workspace rail (mobile sheet) */}
         {!isImmersiveOrFocusedPage && (
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetContent
               side={isRtl ? 'right' : 'left'}
-              className="p-0 w-[85vw] max-w-xs border-e border-[#30404D] bg-[#15212E] overflow-hidden"
+              className="w-[86vw] max-w-[300px] overflow-hidden border-e border-ds-chrome-border bg-ds-chrome p-0"
             >
-              <Sidebar onNavigate={() => setMobileMenuOpen(false)} />
+              <ShellSidebar onNavigate={() => setMobileMenuOpen(false)} />
             </SheetContent>
           </Sheet>
         )}
+
+        <ContextSwitcher isOpen={contextOpen} onClose={() => setContextOpen(false)} />
 
         {/* Role-Based Guided Wizard, Sheet & Searchable Help */}
         <GuidedWizardModal />
@@ -170,7 +166,6 @@ export function AppLayout({ children }: AppLayoutProps) {
             <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
           )}
           {deferredChromeReady && <KeyboardShortcutsModal />}
-          <AltusCopilotDrawer isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
         </Suspense>
       </div>
     </InsideAppLayoutContext.Provider>

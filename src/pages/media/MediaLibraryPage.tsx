@@ -10,6 +10,7 @@
  * - Fully bilingual (EN / AR RTL)
  */
 
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useState, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -28,7 +29,6 @@ import {
   ShieldCheck,
   FolderOpen,
   Calendar,
-  Layers,
   RefreshCw,
   Eye,
   X,
@@ -56,7 +56,6 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useMedia } from '@/hooks/useMedia'
-import { useTenant } from '@/contexts/TenantContext'
 import { AIMediaGeneratorModal } from '@/components/media/AIMediaGeneratorModal'
 import { cn, formatFileSize } from '@/lib/utils'
 import type { MediaAsset, MediaCategory } from '@/lib/types/media'
@@ -64,7 +63,6 @@ import { toast } from 'sonner'
 
 export default function MediaLibraryPage() {
   const { t, i18n } = useTranslation(['media', 'common'])
-  const { currentOrganization } = useTenant()
   const isRTL = i18n.language === 'ar' || document.documentElement.dir === 'rtl'
 
   // Media hook
@@ -203,101 +201,27 @@ export default function MediaLibraryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6 lg:p-8 animate-fade-in">
-      {/* Cockpit Executive Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-br from-card/90 via-card/60 to-amber-500/[0.04] p-6 sm:p-8 backdrop-blur-2xl shadow-sm">
-        <div className="absolute top-0 end-0 -mt-8 -me-8 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <Badge
-                variant="outline"
-                className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 px-3 py-1 font-semibold text-xs gap-1.5"
-              >
-                <Layers className="h-3.5 w-3.5" />
-                {currentOrganization?.name || (isRTL ? 'منظومة الأصول الرقمية' : 'Digital Asset Command')}
-              </Badge>
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                <span>{isRTL ? 'حماية مشددة وفحص فيروسات فوري' : 'Automated Virus Scanning Active'}</span>
-              </div>
-            </div>
-
-            <div>
-              <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground">
-                {t('media:title', 'Media Library')}
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground font-sans mt-1 max-w-2xl">
-                {t('media:subtitle', 'Centralized repository for hotel imagery, video training assets, brand collateral, and AI-generated visuals.')}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="outline"
-              size="lg"
-              className="rounded-xl border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold gap-2 shadow-sm"
-              onClick={() => setIsAiModalOpen(true)}
-            >
-              <Sparkles className="h-4 w-4" />
-              <span>{t('media:actions.generate_ai', 'Generate with AI')}</span>
-            </Button>
-
-            <Button
-              size="lg"
-              className="rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold gap-2 shadow-md hover:shadow-lg transition-all"
-              onClick={() => setIsUploadDialogOpen(true)}
-            >
-              <Upload className="h-4 w-4" />
-              <span>{t('media:actions.upload', 'Upload Files')}</span>
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Metrics Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-border/50 bg-card/60 p-4 text-center backdrop-blur-md">
-          <div className="font-mono text-2xl font-bold text-foreground">
-            {metrics.total}
-          </div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">
-            {t('media:stats.totalAssets', 'Total Assets')}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border/50 bg-card/60 p-4 text-center backdrop-blur-md">
-          <div className="font-mono text-2xl font-bold text-blue-500">
-            {metrics.images}
-          </div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">
-            {t('media:stats.images', 'Photos & Images')}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border/50 bg-card/60 p-4 text-center backdrop-blur-md">
-          <div className="font-mono text-2xl font-bold text-rose-500">
-            {metrics.videos}
-          </div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">
-            {t('media:stats.videos', 'Video Modules')}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-border/50 bg-card/60 p-4 text-center backdrop-blur-md">
-          <div className="font-mono text-2xl font-bold text-amber-500">
-            {metrics.aiVisuals}
-          </div>
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">
-            {t('media:tabs.ai_visuals', 'AI Visuals')}
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('media:page.eyebrow', 'Studio')}
+        title={t('media:title', 'Media library')}
+        context={t('media:page.context', '{{total}} files · {{images}} images · {{videos}} videos. Used in courses and articles.', {
+          total: metrics.total, images: metrics.images, videos: metrics.videos,
+        })}
+        actions={
+          <>
+            <button type="button" onClick={() => setIsAiModalOpen(true)} className={`${headerActionClass.secondary} hidden sm:inline-flex`}>
+              <Sparkles aria-hidden="true" className="h-4 w-4" />{t('media:actions.generate_ai', 'Generate with AI')}
+            </button>
+            <button type="button" onClick={() => setIsUploadDialogOpen(true)} className={headerActionClass.primary}>
+              <Upload aria-hidden="true" className="h-4 w-4" />{t('media:actions.upload', 'Upload files')}
+            </button>
+          </>
+        }
+      />
 
       {/* Control Bar: Search, Category Tabs, Type Filter & View Toggle */}
-      <Card className="rounded-2xl border border-border/60 bg-card/60 backdrop-blur-xl">
+      <Card className="rounded-[6px] border border-ds-border bg-ds-surface shadow-none">
         <CardContent className="p-4 sm:p-6 space-y-4">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* Search Input */}
@@ -344,7 +268,7 @@ export default function MediaLibraryPage() {
                   size="sm"
                   className={cn(
                     "h-8 px-2.5 rounded-lg",
-                    viewMode === 'grid' && "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold"
+                    viewMode === 'grid' && "bg-ds-warning-soft text-ds-warning font-bold"
                   )}
                   onClick={() => setViewMode('grid')}
                 >
@@ -355,7 +279,7 @@ export default function MediaLibraryPage() {
                   size="sm"
                   className={cn(
                     "h-8 px-2.5 rounded-lg",
-                    viewMode === 'list' && "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold"
+                    viewMode === 'list' && "bg-ds-warning-soft text-ds-warning font-bold"
                   )}
                   onClick={() => setViewMode('list')}
                 >
@@ -386,7 +310,7 @@ export default function MediaLibraryPage() {
                 <TabsTrigger value="all" className="rounded-lg text-xs font-semibold">
                   {t('media:tabs.all', 'All Assets')} ({metrics.total})
                 </TabsTrigger>
-                <TabsTrigger value="ai_visuals" className="rounded-lg text-xs font-semibold gap-1 text-amber-600 dark:text-amber-400">
+                <TabsTrigger value="ai_visuals" className="rounded-lg text-xs font-semibold gap-1 text-ds-warning">
                   <Sparkles className="h-3 w-3" />
                   {t('media:tabs.ai_visuals', 'AI Visuals')} ({metrics.aiVisuals})
                 </TabsTrigger>
@@ -432,7 +356,7 @@ export default function MediaLibraryPage() {
               return (
                 <div
                   key={asset.id}
-                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-b from-card to-card/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-amber-500/40"
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/60 backdrop-blur-md shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-ds-warning/30"
                 >
                   {/* Media Visual Area */}
                   <div
@@ -440,7 +364,7 @@ export default function MediaLibraryPage() {
                     onClick={() => setSelectedAssetForPreview(asset)}
                   >
                     {asset.media_type === 'video' ? (
-                      <div className="relative w-full h-full flex items-center justify-center bg-slate-950">
+                      <div className="relative w-full h-full flex items-center justify-center bg-ds-ink">
                         {asset.thumbnail_url ? (
                           <img
                             src={asset.thumbnail_url}
@@ -455,12 +379,12 @@ export default function MediaLibraryPage() {
                             preload="metadata"
                           />
                         ) : (
-                          <div className="h-12 w-12 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                          <div className="h-12 w-12 rounded-full bg-ds-warning-soft text-ds-warning flex items-center justify-center">
                             <VideoIcon className="h-6 w-6" />
                           </div>
                         )}
                         <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
-                          <div className="h-10 w-10 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
+                          <div className="h-10 w-10 rounded-full bg-ds-warning text-ds-ink flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform">
                             <Play className="h-5 w-5 fill-current ms-0.5" />
                           </div>
                         </div>
@@ -473,12 +397,12 @@ export default function MediaLibraryPage() {
                         loading="lazy"
                       />
                     ) : asset.media_type === 'document' ? (
-                      <div className="flex flex-col items-center justify-center text-amber-600 gap-2 p-4">
+                      <div className="flex flex-col items-center justify-center text-ds-warning gap-2 p-4">
                         <FileText className="h-10 w-10" />
                         <span className="text-xs font-mono uppercase">{asset.mime_type?.split('/')[1] || 'DOC'}</span>
                       </div>
                     ) : (
-                      <div className="flex flex-col items-center justify-center text-purple-600 gap-2 p-4">
+                      <div className="flex flex-col items-center justify-center text-ds-accent gap-2 p-4">
                         <FileAudio className="h-10 w-10" />
                         <span className="text-xs font-mono uppercase">Audio</span>
                       </div>
@@ -487,7 +411,7 @@ export default function MediaLibraryPage() {
                     {/* Top Badges */}
                     <div className="absolute top-2.5 start-2.5 flex flex-wrap gap-1.5">
                       {isAi && (
-                        <Badge className="bg-amber-500/90 text-slate-950 font-bold text-[10px] px-2 py-0.5 gap-1 backdrop-blur-sm">
+                        <Badge className="bg-ds-warning-soft text-ds-ink font-bold text-[10px] px-2 py-0.5 gap-1 backdrop-blur-sm">
                           <Sparkles className="h-3 w-3 fill-current" />
                           AI
                         </Badge>
@@ -498,7 +422,7 @@ export default function MediaLibraryPage() {
                     </div>
 
                     {/* Hover Action Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
                       <Button
                         size="sm"
                         variant="secondary"
@@ -543,7 +467,7 @@ export default function MediaLibraryPage() {
 
                   {/* Card Body Information */}
                   <div className="p-4 space-y-2">
-                    <h4 className="font-semibold text-sm text-foreground line-clamp-1 group-hover:text-amber-600 transition-colors">
+                    <h4 className="font-semibold text-sm text-foreground line-clamp-1 group-hover:text-ds-warning transition-colors">
                       {asset.title || asset.original_filename}
                     </h4>
 
@@ -565,7 +489,7 @@ export default function MediaLibraryPage() {
                       {asset.file_size_bytes > 0 ? (
                         <span>{formatFileSize(asset.file_size_bytes)}</span>
                       ) : (
-                        <span className="text-amber-500 font-semibold">Cloud AI</span>
+                        <span className="text-ds-warning font-semibold">Cloud AI</span>
                       )}
                     </div>
                   </div>
@@ -603,9 +527,9 @@ export default function MediaLibraryPage() {
                               ) : imageUrl && asset.media_type === 'image' ? (
                                 <img src={imageUrl} alt={asset.title} className="h-full w-full object-cover" />
                               ) : asset.media_type === 'video' ? (
-                                <VideoIcon className="h-4 w-4 text-amber-500" />
+                                <VideoIcon className="h-4 w-4 text-ds-warning" />
                               ) : asset.media_type === 'audio' ? (
-                                <FileAudio className="h-4 w-4 text-purple-500" />
+                                <FileAudio className="h-4 w-4 text-ds-accent" />
                               ) : (
                                 <ImageIcon className="h-4 w-4 text-muted-foreground" />
                               )}
@@ -665,7 +589,7 @@ export default function MediaLibraryPage() {
         )
       ) : (
         <div className="rounded-3xl border border-border/60 bg-card/40 p-12 text-center backdrop-blur-md">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-500/10 text-amber-600 mb-4">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-ds-warning-soft text-ds-warning mb-4">
             <FolderOpen className="h-8 w-8" />
           </div>
           <h3 className="font-display text-lg font-bold text-foreground">
@@ -678,7 +602,7 @@ export default function MediaLibraryPage() {
           </p>
           <div className="flex items-center justify-center gap-3 mt-6">
             <Button
-              className="rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold gap-2"
+              className="rounded-xl bg-ds-warning hover:bg-ds-warning text-ds-ink font-bold gap-2"
               onClick={() => setIsUploadDialogOpen(true)}
             >
               <Upload className="h-4 w-4" />
@@ -686,7 +610,7 @@ export default function MediaLibraryPage() {
             </Button>
             <Button
               variant="outline"
-              className="rounded-xl border-amber-500/30 text-amber-600 dark:text-amber-400 font-bold gap-2"
+              className="rounded-xl border-ds-warning/30 text-ds-warning font-bold gap-2"
               onClick={() => setIsAiModalOpen(true)}
             >
               <Sparkles className="h-4 w-4" />
@@ -750,7 +674,7 @@ export default function MediaLibraryPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground block font-sans">{isRTL ? 'فحص الأمان' : 'Security Scan'}</span>
-                  <span className="font-mono font-semibold text-emerald-600 flex items-center gap-1">
+                  <span className="font-mono font-semibold text-ds-success flex items-center gap-1">
                     <ShieldCheck className="h-3.5 w-3.5" />
                     Verified Clean
                   </span>
@@ -788,7 +712,7 @@ export default function MediaLibraryPage() {
                   href={selectedAssetForPreview.public_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 text-sm gap-1.5"
+                  className="inline-flex items-center justify-center rounded-xl bg-ds-warning hover:bg-ds-warning text-ds-ink font-bold px-4 py-2 text-sm gap-1.5"
                 >
                   <Download className="h-4 w-4" />
                   <span>{isRTL ? 'تحميل الأصل' : 'Download File'}</span>
@@ -804,7 +728,7 @@ export default function MediaLibraryPage() {
         <DialogContent className="max-w-lg rounded-2xl p-6 bg-card border-border/80 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-xl font-bold flex items-center gap-2">
-              <Upload className="h-5 w-5 text-amber-500" />
+              <Upload className="h-5 w-5 text-ds-warning" />
               {t('media:actions.upload', 'Upload Media Files')}
             </DialogTitle>
             <DialogDescription>
@@ -818,8 +742,8 @@ export default function MediaLibraryPage() {
             {/* File Dropzone */}
             <div
               className={cn(
-                "border-2 border-dashed border-border/80 rounded-2xl p-6 text-center cursor-pointer hover:border-amber-500/50 hover:bg-amber-500/[0.02] transition-colors",
-                selectedFile && "border-amber-500 bg-amber-500/[0.04]"
+                "border-2 border-dashed border-border/80 rounded-2xl p-6 text-center cursor-pointer hover:border-ds-warning/30 hover:bg-ds-warning/[0.02] transition-colors",
+                selectedFile && "border-ds-warning/30 bg-ds-warning/[0.04]"
               )}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -830,14 +754,14 @@ export default function MediaLibraryPage() {
                 accept="image/*,video/*,application/pdf"
                 onChange={handleFileSelect}
               />
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 mb-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-ds-warning-soft text-ds-warning mb-3">
                 <Upload className="h-6 w-6" />
               </div>
               {selectedFile ? (
                 <div>
                   <p className="font-bold text-sm text-foreground">{selectedFile.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{formatFileSize(selectedFile.size)}</p>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mt-2">
+                  <p className="text-xs text-ds-warning font-semibold mt-2">
                     {isRTL ? 'انقر لتغيير الملف' : 'Click to change file'}
                   </p>
                 </div>
@@ -911,7 +835,7 @@ export default function MediaLibraryPage() {
               {t('media:actions.cancel', 'Cancel')}
             </Button>
             <Button
-              className="rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold"
+              className="rounded-xl bg-ds-warning hover:bg-ds-warning text-ds-ink font-bold"
               onClick={handleExecuteUpload}
               disabled={!selectedFile || uploading}
             >

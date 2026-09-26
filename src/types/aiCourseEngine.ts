@@ -651,7 +651,6 @@ export interface CourseGenerationJob {
   models_used: string[]
   duration_ms?: number | null
   error_message?: string | null
-  property_id?: string | null
   created_by?: string | null
   created_at: string
   updated_at: string
@@ -667,7 +666,6 @@ export interface CourseGenerationPreset {
   is_system: boolean
   preset_config: FullCourseGenerationConfig
   created_by?: string | null
-  property_id?: string | null
   created_at: string
   updated_at: string
 }

@@ -122,7 +122,7 @@ export function StepStructure({
               <Sparkles className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('builder.draftWithAI', 'Draft with AI')}
             </Button>
-            <Button onClick={addSection} className={cn("bg-hotel-gold hover:bg-hotel-gold-dark text-white", isRTL ? "flex-row-reverse" : "")}>
+            <Button onClick={addSection} className={cn("bg-ds-brass hover:bg-ds-accent-hover text-white", isRTL ? "flex-row-reverse" : "")}>
               <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('builder.addSection')}
             </Button>
@@ -138,7 +138,7 @@ export function StepStructure({
               <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startStructure')}</h4>
               <p className="text-slate-500 mb-6 max-w-sm">{t('builder.startStructureDesc')}</p>
               <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
+                <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-ds-brass hover:text-ds-brass", isRTL ? "flex-row-reverse" : "")}>
                   <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                   {t('builder.addSection')}
                 </Button>
@@ -183,7 +183,7 @@ export function StepStructure({
                           value={section.title}
                           onChange={(e) => handleRenameSection(section.id, e.target.value)}
                           placeholder="e.g. Front Office Standard Operating Procedures"
-                          className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                          className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                         />
                       </div>
                       <div className="space-y-1.5">

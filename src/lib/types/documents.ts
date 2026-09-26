@@ -11,7 +11,6 @@ export interface Document {
   storage_bucket?: string | null
   storage_path?: string | null
   visibility: DocumentVisibility
-  property_id: string | null
   department_id: string | null
   role: AppRole | null
   status: DocumentStatus

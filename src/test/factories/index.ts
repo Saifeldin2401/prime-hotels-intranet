@@ -1,10 +1,8 @@
 import type { AppRole } from '@/lib/constants'
 import type {
   Profile,
-  Property,
   Department,
   UserRole,
-  UserProperty,
 } from '@/lib/types'
 // Secure ID generator using Web Crypto API
 const generateId = (): string => {
@@ -53,23 +51,9 @@ export const createMockProfile = (overrides: Partial<Profile> = {}): Profile => 
   ...overrides,
 })
 
-// Factory for generating test properties
-export const createMockProperty = (overrides: Partial<Property> = {}): Property => ({
-  id: generateId(),
-  name: 'Test Hotel Property',
-  address: '123 Test Street',
-  phone: '+1234567890',
-  is_active: true,
-  latitude: null,
-  longitude: null,
-  created_at: generateDate(365),
-  ...overrides,
-})
-
 // Factory for generating test departments
 export const createMockDepartment = (overrides: Partial<Department> = {}): Department => ({
   id: generateId(),
-  property_id: generateId(),
   name: 'Test Department',
   is_active: true,
   created_at: generateDate(365),
@@ -88,36 +72,16 @@ export const createMockUserRole = (
   ...overrides,
 })
 
-// Factory for generating test user properties
-export const createMockUserProperty = (
-  userId: string,
-  propertyId: string,
-  overrides: Partial<UserProperty> = {}
-): UserProperty => ({
-  id: generateId(),
-  user_id: userId,
-  property_id: propertyId,
-  ...overrides,
-})
-
 // Factory for generating complete test user context
 export const createMockUserContext = (
   role: AppRole = 'staff',
-  propertyCount: number = 1
 ) => {
   const profile = createMockProfile()
-  const properties = Array.from({ length: propertyCount }, () => createMockProperty())
   const userRoles = [createMockUserRole(profile.id, role)]
-  const userProperties = properties.map((p) =>
-    createMockUserProperty(profile.id, p.id)
-  )
 
   return {
     profile,
-    properties,
     userRoles,
-    userProperties,
-    defaultProperty: properties[0],
     currentRole: role,
   }
 }

@@ -4,7 +4,6 @@ export type TenantRole =
   | 'training_manager'
   | 'knowledge_manager'
   | 'brand_admin'
-  | 'hotel_admin'
   | 'department_manager'
   | 'instructor'
   | 'learner'
@@ -28,7 +27,6 @@ export interface Organization {
   is_deleted: boolean
   lifecycle_status?: 'prospect' | 'trial' | 'onboarding' | 'active' | 'renewal' | 'suspended' | 'archived'
   trial_ends_at?: string | null
-  max_hotels?: number | null
   max_learners?: number | null
   max_storage_gb?: number | null
   max_ai_credits_monthly?: number | null
@@ -49,7 +47,6 @@ export interface SubscriptionPlan {
   name: string
   code: 'starter' | 'growth' | 'enterprise' | string
   max_users: number
-  max_hotels: number
   max_storage_gb: number
   ai_monthly_quota_usd: number
   features: {
@@ -88,39 +85,18 @@ export interface Brand {
   updated_at: string
 }
 
-export interface Hotel {
-  id: string
-  organization_id: string
-  brand_id: string | null
-  name: string
-  name_ar: string | null
-  hotel_code: string | null
-  city: string | null
-  country: string | null
-  address: string | null
-  phone: string | null
-  is_headquarters: boolean
-  is_active: boolean
-  is_deleted: boolean
-  created_at: string
-  updated_at: string
-  brand?: Brand
-}
-
 export interface OrganizationMembership {
   id: string
   organization_id: string
   user_id: string
   role: TenantRole
   brand_id: string | null
-  hotel_id: string | null
   department_id: string | null
   is_primary: boolean
   is_active: boolean
   created_at: string
   updated_at: string
   organization?: Organization
-  hotel?: Hotel
   brand?: Brand
 }
 

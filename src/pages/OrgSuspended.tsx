@@ -9,18 +9,18 @@ export default function OrgSuspended() {
   const org = account.tenantMemberships[0]
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="flex min-h-screen items-center justify-center bg-ds-background p-6">
       <div className="max-w-md text-center space-y-4">
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
-          <AlertOctagon className="h-7 w-7" />
+        <div className="mx-auto w-14 h-14 rounded-md bg-ds-danger-soft text-ds-danger flex items-center justify-center">
+          <AlertOctagon aria-hidden="true" className="h-7 w-7" />
         </div>
-        <h1 className="text-xl font-bold">Access temporarily unavailable</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-xl font-semibold text-ds-ink">Access temporarily unavailable</h1>
+        <p className="text-sm text-ds-ink-secondary">
           {org?.organization_name ? <><strong>{org.organization_name}</strong> is </> : 'Your organization is '}
           currently {org?.lifecycle_status === 'archived' ? 'archived' : 'suspended'}. Training, knowledge, and
           assessment content are paused until it is reactivated.
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-ds-muted">
           Please contact your organization administrator. If you believe this is an error, contact platform support.
         </p>
         <Button variant="outline" size="sm" onClick={() => signOut()}>Sign out</Button>

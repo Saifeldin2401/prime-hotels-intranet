@@ -1,11 +1,10 @@
-import { CheckCircle2, XCircle, Mail, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { format, subDays, startOfDay } from 'date-fns'
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartViewport } from '@/components/ui/ChartViewport'
 import { supabase } from '@/lib/supabase'
 
@@ -116,11 +115,10 @@ export default function EmailAnalytics() {
   const failureRate = state.totalSent > 0 ? Math.round((state.failed / state.totalSent) * 100) : 0
 
   return (
-    <div className="container mx-auto py-6 max-w-[1200px] space-y-6">
+    <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader
-        title="Email Analytics"
-        description="Monitor email delivery performance and template usage over the last 30 days."
-        backTo="/admin"
+        title="Email delivery"
+        description="Were emails delivered in the last 30 days, and which templates fail?"
       />
 
       {state.isLoading ? (
@@ -129,70 +127,45 @@ export default function EmailAnalytics() {
         </div>
       ) : (
         <>
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-                <Mail className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{state.totalSent.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Emails processed in 30 days</p>
-              </CardContent>
-            </Card>
+          <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border sm:grid-cols-3">
+            {[
+              { label: 'Sent', value: state.totalSent.toLocaleString(), note: 'last 30 days' },
+              { label: 'Delivered', value: `${deliveryRate}%`, note: `${state.delivered.toLocaleString()} emails` },
+              { label: 'Failed or bounced', value: `${failureRate}%`, note: `${state.failed.toLocaleString()} emails`, danger: state.failed > 0 },
+            ].map((f) => (
+              <div key={f.label} className="bg-ds-surface px-4 py-4">
+                <dt className="text-xs text-ds-muted">{f.label}</dt>
+                <dd className={`mt-1 font-mono text-2xl tabular-nums ${f.danger ? 'text-ds-danger' : 'text-ds-ink'}`}>{f.value}</dd>
+                <dd className="text-xs text-ds-muted">{f.note}</dd>
+              </div>
+            ))}
+          </dl>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Delivery Rate</CardTitle>
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{deliveryRate}%</div>
-                <p className="text-xs text-muted-foreground">{state.delivered.toLocaleString()} delivered</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Failure Rate</CardTitle>
-                <XCircle className="h-4 w-4 text-destructive" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-destructive">{failureRate}%</div>
-                <p className="text-xs text-muted-foreground">{state.failed.toLocaleString()} bounced or failed</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Delivery Timeline (30 Days)</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <section aria-labelledby="email-timeline" className="space-y-3">
+            <h2 id="email-timeline" className="text-lg font-semibold text-ds-ink">Sent per day</h2>
+            <div className="rounded-[6px] border border-ds-border bg-ds-surface p-4">
               <ChartViewport minHeight={300}>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={state.timeline}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E4E4DF" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#6B7580' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#6B7580' }} axisLine={false} tickLine={false} />
                     <Tooltip 
-                      contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                      contentStyle={{ borderRadius: '6px', border: '1px solid #E4E4DF', boxShadow: 'none' }}
                     />
-                    <Bar dataKey="sent" name="Processed" fill="#0B1C3E" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="failed" name="Failed" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="sent" name="Processed" fill="#15212E" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="failed" name="Failed" fill="#A5302A" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartViewport>
-            </CardContent>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Template Breakdown</CardTitle>
-            </CardHeader>
-            <div className="p-0 border-t">
+          <section aria-labelledby="email-templates" className="space-y-3">
+            <h2 id="email-templates" className="text-lg font-semibold text-ds-ink">By template</h2>
+            <div className="overflow-x-auto rounded-[6px] border border-ds-border bg-ds-surface">
               <table className="w-full text-sm text-start">
-                <thead className="bg-muted/50 text-muted-foreground uppercase text-xs">
+                <thead className="border-b border-ds-border text-xs text-ds-muted">
                   <tr>
                     <th className="px-6 py-3 font-medium">Template Key</th>
                     <th className="px-6 py-3 font-medium text-end">Processed</th>
@@ -206,12 +179,12 @@ export default function EmailAnalytics() {
                     const rate = tmpl.sent > 0 ? Math.round((tmpl.delivered / tmpl.sent) * 100) : 0
                     return (
                       <tr key={tmpl.template_key} className="hover:bg-muted/30">
-                        <td className="px-6 py-4 font-medium text-primary">{tmpl.template_key}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-ds-ink">{tmpl.template_key}</td>
                         <td className="px-6 py-4 text-end">{tmpl.sent.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-end text-green-600">{tmpl.delivered.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-end text-ds-success">{tmpl.delivered.toLocaleString()}</td>
                         <td className="px-6 py-4 text-end text-destructive">{tmpl.failed.toLocaleString()}</td>
                         <td className="px-6 py-4 text-end">
-                          <span className={rate >= 90 ? 'text-green-600' : rate >= 75 ? 'text-amber-500' : 'text-destructive'}>
+                          <span className={rate >= 90 ? 'text-ds-success' : rate >= 75 ? 'text-ds-warning' : 'text-destructive'}>
                             {rate}%
                           </span>
                         </td>
@@ -228,7 +201,7 @@ export default function EmailAnalytics() {
                 </tbody>
               </table>
             </div>
-          </Card>
+          </section>
         </>
       )}
     </div>

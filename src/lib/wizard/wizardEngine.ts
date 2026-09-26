@@ -184,7 +184,6 @@ function hasApprovalResponsibility(role: string, isPlatformOperator: boolean): b
     'department_head',
     'general_manager',
     'property_manager',
-    'hotel_admin',
     'brand_admin'
   ]
   return approverRoles.includes(role?.toLowerCase()?.trim())

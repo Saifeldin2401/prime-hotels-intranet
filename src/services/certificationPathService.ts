@@ -31,8 +31,6 @@ interface AwardPathCertificatesInput {
   completedModuleId: string
   recipientName: string
   recipientEmail?: string | null
-  propertyId?: string
-  propertyName?: string
   departmentId?: string
   departmentName?: string
 }
@@ -219,8 +217,6 @@ export async function awardCertificationPathCertificates(
               path.description || `Completed training path: ${path.title}`,
             completionDate,
             score: aggregateScore,
-            propertyId: input.propertyId,
-            propertyName: input.propertyName,
             departmentId: input.departmentId,
             departmentName: input.departmentName,
             metadata: {

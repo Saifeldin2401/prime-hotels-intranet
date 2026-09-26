@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +19,6 @@ import { formatDate } from '@/lib/utils'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG, STATUS_CONFIG } from '@/types/questions'
 import {
     AlertCircle,
-    ArrowLeft,
     Calendar,
     CheckCircle,
     FileEdit,
@@ -54,7 +54,7 @@ export function QuestionReview() {
     if (!question) {
         return (
             <div className="flex flex-col items-center justify-center h-96 text-center">
-                <p className="text-gray-500 mb-4">Question not found</p>
+                <p className="text-ds-muted mb-4">Question not found</p>
                 <Button variant="outline" onClick={() => navigate('/studio/quizzes')}>
                     {t('question_review.back_to_library')}
                 </Button>
@@ -93,27 +93,12 @@ export function QuestionReview() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
-                        <ArrowLeft className="h-4 w-4 me-2" />
-                        {t('common:common.back')}
-                    </Button>
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold">{t('question_review.title')}</h1>
-                            <Badge variant="outline" className={`text-${statusConfig.color}-600 bg-${statusConfig.color}-50`}>
-                                {statusConfig.label}
-                            </Badge>
-                        </div>
-                        <p className="text-gray-500 text-sm mt-1">
-                            Version {question.version} • Created by {question.created_by_profile?.full_name || 'Unknown'} on {formatDate(question.created_at)}
-                        </p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
+            <PageHeader
+                backTo="/studio/quizzes"
+                title={t('question_review.title')}
+                description={`${statusConfig.label} · Version ${question.version} · ${question.created_by_profile?.full_name || 'Unknown author'} · ${formatDate(question.created_at)}`}
+                actions={
+                <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" asChild>
                         <Link to={`/studio/questions/${question.id}/edit`}>
                             <FileEdit className="h-4 w-4 me-2" />
@@ -125,7 +110,7 @@ export function QuestionReview() {
                         <>
                             <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                                 <DialogTrigger asChild>
-                                    <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                                    <Button variant="outline" className="text-ds-danger hover:text-ds-danger hover:bg-ds-danger-soft">
                                         <XCircle className="h-4 w-4 me-2" />
                                         {t('question_review.reject')}
                                     </Button>
@@ -158,7 +143,7 @@ export function QuestionReview() {
                             </Dialog>
 
                             <Button
-                                className="bg-green-600 hover:bg-green-700"
+                                className="bg-ds-success hover:bg-ds-success"
                                 onClick={handleApprove}
                                 disabled={approveQuestion.isPending}
                             >
@@ -172,7 +157,8 @@ export function QuestionReview() {
                         </>
                     )}
                 </div>
-            </div>
+                }
+            />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Main Content */}
@@ -189,13 +175,13 @@ export function QuestionReview() {
                                         {difficultyConfig.label}
                                     </Badge>
                                     {question.ai_generated && (
-                                        <Badge className="bg-purple-100 text-purple-700">
+                                        <Badge className="bg-ds-accent-soft text-ds-accent">
                                             <Sparkles className="h-3 w-3 me-1" />
                                             AI Generated
                                         </Badge>
                                     )}
                                 </div>
-                                <div className="text-sm text-gray-500 font-medium">
+                                <div className="text-sm text-ds-muted font-medium">
                                     {question.points} Points • ~{question.estimated_time_seconds}s
                                 </div>
                             </div>
@@ -203,39 +189,39 @@ export function QuestionReview() {
                         <CardContent className="space-y-6">
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Question</h3>
-                                <div className="bg-gray-50 p-4 rounded-lg border text-lg">
+                                <div className="bg-ds-surface-subtle p-4 rounded-lg border text-lg">
                                     {question.question_text}
                                 </div>
                             </div>
 
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-3 uppercase tracking-wider">Answer Configuration</h3>
+                                <h3 className="text-sm font-medium text-ds-muted mb-3 uppercase tracking-wider">Answer Configuration</h3>
 
                                 {question.question_type === 'mcq' || question.question_type === 'mcq_multi' ? (
                                     <div className="space-y-3">
                                         {question.options?.sort((a, b) => a.display_order - b.display_order).map((option) => (
                                             <div
                                                 key={option.id}
-                                                className={`p-3 rounded-md border flex items-center justify-between ${option.is_correct ? 'bg-green-50 border-green-200' : 'bg-white'
+                                                className={`p-3 rounded-md border flex items-center justify-between ${option.is_correct ? 'bg-ds-success-soft border-ds-success/30' : 'bg-white'
                                                     }`}
                                             >
-                                                <span className={option.is_correct ? 'font-medium text-green-900' : 'text-gray-700'}>
+                                                <span className={option.is_correct ? 'font-medium text-ds-success' : 'text-ds-ink'}>
                                                     {option.option_text}
                                                 </span>
                                                 {option.is_correct && (
-                                                    <Badge className="bg-green-600">Correct</Badge>
+                                                    <Badge className="bg-ds-success">Correct</Badge>
                                                 )}
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
-                                        <div className="text-sm text-blue-800 font-medium mb-1">Correct Answer Match</div>
-                                        <div className="text-lg font-mono text-blue-900">
+                                    <div className="bg-ds-accent-soft border border-ds-accent/30 p-4 rounded-lg">
+                                        <div className="text-sm text-ds-accent font-medium mb-1">Correct Answer Match</div>
+                                        <div className="text-lg font-mono text-ds-accent">
                                             {question.correct_answer}
                                         </div>
                                         {question.question_type === 'fill_blank' && (
-                                            <div className="text-xs text-blue-600 mt-2">
+                                            <div className="text-xs text-ds-accent mt-2">
                                                 * Case-insensitive exact match required
                                             </div>
                                         )}
@@ -247,14 +233,14 @@ export function QuestionReview() {
                                 <div className="grid gap-4 pt-4 border-t">
                                     {question.explanation && (
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-900 mb-1">Explanation</h4>
-                                            <p className="text-gray-600">{question.explanation}</p>
+                                            <h4 className="text-sm font-medium text-ds-ink mb-1">Explanation</h4>
+                                            <p className="text-ds-muted">{question.explanation}</p>
                                         </div>
                                     )}
                                     {question.hint && (
                                         <div>
-                                            <h4 className="text-sm font-medium text-gray-900 mb-1">Hint</h4>
-                                            <p className="text-gray-600 italic">"{question.hint}"</p>
+                                            <h4 className="text-sm font-medium text-ds-ink mb-1">Hint</h4>
+                                            <p className="text-ds-muted italic">"{question.hint}"</p>
                                         </div>
                                     )}
                                 </div>
@@ -272,7 +258,7 @@ export function QuestionReview() {
                         <CardContent className="space-y-4">
                             {question.linked_sop && (
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-gray-500 uppercase">Linked SOP</span>
+                                    <span className="text-xs text-ds-muted uppercase">Linked SOP</span>
                                     <Link
                                         to={`/knowledge/${question.linked_sop.id}`}
                                         className="text-primary hover:underline font-medium break-words"
@@ -284,7 +270,7 @@ export function QuestionReview() {
 
                             {question.tags && question.tags.length > 0 && (
                                 <div className="flex flex-col gap-2">
-                                    <span className="text-xs text-gray-500 uppercase">Tags</span>
+                                    <span className="text-xs text-ds-muted uppercase">Tags</span>
                                     <div className="flex flex-wrap gap-1">
                                         {question.tags.map(tag => (
                                             <Badge key={tag} variant="secondary" className="text-xs">
@@ -299,13 +285,13 @@ export function QuestionReview() {
 
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 text-sm">
-                                    <User className="h-4 w-4 text-gray-400" />
-                                    <span className="text-gray-600">Created by:</span>
+                                    <User className="h-4 w-4 text-ds-muted" />
+                                    <span className="text-ds-muted">Created by:</span>
                                     <span className="font-medium">{question.created_by_profile?.full_name || 'Unknown'}</span>
                                 </div>
                                 <div className="flex items-center gap-2 text-sm">
-                                    <Calendar className="h-4 w-4 text-gray-400" />
-                                    <span className="text-gray-600">Created on:</span>
+                                    <Calendar className="h-4 w-4 text-ds-muted" />
+                                    <span className="text-ds-muted">Created on:</span>
                                     <span className="font-medium">{formatDate(question.created_at)}</span>
                                 </div>
                             </div>
@@ -313,17 +299,17 @@ export function QuestionReview() {
                     </Card>
 
                     {question.review_notes && (
-                        <Card className="bg-yellow-50 border-yellow-200">
+                        <Card className="bg-ds-warning-soft border-ds-warning/30">
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-yellow-800 flex items-center gap-2">
+                                <CardTitle className="text-sm text-ds-warning flex items-center gap-2">
                                     <AlertCircle className="h-4 w-4" />
                                     Previous Review Notes
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <p className="text-sm text-yellow-800">{question.review_notes}</p>
+                                <p className="text-sm text-ds-warning">{question.review_notes}</p>
                                 {question.reviewed_by_profile && (
-                                    <p className="text-xs text-yellow-600 mt-2">
+                                    <p className="text-xs text-ds-warning mt-2">
                                         - {question.reviewed_by_profile.full_name}, {formatDate(question.reviewed_at || '')}
                                     </p>
                                 )}

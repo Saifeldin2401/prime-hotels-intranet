@@ -37,10 +37,10 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
     return (
         <div className="flex-1 p-6 bg-slate-50/30 overflow-y-auto min-h-[calc(100vh-4rem)]">
             <div className="max-w-4xl mx-auto">
-                <Card className="animate-fade-in border-t-4 border-t-hotel-navy shadow-md">
+                <Card className="animate-fade-in border-t-4 border-t-ds-ink shadow-md">
                     <CardHeader className={cn("bg-white border-b border-gray-100", isRTL ? 'text-end' : 'text-start')}>
                         <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <CardTitle className="text-xl font-bold text-hotel-navy">{t('builder.preview')}</CardTitle>
+                            <CardTitle className="text-xl font-bold text-ds-ink">{t('builder.preview')}</CardTitle>
                             <div className="text-xs text-gray-400 uppercase tracking-wider">{t('builder.draftMode')}</div>
                         </div>
                     </CardHeader>
@@ -51,8 +51,8 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
 
                             {sections.map((section) => (
                                 <div key={section.id} className="mb-10 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
-                                    <h2 className={`text-2xl font-bold mb-3 text-hotel-navy flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                        <span className={cn("w-2 h-8 bg-hotel-gold rounded-full", isRTL ? "ms-3" : "me-3")}></span>
+                                    <h2 className={`text-2xl font-bold mb-3 text-ds-ink flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                        <span className={cn("w-2 h-8 bg-ds-brass rounded-full", isRTL ? "ms-3" : "me-3")}></span>
                                         {section.title}
                                     </h2>
                                     {section.description && <p className={cn("text-gray-600 mb-6", isRTL ? "pe-5" : "ps-5")}>{section.description}</p>}

@@ -11,7 +11,7 @@
 
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from 'react'
-import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import type { Department, Profile, UserRole } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
 import { AuthIdentityContext } from './AuthIdentityContext'
 import { AuthSecurityContext } from './AuthSecurityContext'
@@ -21,7 +21,6 @@ import { useUserDataLoader } from './useUserDataLoader'
 interface UserDataContextType {
   profile: Profile | null
   roles: UserRole[]
-  properties: Property[]
   departments: Department[]
   rolesLoading: boolean
   /**
@@ -49,7 +48,6 @@ export const UserDataContext = createContext<UserDataContextType | undefined>(un
 const FALLBACK_USER_DATA: UserDataContextType = {
   profile: null,
   roles: [],
-  properties: [],
   departments: [],
   rolesLoading: true,
   rolesError: null,
@@ -108,7 +106,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   // Distinguishes "loaded, holds no roles" (e.g. a platform operator) from "not loaded yet".
   const [rolesResolved, setRolesResolved] = useState(false)
   const [activeOrganizationId, setActiveOrganizationId] = useState<string | null>(null)
-  const [properties, setProperties] = useState<Property[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [rolesLoading, setRolesLoading] = useState(true)
   const [rolesError, setRolesError] = useState<string | null>(null)
@@ -123,7 +120,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     setProfile(null)
     setAllRoles([])
     setRolesResolved(false)
-    setProperties([])
     setDepartments([])
     setRolesLoading(false)
     setRolesError(null)
@@ -138,7 +134,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         setAllRoles(next)
         setRolesResolved(true)
       },
-      setProperties,
       setDepartments,
       setRolesLoading,
       setRolesError,
@@ -241,7 +236,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => ({
     profile,
     roles,
-    properties,
     departments,
     rolesLoading: effectiveRolesLoading,
     rolesError,
@@ -252,7 +246,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     shouldRefreshUserData,
     resetUserData,
     setRolesLoading,
-  }), [profile, roles, properties, departments, effectiveRolesLoading, rolesError, primaryRole, activeOrganizationId, loadUserData, shouldRefreshUserData, resetUserData])
+  }), [profile, roles, departments, effectiveRolesLoading, rolesError, primaryRole, activeOrganizationId, loadUserData, shouldRefreshUserData, resetUserData])
 
   return (
     <UserDataContext.Provider value={value}>

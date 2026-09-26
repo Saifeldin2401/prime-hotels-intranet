@@ -17,7 +17,7 @@ export function PlayerShellSkeleton() {
                 <Skeleton className="h-9 w-16 rounded-md" />
             </div>
             <div className="flex min-h-0 flex-1">
-                <div className="hidden w-[320px] shrink-0 flex-col gap-2 border-e border-border/60 bg-hotel-navy-dark/5 p-4 lg:flex">
+                <div className="hidden w-[320px] shrink-0 flex-col gap-2 border-e border-border/60 bg-ds-surface-subtle p-4 lg:flex">
                     {Array.from({ length: 7 }).map((_, i) => (
                         <Skeleton key={i} className="h-14 w-full rounded-xl" />
                     ))}

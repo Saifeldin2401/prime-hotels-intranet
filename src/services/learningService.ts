@@ -57,18 +57,7 @@ type UserDepartmentRow = {
     department_id: string
 }
 
-type UserPropertyRow = {
-    user_id: string
-    property_id: string
-}
-
 type DepartmentRow = {
-    id: string
-    name: string
-    property_id?: string | null
-}
-
-type PropertyRow = {
     id: string
     name: string
 }
@@ -78,9 +67,7 @@ type ModuleAssignmentContext = {
     profiles: ProfileRow[]
     userRoles: UserRoleRow[]
     userDepartments: UserDepartmentRow[]
-    userProperties: UserPropertyRow[]
     departments: DepartmentRow[]
-    properties: PropertyRow[]
     progressRows: LearningProgress[]
     exemptions: LearningAssignmentExemption[]
     overrides: LearningAssignmentUserOverride[]
@@ -185,12 +172,6 @@ function resolveMatchingUserIds(
             .map((row) => row.user_id)
     }
 
-    if (assignment.target_type === 'property') {
-        return context.userProperties
-            .filter((row) => row.property_id === assignment.target_id && activeUserIds.has(row.user_id))
-            .map((row) => row.user_id)
-    }
-
     if (assignment.target_type === 'role') {
         return context.userRoles
             .filter((row) => row.role === assignment.target_id && activeUserIds.has(row.user_id))
@@ -203,8 +184,7 @@ function resolveMatchingUserIds(
 function describeAssignmentTarget(
     assignment: AssignmentRow,
     profilesById: Map<string, ProfileRow>,
-    departmentsById: Map<string, DepartmentRow>,
-    propertiesById: Map<string, PropertyRow>
+    departmentsById: Map<string, DepartmentRow>
 ) {
     switch (assignment.target_type) {
         case 'user': {
@@ -216,16 +196,8 @@ function describeAssignmentTarget(
         }
         case 'department': {
             const department = departmentsById.get(assignment.target_id ?? '')
-            const property = propertiesById.get(department?.property_id || '')
             return {
                 label: department?.name || 'Department',
-                meta: property?.name,
-            }
-        }
-        case 'property': {
-            const property = propertiesById.get(assignment.target_id ?? '')
-            return {
-                label: property?.name || 'Property',
                 meta: undefined,
             }
         }
@@ -249,9 +221,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
         profilesResult,
         userRolesResult,
         userDepartmentsResult,
-        userPropertiesResult,
         departmentsResult,
-        propertiesResult,
         progressResult,
         exemptionsResult,
         overridesResult,
@@ -273,16 +243,8 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
             .select('user_id, department_id')
             .eq('is_active', true),
         supabase
-            .from('organization_memberships')
-            .select('user_id, property_id:hotel_id')
-            .eq('is_active', true),
-        supabase
             .from('departments')
-            .select('id, name, property_id'),
-        supabase
-            .from('hotels')
-            .select('id, name')
-            .eq('is_deleted', false),
+            .select('id, name'),
         supabase
             .from('training_progress')
             .select('*, content_id:training_id, content_type:lp_content_type')
@@ -304,9 +266,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
     if (profilesResult.error) throw profilesResult.error
     if (userRolesResult.error) throw userRolesResult.error
     if (userDepartmentsResult.error) throw userDepartmentsResult.error
-    if (userPropertiesResult.error) throw userPropertiesResult.error
     if (departmentsResult.error) throw departmentsResult.error
-    if (propertiesResult.error) throw propertiesResult.error
     if (progressResult.error) throw progressResult.error
     if (exemptionsResult.error) throw exemptionsResult.error
     if (overridesResult.error) throw overridesResult.error
@@ -316,9 +276,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
         profiles: (profilesResult.data || []) as ProfileRow[],
         userRoles: (userRolesResult.data || []) as UserRoleRow[],
         userDepartments: (userDepartmentsResult.data || []) as UserDepartmentRow[],
-        userProperties: (userPropertiesResult.data || []) as UserPropertyRow[],
         departments: (departmentsResult.data || []) as DepartmentRow[],
-        properties: (propertiesResult.data || []) as PropertyRow[],
         progressRows: (progressResult.data || []) as LearningProgress[],
         exemptions: (exemptionsResult.data || []) as LearningAssignmentExemption[],
         overrides: (overridesResult.data || []) as LearningAssignmentUserOverride[],
@@ -331,7 +289,6 @@ function buildModuleAssignmentRoster(
 ): ModuleAssignmentRoster {
     const profilesById = new Map(context.profiles.map((profile) => [profile.id, profile]))
     const departmentsById = new Map(context.departments.map((department) => [department.id, department]))
-    const propertiesById = new Map(context.properties.map((property) => [property.id, property]))
     const progressByUser = new Map(context.progressRows.map((progress) => [progress.user_id, progress]))
     const exemptionsByUser = new Map(context.exemptions.map((exemption) => [exemption.user_id, exemption]))
     const overridesByUser = new Map(context.overrides.map((override) => [override.user_id, override]))
@@ -343,19 +300,12 @@ function buildModuleAssignmentRoster(
         departmentIdsByUser.set(row.user_id, current)
     })
 
-    const propertyIdsByUser = new Map<string, string[]>()
-    context.userProperties.forEach((row) => {
-        const current = propertyIdsByUser.get(row.user_id) || []
-        current.push(row.property_id)
-        propertyIdsByUser.set(row.user_id, current)
-    })
-
     const assignmentsByUser = new Map<string, AssignmentRow[]>()
     const sourcesByUser = new Map<string, ModuleAssigneeSource[]>()
 
     context.assignments.forEach((assignment) => {
         const matchingUserIds = resolveMatchingUserIds(assignment, context)
-        const sourceMeta = describeAssignmentTarget(assignment, profilesById, departmentsById, propertiesById)
+        const sourceMeta = describeAssignmentTarget(assignment, profilesById, departmentsById)
 
         matchingUserIds.forEach((userId) => {
             const assignmentList = assignmentsByUser.get(userId) || []
@@ -401,17 +351,12 @@ function buildModuleAssignmentRoster(
             .map((departmentId) => departmentsById.get(departmentId)?.name)
             .find(Boolean) || null
 
-        const propertyName = (propertyIdsByUser.get(userId) || [])
-            .map((propertyId) => propertiesById.get(propertyId)?.name)
-            .find(Boolean) || null
-
         const entry: ModuleAssigneeRosterEntry = {
             user_id: userId,
             full_name: profile?.full_name || profile?.email || 'Unknown user',
             email: profile?.email || null,
             avatar_url: profile?.avatar_url || null,
             department_name: departmentName,
-            property_name: propertyName,
             status: getResolvedStatus(progress),
             progress_percentage: typeof progress?.progress_percentage === 'number' ? progress.progress_percentage : 0,
             score_percentage: typeof progress?.score_percentage === 'number' ? progress.score_percentage : null,
@@ -732,7 +677,7 @@ export const learningService = {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
-        const [rolesResult, departmentsResult, propertiesResult] = await Promise.all([
+        const [rolesResult, departmentsResult] = await Promise.all([
             supabase
                 .from('user_roles')
                 .select('role')
@@ -742,16 +687,10 @@ export const learningService = {
                 .select('department_id')
                 .eq('user_id', user.id)
                 .eq('is_active', true),
-            supabase
-                .from('organization_memberships')
-                .select('property_id:hotel_id')
-                .eq('user_id', user.id)
-                .eq('is_active', true)
         ])
 
         if (rolesResult.error) throw rolesResult.error
         if (departmentsResult.error) throw departmentsResult.error
-        if (propertiesResult.error) throw propertiesResult.error
 
         const roleIds = (rolesResult.data || [])
             .map((row: { role?: string | null }) => row.role)
@@ -759,10 +698,6 @@ export const learningService = {
 
         const departmentIds = (departmentsResult.data || [])
             .map((row: { department_id?: string | null }) => row.department_id)
-            .filter((id): id is string => typeof id === 'string' && id.length > 0)
-
-        const propertyIds = (propertiesResult.data || [])
-            .map((row: { property_id?: string | null }) => row.property_id)
             .filter((id): id is string => typeof id === 'string' && id.length > 0)
 
         const notDeletedFilter = 'or(is_deleted.is.null,is_deleted.eq.false)'
@@ -779,10 +714,6 @@ export const learningService = {
 
         departmentIds.forEach((departmentId) => {
             orSegments.push(`and(target_type.eq.department,target_id.eq.${departmentId},${notDeletedFilter})`)
-        })
-
-        propertyIds.forEach((propertyId) => {
-            orSegments.push(`and(target_type.eq.property,target_id.eq.${propertyId},${notDeletedFilter})`)
         })
 
         // Query rule-based assignments from assignments

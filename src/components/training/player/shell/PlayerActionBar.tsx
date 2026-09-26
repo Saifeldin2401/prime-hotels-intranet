@@ -7,6 +7,7 @@ import {
     Loader2,
     RotateCcw,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -41,6 +42,7 @@ interface PlayerActionBarProps {
 }
 
 export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isRTL }: PlayerActionBarProps) {
+    const { t } = useTranslation('training')
     const { current, goPrevious, reducedMotion } = usePlayerShell()
     const describedById = useId()
 
@@ -49,15 +51,15 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
 
     const PrimaryIcon = primary?.icon ? ICONS[primary.icon] : null
     const intentClass = primary?.intent === 'success'
-        ? 'bg-pc-success hover:bg-pc-success/90 text-white rounded-[6px]'
+        ? 'bg-ds-success hover:bg-ds-success/90 text-white rounded-md'
         : primary?.intent === 'destructive'
-            ? 'bg-pc-danger hover:bg-pc-danger/90 text-white rounded-[6px]'
-            : 'bg-pc-ink hover:bg-pc-ink/90 text-pc-surface rounded-[6px]'
+            ? 'bg-ds-danger hover:bg-ds-danger/90 text-white rounded-md'
+            : 'bg-ds-ink hover:bg-ds-ink/90 text-white rounded-md'
 
     return (
         <footer
             className={cn(
-                'z-20 shrink-0 border-t border-pc-border bg-pc-surface shadow-none',
+                'z-20 shrink-0 border-t border-ds-border bg-ds-surface shadow-none',
                 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
             )}
         >
@@ -76,7 +78,7 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
                         aria-label={progressBar.label}
                     >
                         <div
-                            className={cn('h-full rounded-full bg-hotel-gold', !reducedMotion && 'transition-[width] duration-500')}
+                            className={cn('h-full rounded-full bg-ds-brass', !reducedMotion && 'transition-[width] duration-500')}
                             style={{ width: `${Math.min(100, Math.max(0, progressBar.value))}%` }}
                         />
                     </div>
@@ -92,7 +94,7 @@ export function PlayerActionBar({ defaultPrimary, previousDisabled, stepper, isR
                         className="h-11 shrink-0 gap-2"
                     >
                         <ArrowLeft className={cn('h-4 w-4', isRTL && 'rotate-180')} />
-                        <span className="hidden sm:inline">Previous</span>
+                        <span className="hidden sm:inline">{t('player.previous', 'Previous')}</span>
                     </Button>
                 )}
 

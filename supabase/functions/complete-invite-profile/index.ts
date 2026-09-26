@@ -47,12 +47,6 @@ function buildCorsHeaders(req: Request): Record<string, string> {
   };
 }
 
-function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    value,
-  );
-}
-
 function isISODate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
@@ -117,6 +111,12 @@ Deno.serve(async (req: Request) => {
       body = {};
     }
 
+    const json = (payload: unknown, status = 200) =>
+      new Response(JSON.stringify(payload), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
     const action =
       typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
     const fullName =
@@ -128,291 +128,111 @@ Deno.serve(async (req: Request) => {
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
     const jobTitleInput =
       typeof body?.jobTitle === "string" ? body.jobTitle.trim() : "";
-    const propertyId =
-      typeof body?.propertyId === "string" ? body.propertyId.trim() : "";
 
-    if (action === "options") {
-      const { data: profileRow, error: profileReadError } = await adminClient
-        .from("profiles")
-        .select("id, force_password_reset, password_initialized")
-        .eq("id", user.id)
-        .maybeSingle();
+    // The organization a new member joins comes from their invitation (or an
+    // existing membership) - never from anything the invitee chooses. Hotels
+    // were removed; a propertyId sent by older clients is ignored.
+    const inviteEmail = typeof user.email === "string"
+      ? user.email.trim().toLowerCase()
+      : null;
+    const invitationFilters = [`auth_user_id.eq.${user.id}`];
+    if (inviteEmail) invitationFilters.push(`email.eq.${inviteEmail}`);
 
-      if (profileReadError) {
-        return new Response(
-          JSON.stringify({
-            error: `Failed to load profile: ${profileReadError.message}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
+    const { data: invitationRows, error: invitationReadError } = await adminClient
+      .from("user_invitations")
+      .select("id, organization_id, department_id, role, status, invited_at")
+      .or(invitationFilters.join(","))
+      .order("invited_at", { ascending: false })
+      .limit(5);
+    if (invitationReadError) {
+      return json({ error: `Failed to load invitation: ${invitationReadError.message}` }, 500);
+    }
+    const invitation = (invitationRows || []).find((row) => row.organization_id) || null;
 
-      if (!profileRow) {
-        return new Response(
-          JSON.stringify({ error: "Profile record not found." }),
-          {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      const canCompleteInvite =
-        profileRow.force_password_reset === true ||
-        profileRow.password_initialized === false;
-      if (!canCompleteInvite) {
-        return new Response(
-          JSON.stringify({
-            error: "Invite completion is no longer allowed for this account.",
-          }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      // job_titles no longer exists as a lookup table (profiles.job_title is
-      // free text), so there's nothing to enumerate for a dropdown anymore.
-      const { data: propertyRows, error: propertyError } = await adminClient
-        .from("hotels")
-        .select("id, name, organization_id")
-        .eq("is_active", true)
-        .eq("is_deleted", false)
-        .order("name", { ascending: true });
-
-      if (propertyError) {
-        return new Response(
-          JSON.stringify({
-            error: `Failed to load properties: ${propertyError.message}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      const allPropertyOptions = (propertyRows || [])
-        .map((row) => ({ id: row.id, name: row.name }))
-        .filter(
-          (property): property is { id: string; name: string } =>
-            typeof property.id === "string" &&
-            property.id.length > 0 &&
-            typeof property.name === "string" &&
-            property.name.length > 0,
-        );
-
-      // Property assignment now lives on organization_memberships.hotel_id
-      // (a single primary hotel per membership) rather than a many-to-many
-      // user_properties junction table, which no longer exists.
-      const { data: existingMembership, error: membershipLookupError } =
-        await adminClient
-          .from("organization_memberships")
-          .select("hotel_id")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-          .maybeSingle();
-
-      if (membershipLookupError) {
-        return new Response(
-          JSON.stringify({
-            error: `Failed to load assigned property: ${membershipLookupError.message}`,
-          }),
-          {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
-      }
-
-      const assignedHotelId = existingMembership?.hotel_id || null;
-      const assignedPropertyOptions = assignedHotelId
-        ? allPropertyOptions.filter((p) => p.id === assignedHotelId)
-        : [];
-
-      const availableProperties =
-        assignedPropertyOptions.length > 0
-          ? assignedPropertyOptions
-          : allPropertyOptions;
-
-      return new Response(
-        JSON.stringify({
-          jobTitles: [],
-          properties: Array.from(
-            new Map(
-              availableProperties.map((property) => [property.id, property]),
-            ).values(),
-          ),
-          assignedPropertyIds: assignedHotelId ? [assignedHotelId] : [],
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+    const { data: existingMemberships, error: membershipReadError } = await adminClient
+      .from("organization_memberships")
+      .select("id, organization_id, department_id, role, is_active")
+      .eq("user_id", user.id);
+    if (membershipReadError) {
+      return json({ error: `Failed to load membership: ${membershipReadError.message}` }, 500);
     }
 
-    if (!fullName) {
-      return new Response(JSON.stringify({ error: "Full name is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (!dateOfBirth || !isISODate(dateOfBirth)) {
-      return new Response(
-        JSON.stringify({
-          error: "Date of birth must be in YYYY-MM-DD format.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const dobDate = new Date(dateOfBirth);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (Number.isNaN(dobDate.getTime()) || dobDate > today) {
-      return new Response(
-        JSON.stringify({ error: "Date of birth is invalid." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (!propertyId || !isUuid(propertyId)) {
-      return new Response(
-        JSON.stringify({ error: "A valid property is required." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    const organizationId: string | null =
+      invitation?.organization_id ||
+      (existingMemberships || []).find((m) => m.is_active)?.organization_id ||
+      null;
 
     const { data: profileRow, error: profileReadError } = await adminClient
       .from("profiles")
       .select("id, force_password_reset, password_initialized")
       .eq("id", user.id)
       .maybeSingle();
-
     if (profileReadError) {
-      return new Response(
-        JSON.stringify({
-          error: `Failed to load profile: ${profileReadError.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: `Failed to load profile: ${profileReadError.message}` }, 500);
     }
-
     if (!profileRow) {
-      return new Response(
-        JSON.stringify({ error: "Profile record not found." }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: "Profile record not found." }, 404);
     }
-
     const canCompleteInvite =
       profileRow.force_password_reset === true ||
       profileRow.password_initialized === false;
     if (!canCompleteInvite) {
-      return new Response(
-        JSON.stringify({
-          error: "Invite completion is no longer allowed for this account.",
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: "Invite completion is no longer allowed for this account." }, 403);
     }
 
-    const { data: hotelRow, error: hotelLookupError } = await adminClient
-      .from("hotels")
-      .select("id, organization_id")
-      .eq("id", propertyId)
-      .eq("is_active", true)
-      .eq("is_deleted", false)
-      .maybeSingle();
-
-    if (hotelLookupError || !hotelRow) {
-      return new Response(
-        JSON.stringify({ error: "Selected hotel property is not valid." }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    if (hotelRow.organization_id) {
-      const { data: isOperational } = await adminClient.rpc("org_is_operational", {
-        p_org_id: hotelRow.organization_id,
-      });
-
-      if (isOperational === false) {
-        return new Response(
-          JSON.stringify({
-            error: "Cannot complete account setup: the organization is suspended or inactive.",
-          }),
-          {
-            status: 403,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+    if (action === "options") {
+      // Older clients still ask for a property to choose. Offer only the
+      // hotels of the invitation's own organization while that table exists;
+      // after the hotel-removal migration this is always empty.
+      let properties: { id: string; name: string }[] = [];
+      if (organizationId) {
+        const { data: hotelRows, error: hotelError } = await adminClient
+          .from("hotels")
+          .select("id, name")
+          .eq("organization_id", organizationId)
+          .eq("is_active", true)
+          .eq("is_deleted", false)
+          .order("name", { ascending: true });
+        if (!hotelError && hotelRows) {
+          properties = hotelRows
+            .filter((row) => typeof row.id === "string" && typeof row.name === "string")
+            .map((row) => ({ id: row.id, name: row.name }));
+        }
       }
+      return json({
+        jobTitles: [],
+        properties,
+        assignedPropertyIds: [],
+        organizationId,
+        propertyRequired: false,
+      });
     }
 
-    // job_titles is free text on profiles now; no lookup table to validate against.
+    if (!fullName) {
+      return json({ error: "Full name is required." }, 400);
+    }
+    if (!dateOfBirth || !isISODate(dateOfBirth)) {
+      return json({ error: "Date of birth must be in YYYY-MM-DD format." }, 400);
+    }
+    const dobDate = new Date(dateOfBirth);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (Number.isNaN(dobDate.getTime()) || dobDate > today) {
+      return json({ error: "Date of birth is invalid." }, 400);
+    }
+    if (!organizationId) {
+      return json({ error: "No invitation was found for this account. Ask your administrator to invite you again." }, 403);
+    }
+
+    const { data: isOperational } = await adminClient.rpc("org_is_operational", {
+      p_org_id: organizationId,
+    });
+    if (isOperational === false) {
+      return json({ error: "Cannot complete account setup: the organization is suspended or inactive." }, 403);
+    }
+
+    // job_title is free text on profiles.
     const normalizedJobTitle: string | null = jobTitleInput || null;
-
-    const { data: existingMembershipForAssign, error: existingMembershipError } =
-      await adminClient
-        .from("organization_memberships")
-        .select("hotel_id")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .maybeSingle();
-
-    if (existingMembershipError) {
-      return new Response(
-        JSON.stringify({
-          error: `Failed to check property assignment: ${existingMembershipError.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const existingHotelId = existingMembershipForAssign?.hotel_id || null;
-    if (existingHotelId && existingHotelId !== propertyId) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Property assignment is already set by admin and cannot be changed here.",
-        }),
-        {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
 
     const { error: profileUpdateError } = await adminClient
       .from("profiles")
@@ -424,49 +244,39 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id);
-
     if (profileUpdateError) {
-      return new Response(
-        JSON.stringify({
-          error: `Failed to update profile: ${profileUpdateError.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: `Failed to update profile: ${profileUpdateError.message}` }, 500);
     }
 
-    // Property assignment now happens via organization_memberships.hotel_id
-    // below (user_properties junction table no longer exists).
-
-    // Upsert organization membership context
-    if (hotelRow?.organization_id) {
-      const { error: membershipAssignError } = await adminClient
+    // Membership: update the one in this organization, otherwise create it.
+    // (An explicit update-or-insert: no unique constraint to upsert against.)
+    const existing = (existingMemberships || []).find((m) => m.organization_id === organizationId) || null;
+    if (existing) {
+      const { error: membershipUpdateError } = await adminClient
         .from("organization_memberships")
-        .upsert(
-          {
-            user_id: user.id,
-            organization_id: hotelRow.organization_id,
-            role: "learner",
-            hotel_id: propertyId,
-            is_active: true,
-            is_primary: true,
-          },
-          { onConflict: "user_id,organization_id" },
-        );
-
-      if (membershipAssignError) {
-        console.error("Failed to assign organization membership:", membershipAssignError);
+        .update({
+          is_active: true,
+          department_id: existing.department_id || invitation?.department_id || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (membershipUpdateError) {
+        return json({ error: `Failed to activate membership: ${membershipUpdateError.message}` }, 500);
       }
-    }
-
-    const inviteEmail = typeof user.email === "string"
-      ? user.email.trim().toLowerCase()
-      : null;
-    const invitationFilters = [`auth_user_id.eq.${user.id}`];
-    if (inviteEmail) {
-      invitationFilters.push(`email.eq.${inviteEmail}`);
+    } else {
+      const { error: membershipInsertError } = await adminClient
+        .from("organization_memberships")
+        .insert({
+          user_id: user.id,
+          organization_id: organizationId,
+          role: invitation?.role || "learner",
+          department_id: invitation?.department_id || null,
+          is_active: true,
+          is_primary: true,
+        });
+      if (membershipInsertError) {
+        return json({ error: `Failed to create membership: ${membershipInsertError.message}` }, 500);
+      }
     }
 
     const { error: invitationUpdateError } = await adminClient
@@ -477,32 +287,16 @@ Deno.serve(async (req: Request) => {
         updated_at: new Date().toISOString(),
       })
       .or(invitationFilters.join(","));
-
     if (invitationUpdateError) {
-      return new Response(
-        JSON.stringify({
-          error:
-            `Failed to mark invitation as accepted: ${invitationUpdateError.message}`,
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return json({ error: `Failed to mark invitation as accepted: ${invitationUpdateError.message}` }, 500);
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        userId: user.id,
-        jobTitle: normalizedJobTitle,
-        propertyId,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({
+      success: true,
+      userId: user.id,
+      jobTitle: normalizedJobTitle,
+      organizationId,
+    });
   } catch (err: any) {
     return new Response(
       JSON.stringify({

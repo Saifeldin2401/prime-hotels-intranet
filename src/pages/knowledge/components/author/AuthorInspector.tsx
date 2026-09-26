@@ -12,7 +12,6 @@ import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSele
 import { VisualContentBuilder } from '@/components/knowledge'
 import type { KnowledgeVisibility } from '@/types/knowledge'
 import {
-  Building2,
   ChevronDown,
   ExternalLink,
   FileText,
@@ -40,12 +39,9 @@ interface AuthorInspectorProps {
   formData: any
   onUpdateField: (field: string, value: any) => void
   departments: any[]
-  properties: any[]
   categories: any[]
   trainingModules?: Array<{ id: string; title: string }>
-  currentProperty: any
   currentBrand: any
-  currentHotel: any
   isPlatformAdmin: boolean
   user: any
   visibilityOptions: Array<{ value: KnowledgeVisibility; label: string; description: string }>
@@ -72,12 +68,9 @@ export function AuthorInspector({
   formData,
   onUpdateField,
   departments,
-  properties,
   categories,
   trainingModules,
-  currentProperty,
   currentBrand,
-  currentHotel,
   isPlatformAdmin,
   user,
   visibilityOptions,
@@ -117,7 +110,7 @@ export function AuthorInspector({
             <Paperclip className="w-3.5 h-3.5" />
             <span>Media</span>
             {(formData.video_url || formData.file_url) && (
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-ds-success shrink-0" />
             )}
           </TabsTrigger>
           <TabsTrigger value="governance" className="text-xs h-7 gap-1 font-medium data-[state=active]:bg-background">
@@ -135,18 +128,17 @@ export function AuthorInspector({
           <Card className="shadow-xs border-border">
             <CardHeader className="py-3 px-4">
               <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider">
-                <List className="h-3.5 w-3.5 text-hotel-gold" />
+                <List className="h-3.5 w-3.5 text-ds-accent" />
                 <span>Team & Classification</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-3">
               <div>
                 <Label className="text-xs font-semibold mb-1 block">
-                  {t('editor.main_team_topic', 'Department / Team')} <span className="text-red-500">*</span>
+                  {t('editor.main_team_topic', 'Department / Team')} <span className="text-ds-danger">*</span>
                 </Label>
                 <GroupedDepartmentSelector
                   departments={departments}
-                  properties={properties}
                   value={formData.department_id || 'none'}
                   onValueChange={(v) => {
                     onUpdateField('department_id', v === 'none' ? null : v)
@@ -188,8 +180,8 @@ export function AuthorInspector({
           <Card className="shadow-xs border-border">
             <CardHeader className="py-3 px-4">
               <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider">
-                <ShieldCheck className="h-3.5 w-3.5 text-hotel-gold" />
-                <span>Audience & Hotel Scope</span>
+                <ShieldCheck className="h-3.5 w-3.5 text-ds-accent" />
+                <span>Audience</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-3.5">
@@ -223,40 +215,10 @@ export function AuthorInspector({
                     </Label>
                     <MultiDepartmentSelector
                       departments={departments}
-                      properties={properties}
                       value={formData.specific_department_ids}
                       onValueChange={(v) => onUpdateField('specific_department_ids', v)}
                       placeholder={t('editor.visibility.select_depts', 'Select teams...')}
                     />
-                  </div>
-                )}
-
-                {user && (formData.visibility === 'property' || formData.visibility === 'department') && (
-                  <div className="mt-2.5">
-                    <Label className="text-xs font-semibold mb-1 block">
-                      {t('editor.which_hotel', 'Hotel Property')}
-                    </Label>
-                    <Select
-                      value={formData.target_property_id || 'current'}
-                      onValueChange={(v) => onUpdateField('target_property_id', v === 'current' ? null : v)}
-                    >
-                      <SelectTrigger className="w-full text-xs bg-background">
-                        <Building2 className="me-1.5 h-3.5 w-3.5 opacity-50" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="current">
-                          Current Hotel ({currentProperty?.name || 'Head Office'})
-                        </SelectItem>
-                        {properties
-                          ?.filter((p) => p.id !== currentProperty?.id && p.id !== 'all')
-                          .map((prop) => (
-                            <SelectItem key={prop.id} value={prop.id}>
-                              {prop.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
                   </div>
                 )}
 
@@ -276,9 +238,8 @@ export function AuthorInspector({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="organization">Organization-wide (All brands & hotels)</SelectItem>
+                    <SelectItem value="organization">Whole organization</SelectItem>
                     <SelectItem value="brand">Brand-specific ({currentBrand?.name || 'Brand'})</SelectItem>
-                    <SelectItem value="hotel">Hotel-specific ({currentHotel?.name || 'Hotel'})</SelectItem>
                     <SelectItem value="department">Department-specific</SelectItem>
                   </SelectContent>
                 </Select>
@@ -319,12 +280,12 @@ export function AuthorInspector({
 
               {/* Master SOP Template Toggle */}
               {isPlatformAdmin && (
-                <div className="pt-2 border-t flex items-center justify-between p-2.5 rounded-lg bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
+                <div className="pt-2 border-t flex items-center justify-between p-2.5 rounded-lg bg-ds-warning-soft border border-ds-warning/30">
                   <div className="space-y-0.5">
-                    <Label className="text-xs font-bold text-amber-900 dark:text-amber-200 cursor-pointer" htmlFor="master-switch">
+                    <Label className="text-xs font-bold text-ds-warning cursor-pointer" htmlFor="master-switch">
                       Master SOP Template
                     </Label>
-                    <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                    <p className="text-[10px] text-ds-warning">
                       Publish to Platform Master Library for cross-tenant distribution
                     </p>
                   </div>
@@ -343,7 +304,7 @@ export function AuthorInspector({
             <CardHeader className="py-3 px-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider">
-                  <FileText className="h-3.5 w-3.5 text-hotel-gold" />
+                  <FileText className="h-3.5 w-3.5 text-ds-accent" />
                   <span>Executive Summary (TL;DR)</span>
                 </CardTitle>
                 <Button
@@ -351,9 +312,9 @@ export function AuthorInspector({
                   size="sm"
                   onClick={onGenerateSummary}
                   disabled={isGeneratingSummary || !formData.content}
-                  className="h-6 text-[10px] text-hotel-navy dark:text-hotel-gold hover:bg-hotel-gold/10 px-1.5 gap-1"
+                  className="h-6 text-[10px] text-ds-ink hover:bg-ds-accent/10 px-1.5 gap-1"
                 >
-                  <Sparkles className="w-3 h-3 text-hotel-gold" />
+                  <Sparkles className="w-3 h-3 text-ds-accent" />
                   AI Summary
                 </Button>
               </div>
@@ -405,7 +366,7 @@ export function AuthorInspector({
               onClick={onOpenDocumentPicker}
               className="text-xs h-8 font-medium gap-1 px-1.5"
             >
-              <FolderOpen className="h-3.5 w-3.5 text-hotel-gold shrink-0" />
+              <FolderOpen className="h-3.5 w-3.5 text-ds-accent shrink-0" />
               <span className="truncate">Doc Library</span>
             </Button>
             <Button
@@ -415,7 +376,7 @@ export function AuthorInspector({
               onClick={onOpenMediaPicker}
               className="text-xs h-8 font-medium gap-1 px-1.5"
             >
-              <ImageIcon className="h-3.5 w-3.5 text-hotel-gold shrink-0" />
+              <ImageIcon className="h-3.5 w-3.5 text-ds-accent shrink-0" />
               <span className="truncate">Images</span>
             </Button>
             <Button
@@ -423,33 +384,33 @@ export function AuthorInspector({
               variant="outline"
               size="sm"
               onClick={onOpenVideoPicker}
-              className="text-xs h-8 font-medium gap-1 px-1.5 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50/60 dark:hover:bg-rose-950/20"
+              className="text-xs h-8 font-medium gap-1 px-1.5 border-ds-danger/30 hover:bg-ds-danger-soft"
             >
-              <VideoIcon className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+              <VideoIcon className="h-3.5 w-3.5 text-ds-danger shrink-0" />
               <span className="truncate">Link Video</span>
             </Button>
           </div>
 
           {/* Linked Video Card with Interactive Player */}
           {formData.video_url && (
-            <div className="space-y-2 p-3 rounded-lg border border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-950/20 text-xs">
+            <div className="space-y-2 p-3 rounded-lg border border-ds-success/30 bg-ds-success-soft text-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 overflow-hidden">
-                  <VideoIcon className="h-4 w-4 text-rose-500 shrink-0" />
+                  <VideoIcon className="h-4 w-4 text-ds-danger shrink-0" />
                   <span className="font-semibold text-foreground truncate">
                     {decodeURIComponent(formData.video_url.split('/').pop()?.split('?')[0] || 'Linked Video')}
                   </span>
                 </div>
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[10px] px-1.5 shrink-0">
+                <Badge variant="secondary" className="bg-ds-success-soft text-ds-success text-[10px] px-1.5 shrink-0">
                   ✓ Linked
                 </Badge>
               </div>
 
               {/* Video Preview Player */}
-              <div className="relative rounded-md overflow-hidden bg-black aspect-video max-h-36 flex items-center justify-center border border-slate-700/30">
+              <div className="relative rounded-md overflow-hidden bg-black aspect-video max-h-36 flex items-center justify-center border border-ds-border-strong">
                 {formData.video_url.includes('youtube.com') || formData.video_url.includes('youtu.be') ? (
-                  <div className="relative w-full h-full flex flex-col items-center justify-center text-white bg-red-950/40 p-2 text-center">
-                    <VideoIcon className="w-7 h-7 text-red-500 mb-1" />
+                  <div className="relative w-full h-full flex flex-col items-center justify-center text-white bg-ds-danger-soft p-2 text-center">
+                    <VideoIcon className="w-7 h-7 text-ds-danger mb-1" />
                     <span className="text-[11px] font-medium">YouTube Video Attached</span>
                     <Button
                       type="button"
@@ -472,7 +433,7 @@ export function AuthorInspector({
               </div>
 
               {/* Action Buttons */}
-              <div className="flex items-center justify-between pt-1 border-t border-emerald-200/50 dark:border-emerald-800/50">
+              <div className="flex items-center justify-between pt-1 border-t border-ds-success/30">
                 <Button
                   type="button"
                   variant="ghost"
@@ -497,7 +458,7 @@ export function AuthorInspector({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-6 text-[11px] px-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-100/50 dark:hover:bg-rose-950/50"
+                    className="h-6 text-[11px] px-1.5 text-ds-danger hover:text-ds-danger hover:bg-ds-danger-soft"
                     onClick={() => onUpdateField('video_url', '')}
                   >
                     <Trash2 className="w-3 h-3 me-1" /> Remove
@@ -509,19 +470,19 @@ export function AuthorInspector({
 
           {/* Attached Document (PDF) */}
           {formData.file_url && (
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/30 text-xs">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-ds-success-soft border border-ds-success/30 text-xs">
               <span className="truncate text-foreground font-medium">
                 📎 {decodeURIComponent(formData.file_url.split('/').pop()?.split('?')[0] || formData.file_url)}
               </span>
               <div className="flex items-center gap-1 shrink-0">
-                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 text-[10px] px-1.5">
+                <Badge variant="secondary" className="bg-ds-success-soft text-ds-success text-[10px] px-1.5">
                   Linked
                 </Badge>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-ds-danger"
                   onClick={() => onUpdateField('file_url', '')}
                   title="Remove attached document"
                 >
@@ -582,16 +543,16 @@ export function AuthorInspector({
           
           {/* AI Compliance Scorecard */}
           {formData.ai_compliance_score != null ? (
-            <Card className="shadow-xs border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/10">
+            <Card className="shadow-xs border-ds-success/30 bg-ds-success-soft">
               <CardHeader className="py-3 px-4">
-                <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
-                  <Gauge className="h-3.5 w-3.5 text-emerald-600" />
+                <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-ds-success uppercase tracking-wider">
+                  <Gauge className="h-3.5 w-3.5 text-ds-success" />
                   <span>AI Five-Star Compliance Audit</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <Badge className="bg-emerald-600 text-white font-bold px-2 py-0.5">
+                  <Badge className="bg-ds-success text-white font-bold px-2 py-0.5">
                     Score: {formData.ai_compliance_score}/100
                   </Badge>
                   {formData.ai_compliance_checked_at && (
@@ -618,7 +579,7 @@ export function AuthorInspector({
                       <ul className="mt-1.5 space-y-1 ps-1">
                         {formData.ai_compliance_notes.map((note: string, idx: number) => (
                           <li key={idx} className="text-[11px] text-muted-foreground flex gap-1.5">
-                            <span className="text-emerald-500 shrink-0">•</span>
+                            <span className="text-ds-success shrink-0">•</span>
                             <span>{note}</span>
                           </li>
                         ))}
@@ -643,12 +604,12 @@ export function AuthorInspector({
 
           {/* Master Content Deployments */}
           {formData.is_master_template && masterDeploymentCount != null && (
-            <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 text-xs text-amber-900 dark:text-amber-200">
+            <div className="p-3 rounded-lg border border-ds-warning/30 bg-ds-warning-soft text-xs text-ds-warning">
               <div className="font-bold flex items-center gap-1.5">
                 <span>Master Deployment Status</span>
               </div>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Deployed across {masterDeploymentCount} hotel properties.
+                Deployed to {masterDeploymentCount} organizations.
               </p>
             </div>
           )}
@@ -658,7 +619,7 @@ export function AuthorInspector({
             <Card className="shadow-xs border-border">
               <CardHeader className="py-3 px-4">
                 <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-muted-foreground uppercase tracking-wider">
-                  <Tag className="h-3.5 w-3.5 text-hotel-gold" />
+                  <Tag className="h-3.5 w-3.5 text-ds-accent" />
                   <span>Version Revision Notes</span>
                 </CardTitle>
               </CardHeader>
@@ -671,7 +632,7 @@ export function AuthorInspector({
                   className="text-xs bg-background"
                 />
                 <p className="text-[10px] text-muted-foreground">
-                  Recorded in the audit trail for hotel compliance and revision history.
+                  Recorded in the audit trail with the revision history.
                 </p>
               </CardContent>
             </Card>

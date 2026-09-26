@@ -24,7 +24,6 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useMedia } from '@/hooks/useMedia';
-import { useProperties } from '@/hooks/useProperties';
 import { useSecureDownload } from '@/hooks/useSecureDownload';
 import { cn, formatFileSize } from '@/lib/utils';
 import type {
@@ -211,9 +210,7 @@ function UploadTab({
   maxFileSize?: number;
   requireCleanScan?: boolean;
 }) {
-  const { data: properties } = useProperties();
-  const primaryProperty = properties?.[0];
-  const { uploadFile, uploading, uploadProgress } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false });
+  const { uploadFile, uploading, uploadProgress } = useMedia({ autoFetch: false });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'clean' | 'infected'>('idle');
@@ -242,7 +239,6 @@ function UploadTab({
       try {
         const result = await uploadFile(file, {
           category: category || 'general',
-          property_id: primaryProperty?.id,
           maxFileSize,
         });
 
@@ -272,7 +268,7 @@ function UploadTab({
         fileInputRef.current.value = '';
       }
     },
-    [uploadFile, category, primaryProperty?.id, maxFileSize, onUploadComplete, requireCleanScan]
+    [uploadFile, category, maxFileSize, onUploadComplete, requireCleanScan]
   );
 
   return (
@@ -370,10 +366,7 @@ interface MediaPickerProps {
 
 // MediaPicker Component
 export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }: MediaPickerProps) {
-  const { data: properties } = useProperties();
-  const primaryProperty = properties?.[0];
   const { assets, loading, fetchAssets, filters, setFilters, uploadFile } = useMedia({
-    propertyId: primaryProperty?.id,
     autoFetch: false,
   });
   const { getSecureMediaUrl } = useSecureDownload();

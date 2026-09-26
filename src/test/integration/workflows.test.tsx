@@ -15,7 +15,6 @@ describe('Document Management Critical Path', () => {
       id: 'doc-123',
       title: 'Test SOP Document',
       content: 'Document content here',
-      property_id: user.properties[0].id,
       status: 'draft'
     }
 
@@ -36,7 +35,7 @@ describe('Document Management Critical Path', () => {
 
   it('should submit document for approval', async () => {
     const documentId = 'doc-123'
-    
+
     mockClient.from.mockReturnValue({
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -59,7 +58,7 @@ describe('Document Management Critical Path', () => {
   it('should approve a document', async () => {
     const documentId = 'doc-123'
     const approverId = 'approver-456'
-    
+
     mockClient.rpc.mockResolvedValue(mockQueryResponse({
       success: true,
       document_id: documentId,
@@ -172,7 +171,7 @@ describe('Task Management Critical Path', () => {
 
   it('should update task status to in_progress and complete', async () => {
     const taskId = 'task-123'
-    
+
     mockClient.from.mockReturnValue({
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),

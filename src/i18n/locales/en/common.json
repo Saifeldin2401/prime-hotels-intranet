@@ -94,7 +94,7 @@
         "please_login": "Please login to access this page",
         "view_profile": "View Profile",
         "visibility": {
-            "all_properties": "Consolidated (Cluster)",
+            "all_properties": "Whole organization",
             "property_specific": "Hotel Specific",
             "department_specific": "Department Specific",
             "role_specific": "Role Specific"
@@ -428,7 +428,7 @@
         "verifying_access": "Verifying access..."
     },
     "visibility": {
-        "all_properties": "Consolidated (Cluster)",
+        "all_properties": "Whole organization",
         "department_specific": "Department Specific",
         "property_specific": "Hotel Specific",
         "role_specific": "Role Specific"
@@ -647,5 +647,59 @@
     "priority.low": "Low",
     "priority.medium": "Medium",
     "priority.high": "High",
-    "priority.urgent": "Urgent"
+    "priority.urgent": "Urgent",
+    "organization": "Organization",
+    "inbox": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "week": "Earlier this week",
+        "older": "Older",
+        "filter": {
+            "all": "Everything",
+            "unread": "Unread",
+            "training": "Training",
+            "certificates": "Certificates",
+            "knowledge": "Knowledge",
+            "reviews": "Reviews"
+        },
+        "eyebrow": "Inbox",
+        "title": "Notifications",
+        "unread": "{{count}} unread",
+        "allRead": "You are all caught up.",
+        "markAll": "Mark all as read",
+        "filterLabel": "Filter notifications",
+        "emptyTitle": "No notifications yet",
+        "emptyFilter": "Nothing here",
+        "emptyBody": "Assignments, certificates, required reading and review decisions will appear here.",
+        "emptyFilterBody": "No notifications of this kind. Try another filter.",
+        "unreadLabel": "unread",
+        "remove": "Remove notification"
+    },
+    "find": {
+        "eyebrow": "Search",
+        "title": "Search",
+        "titleFor": "Results for “{{query}}”",
+        "scope": "Within {{org}}: knowledge, courses, quizzes, certificates and people.",
+        "label": "Search",
+        "placeholder": "Search SOPs, courses, quizzes, people…",
+        "noOrgTitle": "Choose an organization to search",
+        "noOrgBody": "Search stays inside one organization so results are relevant and private.",
+        "hint": "Type a word from a procedure, a course title or a colleague’s name.",
+        "noneTitle": "Nothing matches “{{query}}”",
+        "noneBody": "Try fewer or different words, or browse Knowledge and Courses directly.",
+        "filterLabel": "Show results of kind",
+        "all": "All",
+        "showAll": "Show all {{count}}",
+        "minutes": "{{count}} min",
+        "passMark": "Pass mark {{pct}}%",
+        "certificate": "Certificate",
+        "member": "Member",
+        "kind": {
+            "knowledge": "Knowledge",
+            "courses": "Courses",
+            "quizzes": "Quizzes",
+            "certificates": "Certificates",
+            "people": "People"
+        }
+    }
 }

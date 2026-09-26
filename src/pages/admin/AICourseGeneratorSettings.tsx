@@ -29,7 +29,6 @@ import type { AIPlatformConfig } from '@/services/aiPlatformConfigService'
 import { aiPlatformConfigService, DEFAULT_AI_PLATFORM_CONFIG } from '@/services/aiPlatformConfigService'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Activity,
   AlertTriangle,
   Award,
   BookOpen,
@@ -53,11 +52,8 @@ import {
   RotateCcw,
   Save,
   Search,
-  Server,
   ShieldCheck,
-  Sliders,
   Sparkles,
-  Wand2,
   X,
   Zap,
 } from 'lucide-react'
@@ -81,9 +77,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'gemini',
     name: 'Google AI Studio',
     tagline: 'Gemini 2.5 Flash, 2.0 Flash & Imagen 3',
-    badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200',
-    borderColor: 'hover:border-blue-300 dark:hover:border-blue-800',
-    icon: <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+    badgeColor: 'bg-ds-accent-soft text-ds-accent border-ds-accent/30',
+    borderColor: 'hover:border-ds-accent/30',
+    icon: <Sparkles className="w-4 h-4 text-ds-accent" />,
     freeTier: true,
     paidTier: true,
     avgLatencyMs: 420,
@@ -92,9 +88,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'groq',
     name: 'Groq LPU Engine',
     tagline: 'Ultra-low latency LPU (Llama 3.3 70B & ALLaM 2 7B)',
-    badgeColor: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200',
-    borderColor: 'hover:border-orange-300 dark:hover:border-orange-800',
-    icon: <Zap className="w-4 h-4 text-orange-600 dark:text-orange-400" />,
+    badgeColor: 'bg-ds-warning-soft text-ds-warning border-ds-warning/30',
+    borderColor: 'hover:border-ds-warning/30',
+    icon: <Zap className="w-4 h-4 text-ds-warning" />,
     freeTier: true,
     paidTier: false,
     avgLatencyMs: 180,
@@ -103,9 +99,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'openrouter',
     name: 'OpenRouter Gateway',
     tagline: 'Claude 3.7 Sonnet, Qwen 2.5 72B & DeepSeek R1',
-    badgeColor: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200',
-    borderColor: 'hover:border-purple-300 dark:hover:border-purple-800',
-    icon: <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
+    badgeColor: 'bg-ds-accent-soft text-ds-accent border-ds-accent/30',
+    borderColor: 'hover:border-ds-accent/30',
+    icon: <Globe className="w-4 h-4 text-ds-accent" />,
     freeTier: true,
     paidTier: true,
     avgLatencyMs: 650,
@@ -114,9 +110,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'cloudflare',
     name: 'Cloudflare Workers AI',
     tagline: 'Zero-cost serverless inference (Lucid Origin, Flux Schnell, SDXL)',
-    badgeColor: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200',
-    borderColor: 'hover:border-amber-300 dark:hover:border-amber-800',
-    icon: <Cpu className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+    badgeColor: 'bg-ds-warning-soft text-ds-warning border-ds-warning/30',
+    borderColor: 'hover:border-ds-warning/30',
+    icon: <Cpu className="w-4 h-4 text-ds-warning" />,
     freeTier: true,
     paidTier: false,
     avgLatencyMs: 310,
@@ -125,9 +121,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'huggingface',
     name: 'Hugging Face Inference',
     tagline: 'Serverless open-weight models (Qwen 2.5 Coder, Mistral 7B)',
-    badgeColor: 'bg-yellow-50 text-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-300 border-yellow-200',
-    borderColor: 'hover:border-yellow-300 dark:hover:border-yellow-800',
-    icon: <Layers className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />,
+    badgeColor: 'bg-ds-warning-soft text-ds-warning border-ds-warning/30',
+    borderColor: 'hover:border-ds-warning/30',
+    icon: <Layers className="w-4 h-4 text-ds-warning" />,
     freeTier: true,
     paidTier: false,
     avgLatencyMs: 820,
@@ -136,9 +132,9 @@ const PROVIDER_METAS: ProviderMeta[] = [
     id: 'recraft',
     name: 'Recraft Vector Schematic Engine',
     tagline: 'Zero-loss deterministic SVG diagram synthesis ($0.00 / step)',
-    badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200',
-    borderColor: 'hover:border-emerald-300 dark:hover:border-emerald-800',
-    icon: <Palette className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+    badgeColor: 'bg-ds-success-soft text-ds-success border-ds-success/30',
+    borderColor: 'hover:border-ds-success/30',
+    icon: <Palette className="w-4 h-4 text-ds-success" />,
     freeTier: true,
     paidTier: false,
     avgLatencyMs: 95,
@@ -358,7 +354,7 @@ export default function AICourseGeneratorSettings() {
   if (isLoading || !draft) {
     return (
       <div className="flex flex-col items-center justify-center py-32 space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-ds-accent" />
         <p className="text-xs text-muted-foreground font-medium">
           {t('common.loading', 'Loading AI Platform Configuration...')}
         </p>
@@ -764,108 +760,62 @@ export default function AICourseGeneratorSettings() {
   }
 
   return (
-    <div className="space-y-6 pb-16 max-w-7xl mx-auto">
-      {/* Header with Quick Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
-        <div>
-          <PageHeader
-            title={t('ai_course_generator.title', 'AI Course Generator — Platform Settings')}
-            description={t(
-              'ai_course_generator.description',
-              'Routing strategy, verified model catalog, gateway connectivity, spending caps, and QA thresholds for the multi-agent course engine.'
-            )}
-          />
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetToDefaults}
-            className="h-9 text-xs font-semibold text-muted-foreground gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>{t('ai_course_generator.actions.reset', 'Reset Defaults')}</span>
-          </Button>
+    <div className="mx-auto max-w-7xl space-y-6 pb-16">
+      <PageHeader
+        title={t('ai_course_generator.title_short', 'AI course generation')}
+        description={t('ai_course_generator.description_short', 'Which models write and illustrate courses, what they may spend, and the quality bar a course must pass.')}
+        actions={
+          <>
+            <Button variant="outline" onClick={handleResetToDefaults} className="min-h-[44px] gap-1.5">
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              {t('ai_course_generator.actions.reset_short', 'Reset to defaults')}
+            </Button>
+            <Button onClick={save} disabled={updateMutation.isPending} className="min-h-[44px] gap-1.5 bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90">
+              {updateMutation.isPending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Save aria-hidden="true" className="h-4 w-4" />}
+              {t('ai_course_generator.actions.save_short', 'Save')}
+            </Button>
+          </>
+        }
+      />
 
-          <Button
-            size="sm"
-            onClick={save}
-            disabled={updateMutation.isPending}
-            className="h-9 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-sm gap-1.5 px-4"
-          >
-            {updateMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            <span>{t('ai_course_generator.actions.save', 'Save & Apply Settings')}</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Top Real-time Telemetry Dashboard — from ai_generation_analytics (last 200 days) */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
-        <StatCard
-          icon={<Activity className="h-4 w-4 text-purple-600" />}
-          label={t('ai_course_generator.telemetry.requests', 'Total Requests')}
-          value={summary.hasData ? String(summary.req) : '—'}
-          subtext={summary.hasData ? 'logged AI calls' : 'no usage logged yet'}
-        />
-        <StatCard
-          icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
-          label={t('ai_course_generator.telemetry.success_rate', 'Success Rate')}
-          value={summary.successRate === null ? '—' : `${summary.successRate}%`}
-          subtext={summary.hasData ? `${summary.ok}/${summary.req} succeeded` : '—'}
-        />
-        <StatCard
-          icon={<DollarSign className="h-4 w-4 text-blue-600" />}
-          label={t('ai_course_generator.telemetry.est_spend', 'Total Spend (USD)')}
-          value={summary.hasData ? `$${summary.cost.toFixed(2)}` : '—'}
-          subtext={summary.hasData ? 'estimated, all-time' : '—'}
-        />
-        <StatCard
-          icon={<RefreshCw className="h-4 w-4 text-amber-600" />}
-          label={t('ai_course_generator.telemetry.fallbacks', 'Auto Fallbacks')}
-          value={summary.hasData ? String(summary.fb) : '—'}
-          subtext={summary.hasData ? 'model cascade events' : '—'}
-        />
-        <StatCard
-          icon={<Zap className="h-4 w-4 text-orange-600" />}
-          label={t('ai_course_generator.telemetry.avg_latency', 'Avg Latency')}
-          value={summary.avgLatencyMs === null ? '—' : `${summary.avgLatencyMs} ms`}
-          subtext={summary.hasData ? 'request-weighted' : '—'}
-        />
-      </div>
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border lg:grid-cols-5">
+        {[
+          { label: t('ai_course_generator.telemetry.requests', 'Requests'), value: summary.hasData ? String(summary.req) : '—' },
+          { label: t('ai_course_generator.telemetry.success_rate', 'Succeeded'), value: summary.successRate === null ? '—' : `${summary.successRate}%` },
+          { label: t('ai_course_generator.telemetry.est_spend', 'Spend (USD, est.)'), value: summary.hasData ? `$${summary.cost.toFixed(2)}` : '—' },
+          { label: t('ai_course_generator.telemetry.fallbacks', 'Fallbacks'), value: summary.hasData ? String(summary.fb) : '—' },
+          { label: t('ai_course_generator.telemetry.avg_latency', 'Average latency'), value: summary.avgLatencyMs === null ? '—' : `${summary.avgLatencyMs} ms` },
+        ].map((f) => (
+          <div key={f.label} className="bg-ds-surface px-4 py-3">
+            <dt className="text-xs text-ds-muted">{f.label}</dt>
+            <dd className="mt-0.5 font-mono text-xl tabular-nums text-ds-ink">{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {!summary.hasData && <p className="-mt-3 text-xs text-ds-muted">{t('ai_course_generator.telemetry.none', 'No AI usage has been logged yet.')}</p>}
 
       {/* Main Control Surface Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 w-full h-auto md:h-11 p-1 bg-muted/60">
-          <TabsTrigger value="strategy" className="text-xs font-semibold gap-1.5">
-            <Wand2 className="w-3.5 h-3.5 text-purple-500" />
+        <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-ds-border bg-transparent p-0">
+          <TabsTrigger value="strategy" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.strategy', 'Strategy & Presets')}</span>
           </TabsTrigger>
-          <TabsTrigger value="gateways" className="text-xs font-semibold gap-1.5">
-            <Server className="w-3.5 h-3.5 text-blue-500" />
+          <TabsTrigger value="gateways" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.gateways', 'Gateways & Health')}</span>
           </TabsTrigger>
-          <TabsTrigger value="models" className="text-xs font-semibold gap-1.5">
-            <Cpu className="w-3.5 h-3.5 text-emerald-500" />
+          <TabsTrigger value="models" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.models', 'Model Catalog')}</span>
           </TabsTrigger>
-          <TabsTrigger value="roles" className="text-xs font-semibold gap-1.5">
-            <Bot className="w-3.5 h-3.5 text-orange-500" />
+          <TabsTrigger value="roles" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.roles', 'Agent Roles')}</span>
           </TabsTrigger>
-          <TabsTrigger value="policies" className="text-xs font-semibold gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-teal-500" />
+          <TabsTrigger value="policies" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.policies', 'Agent Policies')}</span>
           </TabsTrigger>
-          <TabsTrigger value="limits" className="text-xs font-semibold gap-1.5">
-            <Sliders className="w-3.5 h-3.5 text-amber-500" />
+          <TabsTrigger value="limits" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.limits', 'Spend & QA Caps')}</span>
           </TabsTrigger>
-          <TabsTrigger value="diagnostics" className="text-xs font-semibold gap-1.5">
-            <Play className="w-3.5 h-3.5 text-rose-500" />
+          <TabsTrigger value="diagnostics" className="min-h-[40px] shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
             <span>{t('ai_course_generator.tabs.diagnostics', 'Live Diagnostics')}</span>
           </TabsTrigger>
         </TabsList>
@@ -878,50 +828,50 @@ export default function AICourseGeneratorSettings() {
           <div className="space-y-3">
             <div>
               <h3 className="text-sm font-bold text-foreground">
-                {t('ai_course_generator.presets.title', 'One-Click Routing Presets')}
+                {t('ai_course_generator.presets.title', 'Presets')}
               </h3>
               <p className="text-xs text-muted-foreground">
-                {t('ai_course_generator.presets.desc', 'Instantly switch the entire platform routing profile with zero manual configuration.')}
+                {t('ai_course_generator.presets.desc', 'Start from a preset, then adjust the details below.')}
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
               <PresetCard
-                title={t('ai_course_generator.presets.free_first_title', '100% Free & Unlimited')}
+                title={t('ai_course_generator.presets.free_first_title', 'Free models only')}
                 description={t('ai_course_generator.presets.free_first_desc', 'Cloudflare Workers AI + Google Gemini Free Tier + Recraft Vector SVG ($0.00 spend).')}
-                icon={<Zap className="w-5 h-5 text-emerald-500" />}
-                badge="$0.00 Cost"
-                badgeColor="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                icon={<Zap className="w-5 h-5 text-ds-success" />}
+                badge="Free"
+                badgeColor="bg-ds-success-soft text-ds-success"
                 active={draft.freeOnlyMode && draft.routingMode === 'free_first'}
                 onClick={() => applyPreset('free_first')}
               />
 
               <PresetCard
-                title={t('ai_course_generator.presets.balanced_title', 'Balanced Enterprise (Recommended)')}
+                title={t('ai_course_generator.presets.balanced_title', 'Balanced (recommended)')}
                 description={t('ai_course_generator.presets.balanced_desc', 'Gemini 2.5 Flash + OpenRouter Llama 3.3 + Auto Image Routing with $5.00 daily safeguard.')}
-                icon={<Sparkles className="w-5 h-5 text-purple-500" />}
+                icon={<Sparkles className="w-5 h-5 text-ds-accent" />}
                 badge="Recommended"
-                badgeColor="bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                badgeColor="bg-ds-accent-soft text-ds-accent"
                 active={!draft.freeOnlyMode && draft.routingMode === 'balanced'}
                 onClick={() => applyPreset('balanced')}
               />
 
               <PresetCard
-                title={t('ai_course_generator.presets.luxury_title', 'Ultra 5-Star Luxury')}
+                title={t('ai_course_generator.presets.luxury_title', 'Highest quality')}
                 description={t('ai_course_generator.presets.luxury_desc', 'Claude 3.7 Sonnet + Google Imagen 3 (Nano Banana Pro) with 95% QA threshold.')}
-                icon={<Award className="w-5 h-5 text-amber-500" />}
-                badge="Forbes 5-Star"
-                badgeColor="bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                icon={<Award className="w-5 h-5 text-ds-warning" />}
+                badge="Highest quality"
+                badgeColor="bg-ds-warning-soft text-ds-warning"
                 active={draft.routingMode === 'quality_first'}
                 onClick={() => applyPreset('luxury')}
               />
 
               <PresetCard
-                title={t('ai_course_generator.presets.saudi_title', 'Saudi-First Bilingual')}
+                title={t('ai_course_generator.presets.saudi_title', 'Arabic-first bilingual')}
                 description={t('ai_course_generator.presets.saudi_desc', 'ALLaM 2 Arabic + Qwen 2.5 + Balady HACCP and Saudi Civil Defense strict compliance.')}
-                icon={<ShieldCheck className="w-5 h-5 text-emerald-600" />}
-                badge="Vision 2030"
-                badgeColor="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                icon={<ShieldCheck className="w-5 h-5 text-ds-success" />}
+                badge="Arabic first"
+                badgeColor="bg-ds-success-soft text-ds-success"
                 active={draft.qaMinProductionReady >= 95 && draft.routingMode === 'balanced'}
                 onClick={() => applyPreset('saudi')}
               />
@@ -945,35 +895,35 @@ export default function AICourseGeneratorSettings() {
                     id: 'free_first' as RoutingMode,
                     name: t('ai_course_generator.routing_mode.free_first', 'Free-First Mode'),
                     desc: 'Escalate to paid only when no free model can fulfill the task.',
-                    icon: <DollarSign className="w-4 h-4 text-emerald-500" />,
+                    icon: <DollarSign className="w-4 h-4 text-ds-success" />,
                   },
                   {
                     id: 'balanced' as RoutingMode,
                     name: t('ai_course_generator.routing_mode.balanced', 'Balanced Mode'),
                     desc: 'Weigh quality, latency, context window, and cost evenly.',
-                    icon: <Sparkles className="w-4 h-4 text-purple-500" />,
+                    icon: <Sparkles className="w-4 h-4 text-ds-accent" />,
                   },
                   {
                     id: 'quality_first' as RoutingMode,
                     name: t('ai_course_generator.routing_mode.quality_first', 'Quality-First Mode'),
                     desc: 'Prefer the highest-capability model regardless of free tier.',
-                    icon: <Award className="w-4 h-4 text-blue-500" />,
+                    icon: <Award className="w-4 h-4 text-ds-accent" />,
                   },
                   {
                     id: 'premium' as RoutingMode,
                     name: t('ai_course_generator.routing_mode.premium', 'Ultra Premium'),
                     desc: 'Always pick the flagship reasoning models and image generators.',
-                    icon: <Layers className="w-4 h-4 text-amber-500" />,
+                    icon: <Layers className="w-4 h-4 text-ds-warning" />,
                   },
                 ].map((mode) => (
                   <div
                     key={mode.id}
                     onClick={() => set('routingMode', mode.id)}
                     className={`p-3.5 rounded-xl border cursor-pointer transition-all flex flex-col justify-between space-y-2 ${
-                      draft.routingMode === mode.id
-                        ? 'border-purple-600 bg-purple-50/60 dark:bg-purple-950/30 shadow-sm ring-1 ring-purple-500/50'
-                        : 'bg-card hover:bg-muted/20 hover:border-slate-300 dark:hover:border-slate-700'
-                    }`}
+ draft.routingMode === mode.id
+ ? 'border-ds-accent/30 bg-ds-accent-soft shadow-sm ring-1 ring-ds-accent/30'
+ : 'bg-card hover:bg-muted/20 hover:border-ds-border '
+ }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -981,7 +931,7 @@ export default function AICourseGeneratorSettings() {
                         <span className="text-xs font-bold text-foreground">{mode.name}</span>
                       </div>
                       {draft.routingMode === mode.id && (
-                        <CheckCircle2 className="w-4 h-4 text-purple-600 shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-ds-accent shrink-0" />
                       )}
                     </div>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">{mode.desc}</p>
@@ -1032,13 +982,13 @@ export default function AICourseGeneratorSettings() {
                       <button
                         type="button"
                         onClick={() => setActiveTab('policies')}
-                        className="text-[10px] font-semibold text-purple-600 hover:text-purple-700 underline underline-offset-2"
+                        className="text-[10px] font-semibold text-ds-accent hover:text-ds-accent underline underline-offset-2"
                       >
                         Open Agent Policies →
                       </button>
                     </div>
                     {draft.freeOnlyMode && (paidForcers.length > 0 || paidModeAgents.length > 0) && (
-                      <p className="text-amber-700 dark:text-amber-300 leading-relaxed">
+                      <p className="text-ds-warning leading-relaxed">
                         ⚠ Free-Only is ON, so it overrides:{' '}
                         {paidForcers.length > 0 && <>{paidForcers.map((p) => p.agentRole).join(', ')} (force a paid model)</>}
                         {paidForcers.length > 0 && paidModeAgents.length > 0 && '; '}
@@ -1078,10 +1028,10 @@ export default function AICourseGeneratorSettings() {
                 !db || db.health_status === 'unknown'
                   ? 'text-muted-foreground'
                   : db.health_status === 'healthy'
-                    ? 'text-emerald-600'
+                    ? 'text-ds-success'
                     : db.health_status === 'degraded' || db.health_status === 'rate_limited'
-                      ? 'text-amber-600'
-                      : 'text-rose-600'
+                      ? 'text-ds-warning'
+                      : 'text-ds-danger'
 
               return (
                 <Card
@@ -1127,8 +1077,8 @@ export default function AICourseGeneratorSettings() {
                           variant="outline"
                           className={`text-[9px] ${
                             db.key_status === 'configured'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                              ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+                              : 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
                           }`}
                         >
                           key: {db.key_status}
@@ -1145,18 +1095,18 @@ export default function AICourseGeneratorSettings() {
                             Pinging...
                           </Badge>
                         ) : ping?.status === 'online' ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1 animate-pulse" />
+                          <Badge variant="outline" className="bg-ds-success-soft text-ds-success border-ds-success/30 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-ds-success me-1 animate-pulse" />
                             {ping.latencyMs} ms
                           </Badge>
                         ) : ping?.status === 'degraded' ? (
-                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 me-1" />
+                          <Badge variant="outline" className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-ds-warning me-1" />
                             degraded
                           </Badge>
                         ) : ping?.status === 'error' ? (
-                          <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 me-1" />
+                          <Badge variant="outline" className="bg-ds-danger-soft text-ds-danger border-ds-danger/30 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-ds-danger me-1" />
                             offline
                           </Badge>
                         ) : (
@@ -1165,7 +1115,7 @@ export default function AICourseGeneratorSettings() {
                           </Badge>
                         )}
                         {prov.freeTier && (
-                          <Badge variant="secondary" className="text-[9px] bg-slate-100 dark:bg-slate-800">
+                          <Badge variant="secondary" className="text-[9px] bg-ds-surface-subtle">
                             Free Tier
                           </Badge>
                         )}
@@ -1176,7 +1126,7 @@ export default function AICourseGeneratorSettings() {
                         size="sm"
                         disabled={ping?.testing || !isEnabled}
                         onClick={() => handlePingProvider(prov.id)}
-                        className="h-6 text-[10px] font-semibold text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        className="h-6 text-[10px] font-semibold text-ds-accent hover:text-ds-accent hover:bg-ds-accent-soft"
                       >
                         <Zap className="w-3 h-3 me-1" />
                         {t('ai_course_generator.gateways.ping', 'Test Ping')}
@@ -1212,7 +1162,7 @@ export default function AICourseGeneratorSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleEnableAllFree}
-                className="h-8 text-xs font-semibold gap-1 text-emerald-700 border-emerald-200 bg-emerald-50/50"
+                className="h-8 text-xs font-semibold gap-1 text-ds-success border-ds-success/30 bg-ds-success-soft"
               >
                 <Check className="w-3 h-3" />
                 <span>{t('ai_course_generator.models.enable_all_free', 'Enable Free Tier Only')}</span>
@@ -1222,7 +1172,7 @@ export default function AICourseGeneratorSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleAllowAllVerified}
-                className="h-8 text-xs font-semibold gap-1 text-purple-700 border-purple-200 bg-purple-50/50"
+                className="h-8 text-xs font-semibold gap-1 text-ds-accent border-ds-accent/30 bg-ds-accent-soft"
               >
                 <Sparkles className="w-3 h-3" />
                 <span>{t('ai_course_generator.models.enable_all_verified', 'Allow All Verified')}</span>
@@ -1307,12 +1257,12 @@ export default function AICourseGeneratorSettings() {
                 <Card
                   key={m.id}
                   className={`transition-all duration-200 ${
-                    status === 'disabled'
-                      ? 'opacity-50 bg-muted/20 border-dashed'
-                      : status === 'force_enabled'
-                      ? 'border-purple-500 bg-purple-50/20 dark:bg-purple-950/10 shadow-sm'
-                      : 'hover:border-slate-300 dark:hover:border-slate-700'
-                  }`}
+ status === 'disabled'
+ ? 'opacity-50 bg-muted/20 border-dashed'
+ : status === 'force_enabled'
+ ? 'border-ds-accent/30 bg-ds-accent-soft shadow-sm'
+ : 'hover:border-ds-border '
+ }`}
                 >
                   <CardHeader className="p-3.5 pb-2">
                     <div className="flex items-start justify-between gap-2">
@@ -1324,10 +1274,10 @@ export default function AICourseGeneratorSettings() {
                       <Badge
                         variant="outline"
                         className={`text-[9px] font-semibold shrink-0 ${
-                          isImage
-                            ? 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300'
-                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300'
-                        }`}
+ isImage
+ ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30 '
+ : 'bg-ds-accent-soft text-ds-accent border-ds-accent/30 '
+ }`}
                       >
                         {isImage ? 'Image Engine' : 'Text LLM'}
                       </Badge>
@@ -1343,10 +1293,10 @@ export default function AICourseGeneratorSettings() {
                       <Badge
                         variant="outline"
                         className={`text-[9px] font-semibold ${
-                          m.costTier === 'free'
-                            ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300'
-                            : 'text-amber-700 border-amber-200 bg-amber-50 dark:bg-amber-950 dark:text-amber-300'
-                        }`}
+ m.costTier === 'free'
+ ? 'text-ds-success border-ds-success/30 bg-ds-success-soft '
+ : 'text-ds-warning border-ds-warning/30 bg-ds-warning-soft '
+ }`}
                       >
                         {m.costTier === 'free' ? 'Free ($0.00)' : 'Commercial'}
                       </Badge>
@@ -1357,10 +1307,10 @@ export default function AICourseGeneratorSettings() {
                         <Badge
                           variant="outline"
                           className={`text-[9px] font-semibold ${
-                            dbm.availability === 'verified' && dbm.enabled
-                              ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300'
-                              : 'text-rose-700 border-rose-200 bg-rose-50 dark:bg-rose-950 dark:text-rose-300'
-                          }`}
+ dbm.availability === 'verified' && dbm.enabled
+ ? 'text-ds-success border-ds-success/30 bg-ds-success-soft '
+ : 'text-ds-danger border-ds-danger/30 bg-ds-danger-soft '
+ }`}
                         >
                           {dbm.availability === 'verified' && dbm.enabled
                             ? `registry ✓ (Q${dbm.quality_score}/S${dbm.speed_score})`
@@ -1378,10 +1328,10 @@ export default function AICourseGeneratorSettings() {
                           <Badge
                             variant="outline"
                             className={`text-[9px] font-semibold ${
-                              v.last_probe_ok
-                                ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300'
-                                : 'text-rose-700 border-rose-200 bg-rose-50 dark:bg-rose-950 dark:text-rose-300'
-                            }`}
+ v.last_probe_ok
+ ? 'text-ds-success border-ds-success/30 bg-ds-success-soft '
+ : 'text-ds-danger border-ds-danger/30 bg-ds-danger-soft '
+ }`}
                             title={`Last probe ${new Date(v.last_probe_at).toLocaleString()}`}
                           >
                             {v.last_probe_ok ? 'probe ✓' : 'probe ✗'} · {new Date(v.last_probe_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
@@ -1410,7 +1360,7 @@ export default function AICourseGeneratorSettings() {
                           onClick={() => setModelStatus(m.id, 'force_enabled')}
                           className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
                             status === 'force_enabled'
-                              ? 'bg-purple-600 text-white font-bold'
+                              ? 'bg-ds-ink text-ds-on-ink font-bold'
                               : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
@@ -1421,7 +1371,7 @@ export default function AICourseGeneratorSettings() {
                           onClick={() => setModelStatus(m.id, 'disabled')}
                           className={`px-2 py-0.5 rounded text-[10px] font-medium transition-all ${
                             status === 'disabled'
-                              ? 'bg-rose-600 text-white font-bold'
+                              ? 'bg-ds-danger text-white font-bold'
                               : 'text-muted-foreground hover:text-foreground'
                           }`}
                         >
@@ -1441,7 +1391,7 @@ export default function AICourseGeneratorSettings() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-teal-600" />
+                    <ShieldCheck className="w-4 h-4 text-ds-success" />
                     {t('ai_course_generator.verification.title', 'Model Verification Pipeline')}
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -1455,7 +1405,7 @@ export default function AICourseGeneratorSettings() {
                   size="sm"
                   onClick={() => handleRunVerification()}
                   disabled={verifying}
-                  className="h-9 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-sm gap-1.5 shrink-0"
+                  className="h-9 text-xs font-bold bg-ds-success hover:bg-ds-success text-white shadow-sm gap-1.5 shrink-0"
                 >
                   {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   <span>
@@ -1470,11 +1420,11 @@ export default function AICourseGeneratorSettings() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
                 {[
-                  { label: t('ai_course_generator.verification.verified', 'Verified'), value: verificationSummary.verified, tone: 'text-emerald-600' },
-                  { label: t('ai_course_generator.verification.unverified', 'Unverified'), value: verificationSummary.unverified, tone: 'text-amber-600' },
-                  { label: t('ai_course_generator.verification.deprecated', 'Deprecated'), value: verificationSummary.deprecated, tone: 'text-rose-600' },
-                  { label: t('ai_course_generator.verification.probe_ok', 'Last probe OK'), value: verificationSummary.probedOk, tone: 'text-emerald-600' },
-                  { label: t('ai_course_generator.verification.probe_fail', 'Last probe failed'), value: verificationSummary.probedFail, tone: 'text-rose-600' },
+                  { label: t('ai_course_generator.verification.verified', 'Verified'), value: verificationSummary.verified, tone: 'text-ds-success' },
+                  { label: t('ai_course_generator.verification.unverified', 'Unverified'), value: verificationSummary.unverified, tone: 'text-ds-warning' },
+                  { label: t('ai_course_generator.verification.deprecated', 'Deprecated'), value: verificationSummary.deprecated, tone: 'text-ds-danger' },
+                  { label: t('ai_course_generator.verification.probe_ok', 'Last probe OK'), value: verificationSummary.probedOk, tone: 'text-ds-success' },
+                  { label: t('ai_course_generator.verification.probe_fail', 'Last probe failed'), value: verificationSummary.probedFail, tone: 'text-ds-danger' },
                 ].map((s) => (
                   <div key={s.label} className="rounded-xl border bg-card p-3">
                     <div className={`text-lg font-extrabold ${s.tone}`}>{s.value}</div>
@@ -1504,9 +1454,9 @@ export default function AICourseGeneratorSettings() {
                         <div key={p.id} className="flex items-start justify-between gap-3 p-2.5 text-[11px]">
                           <div className="flex items-start gap-2 min-w-0">
                             {p.ok ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-ds-success shrink-0 mt-0.5" />
                             ) : (
-                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                              <AlertTriangle className="w-3.5 h-3.5 text-ds-danger shrink-0 mt-0.5" />
                             )}
                             <div className="min-w-0">
                               <div className="font-mono font-semibold truncate text-foreground">{p.model_id}</div>
@@ -1552,7 +1502,7 @@ export default function AICourseGeneratorSettings() {
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RoleModelSelector
-              icon={<Compass className="w-4 h-4 text-purple-600" />}
+              icon={<Compass className="w-4 h-4 text-ds-accent" />}
               roleName={t('ai_course_generator.roles.planner', 'Primary Text Model (Planner)')}
               roleDescription="Top of the text cascade — curriculum blueprint, learning outcomes, lesson outlines."
               models={models.filter((m) => !isImageModel(m.id))}
@@ -1561,7 +1511,7 @@ export default function AICourseGeneratorSettings() {
             />
 
             <RoleModelSelector
-              icon={<BookOpen className="w-4 h-4 text-blue-600" />}
+              icon={<BookOpen className="w-4 h-4 text-ds-accent" />}
               roleName={t('ai_course_generator.roles.writer', 'Secondary Text Model (Writer)')}
               roleDescription="Second in the text cascade — bilingual prose, luxury procedures, operational standards."
               models={models.filter((m) => !isImageModel(m.id))}
@@ -1570,7 +1520,7 @@ export default function AICourseGeneratorSettings() {
             />
 
             <RoleModelSelector
-              icon={<FileCheck className="w-4 h-4 text-emerald-600" />}
+              icon={<FileCheck className="w-4 h-4 text-ds-success" />}
               roleName={t('ai_course_generator.roles.quiz', 'JSON / Assessment Model')}
               roleDescription="Third in the cascade — verified MCQs, scenario assessments, ordering items, distractors."
               models={models.filter((m) => !isImageModel(m.id) && m.supportsJsonMode)}
@@ -1579,7 +1529,7 @@ export default function AICourseGeneratorSettings() {
             />
 
             <RoleModelSelector
-              icon={<ImageIcon className="w-4 h-4 text-orange-600" />}
+              icon={<ImageIcon className="w-4 h-4 text-ds-warning" />}
               roleName={t('ai_course_generator.roles.image', 'Primary Image Model')}
               roleDescription="Top of the image cascade — luxury hotel photography, concept guides, vector schematics."
               models={models.filter((m) => isImageModel(m.id))}
@@ -1588,7 +1538,7 @@ export default function AICourseGeneratorSettings() {
             />
 
             <RoleModelSelector
-              icon={<Mic className="w-4 h-4 text-rose-600" />}
+              icon={<Mic className="w-4 h-4 text-ds-danger" />}
               roleName={t('ai_course_generator.roles.audio', 'Fourth Text Model (Narrator)')}
               roleDescription="Fourth in the cascade — audio narration scripts and bilingual lesson briefings."
               models={models.filter((m) => !isImageModel(m.id))}
@@ -1597,7 +1547,7 @@ export default function AICourseGeneratorSettings() {
             />
 
             <RoleModelSelector
-              icon={<ShieldCheck className="w-4 h-4 text-teal-600" />}
+              icon={<ShieldCheck className="w-4 h-4 text-ds-success" />}
               roleName={t('ai_course_generator.roles.compliance', 'Fifth Text Model (Compliance)')}
               roleDescription="Fifth in the cascade — audits against Saudi Ministry of Tourism & Balady HACCP rules."
               models={models.filter((m) => !isImageModel(m.id))}
@@ -1630,7 +1580,7 @@ export default function AICourseGeneratorSettings() {
               {draft.routingMode.replace('_', '-')} mode
             </Badge>
             {draft.freeOnlyMode ? (
-              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">
+              <Badge variant="outline" className="text-[10px] bg-ds-success-soft text-ds-success border-ds-success/30">
                 Free-Only ON — paid forced models &amp; quality/premium overrides below are skipped until it&apos;s turned off
               </Badge>
             ) : (
@@ -1641,7 +1591,7 @@ export default function AICourseGeneratorSettings() {
                 (p) => p.routingModeOverride || p.forceModelId || p.capabilityOverride || !p.enabled || p.disabledModelIds.length > 0,
               ).length
               return overrideCount > 0 ? (
-                <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300">
+                <Badge variant="outline" className="text-[10px] bg-ds-accent-soft text-ds-accent border-ds-accent/30">
                   {overrideCount} agent{overrideCount === 1 ? '' : 's'} override the baseline
                 </Badge>
               ) : (
@@ -1706,10 +1656,10 @@ export default function AICourseGeneratorSettings() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-bold flex items-center gap-1.5">
-                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                    <DollarSign className="w-4 h-4 text-ds-success" />
                     {t('ai_course_generator.limits.daily_cap', 'Daily Platform Spend Cap')}
                   </CardTitle>
-                  <span className="text-sm font-extrabold text-emerald-600 font-mono">
+                  <span className="text-sm font-extrabold text-ds-success font-mono">
                     ${draft.premiumDailyUsdCap.toFixed(2)} USD
                   </span>
                 </div>
@@ -1743,10 +1693,10 @@ export default function AICourseGeneratorSettings() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-bold flex items-center gap-1.5">
-                    <DollarSign className="w-4 h-4 text-blue-600" />
+                    <DollarSign className="w-4 h-4 text-ds-accent" />
                     {t('ai_course_generator.limits.course_cap', 'Per-Course Generation Cap')}
                   </CardTitle>
-                  <span className="text-sm font-extrabold text-blue-600 font-mono">
+                  <span className="text-sm font-extrabold text-ds-accent font-mono">
                     ${draft.perCourseUsdCap.toFixed(2)} USD
                   </span>
                 </div>
@@ -1780,10 +1730,10 @@ export default function AICourseGeneratorSettings() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-bold flex items-center gap-1.5">
-                    <Layers className="w-4 h-4 text-purple-600" />
+                    <Layers className="w-4 h-4 text-ds-accent" />
                     {t('ai_course_generator.limits.concurrency', 'Max Parallel Generation Streams')}
                   </CardTitle>
-                  <span className="text-sm font-extrabold text-purple-600 font-mono">
+                  <span className="text-sm font-extrabold text-ds-accent font-mono">
                     {draft.maxConcurrency} parallel
                   </span>
                 </div>
@@ -1817,10 +1767,10 @@ export default function AICourseGeneratorSettings() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-bold flex items-center gap-1.5">
-                    <Award className="w-4 h-4 text-amber-600" />
+                    <Award className="w-4 h-4 text-ds-warning" />
                     {t('ai_course_generator.limits.qa_ready', 'Production-Ready QA Score Minimum')}
                   </CardTitle>
-                  <span className="text-sm font-extrabold text-amber-600 font-mono">
+                  <span className="text-sm font-extrabold text-ds-warning font-mono">
                     {draft.qaMinProductionReady}%
                   </span>
                 </div>
@@ -1860,7 +1810,7 @@ export default function AICourseGeneratorSettings() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Play className="w-4 h-4 text-rose-600" />
+                    <Play className="w-4 h-4 text-ds-danger" />
                     {t('ai_course_generator.diagnostics.title', 'Live Engine Diagnostics & Simulator')}
                   </CardTitle>
                   <CardDescription className="text-xs">
@@ -1872,7 +1822,7 @@ export default function AICourseGeneratorSettings() {
                   size="sm"
                   onClick={handleRunDiagnostics}
                   disabled={diagnosticRunning}
-                  className="h-9 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm gap-1.5 shrink-0"
+                  className="h-9 text-xs font-bold bg-ds-danger hover:bg-ds-danger text-white shadow-sm gap-1.5 shrink-0"
                 >
                   {diagnosticRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                   <span>
@@ -1887,7 +1837,7 @@ export default function AICourseGeneratorSettings() {
             <CardContent className="space-y-4">
               {diagnosticResults.length === 0 ? (
                 <div className="text-center py-12 rounded-xl border border-dashed bg-muted/10 space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center dark:bg-rose-950 dark:text-rose-300">
+                  <div className="w-10 h-10 rounded-full bg-ds-danger-soft text-ds-danger mx-auto flex items-center justify-center">
                     <Play className="w-5 h-5" />
                   </div>
                   <div>
@@ -1903,22 +1853,22 @@ export default function AICourseGeneratorSettings() {
                     <div
                       key={idx}
                       className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all ${
-                        res.status === 'success'
-                          ? 'bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800'
-                          : res.status === 'error'
-                          ? 'bg-rose-50/40 border-rose-200 dark:bg-rose-950/20 dark:border-rose-800'
-                          : res.status === 'running'
-                          ? 'bg-blue-50/40 border-blue-200 dark:bg-blue-950/20 animate-pulse'
-                          : 'bg-card'
-                      }`}
+ res.status === 'success'
+ ? 'bg-ds-success-soft border-ds-success/30 '
+ : res.status === 'error'
+ ? 'bg-ds-danger-soft border-ds-danger/30 '
+ : res.status === 'running'
+ ? 'bg-ds-accent-soft border-ds-accent/30 animate-pulse'
+ : 'bg-card'
+ }`}
                     >
                       <div className="flex items-center gap-3">
                         {res.status === 'success' ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-ds-success shrink-0" />
                         ) : res.status === 'error' ? (
-                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                          <AlertTriangle className="w-4 h-4 text-ds-danger shrink-0" />
                         ) : res.status === 'running' ? (
-                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
+                          <Loader2 className="w-4 h-4 text-ds-accent animate-spin shrink-0" />
                         ) : (
                           <div className="w-4 h-4 rounded-full border border-muted-foreground/40 shrink-0" />
                         )}
@@ -1945,31 +1895,6 @@ export default function AICourseGeneratorSettings() {
   )
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  subtext,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  subtext?: string
-}) {
-  return (
-    <Card className="hover:shadow-xs transition-all">
-      <CardContent className="flex items-center gap-3.5 py-4 p-4">
-        <div className="rounded-xl bg-muted/60 p-2.5 shrink-0">{icon}</div>
-        <div className="min-w-0">
-          <div className="text-[11px] text-muted-foreground truncate">{label}</div>
-          <div className="text-base font-extrabold text-foreground tracking-tight">{value}</div>
-          {subtext && <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium truncate">{subtext}</div>}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 function PresetCard({
   title,
   description,
@@ -1991,10 +1916,10 @@ function PresetCard({
     <div
       onClick={onClick}
       className={`p-4 rounded-2xl border cursor-pointer transition-all duration-200 flex flex-col justify-between space-y-3 relative overflow-hidden ${
-        active
-          ? 'border-purple-600 bg-purple-50/50 dark:bg-purple-950/20 shadow-md ring-2 ring-purple-500/40'
-          : 'bg-card hover:bg-muted/30 hover:border-slate-300 dark:hover:border-slate-700'
-      }`}
+ active
+ ? 'border-ds-accent/30 bg-ds-accent-soft shadow-md ring-2 ring-ds-accent/30'
+ : 'bg-card hover:bg-muted/30 hover:border-ds-border '
+ }`}
     >
       <div className="flex items-start justify-between">
         <div className="p-2 rounded-xl bg-muted/60">{icon}</div>
@@ -2009,7 +1934,7 @@ function PresetCard({
       </div>
 
       <div className="pt-2 border-t flex items-center justify-between">
-        <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+        <span className="text-[10px] font-semibold text-ds-accent flex items-center gap-1">
           {active ? (
             <>
               <Check className="w-3 h-3" /> Active Strategy
@@ -2061,7 +1986,7 @@ function RoleModelSelector({
   onSelect: (modelId: string) => void
 }) {
   return (
-    <Card className="hover:border-slate-300 dark:hover:border-slate-700 transition-all">
+    <Card className="hover:border-ds-border transition-all">
       <CardHeader className="p-4 pb-2">
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-xl bg-muted/60">{icon}</div>
@@ -2163,7 +2088,7 @@ function AgentPolicyCard({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-muted/60">
-              {draft.enabled ? <Bot className="w-4 h-4 text-teal-600" /> : <Ban className="w-4 h-4 text-rose-500" />}
+              {draft.enabled ? <Bot className="w-4 h-4 text-ds-success" /> : <Ban className="w-4 h-4 text-ds-danger" />}
             </div>
             <div>
               <CardTitle className="text-xs font-bold text-foreground">
@@ -2182,7 +2107,7 @@ function AgentPolicyCard({
               {!draft.routingModeOverride && <span className="text-muted-foreground ms-1">(inherited)</span>}
             </Badge>
             {globalFreeOnly && (
-              <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">
+              <Badge variant="outline" className="text-[9px] bg-ds-success-soft text-ds-success border-ds-success/30">
                 Free-Only (global)
               </Badge>
             )}
@@ -2192,7 +2117,7 @@ function AgentPolicyCard({
 
       <CardContent className="p-4 pt-0 space-y-3">
         {draft.enabled && (paidModeOverridden || forcedModelBlocked) && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-2.5 py-2 text-[10px] leading-relaxed text-amber-800 dark:text-amber-200 space-y-0.5">
+          <div className="rounded-lg border border-ds-warning/30 bg-ds-warning-soft px-2.5 py-2 text-[10px] leading-relaxed text-ds-warning space-y-0.5">
             {paidModeOverridden && (
               <p>⚠ This agent&apos;s <strong>{draft.routingModeOverride}</strong> routing mode is ignored while the Strategy tab&apos;s <strong>Free-Only</strong> switch is on — it runs free-first until you turn Free-Only off.</p>
             )}
@@ -2284,7 +2209,7 @@ function AgentPolicyCard({
                 <Badge
                   key={id}
                   variant="outline"
-                  className="text-[9px] font-mono bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 cursor-pointer"
+                  className="text-[9px] font-mono bg-ds-danger-soft text-ds-danger border-ds-danger/30 cursor-pointer"
                   onClick={() => toggleExcluded(id)}
                 >
                   {id} <X className="w-2.5 h-2.5 ms-1" />

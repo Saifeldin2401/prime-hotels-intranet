@@ -4,7 +4,6 @@ import type { SessionAttendanceStatus, TrainingSession } from '@/types/enterpris
 
 export function useTrainingSessions(filters?: {
   organizationId?: string
-  hotelId?: string
   courseId?: string
   instructorId?: string
   status?: string

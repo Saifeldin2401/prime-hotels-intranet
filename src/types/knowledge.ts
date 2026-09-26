@@ -13,11 +13,10 @@ export type KnowledgeContentType =
     | 'visual'
     | 'document'
 
+/** 'all_properties' is the stored name for "the whole organization". */
 export type KnowledgeVisibility =
     | 'all_properties'
-    | 'property'
     | 'department'
-    | 'group_department'
     | 'specific_departments'
     | 'role'
 
@@ -61,11 +60,9 @@ export interface KnowledgeArticle {
     content_ar?: string
 
     // Relations & Multi-Tenant Scoping
-    property_id?: string
-    hotel_id?: string
     brand_id?: string
     organization_id?: string
-    scope_type?: 'organization' | 'brand' | 'hotel' | 'department' | 'global'
+    scope_type?: 'organization' | 'brand' | 'department' | 'global'
     is_master_template?: boolean
     master_source_id?: string | null
     department_id?: string
@@ -104,6 +101,7 @@ export interface KnowledgeArticle {
     updated_at: string
     published_at?: string
     next_review_date?: string
+    last_reviewed_at?: string | null
 
     // Author info (joined)
     author?: {
@@ -217,8 +215,6 @@ export interface KnowledgeSearchFilters {
     status?: KnowledgeStatus
     department_id?: string
     category_id?: string
-    property_id?: string
-    hotel_id?: string
     brand_id?: string
     organization_id?: string
     scope_type?: string

@@ -1,3 +1,4 @@
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -37,12 +38,9 @@ import {
   ShieldCheck,
   ShieldAlert,
   RefreshCw,
-  Shield,
   Crown,
   UserPlus,
-  Activity,
   CheckCircle2,
-  GraduationCap,
   Loader2,
   X,
   Lock,
@@ -588,7 +586,6 @@ export default function PlatformUserDirectory() {
     { value: 'organization_owner', label: 'Organization Owner' },
     { value: 'organization_admin', label: 'Organization Admin' },
     { value: 'brand_admin', label: 'Brand Admin' },
-    { value: 'hotel_admin', label: 'Hotel / Branch Admin' },
     { value: 'department_manager', label: 'Department Manager' },
     { value: 'training_manager', label: 'Training Manager' },
     { value: 'instructor', label: 'Instructor' },
@@ -659,8 +656,6 @@ export default function PlatformUserDirectory() {
   const totalLearnersCount = platformStats?.totalLearners ?? users.filter((u) => !u.is_platform_user).length
   const suspendedCount = platformStats?.suspendedPlatformUsers ?? users.filter((u) => isUserSuspended(u)).length
   const lockedOrRiskCount = platformStats?.lockedPlatformUsers ?? users.filter((u) => isUserLocked(u)).length
-  const activeUsersCount = Math.max(totalUsersCount - suspendedCount, 0)
-  const healthRatio = totalUsersCount > 0 ? Math.round((activeUsersCount / totalUsersCount) * 100) : 100
 
   // Bulk Selection Handlers
   const handleToggleSelectAll = () => {
@@ -725,124 +720,43 @@ export default function PlatformUserDirectory() {
   }
 
   return (
-    <div className="space-y-6 pb-16">
-      {/* Platform Executive Header */}
-      <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-card/95 via-card/80 to-card/50 p-6 sm:p-8 backdrop-blur-2xl shadow-lg">
-        <div className="pointer-events-none absolute -top-24 -end-24 h-72 w-72 rounded-full bg-amber-500/[0.08] blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -start-24 h-72 w-72 rounded-full bg-purple-500/[0.06] blur-3xl" />
-
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-bold px-3 py-0.5 flex items-center gap-1.5">
-                <Crown className="h-3.5 w-3.5" />
-                <span>{t('admin:platform_saas_scope', 'Platform SaaS Operations')}</span>
-              </Badge>
-              <Badge variant="outline" className="border-border/60 text-xs font-medium px-2.5 py-0.5 text-muted-foreground">
-                <Shield className="me-1.5 h-3.5 w-3.5 text-purple-500" />
-                <span>Super-Admin & Cross-Tenant Oversight</span>
-              </Badge>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl font-serif">
-              {t('admin:platform_user_dir_title', 'Platform User & Operator Management')}
-            </h1>
-            <p className="text-xs text-muted-foreground sm:text-sm font-normal max-w-2xl leading-relaxed">
-              {t('admin:platform_user_dir_desc', 'Separate surfaces for our internal platform engineering & operations team and cross-tenant customer organization learners.')}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                refetchOperators()
-                refetch()
-              }}
-              className="text-xs h-9 rounded-xl border-border/60 hover:bg-muted/60"
-            >
-              <RefreshCw className="h-3.5 w-3.5 me-1.5" />
-              <span>{t('common:refresh', 'Refresh')}</span>
-            </Button>
-
-            <Button
-              size="sm"
-              onClick={() => setAddOperatorOpen(true)}
-              className="text-xs h-9 font-bold rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 shadow-md shadow-amber-500/15"
-            >
-              <UserPlus className="h-3.5 w-3.5 me-1.5" />
-              <span>{t('admin:add_platform_operator', 'Add Platform Operator')}</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Real-time Telemetry Metrics Bar */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-6 pt-6 border-t border-border/40">
-          <div className="p-4 rounded-2xl bg-card/80 border border-border/60 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">{t('admin:stat_operators_count', 'Platform Operators (Us)')}</span>
-              <Crown className="h-4 w-4 text-amber-500" />
-            </div>
-            <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{platformOperators.length}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">{t('admin:stat_operators_sub', 'Internal Operations Staff')}</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-card/80 border border-border/60 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">{t('admin:stat_orgs_count', 'Customer Tenants')}</span>
-              <Building2 className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{orgs.length}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">{t('admin:stat_orgs_sub', 'Active Client Accounts')}</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-card/80 border border-border/60 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">{t('admin:stat_learners_count', 'Cross-Tenant Learners')}</span>
-              <GraduationCap className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{totalLearnersCount}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5">{t('admin:stat_learners_sub', 'Enrolled Across Academies')}</div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-card/80 border border-border/60 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground font-medium">{t('admin:stat_status_active', 'Active Status Rate')}</span>
-              <Activity className="h-4 w-4 text-purple-500" />
-            </div>
-            <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{healthRatio}%</div>
-            <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" />
-              <span>Healthy SaaS Accounts</span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto max-w-7xl space-y-6 pb-16">
+      <WorkspaceHeader
+        eyebrow="Platform"
+        title={t('admin:platformPeople.title', 'People')}
+        context={t('admin:platformPeople.context', '{{operators}} platform operators · {{learners}} people across {{orgs}} organizations.', {
+          operators: platformOperators.length, learners: totalLearnersCount, orgs: orgs.length,
+        })}
+        actions={
+          <>
+            <button type="button" onClick={() => { refetchOperators(); refetch() }} className={headerActionClass.secondary} aria-label={t('common:refresh', 'Refresh')}>
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => setAddOperatorOpen(true)} className={headerActionClass.primary}>
+              <UserPlus aria-hidden="true" className="h-4 w-4" />{t('admin:platformPeople.addOperator', 'Add operator')}
+            </button>
+          </>
+        }
+      />
 
       {/* Main Dual-Surface Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-          <TabsList className="bg-muted/70 p-1 rounded-2xl border border-border/60 h-11">
+          <TabsList className="h-auto justify-start gap-1 rounded-none border-b border-ds-border bg-transparent p-0">
             <TabsTrigger
               value="platform_team"
-              className="rounded-xl text-xs font-bold px-4 py-2 flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-sm"
+              className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none"
             >
-              <Crown className="h-3.5 w-3.5 text-amber-500" />
-              <span>{t('admin:platform_team_tab', 'Platform Operators (Our Team)')}</span>
-              <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-amber-500/10 text-amber-600 border border-amber-500/20">
-                {platformOperators.length}
-              </Badge>
+              <span>{t('admin:platformPeople.operators', 'Platform operators')}</span>
+              <span className="ms-1.5 font-mono text-xs tabular-nums">{platformOperators.length}</span>
             </TabsTrigger>
 
             <TabsTrigger
               value="customer_directory"
-              className="rounded-xl text-xs font-bold px-4 py-2 flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-sm"
+              className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none"
             >
-              <Users className="h-3.5 w-3.5 text-blue-500" />
-              <span>{t('admin:customer_directory_tab', 'Customer Organizations & Learners')}</span>
-              <Badge variant="secondary" className="text-[10px] font-mono px-1.5 py-0 bg-blue-500/10 text-blue-600 border border-blue-500/20">
-                {users.length}
-              </Badge>
+              <span>{t('admin:platformPeople.customers', 'Customer members')}</span>
+              <span className="ms-1.5 font-mono text-xs tabular-nums">{users.length}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -856,7 +770,7 @@ export default function PlatformUserDirectory() {
                 setSearch(e.target.value)
                 setDirectoryPage(0)
               }}
-              className="ps-9 h-10 text-xs rounded-xl border-border/60 bg-background/80"
+              className="min-h-[40px] ps-9"
             />
           </div>
         </div>
@@ -865,12 +779,12 @@ export default function PlatformUserDirectory() {
         {/* TAB 1: OUR PLATFORM TEAM (INTERNAL OPERATORS)                             */}
         {/* ------------------------------------------------------------------------- */}
         <TabsContent value="platform_team" className="space-y-4 mt-2">
-          <Card className="border border-border/60 shadow-md rounded-3xl overflow-hidden backdrop-blur-2xl bg-card/90">
+          <Card className="overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface shadow-none">
             <CardHeader className="border-b border-border/40 pb-4">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base font-bold flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-amber-500" />
+                    <ShieldCheck className="h-4 w-4 text-ds-warning" />
                     <span>Internal Platform Operator Directory</span>
                   </CardTitle>
                   <CardDescription className="text-xs mt-0.5">
@@ -880,7 +794,7 @@ export default function PlatformUserDirectory() {
                 <Button
                   size="sm"
                   onClick={() => setAddOperatorOpen(true)}
-                  className="text-xs h-8 rounded-xl font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25"
+                  className="text-xs h-8 rounded-xl font-bold bg-ds-warning-soft text-ds-warning border border-ds-warning/30 hover:bg-ds-warning-soft"
                 >
                   <UserPlus className="h-3.5 w-3.5 me-1.5" />
                   <span>{t('admin:add_platform_operator', 'Add Operator')}</span>
@@ -903,21 +817,21 @@ export default function PlatformUserDirectory() {
                 {isLoadingOperators ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-xs text-muted-foreground">
-                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-amber-500" />
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-ds-warning" />
                       <span>Loading internal platform operators...</span>
                     </TableCell>
                   </TableRow>
                 ) : filteredOperators.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-12 text-xs text-muted-foreground">
-                      <ShieldAlert className="h-6 w-6 mx-auto mb-2 text-amber-500/60" />
+                      <ShieldAlert className="h-6 w-6 mx-auto mb-2 text-ds-warning" />
                       <p className="font-semibold text-foreground">{t('admin:no_operators_found', 'No platform operators found.')}</p>
                       <p className="text-[11px] mt-1">Assign an existing user or invite an internal team member.</p>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => setAddOperatorOpen(true)}
-                        className="mt-3 text-xs h-8 rounded-xl border-amber-500/40 text-amber-600"
+                        className="mt-3 text-xs h-8 rounded-xl border-ds-warning/30 text-ds-warning"
                       >
                         <UserPlus className="h-3.5 w-3.5 me-1.5" />
                         <span>Add First Operator</span>
@@ -929,13 +843,13 @@ export default function PlatformUserDirectory() {
                     <TableRow key={op.user_id} className="hover:bg-muted/30">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center font-bold text-xs uppercase text-amber-700 dark:text-amber-300">
+                          <div className="w-9 h-9 rounded-full border border-ds-warning/30 flex items-center justify-center font-bold text-xs uppercase text-ds-warning">
                             {op.full_name?.slice(0, 2) || op.email?.slice(0, 2) || 'OP'}
                           </div>
                           <div>
                             <div className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                               <span>{op.full_name || 'Platform Staff'}</span>
-                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[9px] px-1 py-0 font-bold">
+                              <Badge variant="outline" className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[9px] px-1 py-0 font-bold">
                                 {t('admin:operator_internal_badge', 'Platform Staff')}
                               </Badge>
                             </div>
@@ -950,9 +864,9 @@ export default function PlatformUserDirectory() {
                             op.roles.map((r) => (
                               <Badge
                                 key={r}
-                                className="text-[10px] font-bold capitalize bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                className="text-[10px] font-bold capitalize bg-ds-warning-soft text-ds-warning border border-ds-warning/30"
                               >
-                                <ShieldCheck className="h-3 w-3 me-1 text-amber-600" />
+                                <ShieldCheck className="h-3 w-3 me-1 text-ds-warning" />
                                 {r.replace(/_/g, ' ')}
                               </Badge>
                             ))
@@ -974,10 +888,10 @@ export default function PlatformUserDirectory() {
                         <Badge
                           variant="outline"
                           className={`text-[10px] font-semibold ${
-                            op.is_active
-                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                              : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                          }`}
+ op.is_active
+ ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ : 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ }`}
                         >
                           {op.is_active ? t('admin:operator_status_active', 'Active Operator') : t('admin:operator_status_inactive', 'Inactive')}
                         </Badge>
@@ -1023,7 +937,7 @@ export default function PlatformUserDirectory() {
                               })
                               setNewPlatformRole(op.roles?.[0] || 'platform_admin')
                             }}
-                            className="h-7 text-[11px] px-2 text-amber-600 hover:bg-amber-500/10"
+                            className="h-7 text-[11px] px-2 text-ds-warning hover:bg-ds-warning-soft"
                           >
                             <ShieldCheck className="h-3.5 w-3.5 me-1" />
                             <span>{t('admin:platform_role', 'Manage Role')}</span>
@@ -1040,10 +954,10 @@ export default function PlatformUserDirectory() {
                               })
                             }
                             className={`h-7 text-[11px] px-2 ${
-                              op.is_active
-                                ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                                : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
-                            }`}
+ op.is_active
+ ? 'text-ds-danger hover:bg-ds-danger-soft '
+ : 'text-ds-success hover:bg-ds-success-soft '
+ }`}
                           >
                             {op.is_active ? t('admin:status_suspended', 'Deactivate') : t('admin:status_active', 'Activate')}
                           </Button>
@@ -1059,19 +973,19 @@ export default function PlatformUserDirectory() {
             <div className="md:hidden divide-y divide-border/60">
               {isLoadingOperators ? (
                 <div className="text-center py-10 text-xs text-muted-foreground">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-amber-500" />
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-ds-warning" />
                   <span>Loading internal platform operators...</span>
                 </div>
               ) : filteredOperators.length === 0 ? (
                 <div className="text-center py-10 px-4 text-xs text-muted-foreground">
-                  <ShieldAlert className="h-6 w-6 mx-auto mb-2 text-amber-500/60" />
+                  <ShieldAlert className="h-6 w-6 mx-auto mb-2 text-ds-warning" />
                   <p className="font-semibold text-foreground">{t('admin:no_operators_found', 'No platform operators found.')}</p>
                   <p className="text-[11px] mt-1">Assign an existing user or invite an internal team member.</p>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setAddOperatorOpen(true)}
-                    className="mt-3 text-xs h-8 rounded-xl border-amber-500/40 text-amber-600"
+                    className="mt-3 text-xs h-8 rounded-xl border-ds-warning/30 text-ds-warning"
                   >
                     <UserPlus className="h-3.5 w-3.5 me-1.5" />
                     <span>Add First Operator</span>
@@ -1082,7 +996,7 @@ export default function PlatformUserDirectory() {
                   <div key={op.user_id} className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center font-bold text-xs uppercase text-amber-700 dark:text-amber-300 shrink-0">
+                        <div className="w-10 h-10 rounded-full border border-ds-warning/30 flex items-center justify-center font-bold text-xs uppercase text-ds-warning shrink-0">
                           {op.full_name?.slice(0, 2) || op.email?.slice(0, 2) || 'OP'}
                         </div>
                         <div className="min-w-0">
@@ -1095,10 +1009,10 @@ export default function PlatformUserDirectory() {
                       <Badge
                         variant="outline"
                         className={`text-[10px] shrink-0 font-semibold ${
-                          op.is_active
-                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                            : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                        }`}
+ op.is_active
+ ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ : 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ }`}
                       >
                         {op.is_active ? t('admin:operator_status_active', 'Active') : t('admin:operator_status_inactive', 'Inactive')}
                       </Badge>
@@ -1109,9 +1023,9 @@ export default function PlatformUserDirectory() {
                         op.roles.map((r) => (
                           <Badge
                             key={r}
-                            className="text-[10px] font-bold capitalize bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                            className="text-[10px] font-bold capitalize bg-ds-warning-soft text-ds-warning border border-ds-warning/30"
                           >
-                            <ShieldCheck className="h-3 w-3 me-1 text-amber-600" />
+                            <ShieldCheck className="h-3 w-3 me-1 text-ds-warning" />
                             {r.replace(/_/g, ' ')}
                           </Badge>
                         ))
@@ -1163,7 +1077,7 @@ export default function PlatformUserDirectory() {
                             })
                             setNewPlatformRole(op.roles?.[0] || 'platform_admin')
                           }}
-                          className="h-8 text-xs px-2 text-amber-600 hover:bg-amber-500/10 min-h-touch"
+                          className="h-8 text-xs px-2 text-ds-warning hover:bg-ds-warning-soft min-h-touch"
                         >
                           <ShieldCheck className="h-3.5 w-3.5 me-1" />
                           <span>{t('admin:platform_role', 'Role')}</span>
@@ -1180,10 +1094,10 @@ export default function PlatformUserDirectory() {
                             })
                           }
                           className={`h-8 text-xs px-2 min-h-touch ${
-                            op.is_active
-                              ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                              : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
-                          }`}
+ op.is_active
+ ? 'text-ds-danger hover:bg-ds-danger-soft '
+ : 'text-ds-success hover:bg-ds-success-soft '
+ }`}
                         >
                           {op.is_active ? t('admin:status_suspended', 'Deactivate') : t('admin:status_active', 'Activate')}
                         </Button>
@@ -1207,7 +1121,7 @@ export default function PlatformUserDirectory() {
                 <span className="text-xs text-muted-foreground font-medium">
                   {t('admin:platform_user_mgmt.kpi_total_users', 'Global Users')}
                 </span>
-                <Users className="h-4 w-4 text-blue-500" />
+                <Users className="h-4 w-4 text-ds-accent" />
               </div>
               <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{totalUsersCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
@@ -1220,7 +1134,7 @@ export default function PlatformUserDirectory() {
                 <span className="text-xs text-muted-foreground font-medium">
                   {t('admin:platform_user_mgmt.kpi_operators', 'Platform Operators')}
                 </span>
-                <Crown className="h-4 w-4 text-amber-500" />
+                <Crown className="h-4 w-4 text-ds-warning" />
               </div>
               <div className="text-2xl font-bold font-mono mt-1.5 text-foreground">{totalOperatorsCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
@@ -1233,9 +1147,9 @@ export default function PlatformUserDirectory() {
                 <span className="text-xs text-muted-foreground font-medium">
                   {t('admin:platform_user_mgmt.kpi_suspended', 'Suspended Accounts')}
                 </span>
-                <Ban className="h-4 w-4 text-rose-500" />
+                <Ban className="h-4 w-4 text-ds-danger" />
               </div>
-              <div className="text-2xl font-bold font-mono mt-1.5 text-rose-600 dark:text-rose-400">{suspendedCount}</div>
+              <div className="text-2xl font-bold font-mono mt-1.5 text-ds-danger">{suspendedCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 {t('admin:platform_user_mgmt.kpi_suspended_sub', 'Restricted Access')}
               </div>
@@ -1246,9 +1160,9 @@ export default function PlatformUserDirectory() {
                 <span className="text-xs text-muted-foreground font-medium">
                   {t('admin:platform_user_mgmt.kpi_locked', 'Locked / At Risk')}
                 </span>
-                <ShieldAlert className="h-4 w-4 text-amber-500" />
+                <ShieldAlert className="h-4 w-4 text-ds-warning" />
               </div>
-              <div className="text-2xl font-bold font-mono mt-1.5 text-amber-600 dark:text-amber-400">{lockedOrRiskCount}</div>
+              <div className="text-2xl font-bold font-mono mt-1.5 text-ds-warning">{lockedOrRiskCount}</div>
               <div className="text-[11px] text-muted-foreground mt-0.5">
                 {t('admin:platform_user_mgmt.kpi_locked_sub', 'Exceeded Failed Logins')}
               </div>
@@ -1396,7 +1310,7 @@ export default function PlatformUserDirectory() {
                   onClick={() => handleExportCsv(displayedUsers)}
                   className="h-8 text-xs rounded-xl border-border/60 hover:bg-muted/60"
                 >
-                  <Download className="h-3.5 w-3.5 me-1.5 text-blue-500" />
+                  <Download className="h-3.5 w-3.5 me-1.5 text-ds-accent" />
                   <span>{t('admin:platform_user_mgmt.export_csv', 'Export CSV')}</span>
                 </Button>
                 <Button
@@ -1455,9 +1369,9 @@ export default function PlatformUserDirectory() {
 
           {/* Floating Bulk Operations Toolbar */}
           {selectedUserIds.size > 0 && (
-            <div className="p-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl border border-slate-700 flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+            <div className="p-3 rounded-2xl text-ds-on-ink shadow-xl border border-ds-border-strong flex flex-wrap items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 bg-ds-ink">
               <div className="flex items-center gap-2">
-                <Badge className="bg-blue-500 text-white border-0 text-xs font-mono font-bold px-2 py-0.5">
+                <Badge className="bg-ds-ink text-ds-on-ink border-0 text-xs font-mono font-bold px-2 py-0.5">
                   {selectedUserIds.size}
                 </Badge>
                 <span className="text-xs font-medium">
@@ -1488,7 +1402,7 @@ export default function PlatformUserDirectory() {
                     setBulkNote('')
                     setBulkActionDialogOpen(true)
                   }}
-                  className="h-8 text-xs rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+                  className="h-8 text-xs rounded-xl font-bold bg-ds-success hover:bg-ds-success text-white gap-1.5"
                 >
                   <UserCheck className="h-3.5 w-3.5" />
                   <span>{t('admin:platform_user_mgmt.bulk_reactivate', 'Bulk Reactivate')}</span>
@@ -1501,7 +1415,7 @@ export default function PlatformUserDirectory() {
                     setBulkNote('')
                     setBulkActionDialogOpen(true)
                   }}
-                  className="h-8 text-xs rounded-xl font-bold bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                  className="h-8 text-xs rounded-xl font-bold bg-ds-warning hover:bg-ds-warning text-white gap-1.5"
                 >
                   <KeyRound className="h-3.5 w-3.5" />
                   <span>{t('admin:platform_user_mgmt.bulk_force_reset', 'Bulk Force Reset')}</span>
@@ -1514,7 +1428,7 @@ export default function PlatformUserDirectory() {
                     const selectedList = displayedUsers.filter((u) => selectedUserIds.has(u.id))
                     handleExportCsv(selectedList)
                   }}
-                  className="h-8 text-xs rounded-xl border-slate-600 text-slate-200 hover:bg-slate-800 gap-1.5"
+                  className="h-8 text-xs rounded-xl border-ds-border-strong text-ds-muted hover:bg-ds-ink gap-1.5"
                 >
                   <Download className="h-3.5 w-3.5" />
                   <span>{t('admin:platform_user_mgmt.export_csv', 'Export Selected')}</span>
@@ -1524,7 +1438,7 @@ export default function PlatformUserDirectory() {
                   size="sm"
                   variant="ghost"
                   onClick={() => setSelectedUserIds(new Set())}
-                  className="h-8 text-xs rounded-xl text-slate-400 hover:text-white"
+                  className="h-8 text-xs rounded-xl text-ds-muted hover:text-white"
                 >
                   {t('admin:platform_user_mgmt.clear_selection', 'Clear')}
                 </Button>
@@ -1532,7 +1446,7 @@ export default function PlatformUserDirectory() {
             </div>
           )}
 
-          <Card className="border border-border/60 shadow-md rounded-3xl overflow-hidden backdrop-blur-2xl bg-card/90">
+          <Card className="overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface shadow-none">
             <Table className="hidden md:table">
               <TableHeader className="bg-muted/40">
                 <TableRow>
@@ -1555,7 +1469,7 @@ export default function PlatformUserDirectory() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-xs text-muted-foreground">
-                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-blue-500" />
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-ds-accent" />
                       <span>{t('admin:loading_user_directory', 'Loading global customer directory...')}</span>
                     </TableCell>
                   </TableRow>
@@ -1583,14 +1497,14 @@ export default function PlatformUserDirectory() {
 
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center font-bold text-xs uppercase text-blue-700 dark:text-blue-300">
+                            <div className="w-9 h-9 rounded-full border border-ds-accent/30 flex items-center justify-center font-bold text-xs uppercase text-ds-accent">
                               {u.full_name?.slice(0, 2) || u.email?.slice(0, 2) || 'U'}
                             </div>
                             <div>
                               <div className="font-semibold text-xs text-foreground flex items-center gap-1.5">
                                 <span>{u.full_name || 'Anonymous User'}</span>
                                 {u.is_platform_user && (
-                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[9px] px-1 py-0 font-bold">
+                                  <Badge variant="outline" className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[9px] px-1 py-0 font-bold">
                                     Operator
                                   </Badge>
                                 )}
@@ -1598,7 +1512,7 @@ export default function PlatformUserDirectory() {
                               <div className="text-[11px] text-muted-foreground font-mono">{u.email}</div>
                               {u.job_title && (
                                 <div className="text-[10px] text-muted-foreground/80 flex items-center gap-1 mt-0.5">
-                                  <Briefcase className="h-2.5 w-2.5 text-blue-500" />
+                                  <Briefcase className="h-2.5 w-2.5 text-ds-accent" />
                                   <span>{u.job_title}</span>
                                 </div>
                               )}
@@ -1609,14 +1523,14 @@ export default function PlatformUserDirectory() {
                         <TableCell>
                           <div className="space-y-0.5">
                             <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                              <Building2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                              <Building2 className="h-3.5 w-3.5 text-ds-accent shrink-0" />
                               <span>{u.primary_organization_name || t('admin:direct_platform_account', 'Global SaaS Platform')}</span>
                             </div>
                             <div className="text-[10px] text-muted-foreground font-mono">
                               {u.membership_count > 0 ? (
                                 <span>{t('admin:active_memberships_count', { count: u.membership_count, defaultValue: `${u.membership_count} Active Tenant Memberships` })}</span>
                               ) : (
-                                <span className="text-slate-400">{t('admin:direct_platform_account', 'Direct Platform Account')}</span>
+                                <span className="text-ds-muted">{t('admin:direct_platform_account', 'Direct Platform Account')}</span>
                               )}
                             </div>
                           </div>
@@ -1624,8 +1538,8 @@ export default function PlatformUserDirectory() {
 
                         <TableCell>
                           {u.platform_role ? (
-                            <Badge variant="secondary" className="text-[10px] font-bold capitalize bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                              <ShieldCheck className="h-3 w-3 me-1 text-amber-600" />
+                            <Badge variant="secondary" className="text-[10px] font-bold capitalize bg-ds-warning-soft text-ds-warning border border-ds-warning/30">
+                              <ShieldCheck className="h-3 w-3 me-1 text-ds-warning" />
                               {u.platform_role.replace(/_/g, ' ')}
                             </Badge>
                           ) : (
@@ -1638,40 +1552,40 @@ export default function PlatformUserDirectory() {
                             <Badge
                               variant="outline"
                               className={`text-[10px] font-semibold ${
-                                isSuspended
-                                  ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                                  : isLocked
-                                  ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                                  : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                              }`}
+ isSuspended
+ ? 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ : isLocked
+ ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+ : 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ }`}
                             >
                               {isSuspended ? (
                                 <span className="flex items-center gap-1">
-                                  <Ban className="h-3 w-3 text-rose-600" />
+                                  <Ban className="h-3 w-3 text-ds-danger" />
                                   <span>{t('admin:platform_user_mgmt.suspended', 'Suspended')}</span>
                                 </span>
                               ) : isLocked ? (
                                 <span className="flex items-center gap-1">
-                                  <Lock className="h-3 w-3 text-amber-600" />
+                                  <Lock className="h-3 w-3 text-ds-warning" />
                                   <span>{t('admin:platform_user_mgmt.locked', 'Locked')}</span>
                                 </span>
                               ) : (
                                 <span className="flex items-center gap-1">
-                                  <UserCheck className="h-3 w-3 text-emerald-600" />
+                                  <UserCheck className="h-3 w-3 text-ds-success" />
                                   <span>{t('admin:platform_user_mgmt.active', 'Active')}</span>
                                 </span>
                               )}
                             </Badge>
 
                             {u.force_password_reset && (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30 font-semibold" title={t('admin:platform_user_mgmt.password_reset_required', 'Password Reset Required')}>
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-ds-warning-soft text-ds-warning border-ds-warning/30 font-semibold" title={t('admin:platform_user_mgmt.password_reset_required', 'Password Reset Required')}>
                                 <KeyRound className="h-2.5 w-2.5 me-0.5" />
                                 <span>Reset Req</span>
                               </Badge>
                             )}
 
                             {u.failed_login_attempts && u.failed_login_attempts > 0 ? (
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-rose-500/10 text-rose-600 border-rose-500/30 font-mono" title={`${u.failed_login_attempts} failed login attempts`}>
+                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-ds-danger-soft text-ds-danger border-ds-danger/30 font-mono" title={`${u.failed_login_attempts} failed login attempts`}>
                                 <span>{u.failed_login_attempts} fails</span>
                               </Badge>
                             ) : null}
@@ -1730,7 +1644,7 @@ export default function PlatformUserDirectory() {
                                   }}
                                   className="gap-2 font-medium"
                                 >
-                                  <Building2 className="h-3.5 w-3.5 text-blue-500" />
+                                  <Building2 className="h-3.5 w-3.5 text-ds-accent" />
                                   <span>{t('admin:platform_user_mgmt.manage_tenants', 'Tenant Memberships')}</span>
                                 </DropdownMenuItem>
 
@@ -1743,9 +1657,9 @@ export default function PlatformUserDirectory() {
                                   className="gap-2 font-medium"
                                 >
                                   {!u.is_platform_user ? (
-                                    <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                    <Crown className="h-3.5 w-3.5 text-ds-warning" />
                                   ) : (
-                                    <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                                    <ShieldCheck className="h-3.5 w-3.5 text-ds-warning" />
                                   )}
                                   <span>
                                     {!u.is_platform_user
@@ -1763,7 +1677,7 @@ export default function PlatformUserDirectory() {
                                   }}
                                   className="gap-2 font-medium"
                                 >
-                                  <Edit className="h-3.5 w-3.5 text-emerald-500" />
+                                  <Edit className="h-3.5 w-3.5 text-ds-success" />
                                   <span>{t('admin:platform_user_mgmt.edit_profile', 'Edit Profile')}</span>
                                 </DropdownMenuItem>
 
@@ -1777,7 +1691,7 @@ export default function PlatformUserDirectory() {
                                       setActionNote('')
                                       setActionDialogOpen(true)
                                     }}
-                                    className="gap-2 font-bold text-emerald-600 focus:text-emerald-600"
+                                    className="gap-2 font-bold text-ds-success focus:text-ds-success"
                                   >
                                     <UserCheck className="h-3.5 w-3.5" />
                                     <span>{t('admin:platform_user_mgmt.reactivate_account', 'Reactivate Account')}</span>
@@ -1792,7 +1706,7 @@ export default function PlatformUserDirectory() {
                                       setActionNote('')
                                       setActionDialogOpen(true)
                                     }}
-                                    className="gap-2 font-bold text-rose-600 focus:text-rose-600"
+                                    className="gap-2 font-bold text-ds-danger focus:text-ds-danger"
                                   >
                                     <Ban className="h-3.5 w-3.5" />
                                     <span>{t('admin:platform_user_mgmt.suspend_account', 'Suspend Account')}</span>
@@ -1806,7 +1720,7 @@ export default function PlatformUserDirectory() {
                                       setActionType('unlock')
                                       setActionDialogOpen(true)
                                     }}
-                                    className="gap-2 font-bold text-blue-600 focus:text-blue-600"
+                                    className="gap-2 font-bold text-ds-accent focus:text-ds-accent"
                                   >
                                     <Unlock className="h-3.5 w-3.5" />
                                     <span>{t('admin:platform_user_mgmt.unlock_account', 'Unlock Account')}</span>
@@ -1820,7 +1734,7 @@ export default function PlatformUserDirectory() {
                                     setActionNote('')
                                     setActionDialogOpen(true)
                                   }}
-                                  className="gap-2 font-medium text-amber-600 focus:text-amber-600"
+                                  className="gap-2 font-medium text-ds-warning focus:text-ds-warning"
                                 >
                                   <KeyRound className="h-3.5 w-3.5" />
                                   <span>{t('admin:platform_user_mgmt.force_password_reset', 'Force Password Reset')}</span>
@@ -1840,7 +1754,7 @@ export default function PlatformUserDirectory() {
             <div className="md:hidden divide-y divide-border/60">
               {isLoading ? (
                 <div className="text-center py-10 text-xs text-muted-foreground">
-                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-blue-500" />
+                  <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2 text-ds-accent" />
                   <span>{t('admin:loading_user_directory', 'Loading global customer directory...')}</span>
                 </div>
               ) : displayedUsers.length === 0 ? (
@@ -1863,14 +1777,14 @@ export default function PlatformUserDirectory() {
                             aria-label={`Select ${u.full_name || u.email}`}
                             className="mt-0.5"
                           />
-                          <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-xs uppercase text-slate-700 dark:text-slate-300 shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-ds-surface-subtle flex items-center justify-center font-bold text-xs uppercase text-ds-ink shrink-0">
                             {u.full_name?.slice(0, 2) || 'U'}
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-xs text-foreground truncate flex items-center gap-1.5">
                               <span>{u.full_name || 'Anonymous User'}</span>
                               {u.is_platform_user && (
-                                <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[9px] px-1 py-0 font-bold">
+                                <Badge variant="outline" className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[9px] px-1 py-0 font-bold">
                                   Operator
                                 </Badge>
                               )}
@@ -1881,12 +1795,12 @@ export default function PlatformUserDirectory() {
                         <Badge
                           variant="outline"
                           className={`text-[10px] shrink-0 font-semibold ${
-                            isSuspended
-                              ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                              : isLocked
-                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                          }`}
+ isSuspended
+ ? 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ : isLocked
+ ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+ : 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ }`}
                         >
                           {isSuspended ? t('admin:platform_user_mgmt.suspended', 'Suspended') : isLocked ? t('admin:platform_user_mgmt.locked', 'Locked') : t('admin:status_active', 'Active')}
                         </Badge>
@@ -1894,7 +1808,7 @@ export default function PlatformUserDirectory() {
 
                       <div className="space-y-1 text-xs pt-1">
                         <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Building2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <Building2 className="h-3.5 w-3.5 text-ds-accent shrink-0" />
                           <span className="font-medium text-foreground truncate">{u.primary_organization_name || t('admin:direct_platform_account', 'Global SaaS Platform')}</span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground font-mono">
@@ -1902,12 +1816,12 @@ export default function PlatformUserDirectory() {
                             <span>{t('admin:active_memberships_count', { count: u.membership_count, defaultValue: `${u.membership_count} Tenants` })}</span>
                           )}
                           {u.platform_role && (
-                            <Badge variant="secondary" className="text-[9px] font-bold capitalize bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                            <Badge variant="secondary" className="text-[9px] font-bold capitalize bg-ds-warning-soft text-ds-warning border border-ds-warning/30">
                               {u.platform_role.replace(/_/g, ' ')}
                             </Badge>
                           )}
                           {u.force_password_reset && (
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 bg-ds-warning-soft text-ds-warning border-ds-warning/30">
                               Reset Req
                             </Badge>
                           )}
@@ -1937,7 +1851,7 @@ export default function PlatformUserDirectory() {
                             setAddTenantOrgId('')
                             setAddTenantRole('learner')
                           }}
-                          className="h-8 text-xs px-2.5 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 min-h-touch"
+                          className="h-8 text-xs px-2.5 rounded-lg text-ds-accent hover:bg-ds-accent-soft min-h-touch"
                         >
                           <Building2 className="h-3.5 w-3.5 me-1" />
                           <span>{t('admin:tenants', 'Tenants')}</span>
@@ -1953,7 +1867,7 @@ export default function PlatformUserDirectory() {
                               setActionNote('')
                               setActionDialogOpen(true)
                             }}
-                            className="h-8 text-xs px-2 rounded-lg text-emerald-600 hover:bg-emerald-50 min-h-touch font-bold"
+                            className="h-8 text-xs px-2 rounded-lg text-ds-success hover:bg-ds-success-soft min-h-touch font-bold"
                           >
                             <UserCheck className="h-3.5 w-3.5 me-1" />
                             <span>{t('admin:platform_user_mgmt.reactivate_account', 'Reactivate')}</span>
@@ -1970,7 +1884,7 @@ export default function PlatformUserDirectory() {
                               setActionNote('')
                               setActionDialogOpen(true)
                             }}
-                            className="h-8 text-xs px-2 rounded-lg text-rose-600 hover:bg-rose-50 min-h-touch font-bold"
+                            className="h-8 text-xs px-2 rounded-lg text-ds-danger hover:bg-ds-danger-soft min-h-touch font-bold"
                           >
                             <Ban className="h-3.5 w-3.5 me-1" />
                             <span>{t('admin:platform_user_mgmt.suspend_account', 'Suspend')}</span>
@@ -2001,9 +1915,9 @@ export default function PlatformUserDirectory() {
                               className="gap-2 font-medium"
                             >
                               {!u.is_platform_user ? (
-                                <Crown className="h-3.5 w-3.5 text-amber-500" />
+                                <Crown className="h-3.5 w-3.5 text-ds-warning" />
                               ) : (
-                                <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                                <ShieldCheck className="h-3.5 w-3.5 text-ds-warning" />
                               )}
                               <span>
                                 {!u.is_platform_user
@@ -2021,7 +1935,7 @@ export default function PlatformUserDirectory() {
                               }}
                               className="gap-2 font-medium"
                             >
-                              <Edit className="h-3.5 w-3.5 text-emerald-500" />
+                              <Edit className="h-3.5 w-3.5 text-ds-success" />
                               <span>{t('admin:platform_user_mgmt.edit_profile', 'Edit Profile')}</span>
                             </DropdownMenuItem>
 
@@ -2034,7 +1948,7 @@ export default function PlatformUserDirectory() {
                                   setActionType('unlock')
                                   setActionDialogOpen(true)
                                 }}
-                                className="gap-2 font-bold text-blue-600 focus:text-blue-600"
+                                className="gap-2 font-bold text-ds-accent focus:text-ds-accent"
                               >
                                 <Unlock className="h-3.5 w-3.5" />
                                 <span>{t('admin:platform_user_mgmt.unlock_account', 'Unlock Account')}</span>
@@ -2048,7 +1962,7 @@ export default function PlatformUserDirectory() {
                                 setActionNote('')
                                 setActionDialogOpen(true)
                               }}
-                              className="gap-2 font-medium text-amber-600 focus:text-amber-600"
+                              className="gap-2 font-medium text-ds-warning focus:text-ds-warning"
                             >
                               <KeyRound className="h-3.5 w-3.5" />
                               <span>{t('admin:platform_user_mgmt.force_password_reset', 'Force Password Reset')}</span>
@@ -2084,7 +1998,7 @@ export default function PlatformUserDirectory() {
         <DialogContent className="max-w-lg rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <Crown className="h-5 w-5 text-amber-500" />
+              <Crown className="h-5 w-5 text-ds-warning" />
               <span>{t('admin:add_operator_modal_title', 'Assign / Invite Platform Operator')}</span>
             </DialogTitle>
             <DialogDescription className="text-xs">
@@ -2124,16 +2038,16 @@ export default function PlatformUserDirectory() {
             {addOperatorMode === 'promote' ? (
               <div className="space-y-3">
                 {selectedCandidateUser ? (
-                  <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between animate-in fade-in">
+                  <div className="p-3 rounded-2xl bg-ds-warning-soft border border-ds-warning/30 flex items-center justify-between animate-in fade-in">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                      <div className="h-9 w-9 rounded-full bg-ds-warning text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
                         {selectedCandidateUser.full_name?.charAt(0).toUpperCase() ||
                           selectedCandidateUser.email.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <div className="font-bold text-xs truncate flex items-center gap-1.5 text-foreground">
                           <span>{selectedCandidateUser.full_name || 'Unnamed User'}</span>
-                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal border-amber-500/40 text-amber-700 dark:text-amber-300">
+                          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal border-ds-warning/30 text-ds-warning">
                             {t('admin:selected', 'Selected')}
                           </Badge>
                         </div>
@@ -2184,7 +2098,7 @@ export default function PlatformUserDirectory() {
 
                     {isLoadingCandidates ? (
                       <div className="flex items-center justify-center gap-2 py-6 rounded-xl border bg-muted/20 text-xs text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                        <Loader2 className="h-4 w-4 animate-spin text-ds-warning" />
                         <span>{t('admin:searching_users', 'Searching registered users...')}</span>
                       </div>
                     ) : candidateUsers.length > 0 ? (
@@ -2201,10 +2115,10 @@ export default function PlatformUserDirectory() {
                                 setSelectedCandidateUser(u)
                               }}
                               className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition-colors ${
-                                isSelected
-                                  ? 'bg-amber-500/20 border border-amber-500/40 text-amber-900 dark:text-amber-200'
-                                  : 'hover:bg-muted/60'
-                              }`}
+ isSelected
+ ? 'bg-ds-warning-soft border border-ds-warning/30 text-ds-warning '
+ : 'hover:bg-muted/60'
+ }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
                                 <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center font-bold text-[11px] shrink-0 border">
@@ -2216,7 +2130,7 @@ export default function PlatformUserDirectory() {
                                 </div>
                               </div>
                               {isSelected ? (
-                                <CheckCircle2 className="h-4 w-4 text-amber-600 shrink-0" />
+                                <CheckCircle2 className="h-4 w-4 text-ds-warning shrink-0" />
                               ) : (
                                 <span className="text-[10px] text-muted-foreground font-medium shrink-0">
                                   {t('admin:click_to_select', 'Select')}
@@ -2274,8 +2188,8 @@ export default function PlatformUserDirectory() {
                     className="h-9 text-xs rounded-xl"
                   />
                   {matchedInviteProfile && (
-                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-medium animate-in fade-in">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                    <div className="flex items-center gap-1.5 p-2 rounded-xl bg-ds-success-soft border border-ds-success/30 text-ds-success text-[11px] font-medium animate-in fade-in">
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-ds-success" />
                       <span>
                         Existing account found ({matchedInviteProfile.full_name || matchedInviteProfile.email}). Platform role will be granted directly.
                       </span>
@@ -2305,8 +2219,8 @@ export default function PlatformUserDirectory() {
               </Select>
             </div>
 
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs flex gap-2.5">
-              <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-ds-warning-soft border border-ds-warning/30 text-ds-warning text-xs flex gap-2.5">
+              <ShieldAlert className="h-4 w-4 text-ds-warning shrink-0 mt-0.5" />
               <div className="leading-relaxed text-[11px]">
                 {t(
                   'admin:operator_privilege_notice',
@@ -2328,7 +2242,7 @@ export default function PlatformUserDirectory() {
                 (addOperatorMode === 'invite' && !inviteEmail.trim())
               }
               onClick={() => addOperatorMutation.mutate()}
-              className="rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
+              className="rounded-xl text-xs font-bold bg-ds-warning hover:bg-ds-warning text-white"
             >
               {addOperatorMutation.isPending ? (
                 <span className="flex items-center gap-1.5">
@@ -2352,9 +2266,9 @@ export default function PlatformUserDirectory() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
                 {!editingUser.is_platform_user ? (
-                  <Crown className="h-5 w-5 text-amber-600" />
+                  <Crown className="h-5 w-5 text-ds-warning" />
                 ) : (
-                  <ShieldCheck className="h-5 w-5 text-amber-600" />
+                  <ShieldCheck className="h-5 w-5 text-ds-warning" />
                 )}
                 <span>
                   {!editingUser.is_platform_user
@@ -2400,7 +2314,7 @@ export default function PlatformUserDirectory() {
 
               {/* Option to fully migrate user by deactivating tenant memberships */}
               {!editingUser.is_platform_user && (
-                <div className="p-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-2">
+                <div className="p-3 rounded-2xl border border-ds-warning/30 bg-ds-warning-soft space-y-2">
                   <label className="flex items-start gap-2.5 cursor-pointer text-xs">
                     <Checkbox
                       checked={detachTenantOnPromote}
@@ -2419,9 +2333,9 @@ export default function PlatformUserDirectory() {
                 </div>
               )}
 
-              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 space-y-1">
+              <div className="p-3 rounded-2xl bg-ds-warning-soft border border-ds-warning/30 text-ds-warning space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
-                  <ShieldAlert className="h-3.5 w-3.5 text-amber-600" />
+                  <ShieldAlert className="h-3.5 w-3.5 text-ds-warning" />
                   <span>Privileged Operator Access</span>
                 </div>
                 <div className="text-[11px] leading-relaxed">
@@ -2440,7 +2354,7 @@ export default function PlatformUserDirectory() {
                     revokeRoleMutation.mutate({ userId: editingUser.id, role: editingUser.platform_role })
                   }
                   disabled={revokeRoleMutation.isPending}
-                  className="text-rose-600 border-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl text-xs shrink-0 w-full sm:w-auto"
+                  className="text-ds-danger border-ds-danger/30 hover:bg-ds-danger-soft rounded-xl text-xs shrink-0 w-full sm:w-auto"
                 >
                   {revokeRoleMutation.isPending ? 'Revoking…' : t('admin:revoke_operator_access', 'Revoke operator access')}
                 </Button>
@@ -2469,7 +2383,7 @@ export default function PlatformUserDirectory() {
                     })
                   }
                   disabled={assignRoleMutation.isPending}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs gap-1.5 shrink-0"
+                  className="bg-ds-warning hover:bg-ds-warning text-white font-bold rounded-xl text-xs gap-1.5 shrink-0"
                 >
                   {!editingUser.is_platform_user ? (
                     <Crown className="h-3.5 w-3.5" />
@@ -2498,7 +2412,7 @@ export default function PlatformUserDirectory() {
           <DialogContent className="max-w-lg rounded-3xl p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
-                <Building2 className="h-5 w-5 text-blue-600" />
+                <Building2 className="h-5 w-5 text-ds-accent" />
                 <span>{t('admin:manage_tenant_memberships', 'Manage Tenant Memberships')}</span>
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -2561,7 +2475,7 @@ export default function PlatformUserDirectory() {
                               active: false,
                             })
                           }
-                          className="h-8 w-8 p-0 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 shrink-0"
+                          className="h-8 w-8 p-0 rounded-lg text-ds-danger hover:bg-ds-danger-soft shrink-0"
                         >
                           <X className="h-3.5 w-3.5" />
                         </Button>
@@ -2615,7 +2529,7 @@ export default function PlatformUserDirectory() {
                       active: true,
                     })
                   }
-                  className="w-full h-9 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+                  className="w-full h-9 text-xs font-bold rounded-xl bg-ds-ink hover:bg-ds-ink/90 text-ds-on-ink"
                 >
                   {setMembershipMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2625,7 +2539,7 @@ export default function PlatformUserDirectory() {
                 </Button>
               </div>
 
-              <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-900 dark:text-blue-200 text-[11px] leading-relaxed flex gap-2">
+              <div className="p-3 rounded-2xl bg-ds-accent-soft border border-ds-accent/30 text-ds-accent text-[11px] leading-relaxed flex gap-2">
                 <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <span>
                   {t(
@@ -2663,10 +2577,10 @@ export default function PlatformUserDirectory() {
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              {actionType === 'suspend' && <Ban className="h-5 w-5 text-rose-600" />}
-              {actionType === 'reactivate' && <UserCheck className="h-5 w-5 text-emerald-600" />}
-              {actionType === 'force_password_reset' && <KeyRound className="h-5 w-5 text-amber-600" />}
-              {actionType === 'unlock' && <Unlock className="h-5 w-5 text-blue-600" />}
+              {actionType === 'suspend' && <Ban className="h-5 w-5 text-ds-danger" />}
+              {actionType === 'reactivate' && <UserCheck className="h-5 w-5 text-ds-success" />}
+              {actionType === 'force_password_reset' && <KeyRound className="h-5 w-5 text-ds-warning" />}
+              {actionType === 'unlock' && <Unlock className="h-5 w-5 text-ds-accent" />}
               <span>
                 {actionType === 'suspend' && t('admin:platform_user_mgmt.suspend_dialog_title', 'Suspend Platform Account')}
                 {actionType === 'reactivate' && t('admin:platform_user_mgmt.reactivate_dialog_title', 'Reactivate User Account')}
@@ -2763,7 +2677,7 @@ export default function PlatformUserDirectory() {
                     note: actionNote || undefined,
                   })
                 }}
-                className="rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white"
+                className="rounded-xl text-xs font-bold bg-ds-danger hover:bg-ds-danger text-white"
               >
                 {suspendUserMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
@@ -2787,7 +2701,7 @@ export default function PlatformUserDirectory() {
                     note: actionNote || undefined,
                   })
                 }}
-                className="rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="rounded-xl text-xs font-bold bg-ds-success hover:bg-ds-success text-white"
               >
                 {reactivateUserMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
@@ -2811,7 +2725,7 @@ export default function PlatformUserDirectory() {
                     note: actionNote || undefined,
                   })
                 }}
-                className="rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
+                className="rounded-xl text-xs font-bold bg-ds-warning hover:bg-ds-warning text-white"
               >
                 {forcePasswordResetMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
@@ -2832,7 +2746,7 @@ export default function PlatformUserDirectory() {
                   if (!actionUser) return
                   unlockUserMutation.mutate({ userId: actionUser.id })
                 }}
-                className="rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white"
+                className="rounded-xl text-xs font-bold bg-ds-ink hover:bg-ds-ink/90 text-ds-on-ink"
               >
                 {unlockUserMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
@@ -2865,9 +2779,9 @@ export default function PlatformUserDirectory() {
         <DialogContent className="max-w-md rounded-3xl p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              {bulkActionType === 'suspend' && <Ban className="h-5 w-5 text-rose-600" />}
-              {bulkActionType === 'reactivate' && <UserCheck className="h-5 w-5 text-emerald-600" />}
-              {bulkActionType === 'force_password_reset' && <KeyRound className="h-5 w-5 text-amber-600" />}
+              {bulkActionType === 'suspend' && <Ban className="h-5 w-5 text-ds-danger" />}
+              {bulkActionType === 'reactivate' && <UserCheck className="h-5 w-5 text-ds-success" />}
+              {bulkActionType === 'force_password_reset' && <KeyRound className="h-5 w-5 text-ds-warning" />}
               <span>
                 {bulkActionType === 'suspend' && t('admin:platform_user_mgmt.bulk_suspend', 'Bulk Suspend')}
                 {bulkActionType === 'reactivate' && t('admin:platform_user_mgmt.bulk_reactivate', 'Bulk Reactivate')}
@@ -2883,8 +2797,8 @@ export default function PlatformUserDirectory() {
           </DialogHeader>
 
           <div className="space-y-4 py-2 text-xs">
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs flex gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-2xl bg-ds-warning-soft border border-ds-warning/30 text-ds-warning text-xs flex gap-2">
+              <AlertTriangle className="h-4 w-4 text-ds-warning shrink-0 mt-0.5" />
               <span>
                 {t(
                   'admin:platform_user_mgmt.bulk_warning_note',
@@ -2959,10 +2873,10 @@ export default function PlatformUserDirectory() {
               }}
               className={`rounded-xl text-xs font-bold text-white ${
                 bulkActionType === 'suspend'
-                  ? 'bg-rose-600 hover:bg-rose-700'
+                  ? 'bg-ds-danger hover:bg-ds-danger'
                   : bulkActionType === 'reactivate'
-                  ? 'bg-emerald-600 hover:bg-emerald-700'
-                  : 'bg-amber-600 hover:bg-amber-700'
+                  ? 'bg-ds-success hover:bg-ds-success'
+                  : 'bg-ds-warning hover:bg-ds-warning'
               }`}
             >
               {bulkActionMutation.isPending ? (
@@ -2986,7 +2900,7 @@ export default function PlatformUserDirectory() {
           <DialogContent className="max-w-md rounded-3xl p-6">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-base font-bold">
-                <Edit className="h-5 w-5 text-emerald-600" />
+                <Edit className="h-5 w-5 text-ds-success" />
                 <span>{t('admin:platform_user_mgmt.edit_profile', 'Edit Profile Details')}</span>
               </DialogTitle>
               <DialogDescription className="text-xs">
@@ -3046,7 +2960,7 @@ export default function PlatformUserDirectory() {
                     },
                   })
                 }
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs"
+                className="bg-ds-success hover:bg-ds-success text-white font-bold rounded-xl text-xs"
               >
                 {updateProfileMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
@@ -3093,14 +3007,14 @@ export default function PlatformUserDirectory() {
                 <SheetHeader className="text-start space-y-3 pb-4 border-b border-border/60">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center font-bold text-base uppercase text-blue-700 dark:text-blue-300 shadow-sm">
+                      <div className="w-12 h-12 rounded-2xl border border-ds-accent/30 flex items-center justify-center font-bold text-base uppercase text-ds-accent shadow-sm">
                         {activeProfile.full_name?.slice(0, 2) || activeProfile.email?.slice(0, 2) || 'U'}
                       </div>
                       <div>
                         <SheetTitle className="text-base font-bold flex items-center gap-2 text-foreground">
                           <span>{activeProfile.full_name || 'Anonymous User'}</span>
                           {activeProfile.is_platform_user && (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] font-bold">
+                            <Badge variant="outline" className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[10px] font-bold">
                               Operator
                             </Badge>
                           )}
@@ -3115,12 +3029,12 @@ export default function PlatformUserDirectory() {
                       <Badge
                         variant="outline"
                         className={`text-[10px] font-bold ${
-                          profileIsSuspended
-                            ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                            : profileIsLocked
-                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                        }`}
+ profileIsSuspended
+ ? 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ : profileIsLocked
+ ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+ : 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ }`}
                       >
                         {profileIsSuspended
                           ? t('admin:platform_user_mgmt.suspended', 'Suspended')
@@ -3130,7 +3044,7 @@ export default function PlatformUserDirectory() {
                       </Badge>
 
                       {activeProfile.force_password_reset && (
-                        <Badge variant="outline" className="text-[9px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+                        <Badge variant="outline" className="text-[9px] bg-ds-warning-soft text-ds-warning border-ds-warning/30">
                           Reset Req
                         </Badge>
                       )}
@@ -3177,7 +3091,7 @@ export default function PlatformUserDirectory() {
                           }}
                           className="h-7 text-xs rounded-lg gap-1 border-border/70 hover:bg-card"
                         >
-                          <Edit className="h-3 w-3 text-emerald-500" />
+                          <Edit className="h-3 w-3 text-ds-success" />
                           <span>{t('admin:platform_user_mgmt.edit_profile', 'Edit')}</span>
                         </Button>
                       </CardHeader>
@@ -3274,7 +3188,7 @@ export default function PlatformUserDirectory() {
                         }}
                         className="text-xs h-8 rounded-xl gap-1.5"
                       >
-                        <Building2 className="h-3.5 w-3.5 text-blue-500" />
+                        <Building2 className="h-3.5 w-3.5 text-ds-accent" />
                         <span>{t('admin:platform_user_mgmt.manage_tenants', 'Manage Tenant Memberships')}</span>
                       </Button>
 
@@ -3289,9 +3203,9 @@ export default function PlatformUserDirectory() {
                         className="text-xs h-8 rounded-xl gap-1.5"
                       >
                         {!activeProfile.is_platform_user ? (
-                          <Crown className="h-3.5 w-3.5 text-amber-500" />
+                          <Crown className="h-3.5 w-3.5 text-ds-warning" />
                         ) : (
-                          <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+                          <ShieldCheck className="h-3.5 w-3.5 text-ds-warning" />
                         )}
                         <span>
                           {!activeProfile.is_platform_user
@@ -3312,12 +3226,12 @@ export default function PlatformUserDirectory() {
                           <Badge
                             variant="outline"
                             className={`text-[10px] font-bold ${
-                              profileIsSuspended
-                                ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                                : profileIsLocked
-                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                                : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                            }`}
+ profileIsSuspended
+ ? 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ : profileIsLocked
+ ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+ : 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ }`}
                           >
                             {profileIsSuspended
                               ? t('admin:platform_user_mgmt.suspended', 'Suspended')
@@ -3329,12 +3243,12 @@ export default function PlatformUserDirectory() {
                       </CardHeader>
                       <CardContent className="p-4 pt-2 space-y-2 text-xs">
                         {profileIsSuspended && (
-                          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-900 dark:text-rose-200 space-y-1.5">
+                          <div className="p-3 rounded-xl bg-ds-danger-soft border border-ds-danger/30 text-ds-danger space-y-1.5">
                             <div className="flex items-center gap-1.5 font-bold">
-                              <Ban className="h-3.5 w-3.5 text-rose-600" />
+                              <Ban className="h-3.5 w-3.5 text-ds-danger" />
                               <span>{t('admin:suspension_details', 'Suspension Record')}</span>
                             </div>
-                            <div className="text-[11px] grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-rose-500/20">
+                            <div className="text-[11px] grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 border-t border-ds-danger/30">
                               <div>
                                 <span className="text-muted-foreground">{t('admin:platform_user_mgmt.suspend_reason_label', 'Reason')}: </span>
                                 <span className="font-semibold capitalize">
@@ -3368,7 +3282,7 @@ export default function PlatformUserDirectory() {
                           <div className="p-3 rounded-xl border border-border/60 bg-card/60 space-y-1">
                             <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center justify-between">
                               <span>{t('admin:platform_user_mgmt.failed_logins', 'Failed Login Attempts')}</span>
-                              <Lock className="h-3.5 w-3.5 text-amber-500" />
+                              <Lock className="h-3.5 w-3.5 text-ds-warning" />
                             </div>
                             <div className="text-xl font-bold font-mono text-foreground">
                               {activeProfile.failed_login_attempts || 0}
@@ -3383,7 +3297,7 @@ export default function PlatformUserDirectory() {
                           <div className="p-3 rounded-xl border border-border/60 bg-card/60 space-y-1">
                             <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider flex items-center justify-between">
                               <span>{t('admin:platform_user_mgmt.locked_until', 'Lockout Expiration')}</span>
-                              <Clock className="h-3.5 w-3.5 text-rose-500" />
+                              <Clock className="h-3.5 w-3.5 text-ds-danger" />
                             </div>
                             <div className="text-xs font-mono font-semibold text-foreground pt-1">
                               {activeProfile.locked_until
@@ -3397,7 +3311,7 @@ export default function PlatformUserDirectory() {
                         <div className="p-3 rounded-xl border border-border/60 bg-card/60 flex items-center justify-between">
                           <div className="space-y-0.5">
                             <div className="font-semibold text-foreground flex items-center gap-1.5">
-                              <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+                              <KeyRound className="h-3.5 w-3.5 text-ds-warning" />
                               <span>{t('admin:platform_user_mgmt.password_reset_required', 'Password Reset Required')}</span>
                             </div>
                             <div className="text-[10px] text-muted-foreground">
@@ -3410,7 +3324,7 @@ export default function PlatformUserDirectory() {
                             variant="outline"
                             className={
                               activeProfile.force_password_reset
-                                ? 'bg-amber-500/10 text-amber-700 border-amber-500/30'
+                                ? 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
                                 : 'bg-muted/40 text-muted-foreground'
                             }
                           >
@@ -3435,7 +3349,7 @@ export default function PlatformUserDirectory() {
                               setActionNote('')
                               setActionDialogOpen(true)
                             }}
-                            className="text-xs h-8 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-1.5"
+                            className="text-xs h-8 rounded-xl bg-ds-success hover:bg-ds-success text-white font-bold gap-1.5"
                           >
                             <UserCheck className="h-3.5 w-3.5" />
                             <span>{t('admin:platform_user_mgmt.reactivate_account', 'Reactivate Account')}</span>
@@ -3451,7 +3365,7 @@ export default function PlatformUserDirectory() {
                               setActionNote('')
                               setActionDialogOpen(true)
                             }}
-                            className="text-xs h-8 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold gap-1.5"
+                            className="text-xs h-8 rounded-xl bg-ds-danger hover:bg-ds-danger text-white font-bold gap-1.5"
                           >
                             <Ban className="h-3.5 w-3.5" />
                             <span>{t('admin:platform_user_mgmt.suspend_account', 'Suspend Account')}</span>
@@ -3467,7 +3381,7 @@ export default function PlatformUserDirectory() {
                               setActionType('unlock')
                               setActionDialogOpen(true)
                             }}
-                            className="text-xs h-8 rounded-xl border-blue-500/40 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 font-bold gap-1.5"
+                            className="text-xs h-8 rounded-xl border-ds-accent/30 text-ds-accent hover:bg-ds-accent-soft font-bold gap-1.5"
                           >
                             <Unlock className="h-3.5 w-3.5" />
                             <span>{t('admin:platform_user_mgmt.unlock_account', 'Unlock Account')}</span>
@@ -3483,7 +3397,7 @@ export default function PlatformUserDirectory() {
                             setActionNote('')
                             setActionDialogOpen(true)
                           }}
-                          className="text-xs h-8 rounded-xl border-amber-500/40 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40 font-bold gap-1.5"
+                          className="text-xs h-8 rounded-xl border-ds-warning/30 text-ds-warning hover:bg-ds-warning-soft font-bold gap-1.5"
                         >
                           <KeyRound className="h-3.5 w-3.5" />
                           <span>{t('admin:platform_user_mgmt.force_password_reset', 'Force Password Reset')}</span>
@@ -3514,7 +3428,7 @@ export default function PlatformUserDirectory() {
                           }}
                           className="h-7 text-xs rounded-lg gap-1 border-border/70 hover:bg-card"
                         >
-                          <Building2 className="h-3 w-3 text-blue-500" />
+                          <Building2 className="h-3 w-3 text-ds-accent" />
                           <span>{t('admin:manage', 'Manage')}</span>
                         </Button>
                       </CardHeader>
@@ -3532,7 +3446,7 @@ export default function PlatformUserDirectory() {
                               >
                                 <div className="min-w-0">
                                   <div className="font-semibold text-foreground truncate flex items-center gap-1.5">
-                                    <Building2 className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                    <Building2 className="h-3.5 w-3.5 text-ds-accent shrink-0" />
                                     <span>{m.organization_name || m.organizations?.name || 'Organization'}</span>
                                   </div>
                                   <div className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">
@@ -3547,8 +3461,8 @@ export default function PlatformUserDirectory() {
                                     variant="outline"
                                     className={`text-[9px] ${
                                       m.is_active !== false
-                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30'
-                                        : 'bg-rose-500/10 text-rose-600 border-rose-500/30'
+                                        ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+                                        : 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
                                     }`}
                                   >
                                     {m.is_active !== false ? 'Active' : 'Inactive'}
@@ -3562,14 +3476,14 @@ export default function PlatformUserDirectory() {
                     </Card>
 
                     {activeProfile.is_platform_user && (
-                      <Card className="rounded-2xl border-border/60 bg-amber-500/5 border-amber-500/20">
+                      <Card className="rounded-2xl border-border/60 bg-ds-warning-soft border-ds-warning/30">
                         <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
                           <div>
-                            <CardTitle className="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                              <Crown className="h-4 w-4 text-amber-600" />
+                            <CardTitle className="text-xs font-bold text-ds-warning flex items-center gap-1.5">
+                              <Crown className="h-4 w-4 text-ds-warning" />
                               <span>Platform Operator Authority</span>
                             </CardTitle>
-                            <CardDescription className="text-[11px] text-amber-700/80 dark:text-amber-300/80">
+                            <CardDescription className="text-[11px] text-ds-warning">
                               Internal cross-tenant supervisory role
                             </CardDescription>
                           </div>
@@ -3580,9 +3494,9 @@ export default function PlatformUserDirectory() {
                               setEditingUser(activeProfile)
                               setNewPlatformRole(activeProfile.platform_role || 'platform_support')
                             }}
-                            className="h-7 text-xs rounded-lg gap-1 border-amber-500/30 hover:bg-amber-500/10 text-amber-800 dark:text-amber-200"
+                            className="h-7 text-xs rounded-lg gap-1 border-ds-warning/30 hover:bg-ds-warning-soft text-ds-warning"
                           >
-                            <ShieldCheck className="h-3 w-3 text-amber-600" />
+                            <ShieldCheck className="h-3 w-3 text-ds-warning" />
                             <span>{t('admin:change_role', 'Change Role')}</span>
                           </Button>
                         </CardHeader>
@@ -3639,7 +3553,7 @@ export default function PlatformUserDirectory() {
                         {/* Section 2: Platform Audit Logs */}
                         <div className="space-y-2 pt-2 border-t border-border/60">
                           <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                            <History className="h-3.5 w-3.5 text-blue-500" />
+                            <History className="h-3.5 w-3.5 text-ds-accent" />
                             <span>System Audit Trail Events</span>
                           </div>
                           {(!inspectedUserData?.auditLogs || inspectedUserData.auditLogs.length === 0) ? (

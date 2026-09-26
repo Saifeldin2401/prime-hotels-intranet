@@ -1,7 +1,5 @@
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
@@ -29,19 +27,14 @@ import { useAccountContext } from '@/contexts/auth/AccountContext'
 import { platformService } from '@/services/platformService'
 import { useQuery } from '@tanstack/react-query'
 import {
-    AlertTriangle,
-    CheckCircle2,
-    FileUp,
-    Loader2,
-    Play,
-    RefreshCw,
-    ShieldCheck,
-    Upload,
-    Users
+  AlertTriangle,
+  Loader2,
+  Play,
+  RefreshCw,
+  Upload,
 } from 'lucide-react'
 import type { ChangeEvent } from 'react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 
 type ProvisioningMethod = 'invite' | 'temporary_password'
 
@@ -49,7 +42,6 @@ interface InputUserRow {
   email: string
   name: string
   phone?: string
-  property: string
   dept: string
   role: string
 }
@@ -89,27 +81,20 @@ interface ProgressState {
   currentEmail: string
 }
 
-interface PropertyRecord {
-  id: string
-  name: string
-  is_active: boolean
-}
-
 interface DepartmentRecord {
   id: string
   name: string
-  property_id: string
   is_active: boolean
 }
 
 interface MapsState {
-  propertyByName: Map<string, PropertyRecord>
-  departmentByPropertyAndName: Map<string, DepartmentRecord | { id: string }>
+  organizationId: string
+  departmentByName: Map<string, DepartmentRecord | { id: string }>
 }
 
 const DEFAULT_INPUT = [
-  'email,name,phone,property,dept,role',
-  'example.user@hotel.com,Example User,500000000,Altus Al Hamra Hotel Riyadh,Front Office,staff'
+  'email,name,phone,dept,role',
+  'example.user@example.com,Example User,500000000,Front Office,staff'
 ].join('\n')
 
 const VALID_ROLES = new Set([
@@ -161,7 +146,6 @@ function validateUserRow(row: InputUserRow) {
   if (!email) return 'Missing email'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return `Invalid email "${row.email}"`
   if (!String(row.name || '').trim()) return 'Missing full name'
-  if (!String(row.property || '').trim()) return 'Missing property'
   if (!String(row.dept || '').trim()) return 'Missing department'
   if (!String(row.role || '').trim()) return 'Missing role'
   return null
@@ -298,7 +282,6 @@ function mapRecordToUserRow(record: Record<string, string>) {
     email: readByAliases(record, ['email', 'mail', 'emailaddress']),
     name: readByAliases(record, ['name', 'fullname', 'full_name', 'employeename']),
     phone: readByAliases(record, ['phone', 'mobile', 'phonenumber', 'phone_number', 'contact']),
-    property: readByAliases(record, ['property', 'propertyname', 'hotel', 'hotelname']),
     dept: readByAliases(record, ['dept', 'department', 'departmentname']),
     role: readByAliases(record, ['role', 'userrole', 'permission'])
   } as InputUserRow
@@ -377,43 +360,32 @@ async function assertPrerequisites() {
   }
 }
 
-async function loadMaps() {
-  const { data: properties, error: propError } = await supabase
-    .from('hotels')
-    .select('id,name,is_active')
-    .eq('is_active', true)
-    .eq('is_deleted', false)
-
-  if (propError) {
-    throw new Error(`Failed to load hotels: ${propError.message}`)
+async function loadMaps(organizationId: string | undefined) {
+  if (!organizationId) {
+    throw new Error('Select an organization before importing people.')
   }
 
   const { data: departments, error: deptError } = await supabase
     .from('departments')
-    .select('id,name,property_id,is_active')
+    .select('id,name,is_active')
+    .eq('organization_id', organizationId)
     .eq('is_active', true)
 
   if (deptError) {
     throw new Error(`Failed to load departments: ${deptError.message}`)
   }
 
-  const propertyByName = new Map<string, PropertyRecord>()
-  for (const property of (properties || []) as PropertyRecord[]) {
-    propertyByName.set(normalizeText(property.name), property)
-  }
-
-  const departmentByPropertyAndName = new Map<string, DepartmentRecord>()
+  const departmentByName = new Map<string, DepartmentRecord | { id: string }>()
   for (const department of (departments || []) as DepartmentRecord[]) {
-    const key = `${department.property_id}::${normalizeText(department.name)}`
-    departmentByPropertyAndName.set(key, department)
+    departmentByName.set(normalizeText(department.name), department)
   }
 
-  return { propertyByName, departmentByPropertyAndName } as MapsState
+  return { organizationId, departmentByName } as MapsState
 }
 
-async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId: string, deptName: string) {
-  const key = `${propertyId}::${normalizeText(deptName)}`
-  const existing = maps.departmentByPropertyAndName.get(key)
+async function ensureDepartment(maps: MapsState, config: BulkConfig, deptName: string) {
+  const key = normalizeText(deptName)
+  const existing = maps.departmentByName.get(key)
   if (existing) return existing.id
 
   if (!config.createMissingDepartments) {
@@ -422,7 +394,7 @@ async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId:
 
   if (config.dryRun) {
     const simulatedId = `dryrun:${key}`
-    maps.departmentByPropertyAndName.set(key, { id: simulatedId })
+    maps.departmentByName.set(key, { id: simulatedId })
     return simulatedId
   }
 
@@ -432,8 +404,8 @@ async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId:
     () => withTimeout(
       Promise.resolve(supabase
         .from('departments')
-        .insert({ property_id: propertyId, name: deptName, is_active: true })
-        .select('id,name,property_id,is_active')
+        .insert({ organization_id: maps.organizationId, name: deptName, is_active: true })
+        .select('id,name,is_active')
         .single()),
       config.requestTimeoutMs,
       `Department create (${deptName})`
@@ -444,30 +416,24 @@ async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId:
     throw new Error(`Failed creating department "${deptName}": ${error.message}`)
   }
 
-  maps.departmentByPropertyAndName.set(key, created as DepartmentRecord)
+  maps.departmentByName.set(key, created as DepartmentRecord)
   return (created as DepartmentRecord).id
 }
 
-async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputUserRow, organizationId?: string) {
+async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputUserRow) {
   const normalizedRole = normalizeText(row.role).replace(/\s+/g, '_')
   if (!VALID_ROLES.has(normalizedRole)) {
     throw new Error(`Invalid role "${row.role}"`)
   }
 
-  const property = maps.propertyByName.get(normalizeText(row.property))
-  if (!property) {
-    throw new Error(`Property not found: "${row.property}"`)
-  }
-
-  const departmentId = await ensureDepartment(maps, config, property.id, row.dept)
+  const departmentId = await ensureDepartment(maps, config, row.dept)
 
   const payload = {
     email: normalizeEmail(row.email),
     fullName: row.name,
     phone: normalizePhone(row.phone),
     role: normalizedRole,
-    organizationId: organizationId || undefined,
-    propertyIds: [property.id],
+    organizationId: maps.organizationId,
     departmentIds: [departmentId],
     provisioningMethod: config.provisioningMethod,
     appUrl: window.location.origin
@@ -510,7 +476,9 @@ export default function BulkUserProvisioning() {
     enabled: !!currentOrganization?.id
   })
 
-  const remainingSeats = Math.max(0, (entitlements?.max_learners ?? 100) - (entitlements?.usage?.learners ?? 0))
+  const remainingSeats = entitlements?.max_learners
+    ? Math.max(0, entitlements.max_learners - (entitlements?.usage?.learners ?? 0))
+    : Number.POSITIVE_INFINITY
 
   const [rawInput, setRawInput] = useState(DEFAULT_INPUT)
   const [config, setConfig] = useState<BulkConfig>(DEFAULT_CONFIG)
@@ -626,8 +594,8 @@ export default function BulkUserProvisioning() {
       await assertPrerequisites()
       appendLog('Authenticated and privileges verified.')
 
-      const maps = await loadMaps()
-      appendLog(`Loaded ${maps.propertyByName.size} active properties.`)
+      const maps = await loadMaps(currentOrganization?.id)
+      appendLog(`Loaded ${maps.departmentByName.size} active departments.`)
 
       const seenInputEmails = new Set<string>()
       const localReport: RunReport = {
@@ -663,7 +631,7 @@ export default function BulkUserProvisioning() {
         seenInputEmails.add(email)
 
         try {
-          await createSingleUser(maps, config, row, currentOrganization?.id)
+          await createSingleUser(maps, config, row)
           localReport.created += 1
           appendLog(`${config.dryRun ? 'Dry-run validated' : 'Processed'}: ${email}`)
         } catch (error: any) {
@@ -709,50 +677,44 @@ export default function BulkUserProvisioning() {
 
   const progressPercent = progress.total > 0 ? Math.round((progress.processed / progress.total) * 100) : 0
 
+  const seatLimit = entitlements?.max_learners ?? null
+  const overSeats = seatLimit !== null && !config.dryRun && previewCounts.valid > remainingSeats
+  const stepHead = (n: number, title: string, hint?: string) => (
+    <div className="flex items-start gap-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-ds-border font-mono text-xs text-ds-ink">{n}</span>
+      <div>
+        <h2 className="text-lg font-semibold text-ds-ink">{title}</h2>
+        {hint && <p className="text-sm text-ds-muted">{hint}</p>}
+      </div>
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-5xl space-y-10">
       <PageHeader
-        title="Bulk User Provisioning"
-        description="Paste CSV/JSON user rows, validate, run dry-run or execute real invitations using the create-user edge function."
+        backTo="/admin/users"
+        title="Import people"
+        description="Add many people at once from a CSV or JSON file. Check the rows, try a dry run, then import."
         actions={(
-          <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <Link to="/admin/users">Back to Users</Link>
-            </Button>
-            <Button type="button" onClick={() => setRawInput(DEFAULT_INPUT)} variant="outline">
-              <RefreshCw className="w-4 h-4 me-2" />
-              Load Sample
-            </Button>
-          </div>
+          <Button type="button" onClick={() => setRawInput(DEFAULT_INPUT)} variant="outline" className="min-h-[44px]">
+            <RefreshCw aria-hidden="true" className="me-2 h-4 w-4" />
+            Load an example
+          </Button>
         )}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileUp className="w-5 h-5 text-hotel-gold" />
-            Input
-          </CardTitle>
-          <CardDescription>
-            CSV headers: email, name, phone, property, dept, role. JSON array is also supported.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-3 md:items-center">
-            <div className="flex-1">
-              <Label htmlFor="bulk-input-file">Upload CSV / JSON</Label>
+      {/* 1. Add rows */}
+      <section aria-label="Add rows" className="space-y-4">
+        {stepHead(1, 'Add rows', 'Columns: email, name, phone, dept, role. A JSON array with the same fields also works.')}
+        <div className="space-y-3 ps-10">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="bulk-input-file">Upload a file</Label>
               <Input id="bulk-input-file" type="file" accept=".csv,.json,.txt" onChange={handleLoadFile} />
             </div>
-            <div className="flex items-end">
-              <Button type="button" onClick={handlePreview}>
-                <Upload className="w-4 h-4 me-2" />
-                Preview Rows
-              </Button>
-            </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bulk-input-text">Rows Input</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="bulk-input-text">Or paste rows</Label>
             <Textarea
               id="bulk-input-text"
               value={rawInput}
@@ -762,198 +724,182 @@ export default function BulkUserProvisioning() {
                 setParseError(null)
                 setReport(null)
               }}
-              className="min-h-[220px] font-mono text-xs"
+              className="min-h-[200px] font-mono text-xs"
               placeholder={DEFAULT_INPUT}
+              dir="ltr"
             />
           </div>
-
           {parseError && (
-            <div className="rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 text-sm">
-              {parseError}
-            </div>
+            <p role="alert" className="rounded-md border border-ds-danger/30 bg-ds-danger-soft px-3 py-2 text-sm text-ds-danger">{parseError}</p>
           )}
-        </CardContent>
-      </Card>
+          <Button type="button" onClick={handlePreview} className="min-h-[44px] bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90">
+            <Upload aria-hidden="true" className="me-2 h-4 w-4" />
+            Check rows
+          </Button>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Execution Settings</CardTitle>
-          <CardDescription>Keep dry-run enabled first, then disable it when the preview looks clean.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-2">
-            <Label>Provisioning Method</Label>
-            <Select
-              value={config.provisioningMethod}
-              onValueChange={(value: ProvisioningMethod) => setConfig((prev) => ({ ...prev, provisioningMethod: value }))}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="invite">invite</SelectItem>
-                <SelectItem value="temporary_password">temporary_password</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* 2. Check */}
+      <section aria-label="Check rows" className="space-y-4 border-t border-ds-border pt-8">
+        {stepHead(2, 'Check rows', previewRows.length > 0
+          ? `${previewCounts.valid} ready · ${previewCounts.duplicates} duplicate · ${previewCounts.invalid} with problems`
+          : 'Rows appear here after you check them.')}
+        {previewRows.length > 0 && (
+          <div className="ms-10 max-h-[360px] overflow-auto rounded-[6px] border border-ds-border bg-ds-surface">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>#</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previewRows.map((entry, idx) => (
+                  <TableRow key={`${entry.row.email}-${idx}`}>
+                    <TableCell className="font-mono text-xs text-ds-muted">{idx + 1}</TableCell>
+                    <TableCell className="font-mono text-xs">{entry.row.email || '—'}</TableCell>
+                    <TableCell>{entry.row.name || '—'}</TableCell>
+                    <TableCell>{entry.row.dept || '—'}</TableCell>
+                    <TableCell>{entry.row.role || '—'}</TableCell>
+                    <TableCell>
+                      {entry.validationError ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-ds-danger">
+                          <AlertTriangle aria-hidden="true" className="h-3 w-3" />{entry.validationError}
+                        </span>
+                      ) : entry.isDuplicateInput ? (
+                        <span className="text-xs text-ds-muted">Duplicate row</span>
+                      ) : (
+                        <span className="text-xs text-ds-success">Ready</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
+        )}
+      </section>
 
-          <div className="space-y-2">
-            <Label htmlFor="delay-ms">Delay (ms)</Label>
-            <Input
-              id="delay-ms"
-              type="number"
-              min={0}
-              value={config.delayMs}
-              onChange={(event) => setConfig((prev) => ({ ...prev, delayMs: Number(event.target.value || 0) }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timeout-ms">Request Timeout (ms)</Label>
-            <Input
-              id="timeout-ms"
-              type="number"
-              min={1000}
-              value={config.requestTimeoutMs}
-              onChange={(event) => setConfig((prev) => ({ ...prev, requestTimeoutMs: Number(event.target.value || prev.requestTimeoutMs) }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="max-retries">Max Retries</Label>
-            <Input
-              id="max-retries"
-              type="number"
-              min={0}
-              value={config.maxRetries}
-              onChange={(event) => setConfig((prev) => ({ ...prev, maxRetries: Number(event.target.value || 0) }))}
-            />
-          </div>
-
-          <div className="flex items-center justify-between rounded-md border px-3 py-2 md:col-span-2 lg:col-span-2">
-            <div>
-              <p className="text-sm font-medium">Create Missing Departments</p>
-              <p className="text-xs text-muted-foreground">Auto-create department if missing for a valid property.</p>
+      {/* 3. Import */}
+      <section aria-label="Import" className="space-y-4 border-t border-ds-border pt-8">
+        {stepHead(3, 'Import', config.dryRun
+          ? 'Dry run is on: nothing is created. Turn it off when the dry run looks right.'
+          : 'Dry run is off: accounts will be created and invitations sent.')}
+        <div className="space-y-4 ps-10">
+          <div className="divide-y divide-ds-border rounded-[6px] border border-ds-border bg-ds-surface">
+            <label className="flex items-center justify-between gap-4 px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-ds-ink">Dry run</span>
+                <span className="block text-xs text-ds-muted">Check everything without creating accounts.</span>
+              </span>
+              <Switch checked={config.dryRun} onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, dryRun: checked }))} />
+            </label>
+            <label className="flex items-center justify-between gap-4 px-4 py-3">
+              <span>
+                <span className="block text-sm font-medium text-ds-ink">Create missing departments</span>
+                <span className="block text-xs text-ds-muted">If a row names a department the organization does not have yet, create it.</span>
+              </span>
+              <Switch checked={config.createMissingDepartments} onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, createMissingDepartments: checked }))} />
+            </label>
+            <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                <span className="block text-sm font-medium text-ds-ink">How people get access</span>
+                <span className="block text-xs text-ds-muted">An invitation email, or a temporary password they must change.</span>
+              </span>
+              <Select
+                value={config.provisioningMethod}
+                onValueChange={(value: ProvisioningMethod) => setConfig((prev) => ({ ...prev, provisioningMethod: value }))}
+              >
+                <SelectTrigger className="min-h-[40px] sm:w-56"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="invite">Invitation email</SelectItem>
+                  <SelectItem value="temporary_password">Temporary password</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Switch checked={config.createMissingDepartments} onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, createMissingDepartments: checked }))} />
           </div>
 
-          <div className="flex items-center justify-between rounded-md border px-3 py-2 md:col-span-2 lg:col-span-2">
-            <div>
-              <p className="text-sm font-medium">Dry Run</p>
-              <p className="text-xs text-muted-foreground">Validates and simulates execution without writes.</p>
+          <details className="rounded-[6px] border border-ds-border bg-ds-surface">
+            <summary className="flex min-h-[44px] cursor-pointer items-center px-4 text-sm font-medium text-ds-ink">Advanced: pacing and retries</summary>
+            <div className="grid gap-4 border-t border-ds-border p-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="delay-ms">Pause between people (ms)</Label>
+                <Input id="delay-ms" type="number" min={0} value={config.delayMs}
+                  onChange={(event) => setConfig((prev) => ({ ...prev, delayMs: Number(event.target.value || 0) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="timeout-ms">Timeout per person (ms)</Label>
+                <Input id="timeout-ms" type="number" min={1000} value={config.requestTimeoutMs}
+                  onChange={(event) => setConfig((prev) => ({ ...prev, requestTimeoutMs: Number(event.target.value || prev.requestTimeoutMs) }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="max-retries">Retries</Label>
+                <Input id="max-retries" type="number" min={0} value={config.maxRetries}
+                  onChange={(event) => setConfig((prev) => ({ ...prev, maxRetries: Number(event.target.value || 0) }))} />
+              </div>
             </div>
-            <Switch checked={config.dryRun} onCheckedChange={(checked) => setConfig((prev) => ({ ...prev, dryRun: checked }))} />
-          </div>
-        </CardContent>
-      </Card>
+          </details>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-hotel-navy" />
-            Preview ({previewRows.length})
-          </CardTitle>
-          <CardDescription>
-            <span className="inline-flex flex-wrap items-center gap-2">
-              <Badge variant="default">{previewCounts.valid} valid</Badge>
-              <Badge variant="secondary">{previewCounts.duplicates} duplicate</Badge>
-              <Badge variant={previewCounts.invalid > 0 ? 'destructive' : 'secondary'}>{previewCounts.invalid} invalid</Badge>
-              {entitlements && (
-                <Badge variant={previewCounts.valid > remainingSeats && !config.dryRun ? 'destructive' : 'outline'} className="font-mono text-xs">
-                  Seats: {entitlements.usage?.learners ?? 0} / {entitlements.max_learners ?? 100} ({remainingSeats} available)
-                </Badge>
-              )}
-            </span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          {seatLimit !== null && (
+            <p className={`text-sm ${overSeats ? 'font-medium text-ds-danger' : 'text-ds-muted'}`}>
+              {overSeats
+                ? `Only ${remainingSeats} of ${seatLimit} seats are free, but ${previewCounts.valid} people are ready. Remove some rows or ask for more seats.`
+                : `${remainingSeats} of ${seatLimit} seats free.`}
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2">
-            <Button type="button" onClick={runProvisioning} disabled={isRunning || previewRows.length === 0}>
-              {isRunning ? (<><Loader2 className="w-4 h-4 animate-spin me-2" />Processing...</>) : (<><Play className="w-4 h-4 me-2" />{config.dryRun ? 'Run Dry-Run' : 'Run Provisioning'}</>)}
+            <Button type="button" onClick={runProvisioning} disabled={isRunning || previewRows.length === 0}
+              className="min-h-[44px] bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90">
+              {isRunning
+                ? (<><Loader2 aria-hidden="true" className="me-2 h-4 w-4 animate-spin" />Working…</>)
+                : (<><Play aria-hidden="true" className="me-2 h-4 w-4" />{config.dryRun ? 'Run dry run' : `Import ${previewCounts.valid} people`}</>)}
             </Button>
             {report && report.errors.length > 0 && (
-              <Button type="button" variant="outline" onClick={exportFailures}>Export Failed Rows</Button>
+              <Button type="button" variant="outline" className="min-h-[44px]" onClick={exportFailures}>Download failed rows</Button>
             )}
           </div>
 
           {isRunning && (
-            <div className="space-y-2 rounded-md border p-3">
+            <div className="space-y-2 rounded-[6px] border border-ds-border p-3" aria-live="polite">
               <div className="flex items-center justify-between text-sm">
-                <span>{progress.currentEmail || 'Starting...'}</span>
-                <span>{progress.processed}/{progress.total}</span>
+                <span className="truncate">{progress.currentEmail || 'Starting…'}</span>
+                <span className="font-mono tabular-nums">{progress.processed}/{progress.total}</span>
               </div>
               <Progress value={progressPercent} />
             </div>
           )}
+        </div>
+      </section>
 
-          {previewRows.length > 0 && (
-            <div className="max-h-[360px] overflow-auto rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>#</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {previewRows.map((entry, idx) => (
-                    <TableRow key={`${entry.row.email}-${idx}`}>
-                      <TableCell>{idx + 1}</TableCell>
-                      <TableCell className="font-mono text-xs">{entry.row.email || '-'}</TableCell>
-                      <TableCell>{entry.row.name || '-'}</TableCell>
-                      <TableCell>{entry.row.property || '-'}</TableCell>
-                      <TableCell>{entry.row.dept || '-'}</TableCell>
-                      <TableCell>{entry.row.role || '-'}</TableCell>
-                      <TableCell>
-                        {entry.validationError ? (
-                          <Badge variant="destructive" className="gap-1">
-                            <AlertTriangle className="w-3 h-3" />
-                            {entry.validationError}
-                          </Badge>
-                        ) : entry.isDuplicateInput ? (
-                          <Badge variant="secondary">Duplicate in input</Badge>
-                        ) : (
-                          <Badge variant="default" className="gap-1">
-                            <ShieldCheck className="w-3 h-3" />
-                            Ready
-                          </Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* 4. Result */}
       {(report || logs.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              Execution Report
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section aria-label="Result" className="space-y-4 border-t border-ds-border pt-8">
+          {stepHead(4, config.dryRun ? 'Dry run result' : 'Result')}
+          <div className="space-y-4 ps-10">
             {report && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">Created / Processed</p><p className="text-2xl font-bold">{report.created}</p></div>
-                <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">Skipped Existing</p><p className="text-2xl font-bold">{report.skippedExisting}</p></div>
-                <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">Skipped Duplicates</p><p className="text-2xl font-bold">{report.skippedInputDuplicates}</p></div>
-                <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">Failed</p><p className="text-2xl font-bold">{report.failed}</p></div>
-              </div>
+              <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border sm:grid-cols-4">
+                {[
+                  [config.dryRun ? 'Would be created' : 'Created', report.created],
+                  ['Already existed', report.skippedExisting],
+                  ['Duplicate rows', report.skippedInputDuplicates],
+                  ['Failed', report.failed],
+                ].map(([label, value]) => (
+                  <div key={label as string} className="bg-ds-surface px-4 py-3">
+                    <dt className="text-xs text-ds-muted">{label}</dt>
+                    <dd className={`mt-0.5 font-mono text-xl tabular-nums ${label === 'Failed' && Number(value) > 0 ? 'text-ds-danger' : 'text-ds-ink'}`}>{value}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
-
             {report && report.errors.length > 0 && (
-              <div className="max-h-[240px] overflow-auto rounded-md border">
+              <div className="max-h-[240px] overflow-auto rounded-[6px] border border-ds-border bg-ds-surface">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Error</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Email</TableHead><TableHead>Problem</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {report.errors.map((entry, idx) => (
                       <TableRow key={`${entry.email}-${idx}`}>
@@ -965,14 +911,14 @@ export default function BulkUserProvisioning() {
                 </Table>
               </div>
             )}
-
             {logs.length > 0 && (
-              <div className="max-h-[220px] overflow-auto rounded-md border bg-muted/30 p-3">
-                <pre className="text-xs whitespace-pre-wrap">{logs.join('\n')}</pre>
-              </div>
+              <details className="rounded-[6px] border border-ds-border bg-ds-surface">
+                <summary className="flex min-h-[44px] cursor-pointer items-center px-4 text-sm font-medium text-ds-ink">Technical log ({logs.length} lines)</summary>
+                <pre className="max-h-[220px] overflow-auto whitespace-pre-wrap border-t border-ds-border p-3 text-xs" dir="ltr">{logs.join('\n')}</pre>
+              </details>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       )}
     </div>
   )

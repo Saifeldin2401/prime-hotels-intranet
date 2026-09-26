@@ -107,7 +107,7 @@ export function StepRules({
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
             <CardTitle className={cn("text-base font-bold text-slate-900 dark:text-white flex items-center gap-2", isRTL ? 'flex-row-reverse' : '')}>
-              <BookOpen className="w-4 h-4 text-hotel-gold" />
+              <BookOpen className="w-4 h-4 text-ds-brass" />
               <span>{t('builder.courseDetails', 'Course Classification & Department')}</span>
             </CardTitle>
           </CardHeader>
@@ -196,7 +196,7 @@ export function StepRules({
           <CardHeader>
             <div className={cn("flex items-center justify-between", isRTL ? 'flex-row-reverse' : '')}>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <SlidersHorizontal className="w-4 h-4 text-hotel-gold" />
+                <SlidersHorizontal className="w-4 h-4 text-ds-brass" />
                 <span>{t('builder.quizRulesTitle', 'Assessment & Quiz Configuration')}</span>
               </CardTitle>
               {visibilityRules.showQuizRules ? (
@@ -245,7 +245,7 @@ export function StepRules({
                       max="100"
                       value={passingScore}
                       onChange={(e) => setPassingScore(e.target.value)}
-                      className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                      className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                     />
                     <div className={cn("flex flex-wrap gap-2 items-center", isRTL ? "flex-row-reverse" : "")}>
                       {scorePresets.map((preset) => (
@@ -283,7 +283,7 @@ export function StepRules({
                       value={maxAttempts}
                       onChange={(e) => setMaxAttempts(e.target.value)}
                       disabled={!allowRetake}
-                      className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                      className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                     />
                   </div>
                 </div>
@@ -317,7 +317,7 @@ export function StepRules({
                       value={timeLimit ?? ''}
                       onChange={(e) => setTimeLimit(e.target.value ? Number(e.target.value) : null)}
                       placeholder={t('builder.timeLimitPlaceholder', 'e.g. 10 (Optional)')}
-                      className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                      className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                     />
                   </div>
                   <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -338,7 +338,7 @@ export function StepRules({
           <CardHeader>
             <div className={cn("flex items-center justify-between", isRTL ? 'flex-row-reverse' : '')}>
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Award className="w-4 h-4 text-hotel-gold" />
+                <Award className="w-4 h-4 text-ds-brass" />
                 <span>{t('builder.certRulesTitle', 'Certification & Validity Period')}</span>
               </CardTitle>
               <Switch checked={certificateEnabled} onCheckedChange={setCertificateEnabled} />
@@ -355,7 +355,7 @@ export function StepRules({
                     type="number"
                     value={validityPeriod}
                     onChange={(e) => setValidityPeriod(e.target.value)}
-                    className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                    className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                   />
                 </div>
                 <div className="p-3 bg-slate-50 rounded-lg text-xs text-slate-600 flex items-center gap-2">

@@ -123,5 +123,9 @@
     "deleteSuccess": "Media asset deleted successfully",
     "updateSuccess": "Media asset updated successfully",
     "uploadSuccess": "File uploaded successfully"
+  },
+  "page": {
+    "eyebrow": "Studio",
+    "context": "{{total}} files · {{images}} images · {{videos}} videos. Used in courses and articles."
   }
 }

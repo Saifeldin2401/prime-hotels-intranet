@@ -1,4 +1,4 @@
-import type { Department, Profile, Property } from './profile'
+import type { Department, Profile } from './profile'
 
 // Messaging System Interfaces
 interface Message {
@@ -13,7 +13,6 @@ interface Message {
   sent_at: string | null
   read_at: string | null
   parent_message_id: string | null // for replies
-  property_id: string | null
   department_id: string | null
   conversation_id?: string | null
   created_at: string
@@ -22,7 +21,6 @@ interface Message {
   // Relations
   sender?: Profile
   recipient?: Profile
-  property?: Property
   department?: Department
   parent_message?: Message
   replies?: Message[]

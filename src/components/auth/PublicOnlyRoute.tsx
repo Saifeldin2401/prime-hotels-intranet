@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { consumePostLoginRedirect, getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
 import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { safeLocalStorage } from '@/lib/storage'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
@@ -19,7 +19,7 @@ const isDeepLink = (p: string | null | undefined): p is string =>
     !!p && !GENERIC_LANDINGS.has(p.split('?')[0].replace(/\/$/, '') || '/')
 
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
-    const { user, loading } = useAuth()
+    const { user, loading, signOut } = useAuth()
     const account = useAccountContext()
     const location = useLocation()
     const { t } = useTranslation('extracted')
@@ -28,12 +28,30 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const redirectPath = getRedirectFromSearch(location.search)
     const storedRedirect = peekPostLoginRedirect()
 
+    const isRegisteredUser =
+        account.isPlatformOperator ||
+        account.tenantMemberships.length > 0 ||
+        Boolean(account.primaryOrganizationId)
+
+    // Unregistered users (e.g. external Google accounts not invited/provisioned by an admin)
+    // are immediately signed out and have their local session state purged.
+    useEffect(() => {
+        if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+            safeSessionStorage.removeItem('altus_session_active')
+            safeLocalStorage.removeItem('altus_active_tenant_id')
+            if (user?.id) {
+                safeLocalStorage.removeItem(`active_tenant_id_${user.id}`)
+            }
+            void signOut()
+        }
+    }, [user, account.loading, account.resolveFailed, isRegisteredUser, signOut])
+
     // Honour a genuine deep-link (e.g. /knowledge/article/123) first; otherwise
     // route the user into the environment their account authorises, resolved
     // server-side by resolve_account_context().
     const deepLink = [pendingAuthFlowPath, redirectPath, storedRedirect].find(isDeepLink) ?? null
     let destination: string | null = null
-    if (user) {
+    if (user && isRegisteredUser) {
         if (deepLink) {
             destination = deepLink
         } else if (account.isPlatformOperator && !account.activePlatformSession) {
@@ -74,7 +92,16 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
         )
     }
 
-    if (user && destination) {
+    // Bounce unregistered users to /login with not_registered notice
+    if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+        const unregEmail = user.email ? encodeURIComponent(user.email) : ''
+        const notRegisteredUrl = `/login?error=not_registered${unregEmail ? `&email=${unregEmail}` : ''}`
+        if (location.pathname !== '/login' || !location.search.includes('error=not_registered')) {
+            return <Navigate to={notRegisteredUrl} replace />
+        }
+    }
+
+    if (user && isRegisteredUser && destination) {
         return <Navigate to={destination} replace />
     }
 

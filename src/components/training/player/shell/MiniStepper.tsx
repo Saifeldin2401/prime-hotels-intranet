@@ -25,7 +25,7 @@ export function MiniStepper({ current, total, className }: MiniStepperProps) {
                         className={cn(
                             'h-1.5 rounded-full transition-all duration-300',
                             i === current
-                                ? 'w-6 bg-hotel-gold'
+                                ? 'w-6 bg-ds-brass'
                                 : i < current
                                     ? 'w-1.5 bg-emerald-500'
                                     : 'w-1.5 bg-border',

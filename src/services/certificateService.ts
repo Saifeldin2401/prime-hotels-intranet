@@ -39,9 +39,6 @@ export interface CertificateData {
     // Context & Multi-Tenant Scoping
     organizationId?: string
     brandId?: string
-    hotelId?: string
-    propertyId?: string
-    propertyName?: string
     departmentId?: string
     departmentName?: string
     issuedBy?: string
@@ -77,7 +74,6 @@ type CertificateRecord = {
     sop_id?: string | null
     quiz_attempt_id?: string | null
     organization_id?: string | null
-    property_id?: string | null
     department_id?: string | null
     issued_by?: string | null
     status: string | null
@@ -473,7 +469,6 @@ export async function verifyCertificate(verificationCode: string): Promise<{
             expiryDate: result.expiry_date ? new Date(result.expiry_date) : undefined,
             status: resolvedStatus,
             createdAt: new Date(result.issued_at),
-            propertyName: result.property_name ?? undefined,
             departmentName: result.department_name ?? undefined,
             organizationName: result.organization_name ?? undefined,
             organizationLogoUrl: result.organization_logo_url ?? undefined
@@ -505,7 +500,7 @@ export async function logCertificateAction(
 export function mapCertificateFromDb(record: CertificateRecord): Certificate {
     // metadata is JSONB; createCertificate() always writes this shape, so the cast is safe
     // even though the generated column type is the generic Json union.
-    const metadata = record.metadata as { propertyName?: string; departmentName?: string; issuedByName?: string } | null | undefined
+    const metadata = record.metadata as { departmentName?: string; issuedByName?: string } | null | undefined
 
     return {
         id: record.id,
@@ -526,8 +521,6 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
         sopId: record.sop_id,
         quizAttemptId: record.quiz_attempt_id,
         organizationId: record.organization_id || undefined,
-        propertyId: record.property_id,
-        propertyName: metadata?.propertyName,
         departmentId: record.department_id,
         departmentName: metadata?.departmentName,
         issuedBy: record.issued_by,

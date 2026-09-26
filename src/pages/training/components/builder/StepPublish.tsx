@@ -166,7 +166,7 @@ export function StepPublish({
               <Button
                 onClick={publishTraining}
                 disabled={!publishReady || builderBusy}
-                className="bg-hotel-gold hover:bg-hotel-gold-dark text-white"
+                className="bg-ds-brass hover:bg-ds-accent-hover text-white"
               >
                 {t('builder.publish', 'Publish Module')}
               </Button>

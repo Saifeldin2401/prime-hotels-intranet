@@ -213,11 +213,14 @@ export default {
         },
       },
       fontFamily: {
-        display: ["IBM Plex Sans", "IBM Plex Sans Arabic", "Inter", "sans-serif"],
-        executive: ["IBM Plex Sans", "IBM Plex Sans Arabic", "Inter", "sans-serif"],
-        sans: ["IBM Plex Sans", "IBM Plex Sans Arabic", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        sans: ["DM Sans", "IBM Plex Sans Arabic", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+        // Legacy aliases resolve to the interface face, so older screens do not
+        // scatter the display face; Cormorant is opt-in via `font-editorial`.
+        display: ["DM Sans", "IBM Plex Sans Arabic", "sans-serif"],
+        executive: ["DM Sans", "IBM Plex Sans Arabic", "sans-serif"],
+        serif: ["DM Sans", "IBM Plex Sans Arabic", "sans-serif"],
+        editorial: ["Cormorant Garamond", "IBM Plex Sans Arabic", "Georgia", "serif"],
         mono: ["IBM Plex Mono", "Consolas", "Courier New", "monospace"],
-        serif: ["IBM Plex Sans", "IBM Plex Sans Arabic", "serif"],
       },
       transitionTimingFunction: {
         'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',

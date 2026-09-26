@@ -1,8 +1,8 @@
+import { PageHeader } from '@/components/layout/PageHeader'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -12,16 +12,11 @@ export default function QuestionGeneratorPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/studio/quizzes')}>
-                    <ArrowLeft className="h-4 w-4 me-2" />
-                    Back to Library
-                </Button>
-                <div>
-                    <h1 className="text-2xl font-bold">AI Question Generator</h1>
-                    <p className="text-gray-500">Generate quiz questions from any SOP content</p>
-                </div>
-            </div>
+            <PageHeader
+                backTo="/studio/quizzes"
+                title="Generate questions"
+                description="Paste a procedure or training text. Review every generated question before it goes into a quiz."
+            />
 
             <div className="grid gap-6">
                 <Card>

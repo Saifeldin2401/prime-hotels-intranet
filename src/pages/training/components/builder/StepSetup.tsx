@@ -161,7 +161,7 @@ export function StepSetup({
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={t('builder.untitledModule')}
-                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                  className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                 />
               </div>
               <div className="space-y-2">
@@ -207,7 +207,7 @@ export function StepSetup({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder={t('builder.descriptionHint')}
                 rows={3}
-                className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
               />
             </div>
 
@@ -273,7 +273,7 @@ export function StepSetup({
                   placeholder="30"
                   disabled={!useEstimatedDuration}
                   className={cn(
-                    "bg-white border-slate-200 focus:ring-hotel-gold",
+                    "bg-white border-slate-200 focus:ring-ds-brass",
                     !useEstimatedDuration && "opacity-60",
                     isRTL ? "text-end" : ""
                   )}
@@ -305,7 +305,7 @@ export function StepSetup({
                   value={validityPeriod}
                   onChange={(e) => setValidityPeriod(e.target.value)}
                   placeholder="365"
-                  className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-end" : "")}
+                  className={cn("bg-white border-slate-200 focus:ring-ds-brass", isRTL ? "text-end" : "")}
                 />
                 <div className={cn("flex flex-wrap gap-2", isRTL ? "flex-row-reverse" : "")}>
                   {validityPresets.map(preset => (

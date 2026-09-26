@@ -55,6 +55,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { ConfirmDialog } from '@/ui'
 import type { Organization, SubscriptionPlan } from '@/lib/types/tenant'
 import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
 
@@ -79,7 +80,7 @@ export default function OrganizationsHub() {
   const navigate = useNavigate()
   const { t } = useTranslation(['admin', 'common'])
 
-  const [organizations, setOrganizations] = useState<(Organization & { hotelCount: number; userCount: number; subscription?: any })[]>([])
+  const [organizations, setOrganizations] = useState<(Organization & { userCount: number; subscription?: any })[]>([])
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'trial' | 'suspended'>('all')
@@ -87,13 +88,13 @@ export default function OrganizationsHub() {
 
   // Enter / Impersonate Modal State
   const [selectedOrgForEnter, setSelectedOrgForEnter] = useState<Organization | null>(null)
+  const [statusChange, setStatusChange] = useState<(Organization & { userCount?: number }) | null>(null)
   const [enterReason, setEnterReason] = useState('')
   const [actingRole, setActingRole] = useState('organization_admin')
   const [isEntering, setIsEntering] = useState(false)
 
   // Quick Entitlements Edit State
   const [editEntOrg, setEditEntOrg] = useState<any | null>(null)
-  const [editMaxHotels, setEditMaxHotels] = useState<number>(10)
   const [editMaxLearners, setEditMaxLearners] = useState<number>(100)
   const [editMaxStorage, setEditMaxStorage] = useState<number>(50)
   const [editMaxAiCredits, setEditMaxAiCredits] = useState<number>(1000)
@@ -117,7 +118,6 @@ export default function OrganizationsHub() {
   
   // Plan & Quota Fields
   const [selectedPlanId, setSelectedPlanId] = useState<string>('')
-  const [maxHotels, setMaxHotels] = useState<number>(10)
   const [maxLearners, setMaxLearners] = useState<number>(100)
   const [maxStorageGb, setMaxStorageGb] = useState<number>(50)
   const [maxAiCreditsMonthly, setMaxAiCreditsMonthly] = useState<number>(1000)
@@ -127,7 +127,6 @@ export default function OrganizationsHub() {
   const [secondaryColor, setSecondaryColor] = useState('#2563eb')
   const [accentColor, setAccentColor] = useState('#d97706')
   const [initialBrandName, setInitialBrandName] = useState('')
-  const [initialHotelName, setInitialHotelName] = useState('')
 
   const loadData = async () => {
     setIsLoading(true)
@@ -143,7 +142,6 @@ export default function OrganizationsHub() {
       if (planData.length > 0 && !selectedPlanId) {
         const growth = planData.find(p => p.code === 'growth') || planData[0]
         setSelectedPlanId(growth.id)
-        setMaxHotels(growth.max_hotels || 25)
         setMaxLearners(growth.max_users || 500)
         setMaxStorageGb(growth.max_storage_gb || 50)
         setMaxAiCreditsMonthly(1000)
@@ -161,7 +159,6 @@ export default function OrganizationsHub() {
 
   const handlePlanSelect = (plan: SubscriptionPlan) => {
     setSelectedPlanId(plan.id)
-    setMaxHotels(plan.max_hotels || 10)
     setMaxLearners(plan.max_users || 100)
     setMaxStorageGb(plan.max_storage_gb || 50)
     if (plan.code === 'enterprise') setMaxAiCreditsMonthly(5000)
@@ -187,7 +184,6 @@ export default function OrganizationsHub() {
         slug: newOrgSlug,
         industry: newOrgIndustry,
         planId: selectedPlanId || undefined,
-        maxHotels: Number(maxHotels) || 10,
         maxLearners: Number(maxLearners) || 100,
         maxStorageGb: Number(maxStorageGb) || 50,
         maxAiCreditsMonthly: Number(maxAiCreditsMonthly) || 1000,
@@ -200,7 +196,6 @@ export default function OrganizationsHub() {
           accent: accentColor
         },
         initialBrandName: initialBrandName || undefined,
-        initialHotelName: initialHotelName || undefined,
         actorId: user?.id
       })
 
@@ -216,7 +211,6 @@ export default function OrganizationsHub() {
       setNewOrgSlug('')
       setNewBillingEmail('')
       setInitialBrandName('')
-      setInitialHotelName('')
       setCreateTab('identity')
       await loadData()
     } catch (err: unknown) {
@@ -233,7 +227,6 @@ export default function OrganizationsHub() {
 
   const openEntitlementsEditor = (org: any) => {
     setEditEntOrg(org)
-    setEditMaxHotels(org.max_hotels || 10)
     setEditMaxLearners(org.max_learners || 100)
     setEditMaxStorage(org.max_storage_gb || 50)
     setEditMaxAiCredits(org.max_ai_credits_monthly || 1000)
@@ -246,7 +239,6 @@ export default function OrganizationsHub() {
     setIsSavingEnt(true)
     try {
       await platformService.updateOrganizationEntitlements(editEntOrg.id, {
-        maxHotels: Number(editMaxHotels),
         maxLearners: Number(editMaxLearners),
         maxStorageGb: Number(editMaxStorage),
         maxAiCreditsMonthly: Number(editMaxAiCredits),
@@ -316,9 +308,6 @@ export default function OrganizationsHub() {
   }
 
   // Summary Metrics
-  const totalHotels = organizations.reduce((acc, o) => acc + (o.hotelCount || 0), 0)
-  const totalUsers = organizations.reduce((acc, o) => acc + (o.userCount || 0), 0)
-  const activeOrgs = organizations.filter(o => o.is_active && !o.is_deleted).length
 
   const filteredOrgs = organizations.filter((org) => {
     const matchesSearch =
@@ -360,7 +349,7 @@ export default function OrganizationsHub() {
                     <DialogTitle className="text-lg font-bold">{t('admin:provision_org', 'Provision Enterprise Organization')}</DialogTitle>
                   </div>
                   <DialogDescription className="text-xs">
-                    {t('admin:provision_org_desc', 'Configure tenant identity, subscription plan, hotel/seat limits, AI budget, and branding.')}
+                    {t('admin:provision_org_desc', 'Set up the organization’s identity, plan, seat limit, AI budget and branding.')}
                   </DialogDescription>
                 </DialogHeader>
 
@@ -521,7 +510,6 @@ export default function OrganizationsHub() {
                                 {p.code === 'enterprise' && <Crown className="h-3.5 w-3.5 text-amber-500" />}
                               </div>
                               <div className="text-[11px] text-muted-foreground space-y-0.5">
-                                <div><strong>{p.max_hotels}</strong> hotels</div>
                                 <div><strong>{p.max_users}</strong> seats</div>
                                 <div><strong>{p.max_storage_gb} GB</strong> storage</div>
                               </div>
@@ -537,21 +525,7 @@ export default function OrganizationsHub() {
                         <Badge variant="outline" className="text-[10px]">Override Defaults</Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="space-y-1.5 bg-muted/30 p-3 rounded-xl border">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                            <Building className="h-3.5 w-3.5 text-blue-500" />
-                            Max Hotels
-                          </div>
-                          <Input
-                            type="number"
-                            min={1}
-                            value={maxHotels}
-                            onChange={(e) => setMaxHotels(parseInt(e.target.value) || 1)}
-                            className="h-8 text-sm font-bold"
-                          />
-                        </div>
-
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="space-y-1.5 bg-muted/30 p-3 rounded-xl border">
                           <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                             <Users className="h-3.5 w-3.5 text-indigo-500" />
@@ -692,18 +666,6 @@ export default function OrganizationsHub() {
                         />
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label htmlFor="init-hotel" className="text-xs font-semibold">
-                          Flagship Hotel Property (Optional)
-                        </Label>
-                        <Input
-                          id="init-hotel"
-                          value={initialHotelName}
-                          onChange={(e) => setInitialHotelName(e.target.value)}
-                          placeholder="e.g. Grand Riyadh Hotel"
-                          className="h-9 text-xs"
-                        />
-                      </div>
                     </div>
                   </TabsContent>
                 </Tabs>
@@ -728,246 +690,126 @@ export default function OrganizationsHub() {
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card className="p-4 border shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">Total Organizations</span>
-            <Building2 className="h-4 w-4 text-blue-500" />
-          </div>
-          <div className="text-2xl font-black mt-2">{organizations.length}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">{activeOrgs} actively operational</div>
-        </Card>
-
-        <Card className="p-4 border shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">Managed Properties</span>
-            <Building className="h-4 w-4 text-indigo-500" />
-          </div>
-          <div className="text-2xl font-black mt-2">{totalHotels}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">Across all customer tenants</div>
-        </Card>
-
-        <Card className="p-4 border shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">Provisioned Seats</span>
-            <Users className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="text-2xl font-black mt-2">{totalUsers}</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">Active learners & managers</div>
-        </Card>
-
-        <Card className="p-4 border shadow-sm">
-          <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold">Subscription Tiers</span>
-            <Crown className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="text-2xl font-black mt-2">{plans.length} Available</div>
-          <div className="text-[11px] text-muted-foreground mt-0.5">Enterprise, Growth, Starter</div>
-        </Card>
+      {/* Fleet status: lifecycle counts double as filters */}
+      <div role="group" aria-label={t('admin:fleet.filterLabel', 'Filter organizations by status')} className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border sm:grid-cols-4">
+        {([
+          { id: 'all', label: t('admin:fleet.all', 'All organizations'), count: organizations.length, tone: 'bg-ds-ink' },
+          { id: 'active', label: t('admin:fleet.active', 'Active'), count: organizations.filter((o) => o.is_active && o.lifecycle_status !== 'trial').length, tone: 'bg-ds-success' },
+          { id: 'trial', label: t('admin:fleet.trial', 'On trial'), count: organizations.filter((o) => o.lifecycle_status === 'trial').length, tone: 'bg-ds-info' },
+          { id: 'suspended', label: t('admin:fleet.suspended', 'Suspended'), count: organizations.filter((o) => !o.is_active).length, tone: 'bg-ds-danger' },
+        ] as const).map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            aria-pressed={statusFilter === f.id}
+            onClick={() => setStatusFilter(f.id)}
+            className={`relative flex min-h-[68px] flex-col items-start justify-center gap-0.5 bg-ds-surface px-4 py-3 text-start hover:bg-ds-surface-subtle focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent ${statusFilter === f.id ? 'bg-ds-surface-subtle' : ''}`}
+          >
+            {statusFilter === f.id && <span className={`absolute inset-x-0 top-0 h-[3px] ${f.tone}`} aria-hidden="true" />}
+            <span className="font-mono text-xl font-medium tabular-nums text-ds-ink">{f.count}</span>
+            <span className="text-xs text-ds-muted">{f.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Filter and Search Bar */}
-      <Card className="border shadow-sm">
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative flex-1 w-full">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={t('admin:search_orgs', 'Search organizations by name or slug...')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="ps-9 h-9 text-xs"
-            />
+      <div role="search" className="relative">
+        <label htmlFor="org-search" className="sr-only">{t('admin:search_orgs', 'Search organizations by name or slug')}</label>
+        <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-muted" />
+        <Input
+          id="org-search"
+          placeholder={t('admin:search_orgs', 'Search organizations by name or slug')}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="h-11 ps-9 text-sm"
+        />
+      </div>
+
+      {/* Organizations: one dense, scannable row each */}
+      <div data-tour="orgs-grid" className="overflow-x-auto rounded-[6px] border border-ds-border bg-ds-surface">
+        {filteredOrgs.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <p className="text-sm font-medium text-ds-ink">{searchTerm ? t('admin:fleet.noMatch', 'No organizations match “{{q}}”', { q: searchTerm }) : t('admin:no_orgs_found', 'No customer organizations yet.')}</p>
+            <p className="mt-1 text-sm text-ds-muted">{t('admin:fleet.noMatchHint', 'Clear the search or choose another status.')}</p>
           </div>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
-              <SelectTrigger className="w-[160px] h-9 text-xs">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('common:all', 'All Statuses')}</SelectItem>
-                <SelectItem value="active">{t('common:active', 'Active (Prod)')}</SelectItem>
-                <SelectItem value="trial">Trial Sandbox</SelectItem>
-                <SelectItem value="suspended">{t('common:suspended', 'Suspended')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Organizations Table */}
-      <Card data-tour="orgs-grid" className="border shadow-sm">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead>{t('admin:organization', 'Organization')}</TableHead>
-                <TableHead>Plan & Domain</TableHead>
-                <TableHead>Hotel Quota</TableHead>
-                <TableHead>Learner Seats</TableHead>
-                <TableHead>Storage & AI</TableHead>
-                <TableHead>{t('admin:status', 'Status')}</TableHead>
-                <TableHead className="text-end">{t('admin:actions', 'Actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrgs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    <Building2 className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                    <p>{t('admin:no_orgs_found', 'No customer organizations found.')}</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredOrgs.map((org) => {
-                  const planName = org.subscription?.plan?.name || 'Enterprise'
-                  const maxH = org.max_hotels || org.subscription?.plan?.max_hotels || 10
-                  const maxL = org.max_learners || org.subscription?.plan?.max_users || 100
-                  const hotelPct = Math.min(100, Math.round(((org.hotelCount || 0) / maxH) * 100))
-                  const userPct = Math.min(100, Math.round(((org.userCount || 0) / maxL) * 100))
-
-                  return (
-                    <TableRow key={org.id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="h-9 w-9 rounded-lg flex items-center justify-center font-bold text-xs text-white border shrink-0"
-                            style={{ backgroundColor: ensureReadableOnWhiteText(org.brand_colors?.primary || '#0f172a') }}
-                          >
-                            {org.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-foreground text-xs">{org.name}</div>
-                            {org.name_ar && <div className="text-[11px] text-muted-foreground font-arabic">{org.name_ar}</div>}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="space-y-1">
-                          <Badge variant="outline" className="text-[10px] font-semibold capitalize bg-primary/5 text-primary border-primary/20">
-                            {planName}
-                          </Badge>
-                          <div className="font-mono text-[11px] text-muted-foreground">
-                            {org.slug}
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Hotel Quota */}
-                      <TableCell>
-                        <div className="space-y-1 w-24">
-                          <div className="flex items-center justify-between text-xs font-semibold">
-                            <span>{org.hotelCount}</span>
-                            <span className="text-muted-foreground">/ {maxH}</span>
-                          </div>
-                          <Progress
-                            value={hotelPct}
-                            className="h-1.5 bg-muted"
-                            indicatorClassName={hotelPct > 90 ? 'bg-rose-500' : hotelPct > 70 ? 'bg-amber-500' : 'bg-primary'}
-                          />
-                        </div>
-                      </TableCell>
-
-                      {/* Seat Quota */}
-                      <TableCell>
-                        <div className="space-y-1 w-24">
-                          <div className="flex items-center justify-between text-xs font-semibold">
-                            <span>{org.userCount}</span>
-                            <span className="text-muted-foreground">/ {maxL}</span>
-                          </div>
-                          <Progress
-                            value={userPct}
-                            className="h-1.5 bg-muted"
-                            indicatorClassName={userPct > 90 ? 'bg-rose-500' : userPct > 70 ? 'bg-amber-500' : 'bg-indigo-500'}
-                          />
-                        </div>
-                      </TableCell>
-
-                      {/* Storage & AI */}
-                      <TableCell>
-                        <div className="text-[11px] space-y-0.5 text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <HardDrive className="h-3 w-3 text-emerald-500" />
-                            <span>{org.max_storage_gb ?? 50} GB</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Sparkles className="h-3 w-3 text-purple-500" />
-                            <span>{org.max_ai_credits_monthly ?? 1000} / mo</span>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant={org.is_active ? 'default' : 'destructive'}
-                          className={`text-[10px] capitalize ${
-                            org.lifecycle_status === 'trial'
-                              ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                              : org.is_active
-                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                              : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                          }`}
+        ) : (
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-ds-border bg-ds-background text-[11px] font-semibold uppercase tracking-[0.08em] text-ds-muted">
+                <th scope="col" className="px-4 py-2.5 text-start">{t('admin:org_column', 'Organization')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start">{t('admin:status', 'Status')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start">{t('admin:fleet.plan', 'Plan')}</th>
+                <th scope="col" className="px-4 py-2.5 text-end">{t('admin:fleet.members', 'Members')}</th>
+                <th scope="col" className="px-4 py-2.5 text-end">{t('admin:actions', 'Actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrgs.map((org) => {
+                const plan = org.subscription?.plan?.name as string | undefined
+                const maxL = org.max_learners ?? org.subscription?.plan?.max_users ?? null
+                const near = (n: number, max: number | null) => max !== null && max > 0 && n / max >= 0.9
+                const status = !org.is_active ? 'suspended' : (org.lifecycle_status || 'active')
+                const dot = status === 'suspended' ? 'bg-ds-danger' : status === 'trial' ? 'bg-ds-info' : status === 'active' ? 'bg-ds-success' : 'bg-ds-warning'
+                return (
+                  <tr key={org.id} className="border-b border-ds-border/70 last:border-0 hover:bg-ds-surface-subtle">
+                    <th scope="row" className="px-4 py-3 text-start font-normal">
+                      <button type="button" onClick={() => navigate(`/platform/organizations/${org.id}`)} className="text-start hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent">
+                        <span className="block font-semibold text-ds-ink">{org.name}</span>
+                        <span className="block font-mono text-xs text-ds-muted">{org.slug}</span>
+                      </button>
+                    </th>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-2 capitalize text-ds-ink">
+                        <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden="true" />
+                        {t(`admin:fleet.status.${status}`, status)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-ds-ink">{plan ?? <span className="text-ds-muted">{t('admin:fleet.noPlan', 'No plan')}</span>}</td>
+                    <td className={`px-4 py-3 text-end font-mono tabular-nums ${near(org.userCount || 0, maxL) ? 'text-ds-warning' : 'text-ds-ink'}`}>
+                      {org.userCount || 0}{maxL !== null && <span className="text-ds-muted"> / {maxL}</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEntitlementsEditor(org)} className="h-9 px-2 text-xs">
+                          <Sliders className="me-1 h-3.5 w-3.5" />{t('admin:quotas', 'Limits')}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setSelectedOrgForEnter(org)} className="h-9 gap-1 px-2 text-xs font-semibold">
+                          <LogIn className="h-3.5 w-3.5" />{t('admin:enter_tenant', 'Enter')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setStatusChange(org)}
+                          className={`h-9 px-2 text-xs ${org.is_active ? 'text-ds-danger' : 'text-ds-success'}`}
                         >
-                          {org.lifecycle_status || (org.is_active ? 'active' : 'suspended')}
-                        </Badge>
-                      </TableCell>
+                          {org.is_active ? <PowerOff className="me-1 h-3.5 w-3.5" /> : <Power className="me-1 h-3.5 w-3.5" />}
+                          {org.is_active ? t('admin:fleet.suspend', 'Suspend') : t('admin:fleet.reactivate', 'Reactivate')}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
 
-                      <TableCell className="text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {/* Quick Quota Edit */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openEntitlementsEditor(org)}
-                            title="Edit Plan & Quotas"
-                            className="h-8 text-xs px-2"
-                          >
-                            <Sliders className="h-3.5 w-3.5 me-1 text-muted-foreground" />
-                            Quotas
-                          </Button>
-
-                          {/* Manage Profile */}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => navigate(`/platform/organizations/${org.id}`)}
-                            className="h-8 text-xs px-2 font-semibold"
-                          >
-                            {t('admin:manage', 'Profile')}
-                          </Button>
-
-                          {/* Enter Organization Action */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedOrgForEnter(org)}
-                            className="gap-1 border-primary/30 text-primary hover:bg-primary/5 font-semibold text-xs h-8 px-2"
-                          >
-                            <LogIn className="h-3.5 w-3.5" />
-                            {t('admin:enter_tenant', 'Enter')}
-                          </Button>
-
-                          {/* Suspend / Activate Toggle */}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleToggleStatus(org)}
-                            title={org.is_active ? 'Suspend Organization' : 'Activate Organization'}
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          >
-                            {org.is_active ? <PowerOff className="h-3.5 w-3.5 text-amber-600" /> : <Power className="h-3.5 w-3.5 text-green-600" />}
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <ConfirmDialog
+        isOpen={!!statusChange}
+        onClose={() => setStatusChange(null)}
+        onConfirm={async () => {
+          if (statusChange) await handleToggleStatus(statusChange)
+          setStatusChange(null)
+        }}
+        isDestructive={!!statusChange?.is_active}
+        title={statusChange?.is_active
+          ? t('admin:fleet.suspendTitle', 'Suspend {{name}}?', { name: statusChange?.name ?? '' })
+          : t('admin:fleet.reactivateTitle', 'Reactivate {{name}}?', { name: statusChange?.name ?? '' })}
+        description={statusChange?.is_active
+          ? t('admin:fleet.suspendBody', 'All {{count}} members lose access immediately. Their data is kept and access returns when you reactivate.', { count: statusChange?.userCount ?? 0 })
+          : t('admin:fleet.reactivateBody', 'Members regain access immediately.')}
+        confirmButtonText={statusChange?.is_active ? t('admin:fleet.suspend', 'Suspend') : t('admin:fleet.reactivate', 'Reactivate')}
+      />
 
       {/* QUICK ENTITLEMENtS & LIMITS MODAL */}
       {editEntOrg && (
@@ -993,7 +835,7 @@ export default function OrganizationsHub() {
                   <SelectContent>
                     {plans.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.name} ({p.max_hotels} hotels, {p.max_users} seats)
+                        {p.name} ({p.max_users} seats)
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1001,17 +843,6 @@ export default function OrganizationsHub() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Hotel Quota Limit</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={editMaxHotels}
-                    onChange={(e) => setEditMaxHotels(parseInt(e.target.value) || 1)}
-                    className="h-9 text-xs font-semibold"
-                  />
-                </div>
-
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Learner Seats Limit</Label>
                   <Input

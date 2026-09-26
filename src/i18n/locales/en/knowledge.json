@@ -134,7 +134,8 @@
         "views": "views",
         "min_read": "min read",
         "updated": "Updated",
-        "updated_at": "Updated on {{date}}"
+        "updated_at": "Updated on {{date}}",
+        "min_read_n": "{{count}} min read"
     },
     "viewer": {
         "master_sop": "Master SOP",
@@ -177,7 +178,7 @@
         "acknowledge_title": "Document Acknowledgment",
         "acknowledge_desc": "Confirm that you have read and understood this content.",
         "i_acknowledge": "I Acknowledge",
-        "already_acknowledged": "Article Acknowledged",
+        "already_acknowledged": "Acknowledged",
         "acknowledged_on": "You acknowledged this on {{date}}",
         "discussion": "Discussion",
         "leave_comment": "Leave a comment...",
@@ -233,7 +234,9 @@
         "clear_translation": "Reset Translation",
         "feedback_placeholder_pos": "What did you find most helpful? (Optional)",
         "translation_complete": "Translation Complete",
-        "translated": "Translated"
+        "translated": "Translated",
+        "acknowledge_required": "Required reading: read to the end and confirm you have understood it.",
+        "reading_time": "Reading time"
     },
     "feedback": {
         "helpful": "Was this article helpful?",
@@ -322,7 +325,12 @@
         "linked_video": "Linked Video",
         "unlink_video": "Remove Video",
         "replace_video": "Replace Video",
-        "video_preview": "Video Preview"
+        "video_preview": "Video Preview",
+        "tabs": {
+            "write": "Write",
+            "checklists": "Checklists & controls",
+            "preview_short": "Preview"
+        }
     },
     "browse": {
         "title": "Browse Knowledge Base",
@@ -480,5 +488,93 @@
     "common": {
         "no_data": "No Data"
     },
-    "required_reading": "Required Reading"
+    "required_reading": "Required Reading",
+    "hub": {
+        "eyebrow": "Knowledge",
+        "title": "What do you need to know?",
+        "searchLabel": "Search knowledge",
+        "searchPlaceholder": "Search SOPs, guides and policies - for example \"late check-out\"",
+        "clearSearch": "Clear search",
+        "filter": {
+            "all": "All",
+            "sop": "SOPs",
+            "guide": "Guides",
+            "policy": "Policies",
+            "required": "Required reading",
+            "saved": "Saved"
+        },
+        "scopeLine": "Showing knowledge for {{scope}}",
+        "resultsFor": "{{count}} results for \"{{q}}\"",
+        "resultsCount": "{{count}} articles",
+        "noResults": "No articles match \"{{q}}\"",
+        "noResultsFilter": "No articles here yet",
+        "noResultsHotel": "Nothing matches at {{hotel}}. Try fewer words, another type, or all hotels.",
+        "noResultsHint": "Try fewer words or another type. If an SOP should exist, tell your knowledge manager.",
+        "clearFilters": "Clear search and filters",
+        "emptyTitle": "No knowledge published yet",
+        "emptyAuthor": "Write the first SOP, guide or policy for your teams.",
+        "emptyLearner": "Your organization has not published any articles yet.",
+        "writeFirst": "Write an article",
+        "requiredTitle": "Required reading",
+        "requiredHint": "Read these and confirm you have understood them.",
+        "roleTitle": "Relevant to your role",
+        "latestTitle": "Latest for your organization",
+        "roleEmpty": "No articles are targeted at your department yet.",
+        "recentTitle": "Recently updated",
+        "popularTitle": "Most used by colleagues",
+        "popularEmpty": "Popular articles appear here once people start reading.",
+        "reviewTitle": "Past their review date",
+        "openReview": "Open review queue",
+        "required": "Required",
+        "owner": "Owner",
+        "version": "Version",
+        "effective": "Effective",
+        "reviewed": "Last reviewed",
+        "appliesTo": "Applies to",
+        "reviewOverdue": "Review overdue",
+        "current": "Current",
+        "scope": {
+            "global": "All organizations",
+            "organization": "Whole organization",
+            "brand": "Brand",
+            "hotel": "Hotel",
+            "department": "Department"
+        }
+    },
+    "content_types_short": {
+        "sop": "SOP",
+        "policy": "Policy",
+        "guide": "Guide",
+        "checklist": "Checklist",
+        "reference": "Reference",
+        "faq": "FAQ",
+        "video": "Video",
+        "visual": "Visual",
+        "document": "Document"
+    },
+    "quizBank": {
+        "eyebrow": "Studio",
+        "title": "Quizzes & questions",
+        "context": "Write questions once, then reuse them across quizzes and course checkpoints.",
+        "generate": "Generate from a document",
+        "newQuiz": "New quiz",
+        "questions": "Questions",
+        "quizzes": "Quizzes"
+    },
+    "articleReview": {
+        "eyebrow": "Studio · Review",
+        "title": "Article review",
+        "context": "Read submitted procedures, then publish them or send them back with notes.",
+        "waiting": "Waiting for review",
+        "returned": "Sent back",
+        "drafts": "Drafts",
+        "published": "Published",
+        "all": "All"
+    },
+    "articleLibrary": {
+        "eyebrow": "Studio",
+        "title": "Articles",
+        "context": "Every procedure, policy and guide in your organization: drafts, in review and published.",
+        "draftWithAi": "Draft with AI"
+    }
 }

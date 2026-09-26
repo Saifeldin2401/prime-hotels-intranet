@@ -1,4 +1,4 @@
-import type { Department, Profile, Property } from './profile'
+import type { Department, Profile } from './profile'
 
 // Task Management Interfaces
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'
@@ -16,7 +16,6 @@ export interface Task {
   created_by_id: string
 
   // Organization
-  property_id: string | null
   department_id: string | null
 
   // Dates
@@ -35,7 +34,6 @@ export interface Task {
   // Relations
   assigned_to?: Profile
   created_by?: Profile
-  property?: Property
   department?: Department
   comments?: TaskComment[]
   attachments?: TaskAttachment[]

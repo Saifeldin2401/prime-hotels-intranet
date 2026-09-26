@@ -81,6 +81,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [resolveFailed, setResolveFailed] = useState(false)
   const reqIdRef = useRef(0)
   const hasResolvedRef = useRef(false)
+  const resolvedUserIdRef = useRef<string | null>(null)
 
   const resolve = useCallback(async () => {
     const myReq = ++reqIdRef.current
@@ -89,10 +90,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setResolveFailed(false)
       setLoading(false)
       hasResolvedRef.current = false
+      resolvedUserIdRef.current = null
       return
     }
     // Only show full loading state during initial resolution
-    if (!hasResolvedRef.current) {
+    if (!hasResolvedRef.current || resolvedUserIdRef.current !== user.id) {
       setLoading(true)
     }
     // Right after login the JWT can lag a beat — retry a transient failure a
@@ -108,6 +110,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           setCtx({ ...EMPTY, ...(data as AccountContextShape) })
           setResolveFailed(false)
           hasResolvedRef.current = true
+          resolvedUserIdRef.current = user.id
           setLoading(false)
           return
         }
@@ -122,6 +125,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setCtx(EMPTY)
     setResolveFailed(true)
     hasResolvedRef.current = true
+    resolvedUserIdRef.current = user.id
     setLoading(false)
   }, [user])
 
@@ -133,8 +137,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AccountContextValue>(() => {
     const roles = ctx.platform_roles ?? []
     const perms = ctx.platform_permissions ?? []
+    const isResolvingForUser = !!user && resolvedUserIdRef.current !== user.id
     return {
-      loading: authLoading || loading,
+      loading: authLoading || loading || isResolvingForUser,
       resolveFailed,
       isPlatformOperator: !!ctx.is_platform_operator,
       platformRoles: roles,

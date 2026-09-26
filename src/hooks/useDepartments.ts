@@ -1,187 +1,99 @@
 import { useTenant } from '@/contexts/TenantContext';
-import { isRealPropertyId } from '@/lib/propertyScope';
 import { supabase } from '@/lib/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
+import type { Json } from '@/types/database.generated';
 
 interface Department {
   id: string;
   name: string;
   name_ar?: string;
-  property_id: string; // Ensure this is present
   manager_id?: string;
 }
 
-export function useDepartments(propertyId?: string) { // Optional filter
+/**
+ * Departments of the current organization. Departments are organization-wide;
+ * row-level security decides who may read and change them - the role check
+ * here only hides actions a user could not complete.
+ */
+export function useDepartments() {
   const queryClient = useQueryClient();
-  const { user, primaryRole, properties } = useAuth();
-  const { currentOrganization, isPlatformScope } = useTenant();
+  const { user, primaryRole } = useAuth();
+  const { currentOrganization } = useTenant();
 
-  // Auth helpers
-  const isCorporateAdmin = ['administrator', 'super_admin', 'corporate_admin'].includes(primaryRole || '');
-  const isRegionalAccess = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr'].includes(primaryRole || '');
-  const isPropertyAdmin = ['property_manager', 'property_hr'].includes(primaryRole || '');
-  const canManage = isRegionalAccess || isPropertyAdmin;
+  const canManage = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'].includes(primaryRole || '');
 
-  // Determine which property IDs this user can actually see/manage
-  const allowedPropertyIds = properties?.map(p => p.id) || [];
-  const validatePropertyAccess = (idToValidate: string) => {
-    if (isCorporateAdmin) return true; // administrators and corporate_admin can manage anywhere
-    return allowedPropertyIds.includes(idToValidate);
-  };
-
-  const normalizedPropertyId = isRealPropertyId(propertyId) ? propertyId : undefined;
-
-  // Fetch departments
   const { data: departments = [], isLoading, error } = useQuery({
-    queryKey: ['departments', normalizedPropertyId, currentOrganization?.id],
+    queryKey: ['departments', currentOrganization?.id],
     queryFn: async () => {
-      // departments table uses is_active, not is_deleted
-      let query = supabase.from('departments').select('*').eq('is_active', true).order('name');
-      if (normalizedPropertyId) {
-        query = query.eq('property_id', normalizedPropertyId);
-      } else if (currentOrganization?.id) {
-        query = query.eq('organization_id', currentOrganization.id);
-      } else if (!isPlatformScope && !isCorporateAdmin) {
-        // Enforce visibility for non-corporate users
-        if (allowedPropertyIds.length > 0) {
-          query = query.in('property_id', allowedPropertyIds);
-        } else {
-          // If user has no properties and is not corporate, they shouldn't see any departments
-          return [];
-        }
-      }
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('organization_id', currentOrganization!.id)
+        .eq('is_active', true)
+        .order('name');
       if (error) throw error;
       return data as Department[];
     },
-    enabled: isPlatformScope || !!currentOrganization?.id || !!normalizedPropertyId
+    enabled: !!currentOrganization?.id,
   });
 
-  // Create
+  const audit = (entityId: string, metadata: Json) => {
+    if (!user || !currentOrganization?.id) return;
+    supabase.from('system_events').insert({
+      event_type: 'audit',
+      actor_id: user.id,
+      entity_type: 'department',
+      entity_id: entityId,
+      organization_id: currentOrganization.id,
+      metadata,
+    }).then(({ error: auditError }) => {
+      if (auditError) console.error('Failed to write audit log:', auditError);
+    });
+  };
+
   const createDepartment = useMutation({
     mutationFn: async (dept: Omit<Department, 'id'>) => {
       if (!user) throw new Error('Unauthenticated');
       if (!canManage) throw new Error('Unauthorized');
-      if (!validatePropertyAccess(dept.property_id)) {
-        throw new Error('Unauthorized: Property access denied');
-      }
+      if (!currentOrganization?.id) throw new Error('No organization selected');
 
-      let orgId: string | null = currentOrganization?.id || null;
-      if (dept.property_id) {
-        const { data: hotelRow } = await supabase.from('hotels').select('organization_id').eq('id', dept.property_id).maybeSingle();
-        if (hotelRow?.organization_id) orgId = hotelRow.organization_id;
-      }
-
-      const payload = {
-        ...dept,
-        organization_id: orgId || undefined,
-        hotel_id: dept.property_id
-      };
-
-      const { data, error } = await supabase.from('departments').insert(payload).select().single();
+      const { data, error } = await supabase
+        .from('departments')
+        .insert({ ...dept, organization_id: currentOrganization.id })
+        .select()
+        .single();
       if (error) throw error;
-
-      // Audit log
-      if (orgId) {
-        supabase.from('system_events').insert({
-          event_type: 'audit',
-          actor_id: user.id,
-          entity_type: 'department',
-          entity_id: data.id,
-          organization_id: orgId,
-          metadata: { action: 'create', details: { name: dept.name, property_id: dept.property_id } }
-        }).then(({ error: auditError }) => {
-          if (auditError) console.error('Failed to write audit log:', auditError);
-        });
-      }
-
+      audit(data.id, { action: 'create', details: { name: dept.name } });
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-    }
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
   });
 
-  // Update
   const updateDepartment = useMutation({
     mutationFn: async (dept: Partial<Department> & { id: string }) => {
       if (!user) throw new Error('Unauthenticated');
       if (!canManage) throw new Error('Unauthorized');
-
-      // Need to verify property access for the existing department first
-      if (!isCorporateAdmin) {
-        const { data: existingDept } = await supabase
-          .from('departments')
-          .select('property_id')
-          .eq('id', dept.id)
-          .single();
-
-        if (!existingDept || !validatePropertyAccess(existingDept.property_id)) {
-          throw new Error('Unauthorized: Target department property access denied');
-        }
-      }
-
-      // Also verify they aren't trying to transfer it to a property they can't access
-      if (dept.property_id && !validatePropertyAccess(dept.property_id)) {
-        throw new Error('Unauthorized: Destination property access denied');
-      }
-
-      const { error } = await supabase.from('departments').update({ name: dept.name, manager_id: dept.manager_id, property_id: dept.property_id }).eq('id', dept.id);
+      const { error } = await supabase
+        .from('departments')
+        .update({ name: dept.name, manager_id: dept.manager_id })
+        .eq('id', dept.id);
       if (error) throw error;
-
-      // Audit log
-      supabase.from('system_events').insert({
-        event_type: 'audit',
-        actor_id: user.id,
-        entity_type: 'department',
-        entity_id: dept.id,
-        metadata: { action: 'update', details: { updates: dept } }
-      }).then(({ error: auditError }) => {
-        if (auditError) console.error('Failed to write audit log:', auditError);
-      });
+      audit(dept.id, { action: 'update', details: { name: dept.name ?? null, manager_id: dept.manager_id ?? null } });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-    }
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
   });
 
-  // Delete
   const deleteDepartment = useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error('Unauthenticated');
       if (!canManage) throw new Error('Unauthorized');
-
-      if (!isCorporateAdmin) {
-        const { data: existingDept } = await supabase
-          .from('departments')
-          .select('property_id')
-          .eq('id', id)
-          .single();
-
-        if (!existingDept || !validatePropertyAccess(existingDept.property_id)) {
-          throw new Error('Unauthorized: Department property access denied');
-        }
-      }
-
       // Soft-delete by deactivating the department
       const { error } = await supabase.from('departments').update({ is_active: false }).eq('id', id);
       if (error) throw error;
-
-      // Audit log
-      supabase.from('system_events').insert({
-        event_type: 'audit',
-        actor_id: user.id,
-        entity_type: 'department',
-        entity_id: id,
-        metadata: { action: 'delete', details: { deactivated: true } }
-      }).then(({ error: auditError }) => {
-        if (auditError) console.error('Failed to write audit log:', auditError);
-      });
+      audit(id, { action: 'delete', details: { deactivated: true } });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['departments'] });
-    }
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['departments'] }),
   });
 
   return {
@@ -190,6 +102,6 @@ export function useDepartments(propertyId?: string) { // Optional filter
     error,
     createDepartment,
     updateDepartment,
-    deleteDepartment
+    deleteDepartment,
   };
 }

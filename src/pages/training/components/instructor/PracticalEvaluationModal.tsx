@@ -30,7 +30,6 @@ interface PracticalEvaluationModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   assessment: PracticalAssessment | null
-  hotelId?: string
   organizationId?: string
 }
 
@@ -45,7 +44,6 @@ export function PracticalEvaluationModal({
   open,
   onOpenChange,
   assessment,
-  hotelId,
   organizationId
 }: PracticalEvaluationModalProps) {
   const { i18n } = useTranslation('common')
@@ -153,7 +151,6 @@ export function PracticalEvaluationModal({
       await submitMutation.mutateAsync({
         assessment_id: assessment.id,
         learner_id: selectedLearnerId,
-        hotel_id: hotelId || null,
         score_achieved: percentage,
         is_passed: isPassed,
         rubric_evaluations: rubricScores,

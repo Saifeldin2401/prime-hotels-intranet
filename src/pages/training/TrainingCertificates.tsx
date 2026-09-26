@@ -1,32 +1,24 @@
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Badge } from '@/components/ui/badge'
+import { Link } from 'react-router-dom'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from '@/hooks/useAuth'
 import {
     useAllCertificates,
     useDownloadCertificate,
-    useMyCertificates,
-    useOrganizationLogo,
-    useVerifyCertificate
+    useOrganizationLogo
 } from '@/hooks/useCertificates'
 import { usePermissions } from '@/hooks/usePermissions'
 import { createQRCodeDataUrl, type Certificate } from '@/services/certificateService'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {
-    AlertTriangle,
     Award,
-    CheckCircle,
     Copy,
     Download,
     ExternalLink,
-    FileText,
     Printer,
     Search,
     Shield
@@ -34,17 +26,18 @@ import {
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
+type RegisterFilter = 'all' | 'valid' | 'expiring' | 'expired' | 'revoked'
+
 export default function TrainingCertificates() {
   const { profile: _profile } = useAuth()
   const { hasPermission } = usePermissions()
   const { t, i18n } = useTranslation(['training', 'public', 'common'])
   const { toast } = useToast()
-  const isRTL = i18n.language === 'ar'
   const dateLocale = i18n.language === 'ar' ? ar : enUS
 
   // State
   const [search, setSearch] = useState('')
-  const [verificationCode, setVerificationCode] = useState('')
+  const [registerFilter, setRegisterFilter] = useState<RegisterFilter>('all')
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null)
   const [showCertificateDialog, setShowCertificateDialog] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
@@ -57,7 +50,7 @@ export default function TrainingCertificates() {
 
   useEffect(() => {
     if (selectedCertificate?.verificationCode) {
-      createQRCodeDataUrl(`https://altus-advisory.com/verify?code=${selectedCertificate.verificationCode}`)
+      createQRCodeDataUrl(`${window.location.origin}/verify/${selectedCertificate.verificationCode}`)
         .then(setQrCodeDataUrl)
         .catch(() => setQrCodeDataUrl(''))
     } else {
@@ -66,25 +59,8 @@ export default function TrainingCertificates() {
   }, [selectedCertificate])
 
   // Hooks
-  const { data: myCertificates, isLoading: myLoading } = useMyCertificates()
   const { data: allCertificates, isLoading: allLoading } = useAllCertificates()
   const downloadMutation = useDownloadCertificate()
-  const verifyMutation = useVerifyCertificate()
-
-  // Helpers
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800'
-      case 'revoked': return 'bg-red-100 text-red-800'
-      case 'expired': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const handleVerify = async () => {
-    if (!verificationCode.trim()) return
-    await verifyMutation.mutateAsync(verificationCode.trim())
-  }
 
   const handleDownload = async (certId: string) => {
     await downloadMutation.mutateAsync(certId)
@@ -104,215 +80,142 @@ export default function TrainingCertificates() {
     })
   }
 
-  // Filter
-  const filteredMy = myCertificates?.filter(c =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.certificateNumber.toLowerCase().includes(search.toLowerCase())
-  ) || []
-
-  const filteredAll = allCertificates?.filter(c =>
-    c.title.toLowerCase().includes(search.toLowerCase()) ||
-    c.recipientName.toLowerCase().includes(search.toLowerCase()) ||
-    c.certificateNumber.toLowerCase().includes(search.toLowerCase())
-  ) || []
-
   const isAdmin = hasPermission('training.report')
 
+  const now = Date.now()
+  const SOON = 60 * 24 * 60 * 60 * 1000
+  const stateOf = (c: Certificate): Exclude<RegisterFilter, 'all'> => {
+    if (c.status === 'revoked' || c.status === 'superseded') return 'revoked'
+    const exp = c.expiryDate ? new Date(c.expiryDate).getTime() : null
+    if (c.status === 'expired' || (exp !== null && exp < now)) return 'expired'
+    if (exp !== null && exp - now < SOON) return 'expiring'
+    return 'valid'
+  }
+  const register = allCertificates ?? []
+  const counts = register.reduce<Record<string, number>>((acc, c) => { const s = stateOf(c); acc[s] = (acc[s] ?? 0) + 1; return acc }, {})
+  const q = search.trim().toLowerCase()
+  const rows = register
+    .filter((c) => registerFilter === 'all' || stateOf(c) === registerFilter)
+    .filter((c) => !q || c.title.toLowerCase().includes(q) || c.recipientName.toLowerCase().includes(q) || c.certificateNumber.toLowerCase().includes(q))
+  const stateTag: Record<Exclude<RegisterFilter, 'all'>, { label: string; cls: string }> = {
+    valid: { label: t('certRegister.valid', 'Valid'), cls: 'text-ds-muted' },
+    expiring: { label: t('certRegister.expiring', 'Expiring soon'), cls: 'rounded-[3px] bg-ds-warning-soft px-1.5 py-0.5 font-medium text-ds-warning' },
+    expired: { label: t('certRegister.expired', 'Expired'), cls: 'rounded-[3px] bg-ds-danger-soft px-1.5 py-0.5 font-medium text-ds-danger' },
+    revoked: { label: t('certRegister.revoked', 'Revoked'), cls: 'text-ds-muted line-through' },
+  }
+  const filterList: { id: RegisterFilter; label: string; count: number }[] = [
+    { id: 'all', label: t('certRegister.all', 'All'), count: register.length },
+    { id: 'expiring', label: stateTag.expiring.label, count: counts.expiring ?? 0 },
+    { id: 'expired', label: stateTag.expired.label, count: counts.expired ?? 0 },
+    { id: 'valid', label: stateTag.valid.label, count: counts.valid ?? 0 },
+    { id: 'revoked', label: stateTag.revoked.label, count: counts.revoked ?? 0 },
+  ]
+  const fmt = (d?: Date | string | null) => (d ? format(new Date(d), 'd MMM yyyy', { locale: dateLocale }) : '—')
+
+  if (!isAdmin) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <WorkspaceHeader eyebrow={t('certRegister.eyebrow', 'Manage')} title={t('certRegister.title', 'Certificates')} />
+        <p className="text-sm text-ds-muted">
+          {t('certRegister.noAccess', 'You can issue certificates, but the full register needs reporting access.')}{' '}
+          <Link to="/learn/certificates" className="font-medium text-ds-accent hover:underline">{t('certRegister.mine', 'See your own certificates')}</Link>
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
-      <PageHeader
-        title={t('certificates')}
-        description={t('certificateDescription')}
+    <div className="mx-auto max-w-6xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('certRegister.eyebrow', 'Manage')}
+        title={t('certRegister.title', 'Certificates')}
+        context={(counts.expiring ?? 0) > 0
+          ? t('certRegister.contextExpiring', '{{count}} expire in the next 60 days.', { count: counts.expiring })
+          : t('certRegister.context', 'Every certificate issued in your organization.')}
+        actions={
+          <Link to="/manage/certificates/issue" className={headerActionClass.primary}>
+            <Award aria-hidden="true" className="h-4 w-4" />{t('certRegister.issue', 'Issue a certificate')}
+          </Link>
+        }
       />
 
-      <Tabs defaultValue="my-certificates" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="my-certificates">{t('myCertificates')}</TabsTrigger>
-          <TabsTrigger value="verify">{t('verifyCertificate')}</TabsTrigger>
-          {isAdmin && <TabsTrigger value="all-certificates">{t('allCertificates')}</TabsTrigger>}
-        </TabsList>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div role="group" aria-label={t('certRegister.filterLabel', 'Show certificates')} className="flex flex-wrap gap-2">
+          {filterList.filter((f) => f.id === 'all' || f.count > 0).map((f) => (
+            <button key={f.id} type="button" aria-pressed={registerFilter === f.id} onClick={() => setRegisterFilter(f.id)}
+              className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent ${registerFilter === f.id ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong'}`}>
+              {f.label}<span className="font-mono text-xs tabular-nums opacity-70">{f.count}</span>
+            </button>
+          ))}
+        </div>
+        <div className="relative lg:w-72">
+          <label htmlFor="cert-search" className="sr-only">{t('searchCertificates')}</label>
+          <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-muted" />
+          <Input id="cert-search" placeholder={t('certRegister.search', 'Name, course or number')} value={search} onChange={(e) => setSearch(e.target.value)} className="min-h-[40px] ps-9" />
+        </div>
+      </div>
 
-        {/* My Certificates */}
-        <TabsContent value="my-certificates" className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
-              <Input
-                placeholder={t('searchCertificates')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={isRTL ? 'pe-10' : 'ps-10'}
-              />
-            </div>
-          </div>
-
-          {myLoading ? (
-            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hotel-gold"></div></div>
-          ) : filteredMy.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMy.map((cert) => (
-                <Card key={cert.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Award className="w-8 h-8 text-yellow-500" />
-                        <div>
-                          <h3 className="font-semibold text-sm line-clamp-2">{cert.title}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(cert.completionDate), 'PPP', { locale: dateLocale })}
-                          </p>
-                        </div>
+      {allLoading ? (
+        <div className="space-y-2" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-14 animate-pulse rounded-[6px] bg-ds-surface-subtle" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+          <h2 className="text-base font-semibold text-ds-ink">
+            {register.length === 0 ? t('certRegister.emptyTitle', 'No certificates issued yet') : t('certRegister.noMatch', 'No certificates match')}
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-ds-muted">
+            {register.length === 0
+              ? t('certRegister.emptyBody', 'Certificates are issued automatically when someone passes a course that awards one. You can also issue one by hand.')
+              : t('certRegister.noMatchBody', 'Try another filter or search.')}
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-[6px] border border-ds-border bg-ds-surface">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-ds-border text-start text-xs text-ds-muted">
+                <th scope="col" className="px-4 py-2.5 text-start font-medium">{t('certRegister.holder', 'Holder')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start font-medium">{t('certRegister.course', 'Course')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start font-medium">{t('certRegister.issued', 'Issued')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start font-medium">{t('certRegister.expires', 'Expires')}</th>
+                <th scope="col" className="px-4 py-2.5 text-start font-medium">{t('certRegister.status', 'Status')}</th>
+                <th scope="col" className="px-4 py-2.5"><span className="sr-only">{t('certRegister.actions', 'Actions')}</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-ds-border">
+              {rows.map((cert) => {
+                const st = stateOf(cert)
+                return (
+                  <tr key={cert.id} className="hover:bg-ds-surface-subtle">
+                    <td className="px-4 py-3 font-medium text-ds-ink">{cert.recipientName}</td>
+                    <td className="px-4 py-3">
+                      <span className="block text-ds-ink">{cert.title}</span>
+                      <span className="block font-mono text-xs text-ds-muted">{cert.certificateNumber}</span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-ds-ink-secondary">{fmt(cert.completionDate)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap text-ds-ink-secondary">{cert.expiryDate ? fmt(cert.expiryDate) : t('certRegister.noExpiry', 'Does not expire')}</td>
+                    <td className="px-4 py-3"><span className={`text-xs ${stateTag[st].cls}`}>{stateTag[st].label}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="min-h-[36px]" onClick={() => handleView(cert)}>
+                          {t('certRegister.view', 'View')}
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => copyLink(cert.verificationCode)} aria-label={t('accessibility.copyLink', 'Copy verification link')}>
+                          <Copy aria-hidden="true" className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDownload(cert.id)} disabled={downloadMutation.isPending} aria-label={t('download')}>
+                          <Download aria-hidden="true" className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Badge className={getStatusColor(cert.status)}>{t(`status.${cert.status}`, cert.status)}</Badge>
-                    </div>
-
-                    <div className="space-y-2 mb-6">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">{t('certificateNumber', 'Number')}:</span>
-                        <span className="font-mono">{cert.certificateNumber}</span>
-                      </div>
-                      {cert.score !== undefined && (
-                        <div className="flex justify-between text-xs">
-                          <span className="text-muted-foreground">{t('score')}:</span>
-                          <span className="font-medium">{cert.score}%</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(cert)}>
-                        <FileText className="w-4 h-4 me-2" />
-                        {t('viewCertificate')}
-                      </Button>
-                      <Button size="sm" className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-white" onClick={() => handleDownload(cert.id)} disabled={downloadMutation.isPending}>
-                        <Download className="w-4 h-4 me-2" />
-                        {t('download')}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card><CardContent className="py-12 text-center text-muted-foreground">{t('noCertificates')}</CardContent></Card>
-          )}
-        </TabsContent>
-
-        {/* Verification Tab */}
-        <TabsContent value="verify">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-hotel-navy" />
-                {t('verifyCertificate')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="max-w-md space-y-2">
-                <Label>{t('enterVerificationCode')}</Label>
-                <div className="flex gap-2">
-                    <Input
-                        placeholder={t('enterCodeToVerify')}
-                        value={verificationCode}
-                        onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                        className="font-mono text-center text-lg tracking-wider uppercase"
-                    />
-                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleVerify} disabled={verifyMutation.isPending}>
-                    {verifyMutation.isPending ? t('common:actions.processing') : t('verifyButton')}
-                  </Button>
-                </div>
-              </div>
-
-              {verifyMutation.data && (
-                <div className={`p-4 rounded-lg border ${verifyMutation.data.isValid ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    {verifyMutation.data.isValid ? (
-                      <CheckCircle className="w-6 h-6 text-green-600" />
-                    ) : (
-                      <AlertTriangle className="w-6 h-6 text-red-600" />
-                    )}
-                    <h4 className={`font-bold ${verifyMutation.data.isValid ? 'text-green-800' : 'text-red-800'}`}>
-                      {verifyMutation.data.isValid ? t('public:verification.valid_title') : t('public:verification.invalid_title')}
-                    </h4>
-                  </div>
-
-                  {verifyMutation.data.isValid && verifyMutation.data.certificate && (
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">{t('public:verification.recipient')}</p>
-                        <p className="font-bold">{verifyMutation.data.certificate.recipientName}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">{t('public:verification.course')}</p>
-                        <p className="font-bold">{verifyMutation.data.certificate.title}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">{t('public:verification.issued_on')}</p>
-                        <p className="font-bold">{verifyMutation.data.certificate.completionDate?.toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">{t('public:verification.id')}</p>
-                        <p className="font-mono font-bold">{verifyMutation.data.certificate.certificateNumber}</p>
-                      </div>
-                    </div>
-                  )}
-                  {!verifyMutation.data.isValid && (
-                    <p className="text-sm text-red-700">{t('public:verification.invalid_code')}</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* All Certificates (Admin) */}
-        {isAdmin && (
-          <TabsContent value="all-certificates" className="space-y-4">
-            <div className="relative flex-1">
-              <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
-              <Input
-                placeholder={t('searchCertificates')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={isRTL ? 'pe-10' : 'ps-10'}
-              />
-            </div>
-
-            <Card>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {allLoading ? (
-                    <div className="p-8 text-center">{t('common:common.loading')}</div>
-                  ) : filteredAll.length > 0 ? (
-                    filteredAll.map(cert => (
-                      <div key={cert.id} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <Award className="w-10 h-10 text-hotel-gold" />
-                          <div>
-                            <p className="font-bold text-sm">{cert.title}</p>
-                            <p className="text-xs text-muted-foreground">{cert.recipientName} • {cert.certificateNumber}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className={getStatusColor(cert.status)}>{cert.status}</Badge>
-                          <Button variant="ghost" size="icon" onClick={() => copyLink(cert.verificationCode)} title={t('copyLink')} aria-label={t('accessibility.copyLink', 'Copy verification link')}>
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleView(cert)} aria-label={t('accessibility.viewCertificate', 'View certificate')}>
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-8 text-center text-muted-foreground">{t('common:common.no_data')}</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Preview Dialog */}
       <Dialog open={showCertificateDialog} onOpenChange={setShowCertificateDialog}>

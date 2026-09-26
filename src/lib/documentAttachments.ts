@@ -6,8 +6,8 @@
  * the workflow, not a manual re-upload.
  *
  *   1. Upload  -> `uploadSourceDocument(file, extractedText)` stores the file
- *      ONCE (a `documents` row + storage object, visibility = property, NOT
- *      public) and returns a `SourceDocumentRef`.
+ *      ONCE (a `documents` row + storage object, status APPROVED - never
+ *      published) and returns a `SourceDocumentRef`.
  *   2. Library pick -> `libraryDocRef(doc)` — no upload, references the existing
  *      `documents` row in place.
  *   3. After the course is saved -> `linkSourceDocuments(moduleId, refs, jobId)`
@@ -26,7 +26,7 @@ const extOf = (name: string) => (name.includes('.') ? name.split('.').pop()!.toL
 
 /**
  * Store an uploaded file once and return a reference. The `documents` row is
- * created with `visibility: 'property'` so it does NOT become learner- or
+ * created with status APPROVED (not PUBLISHED) so it does NOT become learner- or
  * publicly-visible just because it grounded a course.
  */
 export async function uploadSourceDocument(
@@ -37,19 +37,19 @@ export async function uploadSourceDocument(
   const uid = auth?.user?.id
   if (!uid) throw new Error('Sign in required to attach a source document.')
 
-  let propertyId: string | null = null
+  let organizationId: string | null = null
   try {
-    // A user's hotel lives on their active membership (profiles has no property column).
+    // The user's organization lives on their active membership.
     const { data: membership } = await supabase
       .from('organization_memberships')
-      .select('hotel_id')
+      .select('organization_id')
       .eq('user_id', uid)
       .eq('is_active', true)
       .order('is_primary', { ascending: false })
       .limit(1)
       .maybeSingle()
-    propertyId = membership?.hotel_id ?? null
-  } catch { /* property optional */ }
+    organizationId = membership?.organization_id ?? null
+  } catch { /* organization is filled by trigger when missing */ }
 
   const safeName = file.name.replace(/[^\w.-]+/g, '_').slice(0, 120)
   const path = `course-sources/${uid}/${crypto.randomUUID()}-${safeName}`
@@ -75,9 +75,9 @@ export async function uploadSourceDocument(
       file_type: file.type || extOf(file.name),
       file_extension: extOf(file.name),
       file_size: file.size,
-      visibility: 'property',
+      visibility: 'all_properties',
       status: 'APPROVED',
-      property_id: propertyId,
+      organization_id: organizationId,
       owner_id: uid,
       created_by: uid,
       content_data: { role: 'course_source', storage_path: path, storage_bucket: SOURCE_BUCKET },

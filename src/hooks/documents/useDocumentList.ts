@@ -22,7 +22,6 @@ export function useDocuments(filters?: DocumentFilters) {
           content_type,
           status,
           visibility,
-          property_id,
           department_id,
           folder_id,
           file_type,
@@ -82,9 +81,6 @@ export function useDocuments(filters?: DocumentFilters) {
       }
       if (filters?.visibility) {
         query = query.eq('visibility', filters.visibility as DocumentVisibility)
-      }
-      if (filters?.property_id) {
-        query = query.eq('property_id', filters.property_id)
       }
       if (filters?.department_id) {
         query = query.eq('department_id', filters.department_id)
@@ -149,7 +145,6 @@ export function useDocuments(filters?: DocumentFilters) {
       if (filters?.search) {
         const secureData = await secureSearchDocuments({
           search: filters.search,
-          property_id: filters.property_id,
           folder_id: filters.folder_id,
           status: filters.status,
           visibility: filters.visibility,
@@ -211,7 +206,6 @@ export function useDocument(documentId: string) {
           content_type,
           status,
           visibility,
-          property_id,
           department_id,
           folder_id,
           file_type,
@@ -241,7 +235,6 @@ export function useDocument(documentId: string) {
           folder:document_folders(id, name, parent_id),
           tag_assignments:document_tag_assignments(tag_id, tag:document_tags(id, name, color)),
           departments(id, name),
-          properties(id, name),
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url, job_title),
           owner:profiles!documents_owner_id_fkey(id, full_name, avatar_url, job_title)
         `)

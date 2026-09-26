@@ -5,7 +5,7 @@
 
 import type { KnowledgeQuestion, QuestionStatus } from './questions'
 
-export type LearningTargetType = 'user' | 'department' | 'role' | 'property' | 'everyone'
+export type LearningTargetType = 'user' | 'department' | 'role' | 'everyone'
 export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module' | 'microlearning'
 export type LearningAssignmentStatus = 'assigned' | 'in_progress' | 'completed' | 'overdue' | 'excused'
 
@@ -181,7 +181,6 @@ export interface ModuleAssigneeRosterEntry {
     email?: string | null
     avatar_url?: string | null
     department_name?: string | null
-    property_name?: string | null
     status: LearningAssignmentStatus | 'not_started'
     progress_percentage: number
     score_percentage?: number | null

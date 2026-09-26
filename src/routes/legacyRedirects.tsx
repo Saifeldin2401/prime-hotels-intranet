@@ -52,8 +52,8 @@ export const LEGACY_REDIRECTS: ReadonlyArray<readonly [from: string, to: string]
     ['/support', '/knowledge'],
 
     // Studio
-    ['/training/hub', '/studio'],
-    ['/training/modules', '/studio'],
+    ['/training/hub', '/studio/courses'],
+    ['/training/modules', '/studio/courses'],
     ['/training/hub/:id', '/studio/courses/:id'],
     ['/training/builder', '/studio/courses/new'],
     ['/training/builder/:id', '/studio/courses/:id'],
@@ -107,7 +107,8 @@ export const LEGACY_REDIRECTS: ReadonlyArray<readonly [from: string, to: string]
     ['/org', '/admin/organization'],
     ['/org/users', '/admin/users'],
     ['/org/members', '/admin/users'],
-    ['/org/properties', '/admin/properties'],
+    ['/org/properties', '/admin/structure'],
+    ['/admin/properties', '/admin/structure'],
     ['/org/structure', '/admin/organization'],
     ['/org/departments', '/admin/organization'],
     ['/org/settings', '/admin/settings'],

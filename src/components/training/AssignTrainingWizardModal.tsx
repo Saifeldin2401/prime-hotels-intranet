@@ -33,7 +33,6 @@ import {
   FileText
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
 import { persistLearningAssignments } from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -43,10 +42,10 @@ interface AssignTrainingWizardModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
-  defaultTargetType?: 'user' | 'department' | 'role' | 'new_hire' | 'property'
+  defaultTargetType?: 'user' | 'department' | 'role' | 'new_hire'
 }
 
-type AudienceType = 'user' | 'department' | 'role' | 'new_hire' | 'property'
+type AudienceType = 'user' | 'department' | 'role' | 'new_hire'
 type ContentCategory = 'onboarding' | 'paths' | 'compliance' | 'modules'
 
 interface ContentPackageItem {
@@ -58,17 +57,6 @@ interface ContentPackageItem {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
   isMandatory?: boolean
 }
-
-const DEPARTMENTS_LIST = [
-  'Front Office',
-  'Housekeeping',
-  'Food & Beverage',
-  'Engineering & Maintenance',
-  'Human Resources',
-  'Sales & Marketing',
-  'Finance & Accounting',
-  'Executive Office'
-]
 
 const ROLES_LIST = [
   'administrator',
@@ -94,7 +82,6 @@ export function AssignTrainingWizardModal({
 }: AssignTrainingWizardModalProps) {
   const { t } = useTranslation('dashboard')
   const { user, profile } = useAuth()
-  const { availableProperties, currentProperty } = useProperty()
   const queryClient = useQueryClient()
 
   // Wizard Step State (1 to 4)
@@ -155,6 +142,21 @@ export function AssignTrainingWizardModal({
       return data || []
     },
     enabled: open && audienceType === 'user'
+  })
+
+  // Fetch real departments from Supabase
+  const { data: dbDepartments } = useQuery({
+    queryKey: ['real-departments-wizard'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name')
+      if (error) return []
+      return data || []
+    },
+    enabled: open
   })
 
   // Only the "modules" tab is backed by a real content source (courses).
@@ -313,7 +315,7 @@ export function AssignTrainingWizardModal({
 
                 <button
                   type="button"
-                  onClick={() => { setAudienceType('department'); setSelectedTargetId(DEPARTMENTS_LIST[0]) }}
+                  onClick={() => { setAudienceType('department'); setSelectedTargetId(dbDepartments?.[0]?.id || '') }}
                   className={`p-4 rounded-2xl border text-start transition-all flex flex-col justify-between gap-3 ${
                     audienceType === 'department'
                       ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
@@ -365,23 +367,6 @@ export function AssignTrainingWizardModal({
                   </div>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => { setAudienceType('property'); setSelectedTargetId(currentProperty?.id || availableProperties[0]?.id || '') }}
-                  className={`p-4 rounded-2xl border text-start transition-all flex flex-col justify-between gap-3 ${
-                    audienceType === 'property'
-                      ? 'bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-500 shadow-md ring-2 ring-indigo-500/20'
-                      : 'bg-slate-50/50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${audienceType === 'property' ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600'}`}>
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">Entire Hotel Property</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">All staff in selected hotel</p>
-                  </div>
-                </button>
               </div>
 
               {/* Sub-Selection Dropdown / Search Input based on Audience Type */}
@@ -389,20 +374,26 @@ export function AssignTrainingWizardModal({
                 <div className="space-y-2 pt-2">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Select Department:</label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {DEPARTMENTS_LIST.map((dept) => (
-                      <button
-                        key={dept}
-                        type="button"
-                        onClick={() => setSelectedTargetId(dept)}
-                        className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
-                          selectedTargetId === dept
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                            : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-200'
-                        }`}
-                      >
-                        {dept}
-                      </button>
-                    ))}
+                    {dbDepartments && dbDepartments.length > 0 ? (
+                      dbDepartments.map((dept) => (
+                        <button
+                          key={dept.id}
+                          type="button"
+                          onClick={() => setSelectedTargetId(dept.id)}
+                          className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition-all ${
+                            selectedTargetId === dept.id
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                              : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-200'
+                          }`}
+                        >
+                          {dept.name}
+                        </button>
+                      ))
+                    ) : (
+                      <div className="col-span-full text-center py-4 text-xs text-slate-500 italic">
+                        No departments found.
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -687,7 +678,13 @@ export function AssignTrainingWizardModal({
                 <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3">
                   <span className="text-xs font-bold text-slate-500 uppercase">Target Audience:</span>
                   <Badge className="bg-indigo-100 text-indigo-800 border-indigo-200 text-xs font-bold capitalize">
-                    {audienceType.replace('_', ' ')}: {selectedTargetId || 'All New Hires'}
+                    {audienceType.replace('_', ' ')}: {
+                      audienceType === 'department'
+                        ? dbDepartments?.find(d => d.id === selectedTargetId)?.name || selectedTargetId
+                        : audienceType === 'user'
+                        ? realProfiles?.find(p => p.id === selectedTargetId)?.full_name || selectedTargetId
+                        : selectedTargetId || 'All New Hires'
+                    }
                   </Badge>
                 </div>
 

@@ -14,7 +14,6 @@ export interface QuestionFilters {
     sop_id?: string
     ai_generated?: boolean
     organization_id?: string
-    hotel_id?: string
     brand_id?: string
     scope_type?: string
     is_master_template?: boolean

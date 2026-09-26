@@ -9,7 +9,6 @@ import type { TablesInsert } from '@/types/database.generated'
 export const iltService = {
   async getSessions(filters?: {
     organizationId?: string
-    hotelId?: string
     courseId?: string
     instructorId?: string
     status?: string
@@ -20,7 +19,6 @@ export const iltService = {
         `
         *,
         instructor:profiles!training_sessions_instructor_id_fkey(id, full_name, email, avatar_url),
-        hotel:hotels(id, name),
         course:courses(id, title),
         attendees:training_session_attendees(count)
       `
@@ -29,9 +27,6 @@ export const iltService = {
 
     if (filters?.organizationId) {
       query = query.eq('organization_id', filters.organizationId)
-    }
-    if (filters?.hotelId) {
-      query = query.or(`hotel_id.eq.${filters.hotelId},hotel_id.is.null`)
     }
     if (filters?.courseId) {
       query = query.eq('course_id', filters.courseId)

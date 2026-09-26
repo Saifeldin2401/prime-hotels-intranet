@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useEffect, useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
@@ -14,7 +16,6 @@ import {
   Users,
   BookOpen,
   GraduationCap,
-  ShieldCheck,
   Activity,
   Search,
   ArrowRight,
@@ -101,63 +102,33 @@ export default function PlatformControlCenter() {
   })
 
   return (
-    <div className="space-y-6 pb-12">
-      {/* Executive SaaS Operator Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#15212E] text-[#F4F2EC] p-6 rounded-[8px] border border-[#30404D] shadow-none relative overflow-hidden">
-        <div className="space-y-1 relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-[6px] bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold font-serif tracking-tight flex items-center gap-2 text-[#F4F2EC]">
-                <span>Platform Control Center</span>
-                <Badge variant="outline" className="bg-[#86672C]/20 text-[#D4AF37] border-[#86672C]/40 text-[10px] uppercase font-bold tracking-wider rounded-[4px]">
-                  SaaS Operator Plane
-                </Badge>
-              </h1>
-              <p className="text-xs text-[#929CA5]">
-                Multi-tenant governance, organizational lifecycle, master content distribution, and system operations.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 relative z-10">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchStats()
-              refetchOps()
-            }}
-            className="bg-[#1E2D3D] border-[#30404D] hover:bg-[#25384D] text-[#F4F2EC] text-xs h-9 rounded-[6px] shadow-none"
-          >
-            <RefreshCw className="h-3.5 w-3.5 me-1.5 text-[#B79A62]" />
-            <span>Refresh Telemetry</span>
-          </Button>
-
-          <Button
-            size="sm"
-            onClick={() => navigate('/platform/organizations')}
-            className="bg-[#86672C] hover:bg-[#6D5322] text-[#FFFFFF] font-medium text-xs h-9 rounded-[6px] shadow-none transition-colors"
-          >
-            <Building2 className="h-3.5 w-3.5 me-1.5" />
-            <span>Manage Organizations</span>
-          </Button>
-        </div>
-      </div>
+    <div className="mx-auto max-w-7xl space-y-6 pb-12">
+      <WorkspaceHeader
+        eyebrow="Platform"
+        title="Statistics"
+        context="Organizations, people, content and jobs across the whole platform."
+        actions={
+          <>
+            <button type="button" onClick={() => { refetchStats(); refetchOps() }} className={headerActionClass.secondary} aria-label="Refresh">
+              <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <Link to="/platform/organizations" className={headerActionClass.primary}>
+              <Building2 aria-hidden="true" className="h-4 w-4" />Organizations
+            </Link>
+          </>
+        }
+      />
 
       {/* Cross-Tenant Global Search Bar */}
       <div className="relative" ref={searchContainerRef}>
         <div className="relative">
           <Search className="absolute start-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Global search across all customer tenants, hotels, staff, master SOPs, and master courses..."
+            placeholder="Search organizations, people and master content…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onFocus={() => setSearchOverlayDismissed(false)}
-            className="ps-11 h-12 bg-card border border-border bg-card shadow-none rounded-[8px] shadow-sm text-sm rounded-[6px]"
+            className="ps-11 h-12 rounded-md border border-ds-border bg-ds-surface text-sm shadow-none"
           />
           {isSearching && (
             <div className="absolute end-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -175,7 +146,7 @@ export default function PlatformControlCenter() {
               {searchResults.organizations?.length > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5 text-amber-500" /> Organizations ({searchResults.organizations.length})
+                    <Building2 className="h-3.5 w-3.5 text-ds-warning" /> Organizations ({searchResults.organizations.length})
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {searchResults.organizations.map((org: any) => (
@@ -190,34 +161,7 @@ export default function PlatformControlCenter() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px] capitalize">{org.lifecycle_status || (org.is_active ? 'active' : 'inactive')}</Badge>
-                          <Badge variant="secondary" className="text-[10px]">{org.hotel_count} Hotels</Badge>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Hotels */}
-              {searchResults.hotels?.length > 0 && (
-                <div>
-                  <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Building2 className="h-3.5 w-3.5 text-indigo-500" /> Hotels & Properties ({searchResults.hotels.length})
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {searchResults.hotels.map((h: any) => (
-                      <div
-                        key={h.id}
-                        onClick={() => { closeSearchOverlay(); navigate(h.organization_id ? `/platform/organizations/${h.organization_id}` : '/platform/organizations') }}
-                        className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-semibold text-foreground">{h.name}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {[h.brand_name, h.city, h.organization_name].filter(Boolean).join(' · ')}
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">Hotel</Badge>
                       </div>
                     ))}
                   </div>
@@ -228,7 +172,7 @@ export default function PlatformControlCenter() {
               {searchResults.users?.length > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-blue-500" /> Staff & Learners ({searchResults.users.length})
+                    <Users className="h-3.5 w-3.5 text-ds-accent" /> Staff & Learners ({searchResults.users.length})
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {searchResults.users.map((u: any) => (
@@ -240,7 +184,7 @@ export default function PlatformControlCenter() {
                         <div>
                           <div className="font-semibold text-foreground">{u.full_name}</div>
                           <div className="text-[10px] text-muted-foreground">
-                            {u.email} {u.organization_name ? `· ${u.organization_name}` : ''} {u.hotel_name ? `(${u.hotel_name})` : ''}
+                            {u.email} {u.organization_name ? `· ${u.organization_name}` : ''}
                           </div>
                         </div>
                         <Badge variant="secondary" className="text-[10px] capitalize">{u.role || 'Member'}</Badge>
@@ -254,7 +198,7 @@ export default function PlatformControlCenter() {
               {((searchResults.master_courses?.length || 0) + (searchResults.tenant_courses?.length || 0)) > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <GraduationCap className="h-3.5 w-3.5 text-emerald-500" /> Courses & Modules
+                    <GraduationCap className="h-3.5 w-3.5 text-ds-success" /> Courses & Modules
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(searchResults.master_courses || []).map((c: any) => (
@@ -267,7 +211,7 @@ export default function PlatformControlCenter() {
                           <div className="font-semibold text-foreground">{c.title}</div>
                           <div className="text-[10px] text-muted-foreground">Master Template · {c.category || 'General'}</div>
                         </div>
-                        <Badge variant="outline" className="text-[10px] capitalize bg-purple-500/10 text-purple-700">Master</Badge>
+                        <Badge variant="outline" className="text-[10px] capitalize bg-ds-accent-soft text-ds-accent">Master</Badge>
                       </div>
                     ))}
                     {(searchResults.tenant_courses || []).map((c: any) => (
@@ -291,7 +235,7 @@ export default function PlatformControlCenter() {
               {((searchResults.assessments?.length || 0) + (searchResults.question_banks?.length || 0)) > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <BookOpen className="h-3.5 w-3.5 text-amber-500" /> Assessments & Question Banks
+                    <BookOpen className="h-3.5 w-3.5 text-ds-warning" /> Assessments & Question Banks
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(searchResults.assessments || []).map((a: any) => (
@@ -330,98 +274,98 @@ export default function PlatformControlCenter() {
 
       {/* KPI Counters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border border-border bg-card hover:border-[#86672C]/40 transition-colors shadow-none rounded-[8px]">
+        <Card className="border border-border bg-card hover:border-ds-accent/40 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Active Customer Tenants</span>
-              <div className="w-9 h-9 rounded-[6px] bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-ds-warning-soft text-ds-warning flex items-center justify-center">
                 <Building2 className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-2xl font-black text-ds-ink dark:text-white">
                 {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.totalOrganizations || 0}
               </span>
-              <span className="text-xs text-green-600 dark:text-green-400 font-bold">
+              <span className="text-xs text-ds-success font-bold">
                 {stats?.activeOrganizations || 0} Healthy
               </span>
             </div>
             <div className="mt-2 text-[11px] text-muted-foreground flex items-center justify-between pt-2 border-t">
-              <span>{stats?.totalHotels || 0} Hotel Properties</span>
-              <button onClick={() => navigate('/platform/organizations')} className="text-amber-600 hover:underline font-semibold">
+              <span>{stats?.trialOrganizations || 0} on trial</span>
+              <button onClick={() => navigate('/platform/organizations')} className="text-ds-warning hover:underline font-semibold">
                 Manage &rarr;
               </button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-border bg-card hover:border-blue-500/40 transition-colors shadow-none rounded-[8px]">
+        <Card className="border border-border bg-card hover:border-ds-accent/30 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Enrolled Learners & Staff</span>
-              <div className="w-9 h-9 rounded-[6px] bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-ds-accent-soft text-ds-accent flex items-center justify-center">
                 <Users className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-2xl font-black text-ds-ink dark:text-white">
                 {isLoadingStats ? <Skeleton className="h-8 w-12" /> : stats?.totalLearners || 0}
               </span>
-              <span className="text-xs text-blue-600 font-bold">Platform-wide</span>
+              <span className="text-xs text-ds-accent font-bold">Platform-wide</span>
             </div>
             <div className="mt-2 text-[11px] text-muted-foreground flex items-center justify-between pt-2 border-t">
               <span>Multi-Tenant Directory</span>
-              <button onClick={() => navigate('/platform/users')} className="text-blue-600 hover:underline font-semibold">
+              <button onClick={() => navigate('/platform/users')} className="text-ds-accent hover:underline font-semibold">
                 Directory &rarr;
               </button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-border bg-card hover:border-emerald-500/40 transition-colors shadow-none rounded-[8px]">
+        <Card className="border border-border bg-card hover:border-ds-success/30 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Master SOP & Course Library</span>
-              <div className="w-9 h-9 rounded-[6px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-ds-success-soft text-ds-success flex items-center justify-center">
                 <BookOpen className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-2xl font-black text-ds-ink dark:text-white">
                 {isLoadingStats ? <Skeleton className="h-8 w-12" /> : (stats?.totalMasterCourses || 0) + (stats?.totalMasterSops || 0)}
               </span>
-              <span className="text-xs text-emerald-600 font-bold">
+              <span className="text-xs text-ds-success font-bold">
                 {stats?.totalDeployments || 0} Deployed
               </span>
             </div>
             <div className="mt-2 text-[11px] text-muted-foreground flex items-center justify-between pt-2 border-t">
               <span>{stats?.totalMasterSops || 0} SOPs • {stats?.totalMasterCourses || 0} Courses</span>
-              <button onClick={() => navigate('/platform/master-library')} className="text-emerald-600 hover:underline font-semibold">
+              <button onClick={() => navigate('/platform/master-library')} className="text-ds-success hover:underline font-semibold">
                 Library &rarr;
               </button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-border bg-card hover:border-purple-500/40 transition-colors shadow-none rounded-[8px]">
+        <Card className="border border-border bg-card hover:border-ds-accent/30 transition-colors shadow-none rounded-[8px]">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Background Operations Queue</span>
-              <div className="w-9 h-9 rounded-[6px] bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-[6px] bg-ds-accent-soft text-ds-accent flex items-center justify-center">
                 <Cpu className="h-4 w-4" />
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-2xl font-black text-ds-ink dark:text-white">
                 {isLoadingOps ? <Skeleton className="h-8 w-12" /> : operations?.active_jobs || 0}
               </span>
-              <span className="text-xs text-purple-600 font-bold">Processing</span>
+              <span className="text-xs text-ds-accent font-bold">Processing</span>
             </div>
             <div className="mt-2 text-[11px] text-muted-foreground flex items-center justify-between pt-2 border-t">
-              <span className={operations?.failed_jobs ? 'text-rose-600 font-bold' : ''}>
+              <span className={operations?.failed_jobs ? 'text-ds-danger font-bold' : ''}>
                 {operations?.failed_jobs || 0} Failed • {operations?.completed_jobs || 0} Succeeded
               </span>
-              <button onClick={() => navigate('/platform/operations')} className="text-purple-600 hover:underline font-semibold">
+              <button onClick={() => navigate('/platform/operations')} className="text-ds-accent hover:underline font-semibold">
                 Queue &rarr;
               </button>
             </div>
@@ -436,7 +380,7 @@ export default function PlatformControlCenter() {
             <CardHeader className="p-5 pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-purple-600" />
+                  <Activity className="h-4 w-4 text-ds-accent" />
                   <span>Real-Time Job Queue & AI Generation Pipeline</span>
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -460,18 +404,18 @@ export default function PlatformControlCenter() {
                   {operations.recent_jobs.slice(0, 5).map((job) => (
                     <div
                       key={job.id}
-                      className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex items-center justify-between text-xs gap-3"
+                      className="p-3 rounded-xl border border-ds-border bg-ds-surface-subtle flex items-center justify-between text-xs gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className={`w-2 h-2 rounded-full shrink-0 ${
                           job.status === 'completed' || job.status === 'success'
-                            ? 'bg-green-500'
+                            ? 'bg-ds-success'
                             : job.status === 'failed' || job.status === 'error'
-                            ? 'bg-rose-500'
-                            : 'bg-amber-500 animate-pulse'
+                            ? 'bg-ds-danger'
+                            : 'bg-ds-warning animate-pulse'
                         }`} />
                         <div className="truncate">
-                          <div className="font-bold text-slate-900 dark:text-white capitalize truncate">
+                          <div className="font-bold text-ds-ink dark:text-white capitalize truncate">
                             {job.mode || 'Course Generation'} Job
                           </div>
                           <div className="text-[10px] text-muted-foreground">
@@ -484,12 +428,12 @@ export default function PlatformControlCenter() {
                         <Badge
                           variant="outline"
                           className={`text-[10px] capitalize ${
-                            job.status === 'completed' || job.status === 'success'
-                              ? 'bg-green-500/10 text-green-700 dark:text-green-300 border-green-500/30'
-                              : job.status === 'failed' || job.status === 'error'
-                              ? 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                              : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                          }`}
+ job.status === 'completed' || job.status === 'success'
+ ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ : job.status === 'failed' || job.status === 'error'
+ ? 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ : 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+ }`}
                         >
                           {job.status}
                         </Badge>
@@ -500,7 +444,7 @@ export default function PlatformControlCenter() {
                             variant="outline"
                             onClick={() => retryMutation.mutate(job.id)}
                             disabled={retryMutation.isPending}
-                            className="h-7 text-[11px] px-2 text-rose-600 border-rose-300 hover:bg-rose-50"
+                            className="h-7 text-[11px] px-2 text-ds-danger border-ds-danger/30 hover:bg-ds-danger-soft"
                           >
                             <RefreshCw className="h-3 w-3 me-1" />
                             Retry
@@ -512,7 +456,7 @@ export default function PlatformControlCenter() {
                 </div>
               ) : (
                 <div className="py-8 text-center text-xs text-muted-foreground">
-                  <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-1 opacity-70" />
+                  <CheckCircle2 className="h-6 w-6 text-ds-success mx-auto mb-1 opacity-70" />
                   <span>All platform queues are clear. 0 active or failed jobs.</span>
                 </div>
               )}
@@ -522,96 +466,96 @@ export default function PlatformControlCenter() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <Card
               onClick={() => navigate('/platform/organizations')}
-              className="p-4 rounded-xl border hover:border-amber-500/50 hover:bg-amber-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-warning/30 hover:bg-ds-warning-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <Building2 className="h-5 w-5 text-amber-600 mb-2" />
+                <Building2 className="h-5 w-5 text-ds-warning mb-2" />
                 <h4 className="font-bold text-xs">Customer Tenants</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Lifecycle, quotas, assisted access sessions, and org structure.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-amber-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-warning flex items-center gap-1">
                 <span>Manage Tenants</span> &rarr;
               </div>
             </Card>
 
             <Card
               onClick={() => navigate('/platform/users')}
-              className="p-4 rounded-xl border hover:border-blue-500/50 hover:bg-blue-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-accent/30 hover:bg-ds-accent-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <Users className="h-5 w-5 text-blue-600 mb-2" />
+                <Users className="h-5 w-5 text-ds-accent mb-2" />
                 <h4 className="font-bold text-xs">Global User Directory</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Platform operators, tenant admins, permissions, and status control.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-blue-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-accent flex items-center gap-1">
                 <span>User Directory</span> &rarr;
               </div>
             </Card>
 
             <Card
               onClick={() => navigate('/platform/master-library')}
-              className="p-4 rounded-xl border hover:border-emerald-500/50 hover:bg-emerald-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-success/30 hover:bg-ds-success-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <BookOpen className="h-5 w-5 text-emerald-600 mb-2" />
+                <BookOpen className="h-5 w-5 text-ds-success mb-2" />
                 <h4 className="font-bold text-xs">Master SOP & Course Deployer</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Publish platform master standard content to target organizations.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-emerald-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-success flex items-center gap-1">
                 <span>Deploy Content</span> &rarr;
               </div>
             </Card>
 
             <Card
               onClick={() => navigate('/platform/ai-settings')}
-              className="p-4 rounded-xl border hover:border-purple-500/50 hover:bg-purple-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-accent/30 hover:bg-ds-accent-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <Bot className="h-5 w-5 text-purple-600 mb-2" />
+                <Bot className="h-5 w-5 text-ds-accent mb-2" />
                 <h4 className="font-bold text-xs">AI Course Engine & Gateways</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Gemini, Groq, OpenRouter routing modes, spend caps, and edge diagnostics.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-purple-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-accent flex items-center gap-1">
                 <span>Configure AI Engine</span> &rarr;
               </div>
             </Card>
 
             <Card
               onClick={() => navigate('/platform/email-templates')}
-              className="p-4 rounded-xl border hover:border-cyan-500/50 hover:bg-cyan-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-accent/30 hover:bg-ds-accent-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <Mail className="h-5 w-5 text-cyan-600 mb-2" />
+                <Mail className="h-5 w-5 text-ds-accent mb-2" />
                 <h4 className="font-bold text-xs">System Email & Inbound Pipeline</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Transactional notification templates, delivery events, and inbound webhooks.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-cyan-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-accent flex items-center gap-1">
                 <span>Manage Templates</span> &rarr;
               </div>
             </Card>
 
             <Card
               onClick={() => navigate('/platform/operations')}
-              className="p-4 rounded-xl border hover:border-indigo-500/50 hover:bg-indigo-500/5 cursor-pointer transition-all flex flex-col justify-between"
+              className="p-4 rounded-xl border hover:border-ds-accent/30 hover:bg-ds-accent-soft cursor-pointer transition-all flex flex-col justify-between"
             >
               <div>
-                <Cpu className="h-5 w-5 text-indigo-600 mb-2" />
+                <Cpu className="h-5 w-5 text-ds-accent mb-2" />
                 <h4 className="font-bold text-xs">Operations & Task Queue</h4>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   Background job execution, vector sync, and AI generation pipeline status.
                 </p>
               </div>
-              <div className="mt-3 font-semibold text-[11px] text-indigo-600 flex items-center gap-1">
+              <div className="mt-3 font-semibold text-[11px] text-ds-accent flex items-center gap-1">
                 <span>Inspect Pipeline</span> &rarr;
               </div>
             </Card>
@@ -623,7 +567,7 @@ export default function PlatformControlCenter() {
             <CardHeader className="p-5 pb-3 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-base font-bold flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4 text-amber-600" />
+                  <ShieldAlert className="h-4 w-4 text-ds-warning" />
                   <span>Platform Security Audit</span>
                 </CardTitle>
                 <CardDescription className="text-xs">Immutable operator audit trail.</CardDescription>
@@ -639,7 +583,7 @@ export default function PlatformControlCenter() {
                 {recentAudit.map((log) => (
                   <div key={log.id} className="p-2.5 rounded-lg border text-xs bg-card space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-slate-900 dark:text-white capitalize">
+                      <span className="font-bold text-ds-ink dark:text-white capitalize">
                         {log.action.replace(/_/g, ' ')}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
@@ -647,7 +591,7 @@ export default function PlatformControlCenter() {
                       </span>
                     </div>
                     <div className="text-[10px] text-muted-foreground truncate">
-                      Actor: <span className="font-semibold text-slate-700 dark:text-slate-300">{log.actor_name}</span> &bull; Tenant: {log.target_organization_name}
+                      Actor: <span className="font-semibold text-ds-ink">{log.actor_name}</span> &bull; Tenant: {log.target_organization_name}
                     </div>
                   </div>
                 ))}
@@ -655,23 +599,23 @@ export default function PlatformControlCenter() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border bg-card shadow-none rounded-[8px] bg-gradient-to-br from-slate-900 to-slate-950 text-white p-5 space-y-3">
+          <Card className="border border-border bg-card shadow-none rounded-[8px] text-ds-on-ink p-5 space-y-3 bg-ds-ink">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-amber-400" />
+                <Settings className="h-4 w-4 text-ds-warning" />
                 <span className="font-bold text-xs">Platform Configuration</span>
               </div>
-              <Badge variant="outline" className="text-[10px] border-amber-400/40 text-amber-300">
+              <Badge variant="outline" className="text-[10px] border-ds-warning/30 text-ds-warning">
                 Production GA
               </Badge>
             </div>
-            <p className="text-[11px] text-slate-300">
+            <p className="text-[11px] text-ds-muted">
               Control feature flags, AI model routing priorities, and tenant quota limits.
             </p>
             <Button
               size="sm"
               onClick={() => navigate('/platform/settings')}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-semibold h-8"
+              className="w-full bg-ds-ink hover:bg-ds-ink text-white border border-ds-border-strong text-xs font-semibold h-8"
             >
               Open Platform Settings &rarr;
             </Button>

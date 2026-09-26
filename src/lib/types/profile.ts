@@ -8,7 +8,7 @@ export interface Profile {
   avatar_url: string | null
   hire_date: string | null
   date_of_birth: string | null
-  job_title: string | null // Actual hotel job title (e.g., "Front Office Manager", "Room Attendant")
+  job_title: string | null // e.g. "Front Office Manager", "Room Attendant"
   staff_id: string | null // Human-readable unique employee identifier (e.g., "PH-1001")
   reporting_to: string | null // UUID of supervisor/manager
   is_active: boolean
@@ -56,18 +56,14 @@ export interface Profile {
   organization_memberships?: {
     id: string
     organization_id: string
-    hotel_id?: string | null
     department_id?: string | null
     role?: string
-    hotel?: { id: string; name: string; name_ar?: string | null } | null
     department?: { id: string; name: string; name_ar?: string | null } | null
     organization?: { id: string; name: string; name_ar?: string | null } | null
   }[]
   reporting_to_profile?: Profile // Populated when fetching with joins
   roles?: AppRole[]
   role?: AppRole | null
-  properties?: Property[]
-  property?: Property | null
   departments?: Department[]
   department_id?: string | null
 }
@@ -80,45 +76,10 @@ export interface UserRole {
   organization_id?: string | null
 }
 
-export interface Property {
-  id: string
-  name: string
-  address: string | null
-  phone: string | null
-  is_active: boolean
-  latitude?: number | null
-  longitude?: number | null
-  created_at: string
-  company_id?: string | null
-  brand_id?: string | null
-  organization_id?: string | null
-  city?: string | null
-  country?: string | null
-  hotel_code?: string | null
-  name_ar?: string | null
-  is_headquarters?: boolean
-  organizations?: {
-    id: string
-    name: string
-    name_ar?: string | null
-  } | null
-  brands?: {
-    id: string
-    name: string
-    name_ar?: string | null
-  } | null
-}
-
 export interface Department {
   id: string
-  property_id: string
   name: string
   is_active: boolean
   created_at: string
 }
 
-export interface UserProperty {
-  id: string
-  user_id: string
-  property_id: string
-}

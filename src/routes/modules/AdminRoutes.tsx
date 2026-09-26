@@ -9,9 +9,9 @@ import { Route } from 'react-router-dom'
 
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioning'))
+const OverviewPage = lazy(() => import('@/features/organization/pages/OverviewPage'))
 const OrganizationalControlCenter = lazy(() => import('@/pages/admin/OrganizationalControlCenter'))
-const PropertyManagement = lazy(() => import('@/pages/admin/PropertyManagement'))
-const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
+const AuditPage = lazy(() => import('@/features/organization/pages/AuditPage'))
 const PIIAuditViewer = lazy(() => import('@/pages/admin/PIIIAuditViewer').then(m => ({ default: m.PIIAuditViewer })))
 const NotificationBatches = lazy(() => import('@/pages/admin/notifications/NotificationBatches'))
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
@@ -25,6 +25,7 @@ const TenantDataExport = lazy(() => import('@/pages/admin/TenantDataExport'))
 const WizardManager = lazy(() => import('@/pages/admin/WizardManager'))
 
 // Platform Owner Super Admin Pages
+const ExceptionsPage = lazy(() => import('@/features/platform/pages/ExceptionsPage'))
 const PlatformControlCenter = lazy(() => import('@/pages/platform/PlatformControlCenter'))
 const OrganizationsHub = lazy(() => import('@/pages/platform/OrganizationsHub'))
 const OrganizationProfile = lazy(() => import('@/pages/platform/OrganizationProfile'))
@@ -46,13 +47,13 @@ const PEOPLE: Capability[] = ['people.manage', 'org.admin']
 export const AdminRoutes = () => (
     <>
         <Route element={<TenantContextGuard resourceName="Organization" />}>
-            <Route path="/admin/organization" element={page(<OrganizationalControlCenter />, { capability: PEOPLE })} />
+            <Route path="/admin/organization" element={page(<OverviewPage />, { capability: PEOPLE })} />
+            <Route path="/admin/structure" element={page(<OrganizationalControlCenter />, { capability: PEOPLE })} />
             <Route path="/admin/users" element={page(<UserManagement />, { capability: PEOPLE })} />
             <Route path="/admin/users/bulk" element={page(<BulkUserProvisioning />, { capability: 'people.manage' })} />
             <Route path="/admin/invitations" element={page(<UserInvitations />, { capability: PEOPLE })} />
-            <Route path="/admin/properties" element={page(<PropertyManagement />, { capability: ORG_ADMIN })} />
             <Route path="/admin/settings" element={page(<SystemSettings />, { capability: 'org.settings' })} />
-            <Route path="/admin/audit" element={page(<AuditLogs />, { capability: 'audit.view' })} />
+            <Route path="/admin/audit" element={page(<AuditPage />, { capability: 'audit.view' })} />
             <Route path="/admin/pii-access" element={page(<PIIAuditViewer />, { capability: 'audit.view' })} />
             <Route path="/admin/notifications" element={page(<NotificationBatches />, { capability: ORG_ADMIN })} />
             <Route path="/admin/export" element={page(<TenantDataExport />, { capability: 'org.settings' })} />
@@ -66,6 +67,16 @@ export const AdminRoutes = () => (
         {/* ------------------------------------------------------------------ */}
         <Route
             path="/platform"
+            element={
+                <PlatformRoute>
+                    <AppLayout>
+                        <ExceptionsPage />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/control-center"
             element={
                 <PlatformRoute>
                     <AppLayout>

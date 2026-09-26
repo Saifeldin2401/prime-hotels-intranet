@@ -29,7 +29,6 @@ export interface MediaAsset {
   usage_count: number;
   last_used_at: string | null;
   uploaded_by: string | null;
-  property_id: string | null;
   is_public: boolean;
   is_archived: boolean;
   
@@ -46,7 +45,6 @@ export interface MediaAsset {
 
 interface MediaAssetWithUploader extends MediaAsset {
   uploader_name: string | null;
-  property_name: string | null;
 }
 
 export interface MediaAssetWithUsage extends MediaAssetWithUploader {
@@ -67,7 +65,6 @@ export interface MediaCollection {
   name: string;
   description: string | null;
   created_by: string | null;
-  property_id: string | null;
   is_system: boolean;
   created_at: string;
   updated_at: string;
@@ -79,7 +76,6 @@ export interface MediaUploadOptions {
   description?: string;
   category?: MediaCategory;
   tags?: string[];
-  property_id?: string | null;
   is_public?: boolean;
   maxFileSize?: number; // in MB
 }

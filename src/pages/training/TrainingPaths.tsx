@@ -23,6 +23,8 @@ import type {
 } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCapabilities } from '@/hooks/useCapabilities'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import {
     BookOpen,
     Briefcase,
@@ -54,7 +56,6 @@ interface PathForm {
   module_ids: string[]
   target_role?: Database['public']['Enums']['app_role'] | null
   target_department_id?: string | null
-  target_property_id?: string | null
   target_user_ids: string[]
 }
 
@@ -65,6 +66,9 @@ export default function TrainingPaths() {
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('training')
   const [activeTab, setActiveTab] = useState('my')
+  const { canAny } = useCapabilities()
+  // Creating and managing paths follows the capability matrix, not legacy app roles.
+  const canManagePaths = canAny('assignment.manage', 'content.author')
   const isRTL = i18n.dir() === 'rtl'
 
   // Fetch all user progress to calculate path completion
@@ -112,7 +116,6 @@ export default function TrainingPaths() {
     module_ids: [],
     target_role: null,
     target_department_id: null,
-    target_property_id: null,
     target_user_ids: []
   })
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -205,20 +208,7 @@ export default function TrainingPaths() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name, property_id')
-      if (error) throw error
-      return data as { id: string; name: string; property_id: string }[]
-    }
-  })
-
-  // Fetch properties / hotels for targeting
-  const { data: properties } = useQuery({
-    queryKey: ['properties', 'hotels'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('hotels')
         .select('id, name')
-        .eq('is_deleted', false)
       if (error) throw error
       return data as { id: string; name: string }[]
     }
@@ -254,7 +244,6 @@ export default function TrainingPaths() {
             certificate_enabled: data.certificate_enabled,
             target_role: data.target_role ?? null,
             target_department_id: data.target_department_id ?? null,
-            target_property_id: data.target_property_id ?? null,
             target_user_ids: data.target_user_ids ?? [],
             updated_at: new Date().toISOString()
           })
@@ -292,7 +281,6 @@ export default function TrainingPaths() {
             certificate_enabled: data.certificate_enabled,
             target_role: data.target_role ?? null,
             target_department_id: data.target_department_id ?? null,
-            target_property_id: data.target_property_id ?? null,
             target_user_ids: data.target_user_ids ?? [],
             created_by: profile?.id ?? null
           })
@@ -358,7 +346,6 @@ export default function TrainingPaths() {
       module_ids: [],
       target_role: null,
       target_department_id: null,
-      target_property_id: null,
       target_user_ids: []
     })
   }
@@ -375,7 +362,6 @@ export default function TrainingPaths() {
       module_ids: (path as any).training_path_modules?.map((m) => m.module_id) || [],
       target_role: (path.target_role as Database['public']['Enums']['app_role'] | null) || null,
       target_department_id: path.target_department_id || null,
-      target_property_id: path.target_property_id || null,
       target_user_ids: path.target_user_ids || []
     })
     setShowPathDialog(true)
@@ -429,35 +415,32 @@ export default function TrainingPaths() {
   }
 
   return (
-    <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
-      <PageHeader
-        title={t('paths')}
-        description={t('paths_description')}
-        actions={
-          <div className="flex items-center gap-2">
-            {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
-              <Button onClick={() => setShowPathDialog(true)} className={isRTL ? "flex-row-reverse" : ""}>
-                <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
-                {t('createPath')}
-              </Button>
-            )}
-          </div>
-        }
+    <div className="mx-auto max-w-5xl space-y-8">
+      <WorkspaceHeader
+        eyebrow={t('pathsPage.eyebrow', 'Learn')}
+        title={t('pathsPage.title', 'Learning paths')}
+        context={t('pathsPage.context', 'Sequences of courses for a role, department or first weeks in the job.')}
+        actions={canManagePaths ? (
+          <button type="button" onClick={() => setShowPathDialog(true)} className={headerActionClass.primary}>
+            <Plus aria-hidden="true" className="h-4 w-4" />{t('createPath')}
+          </button>
+        ) : undefined}
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-slate-100 dark:bg-slate-800/80 p-1 rounded-2xl">
-          <TabsTrigger value="my" className="rounded-xl text-xs sm:text-sm font-bold">{t('myPaths', 'My Active Roadmaps')}</TabsTrigger>
-          <TabsTrigger value="explore" className="rounded-xl text-xs sm:text-sm font-bold">{t('explorePaths', 'Explore All Paths')}</TabsTrigger>
-          {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
-            <TabsTrigger value="all" className="rounded-xl text-xs sm:text-sm font-bold">{t('allPaths', 'Path Management')}</TabsTrigger>
+        <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-ds-border bg-transparent p-0">
+          <TabsTrigger value="my" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">{t('pathsPage.mine', 'My paths')}</TabsTrigger>
+          <TabsTrigger value="explore" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">{t('pathsPage.all', 'All paths')}</TabsTrigger>
+          {canManagePaths && (
+            <TabsTrigger value="all" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">{t('pathsPage.manage', 'Manage paths')}</TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="my" className="space-y-6">
           {enrollmentsLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <div className="space-y-3" aria-busy="true">
+              <div className="h-40 animate-pulse rounded-[6px] bg-ds-surface-subtle" />
+              <div className="h-40 animate-pulse rounded-[6px] bg-ds-surface-subtle" />
             </div>
           ) : myEnrollments && myEnrollments.length > 0 ? (
             <div className="space-y-8">
@@ -471,31 +454,21 @@ export default function TrainingPaths() {
               ))}
             </div>
           ) : (
-            <Card className="rounded-3xl p-12 text-center border-dashed">
-              <BookOpen className="h-12 w-12 text-amber-500/60 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-foreground">
-                {isRTL ? 'لم تسجل في أي مسار تدريبي حتى الآن' : 'No active learning paths enrolled'}
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto mt-1 mb-6">
-                {isRTL
-                  ? 'استكشف المسارات التدريبية المعتمدة لاكتساب كفاءات متقدمة والحصول على اعتمادات مهنية موثقة.'
-                  : 'Browse available executive pathways to build mastery and achieve accredited credentials.'}
-              </p>
-              <Button
-                onClick={() => setActiveTab('explore')}
-                className="rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold"
-              >
-                <Compass className="h-4 w-4 me-2" />
-                {isRTL ? 'استكشاف المسارات المتاحة' : 'Explore Available Paths'}
-              </Button>
-            </Card>
+            <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+              <h3 className="text-base font-semibold text-ds-ink">{t('pathsPage.emptyMine', 'You are not following a learning path yet')}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm text-ds-muted">{t('pathsPage.emptyMineBody', 'Paths assigned to you appear here. You can also join an open path yourself.')}</p>
+              <button type="button" onClick={() => setActiveTab('explore')} className="mt-5 inline-flex min-h-[44px] items-center gap-2 rounded-md bg-ds-ink px-4 text-sm font-semibold text-ds-on-ink hover:bg-ds-ink/90">
+                <Compass aria-hidden="true" className="h-4 w-4" />{t('pathsPage.browse', 'See all paths')}
+              </button>
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="explore" className="space-y-6">
           {pathsLoading ? (
-            <div className="flex justify-center py-16">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <div className="space-y-3" aria-busy="true">
+              <div className="h-40 animate-pulse rounded-[6px] bg-ds-surface-subtle" />
+              <div className="h-40 animate-pulse rounded-[6px] bg-ds-surface-subtle" />
             </div>
           ) : paths && paths.length > 0 ? (
             <div className="space-y-8">
@@ -522,7 +495,7 @@ export default function TrainingPaths() {
           )}
         </TabsContent>
 
-        {['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
+        {canManagePaths && (
           <TabsContent value="all" className="space-y-4">
             <Card>
               <CardHeader>
@@ -531,35 +504,35 @@ export default function TrainingPaths() {
               <CardContent>
                 {pathsLoading ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
+                    <Loader2 className="h-8 w-8 animate-spin text-ds-accent" />
                   </div>
                 ) : paths && paths.length > 0 ? (
                   <div className="space-y-4">
                     {paths.map((path) => (
-                      <div key={path.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={path.id} className="flex flex-col gap-3 border-b border-ds-border p-4 last:border-0 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
                           {getPathIcon(path.path_type)}
                           <div>
                             <h3 className="font-medium">{path.title}</h3>
-                            <p className="text-sm text-gray-600">{path.description}</p>
-                            <div className={cn("flex items-center gap-4 mt-2 text-sm text-gray-600", isRTL ? "flex-row-reverse" : "")}>
+                            <p className="text-sm text-ds-muted">{path.description}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ds-muted">
                               <span>{t('modules')}: {path.training_path_modules?.length || 0}</span>
                               <span>{t('estimatedDuration')}: {path.estimated_duration_hours}{t('h')}</span>
                               {path.is_mandatory && (
-                                <Badge className="bg-hotel-gold text-white border border-hotel-gold rounded-md">{t('mandatory')}</Badge>
+                                <span className="rounded-[3px] bg-ds-warning-soft px-1.5 py-0.5 text-xs font-medium text-ds-warning">{t('mandatory')}</span>
                               )}
                               {path.certificate_enabled && (
-                                <Badge className="bg-hotel-navy text-white border border-hotel-navy rounded-md">{t('certificate')}</Badge>
+                                <span className="rounded-[3px] bg-ds-accent-soft px-1.5 py-0.5 text-xs font-medium text-ds-accent">{t('certificate')}</span>
                               )}
                             </div>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark border border-hotel-gold rounded-md transition-colors" onClick={() => handleEdit(path)}>
-                            <Edit className="w-4 h-4" />
+                          <Button size="sm" variant="outline" className="min-h-[40px]" onClick={() => handleEdit(path)}>
+                            <Edit aria-hidden="true" className="me-1.5 h-4 w-4" />{t('pathsPage.edit', 'Edit')}
                           </Button>
-                          <Button size="sm" className="bg-red-500 text-white hover:bg-red-600 border border-red-500 rounded-md transition-colors" onClick={() => handleDelete(path)}>
-                            <Trash2 className="w-4 h-4" />
+                          <Button size="sm" variant="ghost" className="min-h-[40px] text-ds-danger hover:bg-ds-danger-soft" onClick={() => handleDelete(path)}>
+                            <Trash2 aria-hidden="true" className="me-1.5 h-4 w-4" />{t('pathsPage.delete', 'Delete')}
                           </Button>
                         </div>
                       </div>
@@ -656,7 +629,7 @@ export default function TrainingPaths() {
                     id="mandatory"
                     checked={formData.is_mandatory}
                     onChange={(e) => setFormData({ ...formData, is_mandatory: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300"
+                    className="w-4 h-4 rounded border-ds-border"
                   />
                   <Label htmlFor="mandatory">{t('mandatory')}</Label>
                 </div>
@@ -667,7 +640,7 @@ export default function TrainingPaths() {
                     id="certificate"
                     checked={formData.certificate_enabled}
                     onChange={(e) => setFormData({ ...formData, certificate_enabled: e.target.checked })}
-                    className="w-4 h-4 rounded border-gray-300"
+                    className="w-4 h-4 rounded border-ds-border"
                   />
                   <Label htmlFor="certificate">{t('certificateEnabled')}</Label>
                 </div>
@@ -679,7 +652,7 @@ export default function TrainingPaths() {
                 <Label>{t('selectModules')}</Label>
                 <div className="border rounded-md p-4 max-h-[300px] overflow-y-auto space-y-2">
                   {availableModules?.map(module => (
-                    <div key={module.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded border">
+                    <div key={module.id} className="flex items-center justify-between p-2 hover:bg-ds-surface-subtle rounded border">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -701,36 +674,17 @@ export default function TrainingPaths() {
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-500 italic">
+                <p className="text-[11px] text-ds-muted italic">
                   * {t('modulesOrderHint')}
                 </p>
               </div>
             </TabsContent>
 
             <TabsContent value="targeting" className={cn("space-y-4 pt-4", isRTL ? "text-end" : "text-start")}>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>{t('targetHotel')}</Label>
-                  <Select
-                    value={formData.target_property_id || 'none'}
-                    onValueChange={(value) => setFormData({ ...formData, target_property_id: value === 'none' ? null : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('selectAllHotels')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t('allHotels')}</SelectItem>
-                      {properties?.map(prop => (
-                        <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                   <GroupedDepartmentSelector
                     departments={departments as any}
-                    properties={properties as any}
                     value={formData.target_department_id || 'none'}
                     onValueChange={(value) => setFormData({ ...formData, target_department_id: value === 'none' ? null : value })}
                     placeholder={t('selectDepartment')}
@@ -762,7 +716,7 @@ export default function TrainingPaths() {
                 <Label>{t('specificEmployees')} ({formData.target_user_ids.length})</Label>
                 <div className="border rounded-md p-3 max-h-[200px] overflow-y-auto space-y-1">
                   {staffList?.map(staff => (
-                    <div key={staff.id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded text-sm">
+                    <div key={staff.id} className="flex items-center gap-2 p-1.5 hover:bg-ds-surface-subtle rounded text-sm">
                       <input
                         type="checkbox"
                         checked={formData.target_user_ids.includes(staff.id)}
@@ -773,17 +727,17 @@ export default function TrainingPaths() {
                             setFormData({ ...formData, target_user_ids: formData.target_user_ids.filter(id => id !== staff.id) })
                           }
                         }}
-                        className="w-4 h-4 rounded border-gray-300"
+                        className="w-4 h-4 rounded border-ds-border"
                       />
                       <span className="font-medium">{staff.full_name}</span>
-                      <span className="text-gray-500 text-[11px]">— {staff.job_title}</span>
+                      <span className="text-ds-muted text-[11px]">— {staff.job_title}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className={cn("p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2", isRTL ? "flex-row-reverse" : "")}>
-                <Target className={cn("w-4 h-4 mt-0.5 text-blue-600", isRTL ? "ms-2" : "")} />
+              <div className={cn("p-3 bg-ds-accent-soft text-ds-accent text-[11px] rounded border border-ds-accent/30 flex items-start gap-2", isRTL ? "flex-row-reverse" : "")}>
+                <Target className={cn("w-4 h-4 mt-0.5 text-ds-accent", isRTL ? "ms-2" : "")} />
                 <p className={isRTL ? "text-end" : ""}>
                   <strong>{t('targeting_logic')}:</strong> {t('targeting_logic_desc')}
                 </p>
@@ -792,10 +746,10 @@ export default function TrainingPaths() {
           </Tabs>
 
           <div className="flex justify-end gap-2 pt-6 border-t mt-4">
-            <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" onClick={() => setShowPathDialog(false)}>
+            <Button className="bg-white border border-ds-border text-ds-ink hover:bg-ds-surface-subtle rounded-md transition-colors" onClick={() => setShowPathDialog(false)}>
               {t('cancel')}
             </Button>
-            <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors px-6" onClick={handleSubmit} disabled={pathMutation.isPending}>
+            <Button className="bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90 rounded-md transition-colors px-6" onClick={handleSubmit} disabled={pathMutation.isPending}>
               {pathMutation.isPending ? <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ms-2" : "me-1")} /> : null}
               {pathMutation.isPending ? t('saving') : t('savePath')}
             </Button>

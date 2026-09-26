@@ -1,3 +1,4 @@
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useState, useEffect } from 'react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -5,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { 
-  Sparkles, 
   Users, 
   CheckCircle2, 
   Clock, 
@@ -100,28 +100,17 @@ export default function WizardManager() {
     ['platform_operator', 'tenant_owner', 'tenant_admin', 'training_manager', 'knowledge_manager', 'department_manager', 'learner', 'viewer'].includes(key)
   )
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {t('manager.title', 'Guided Onboarding & Role Wizards')}
-            </h1>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {t('manager.description', 'Manage, simulate, and monitor role-based onboarding journeys across properties and departments.')}
-          </p>
-        </div>
-
-        <Button onClick={() => handleSimulate(selectedRole)} className="gap-2 text-xs shadow-sm">
-          <Eye className="h-3.5 w-3.5" />
-          {t('manager.simulate_button', 'Preview Active Wizard')}
-        </Button>
-      </div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('manager.eyebrow', 'Organization')}
+        title={t('manager.title_short', 'Onboarding guides')}
+        context={t('manager.context', 'The guided first steps each role sees. Preview them as that role before people meet them.')}
+        actions={
+          <button type="button" onClick={() => handleSimulate(selectedRole)} className={headerActionClass.secondary}>
+            <Eye aria-hidden="true" className="h-4 w-4" />{t('manager.simulate_button_short', 'Preview as this role')}
+          </button>
+        }
+      />
 
       {/* Analytics Overview Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -139,7 +128,7 @@ export default function WizardManager() {
         <Card className="border-border/80">
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <span className="text-xs text-muted-foreground font-medium">{t('manager.stats.completion_rate', 'Completion Rate')}</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-ds-success" />
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-foreground">{completionRate}%</div>
@@ -150,7 +139,7 @@ export default function WizardManager() {
         <Card className="border-border/80">
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <span className="text-xs text-muted-foreground font-medium">{t('manager.stats.in_progress', 'In Progress')}</span>
-            <Clock className="h-4 w-4 text-blue-600" />
+            <Clock className="h-4 w-4 text-ds-accent" />
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-foreground">{analytics.inProgressCount}</div>
@@ -161,7 +150,7 @@ export default function WizardManager() {
         <Card className="border-border/80">
           <CardHeader className="p-4 pb-2 flex flex-row items-center justify-between">
             <span className="text-xs text-muted-foreground font-medium">{t('manager.stats.skipped', 'Skipped')}</span>
-            <RotateCcw className="h-4 w-4 text-amber-600" />
+            <RotateCcw className="h-4 w-4 text-ds-warning" />
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-foreground">{analytics.skippedCount}</div>
@@ -171,7 +160,7 @@ export default function WizardManager() {
       </div>
 
       {/* "View As" Simulation Console */}
-      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-card to-card">
+      <Card className="border-primary/20">
         <CardHeader className="p-5 pb-3">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4 text-primary" />
@@ -213,7 +202,7 @@ export default function WizardManager() {
       <Card className="border-border/80 bg-card/60 backdrop-blur-sm">
         <CardHeader className="p-5 pb-3">
           <div className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-amber-500" />
+            <Zap className="h-4 w-4 text-ds-warning" />
             <CardTitle className="text-sm font-bold text-foreground">
               {t('manager.event_simulator_title', 'Operational Event Guidance Simulator')}
             </CardTitle>
@@ -241,7 +230,7 @@ export default function WizardManager() {
           <Button 
             onClick={() => handleSimulateEvent(selectedEventId)} 
             variant="outline"
-            className="text-xs h-9 gap-1.5 border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+            className="text-xs h-9 gap-1.5 border-ds-warning/30 text-ds-warning hover:bg-ds-warning-soft"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             {t('manager.simulate_event_btn', 'Simulate Event Guidance')}

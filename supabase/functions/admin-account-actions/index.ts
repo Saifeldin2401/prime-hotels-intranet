@@ -368,7 +368,6 @@ Deno.serve(async (req: Request) => {
             "organization_owner",
             "organization_admin",
             "brand_admin",
-            "hotel_admin",
             "training_manager",
           ].includes(m.role),
         )

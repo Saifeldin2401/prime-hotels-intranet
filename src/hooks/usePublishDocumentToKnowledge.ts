@@ -6,7 +6,6 @@
  */
 
 import { useAuth } from '@/hooks/useAuth';
-import { useProperty } from '@/contexts/PropertyContext';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
 import { crudToasts } from '@/lib/toastHelpers';
@@ -22,7 +21,6 @@ export interface PublishToKnowledgeInput {
   description?: string;
   content?: string;
   visibility: KnowledgeVisibility;
-  propertyId?: string | null;
   departmentId?: string | null;
   categoryId?: string | null;
   requiresAcknowledgment?: boolean;
@@ -43,7 +41,6 @@ interface PublishToKnowledgeResult {
 export function usePublishDocumentToKnowledge() {
   const queryClient = useQueryClient();
   const { user, primaryRole } = useAuth();
-  const { currentProperty } = useProperty();
   const { t } = useTranslation();
 
   return useMutation({

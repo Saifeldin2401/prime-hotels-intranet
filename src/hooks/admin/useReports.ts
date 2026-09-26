@@ -7,8 +7,7 @@ export interface ReportDefinition {
     id: string
     name: string
     description: string | null
-    scope_type: 'global' | 'property' | 'department'
-    property_id: string | null
+    scope_type: 'global' | 'department'
     department_id: string | null
     report_type: string
     filters?: Record<string, unknown> | null
@@ -30,7 +29,6 @@ export const useReports = () => {
                 .from('report_definitions')
                 .select(`
                     *,
-                    properties:property_id (name_en, name_ar),
                     departments:department_id (name_en, name_ar),
                     creator:created_by (first_name, last_name)
                 `)
@@ -49,7 +47,6 @@ export const useReports = () => {
                     name: report.name,
                     description: report.description,
                     scope_type: report.scope_type,
-                    property_id: report.property_id,
                     department_id: report.department_id,
                     report_type: report.report_type,
                     filters: report.filters as unknown as Json,
@@ -80,7 +77,6 @@ export const useReports = () => {
                     ...(report.name !== undefined ? { name: report.name } : {}),
                     ...(report.description !== undefined ? { description: report.description } : {}),
                     ...(report.scope_type !== undefined ? { scope_type: report.scope_type } : {}),
-                    ...(report.property_id !== undefined ? { property_id: report.property_id } : {}),
                     ...(report.department_id !== undefined ? { department_id: report.department_id } : {}),
                     ...(report.report_type !== undefined ? { report_type: report.report_type } : {}),
                     ...(report.filters !== undefined ? { filters: report.filters as unknown as Json } : {}),

@@ -73,7 +73,6 @@ export interface TrainingSession {
   id: string
   organization_id: string
   course_id?: string | null
-  hotel_id: string
   title: string
   title_ar?: string | null
   description?: string | null
@@ -90,7 +89,6 @@ export interface TrainingSession {
   updated_at: string
   // Joins
   instructor?: { id: string; full_name: string; email: string; avatar_url?: string }
-  hotel?: { id: string; name: string }
   course?: { id: string; title: string }
   attendees_count?: number
 }
@@ -140,7 +138,6 @@ export interface PracticalSubmission {
   assessment_id: string
   learner_id: string
   evaluator_id?: string | null
-  hotel_id?: string | null
   score_achieved: number
   is_passed: boolean
   rubric_evaluations: Record<string, { points: number; comments?: string }>

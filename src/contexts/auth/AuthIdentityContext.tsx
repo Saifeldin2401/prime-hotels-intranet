@@ -120,14 +120,56 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
       clearTimeout(timeoutId)
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (!mounted) return
-      if (error) {
-        log.warn('[AuthIdentity] Error getting session:', getErrorMessage(error))
-        finishLoading()
-        return
+    // Get initial session (including OAuth code exchange or token restoration)
+    const resolveInitialSession = async () => {
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href)
+        const code = url.searchParams.get('code')
+        if (code && !shouldDeferAuthenticatedAppState()) {
+          try {
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+            if (!exchangeError && data.session) {
+              safeSessionStorage.setItem('altus_session_active', 'true')
+              safeLocalStorage.setItem(REMEMBER_ME_KEY, 'true')
+              url.searchParams.delete('code')
+              window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+              return data.session
+            }
+          } catch (err) {
+            log.warn('[AuthIdentity] Error exchanging OAuth code for session:', err)
+          }
+        }
+
+        if (window.location.hash.includes('access_token=') && !shouldDeferAuthenticatedAppState()) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1))
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
+          if (accessToken && refreshToken) {
+            try {
+              const { data, error: setSessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              })
+              if (!setSessionError && data.session) {
+                safeSessionStorage.setItem('altus_session_active', 'true')
+                safeLocalStorage.setItem(REMEMBER_ME_KEY, 'true')
+                window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+                return data.session
+              }
+            } catch (err) {
+              log.warn('[AuthIdentity] Error restoring session from hash:', err)
+            }
+          }
+        }
       }
+
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (error) throw error
+      return session
+    }
+
+    resolveInitialSession().then(async (session) => {
+      if (!mounted) return
       if (session?.user) {
         if (shouldDeferAuthenticatedAppState()) {
           finishLoading()

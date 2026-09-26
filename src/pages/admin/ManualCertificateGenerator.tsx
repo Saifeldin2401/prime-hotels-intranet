@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,7 +9,7 @@ import { useProfiles } from '@/hooks/useUsers'
 import { CertificateIssueError, issueManualCertificate } from '@/services/certificateService'
 import { supabase } from '@/lib/supabase'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Award, Loader2, User as UserIcon } from 'lucide-react'
+import { Award, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -111,21 +112,16 @@ export default function ManualCertificateGenerator() {
     }
 
     return (
-        <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-4xl">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold font-serif text-hotel-navy flex items-center gap-3">
-                    <Award className="h-8 w-8 text-hotel-gold" />
-                    {t('manual_certificates.title')}
-                </h1>
-                <p className="text-muted-foreground mt-2 text-lg">
-                    {t('manual_certificates.description')}
-                </p>
-            </div>
+        <div className="mx-auto max-w-3xl">
+            <PageHeader
+                backTo="/manage/certificates"
+                title={t('manual_certificates.title')}
+                description={t('manual_certificates.description')}
+            />
 
-            <Card className="border-t-4 border-t-hotel-gold shadow-md">
-                <CardHeader className="bg-hotel-navy/5 border-b pb-6">
-                    <CardTitle className="text-xl text-hotel-navy flex items-center gap-2">
-                        <UserIcon className="h-5 w-5" />
+            <Card className="rounded-[6px] border border-ds-border bg-ds-surface shadow-none">
+                <CardHeader className="border-b border-ds-border pb-5">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-ds-ink">
                         {t('manual_certificates.form.title')}
                     </CardTitle>
                     <CardDescription>
@@ -136,9 +132,9 @@ export default function ManualCertificateGenerator() {
                     <form onSubmit={handleGenerate} className="space-y-6">
 
                         <div className="space-y-2">
-                            <Label className="text-hotel-navy font-semibold">{t('manual_certificates.form.user')}</Label>
+                            <Label className="font-medium text-ds-ink">{t('manual_certificates.form.user')}</Label>
                             <Select value={selectedUserId} onValueChange={setSelectedUserId} disabled={usersLoading}>
-                                <SelectTrigger className="w-full bg-white">
+                                <SelectTrigger className="w-full bg-ds-surface">
                                     <SelectValue placeholder={t('manual_certificates.form.select_user')} />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -153,9 +149,9 @@ export default function ManualCertificateGenerator() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <Label className="text-hotel-navy font-semibold">{t('manual_certificates.form.cert_type')}</Label>
+                                <Label className="font-medium text-ds-ink">{t('manual_certificates.form.cert_type')}</Label>
                                 <Select value={certificateType} onValueChange={(v) => setCertificateType(v as CertificateType)}>
-                                    <SelectTrigger className="bg-white">
+                                    <SelectTrigger className="bg-ds-surface">
                                         <SelectValue placeholder={t('manual_certificates.form.select_type')} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -168,37 +164,37 @@ export default function ManualCertificateGenerator() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-hotel-navy font-semibold">{t('manual_certificates.form.completion_date')}</Label>
+                                <Label className="font-medium text-ds-ink">{t('manual_certificates.form.completion_date')}</Label>
                                 <Input
                                     type="date"
                                     value={completionDate}
                                     onChange={(e) => setCompletionDate(e.target.value)}
                                     required
-                                    className="bg-white"
+                                    className="bg-ds-surface"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <Label className="text-hotel-navy font-semibold">{t('manual_certificates.form.course_title')}</Label>
+                            <Label className="font-medium text-ds-ink">{t('manual_certificates.form.course_title')}</Label>
                             <Input
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                                 placeholder={t('manual_certificates.form.course_title_placeholder')}
                                 required
-                                className="bg-white"
+                                className="bg-ds-surface"
                             />
                         </div>
 
                         {certificateType === 'training' && (
                             <div className="space-y-2">
-                                <Label className="text-hotel-navy font-semibold">Training Module</Label>
+                                <Label className="font-medium text-ds-ink">Training Module</Label>
                                 <Select
                                     value={selectedTrainingModuleId}
                                     onValueChange={setSelectedTrainingModuleId}
                                     disabled={modulesLoading}
                                 >
-                                    <SelectTrigger className="w-full bg-white">
+                                    <SelectTrigger className="w-full bg-ds-surface">
                                         <SelectValue placeholder="Select training module" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -213,45 +209,45 @@ export default function ManualCertificateGenerator() {
                         )}
 
                         <div className="pt-4 border-t mt-6">
-                            <h3 className="text-lg font-semibold text-hotel-navy mb-4">Signatory Overrides (Optional)</h3>
+                            <h3 className="mb-4 text-base font-semibold text-ds-ink">Signatory Overrides (Optional)</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 Leave these fields blank to use the global template defaults.
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <Label className="text-hotel-navy font-semibold">Left Signatory Name</Label>
+                                    <Label className="font-medium text-ds-ink">Left Signatory Name</Label>
                                     <Input
                                         value={issuedByName}
                                         onChange={(e) => setIssuedByName(e.target.value)}
                                         placeholder="e.g. Saifeldin M."
-                                        className="bg-white"
+                                        className="bg-ds-surface"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-hotel-navy font-semibold">Left Signatory Title</Label>
+                                    <Label className="font-medium text-ds-ink">Left Signatory Title</Label>
                                     <Input
                                         value={issuedByTitle}
                                         onChange={(e) => setIssuedByTitle(e.target.value)}
                                         placeholder="e.g. VP of Learning & Quality"
-                                        className="bg-white"
+                                        className="bg-ds-surface"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-hotel-navy font-semibold">Right Signatory Name</Label>
+                                    <Label className="font-medium text-ds-ink">Right Signatory Name</Label>
                                     <Input
                                         value={secondarySignatoryName}
                                         onChange={(e) => setSecondarySignatoryName(e.target.value)}
                                         placeholder="e.g. Dr. Khalid Al-Mansoor"
-                                        className="bg-white"
+                                        className="bg-ds-surface"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-hotel-navy font-semibold">Right Signatory Title</Label>
+                                    <Label className="font-medium text-ds-ink">Right Signatory Title</Label>
                                     <Input
                                         value={secondarySignatoryTitle}
                                         onChange={(e) => setSecondarySignatoryTitle(e.target.value)}
                                         placeholder="e.g. Executive Managing Director"
-                                        className="bg-white"
+                                        className="bg-ds-surface"
                                     />
                                 </div>
                             </div>
@@ -261,7 +257,7 @@ export default function ManualCertificateGenerator() {
                             <Button
                                 type="submit"
                                 disabled={isGenerating || !selectedUserId || !title || (certificateType === 'training' && !selectedTrainingModuleId)}
-                                className="bg-hotel-navy hover:bg-hotel-navy-light text-white px-8"
+                                className="min-h-[44px] bg-ds-ink px-8 text-ds-on-ink hover:bg-ds-ink/90"
                             >
                                 {isGenerating ? (
                                     <>
@@ -270,7 +266,7 @@ export default function ManualCertificateGenerator() {
                                     </>
                                 ) : (
                                     <>
-                                        <Award className="me-2 h-4 w-4 text-hotel-gold" />
+                                        <Award aria-hidden="true" className="me-2 h-4 w-4" />
                                         {t('manual_certificates.actions.generate')}
                                     </>
                                 )}

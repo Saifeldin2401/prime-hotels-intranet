@@ -88,7 +88,6 @@ interface NotificationRequest {
   priority?: "low" | "normal" | "high" | "critical";
   scheduledFor?: string;
   all?: boolean;
-  propertyId?: string;
   departmentId?: string;
   emailSubject?: string;
   emailHtml?: string;
@@ -464,26 +463,6 @@ Deno.serve(async (req) => {
 
           targetUserIds = (orgProfiles || []).map((p) => p.id);
         }
-      } else if (body.propertyId) {
-        // Property (hotel) membership now lives on organization_memberships.hotel_id
-        // rather than a separate user_properties junction table.
-        const { data: propertyUsers, error: propertyError } = await supabase
-          .from("organization_memberships")
-          .select("user_id")
-          .eq("hotel_id", body.propertyId)
-          .eq("is_active", true);
-
-        if (propertyError) {
-          return jsonResponse(
-            {
-              error: "Failed to fetch property users",
-              details: propertyError.message,
-            },
-            500,
-            corsHeaders,
-          );
-        }
-        targetUserIds = (propertyUsers || []).map((p) => p.user_id);
       } else if (body.departmentId) {
         // Department membership now lives on organization_memberships.department_id
         // rather than a separate user_departments junction table.

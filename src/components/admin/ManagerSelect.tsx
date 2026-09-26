@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next'
 interface ManagerSelectProps {
     value: string | null
     onChange: (value: string | null) => void
-    propertyId?: string
     excludeUserId?: string
     disabled?: boolean
     placeholder?: string
@@ -17,14 +16,13 @@ interface ManagerSelectProps {
 export function ManagerSelect({
     value,
     onChange,
-    propertyId,
     excludeUserId,
     disabled = false,
     placeholder,
     allowClear = true
 }: ManagerSelectProps) {
     const { t } = useTranslation('admin')
-    const { data: managers, isLoading } = usePotentialManagers(propertyId, excludeUserId)
+    const { data: managers, isLoading } = usePotentialManagers(excludeUserId)
 
     const getRoleBadge = (role: string) => {
         const roleColors: Record<string, string> = {

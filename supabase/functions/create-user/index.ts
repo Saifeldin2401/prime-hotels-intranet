@@ -276,7 +276,7 @@ Deno.serve(async (req: Request) => {
       phone,
       jobTitle,
       role,
-      propertyIds: rawPropertyIds = [],
+      // propertyIds from older clients is ignored: hotels were removed.
       departmentIds: rawDepartmentIds = [],
       reportingTo,
       dateOfBirth,
@@ -312,12 +312,6 @@ Deno.serve(async (req: Request) => {
     const normalizedRole: AppRole | null = isAppRole(normalizedRoleInput)
       ? normalizedRoleInput
       : null;
-    const propertyIds = Array.isArray(rawPropertyIds)
-      ? rawPropertyIds.filter(
-          (pid): pid is string =>
-            typeof pid === "string" && pid.trim().length > 0,
-        )
-      : [];
     const departmentIds = Array.isArray(rawDepartmentIds)
       ? rawDepartmentIds.filter(
           (did): did is string =>
@@ -493,16 +487,6 @@ Deno.serve(async (req: Request) => {
     // ENTITLEMENT CHECK: START
     // =================================================================
     let targetOrgId: string | null = body.organizationId || body.organization_id || null;
-    if (!targetOrgId && propertyIds.length > 0) {
-      const { data: propData } = await adminClient
-        .from("hotels")
-        .select("organization_id")
-        .eq("id", propertyIds[0])
-        .maybeSingle();
-      if (propData?.organization_id) {
-        targetOrgId = propData.organization_id;
-      }
-    }
     if (!targetOrgId) {
       const { data: userMembership } = await adminClient
         .from("organization_memberships")
@@ -553,7 +537,6 @@ Deno.serve(async (req: Request) => {
             "organization_owner",
             "organization_admin",
             "brand_admin",
-            "hotel_admin",
             "training_manager",
           ].includes(callerOrgMembership.role)
         ) {
@@ -782,13 +765,9 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // 4/5. Property and department assignment now live directly on
-    // organization_memberships (hotel_id/department_id columns) rather than
-    // separate user_properties/user_departments junction tables, which no
-    // longer exist. Only a single primary hotel/department can be recorded
-    // per membership row (set below), so multi-property/-department
-    // assignment from this endpoint is no longer supported — the caller only
-    // gets propertyIds[0]/departmentIds[0] applied.
+    // 4/5. The department lives directly on organization_memberships. Only a
+    // single primary department is recorded per membership row (set below),
+    // so the caller only gets departmentIds[0] applied.
 
     // 6. Assign Organization Membership (multi-tenant authoritative context)
     if (targetOrgId) {
@@ -801,10 +780,7 @@ Deno.serve(async (req: Request) => {
         mappedMembershipRole = "organization_admin";
       else if (
         normalizedRole === "regional_admin" ||
-        normalizedRole === "property_manager"
-      )
-        mappedMembershipRole = "hotel_admin";
-      else if (
+        normalizedRole === "property_manager" ||
         normalizedRole === "training_manager" ||
         normalizedRole === "regional_hr" ||
         normalizedRole === "property_hr"
@@ -823,20 +799,30 @@ Deno.serve(async (req: Request) => {
       )
         mappedMembershipRole = "learner";
 
-      const { error: membershipError } = await adminClient
+      // Explicit update-or-insert: the old upsert named a conflict target
+      // (user_id,organization_id) that no unique constraint matched, so it
+      // always failed and the membership was silently never written.
+      const membershipFields = {
+        role: mappedMembershipRole,
+        department_id: departmentIds[0] || null,
+        is_active: true,
+        is_primary: true,
+      };
+      const { data: existingMembership } = await adminClient
         .from("organization_memberships")
-        .upsert(
-          {
-            user_id: userId,
-            organization_id: targetOrgId,
-            role: mappedMembershipRole,
-            hotel_id: propertyIds[0] || null,
-            department_id: departmentIds[0] || null,
-            is_active: true,
-            is_primary: true,
-          },
-          { onConflict: "user_id,organization_id" },
-        );
+        .select("id")
+        .eq("user_id", userId)
+        .eq("organization_id", targetOrgId)
+        .limit(1)
+        .maybeSingle();
+      const { error: membershipError } = existingMembership
+        ? await adminClient
+            .from("organization_memberships")
+            .update(membershipFields)
+            .eq("id", existingMembership.id)
+        : await adminClient
+            .from("organization_memberships")
+            .insert({ ...membershipFields, user_id: userId, organization_id: targetOrgId });
 
       if (membershipError) {
         console.error("Organization membership assignment failed:", membershipError);
@@ -965,7 +951,6 @@ Deno.serve(async (req: Request) => {
           auth_user_id: userId,
           email: normalizedEmail,
           role: normalizedRole,
-          property_id: propertyIds[0] || null,
           department_id: departmentIds[0] || null,
           organization_id: targetOrgId || null,
           invited_by: user.id,

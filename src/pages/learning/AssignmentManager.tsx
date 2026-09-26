@@ -1,6 +1,6 @@
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Command,
     CommandEmpty,
@@ -78,7 +78,7 @@ function AssignmentProgressDialog({
                     <div className="rounded-md border">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-slate-50 border-b">
+                                <thead className="bg-ds-surface-subtle border-b">
                                     <tr>
                                         <th className="px-4 py-3 text-start font-medium">{t('common:user')}</th>
                                         <th className="px-4 py-3 text-start font-medium">{t('common:status')}</th>
@@ -357,30 +357,18 @@ export default function AssignmentManager() {
             : 'Not selected'
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{t('training:assignments', 'Assignments')}</h1>
-                    <p className="text-muted-foreground mt-2">
-                        Target quizzes and content to specific staff, roles, or departments.
-                    </p>
-                </div>
-                <Button onClick={() => setShowModal(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    New Assignment
-                </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{assignments.length}</div>
-                    </CardContent>
-                </Card>
-            </div>
+        <div className="mx-auto max-w-6xl space-y-6">
+            <PageHeader
+                backTo="/manage/assignments"
+                title="Quiz assignments"
+                description={`Assign quizzes to people, roles or departments. ${assignments.length} active.`}
+                actions={
+                    <Button onClick={() => setShowModal(true)} className="min-h-[44px] bg-ds-ink text-ds-on-ink hover:bg-ds-ink/90">
+                        <Plus aria-hidden="true" className="me-2 h-4 w-4" />
+                        Assign a quiz
+                    </Button>
+                }
+            />
 
             <Dialog
                 open={showModal}
@@ -397,7 +385,7 @@ export default function AssignmentManager() {
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
                         {validationErrors.length > 0 && (
-                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                            <div className="rounded-md border border-ds-danger/30 bg-ds-danger-soft p-3 text-xs text-ds-danger">
                                 {validationErrors.map((message) => (
                                     <p key={message}>{message}</p>
                                 ))}
@@ -737,7 +725,7 @@ export default function AssignmentManager() {
             <div className="border rounded-lg bg-white overflow-hidden shadow-sm">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-start">
-                        <thead className="bg-slate-50 border-b">
+                        <thead className="bg-ds-surface-subtle border-b">
                             <tr>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('content')}</th>
                                 <th className="px-6 py-3 font-medium text-muted-foreground">{t('target')}</th>
@@ -750,17 +738,17 @@ export default function AssignmentManager() {
                         </thead>
                         <tbody className="divide-y">
                             {assignments.map(a => (
-                                <tr key={a.id} className="hover:bg-slate-50">
+                                <tr key={a.id} className="hover:bg-ds-surface-subtle">
                                     <td className="px-6 py-4 font-medium">
                                         <div className="flex items-center gap-2">
-                                            <BookOpen className="h-4 w-4 text-blue-500" />
+                                            <BookOpen className="h-4 w-4 text-ds-accent" />
                                             {/* Attempt to show title if available (would need enriched data or lookup) */}
                                             {getContentName(a.content_id, a.content_type) || a.content_type.toUpperCase()}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-slate-400" />
+                                            <Users className="h-4 w-4 text-ds-muted" />
                                             <span className="capitalize">
                                                 {a.target_type === 'everyone' ? t('allStaff') : getTargetName(a.target_id, a.target_type)}
                                             </span>
@@ -789,7 +777,7 @@ export default function AssignmentManager() {
                                             onClick={() => startEdit(a)}
                                             title="Edit"
                                         >
-                                            <Pencil className="h-4 w-4 text-slate-500" />
+                                            <Pencil className="h-4 w-4 text-ds-muted" />
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -797,7 +785,7 @@ export default function AssignmentManager() {
                                             onClick={() => setViewProgressId(a.id)}
                                             title={t('viewProgress')}
                                         >
-                                            <Eye className="h-4 w-4 text-slate-500" />
+                                            <Eye className="h-4 w-4 text-ds-muted" />
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -805,7 +793,7 @@ export default function AssignmentManager() {
                                             onClick={() => setDeleteAssignmentId(a.id)}
                                             title="Delete"
                                         >
-                                            <Trash2 className="h-4 w-4 text-red-600" />
+                                            <Trash2 className="h-4 w-4 text-ds-danger" />
                                         </Button>
                                     </td>
                                 </tr>

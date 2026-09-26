@@ -1,5 +1,5 @@
 import type { EntityStatus } from './index'
-import type { Department, Profile, Property } from './profile'
+import type { Department, Profile } from './profile'
 // Job Posting System Interfaces
 type SeniorityLevel = 'junior' | 'mid' | 'senior' | 'manager' | 'director' | 'executive'
 type EmploymentType = 'full_time' | 'part_time' | 'contract' | 'temporary'
@@ -10,7 +10,6 @@ interface JobPosting {
   id: string
   title: string
   department_id: string | null
-  property_id: string | null
   seniority_level: SeniorityLevel
   employment_type: EmploymentType
   description: string | null
@@ -27,7 +26,6 @@ interface JobPosting {
 
   // Relations
   department?: Department
-  property?: Property
   created_by_profile?: Profile
   applications?: JobApplication[]
 }

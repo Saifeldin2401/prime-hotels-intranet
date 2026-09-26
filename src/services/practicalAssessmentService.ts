@@ -42,7 +42,6 @@ export const practicalAssessmentService = {
     assessmentId?: string
     learnerId?: string
     evaluatorId?: string
-    hotelId?: string
   }): Promise<PracticalSubmission[]> {
     let query = supabase
       .from('practical_submissions')
@@ -65,9 +64,6 @@ export const practicalAssessmentService = {
     if (filters?.evaluatorId) {
       query = query.eq('evaluator_id', filters.evaluatorId)
     }
-    if (filters?.hotelId) {
-      query = query.eq('hotel_id', filters.hotelId)
-    }
 
     const { data, error } = await query
     if (error) throw error
@@ -77,7 +73,6 @@ export const practicalAssessmentService = {
   async submitEvaluation(evaluation: {
     assessment_id: string
     learner_id: string
-    hotel_id?: string
     score_achieved: number
     is_passed: boolean
     rubric_evaluations: Record<string, { points: number; comments?: string }>

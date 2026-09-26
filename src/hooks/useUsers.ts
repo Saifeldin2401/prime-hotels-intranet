@@ -6,18 +6,11 @@ import { useQuery } from '@tanstack/react-query'
 
 export function useProfiles(filters?: {
     search?: string
-    property_id?: string
     department_id?: string
     department_ids?: string[]
     limit?: number // Max records to fetch, defaults to 200
 }) {
-    // const { primaryRole, properties } = useAuth() // unused for now
-    const normalizedPropertyId = filters?.property_id && filters.property_id !== 'all'
-        ? filters.property_id
-        : undefined
     const normalizedFilters = filters
-        ? { ...filters, property_id: normalizedPropertyId }
-        : undefined
 
     return useQuery({
         queryKey: ['profiles', normalizedFilters],
@@ -28,7 +21,6 @@ export function useProfiles(filters?: {
                 if (sanitizedSearch) {
                     const secureResults = await secureSearchUsers({
                         search: sanitizedSearch,
-                        property_id: normalizedPropertyId,
                         department_id: filters?.department_id,
                         is_active: true,
                         limit: filters?.limit || 200
@@ -36,7 +28,7 @@ export function useProfiles(filters?: {
                     return secureResults
                 }
             }
-            
+
             let query = supabase
                 .from('profiles')
                 .select(`
@@ -57,19 +49,13 @@ export function useProfiles(filters?: {
                         role,
                         organization_id,
                         is_active,
-                        hotel_id,
                         department_id,
-                        hotel:hotels(id, name),
                         department:departments(id, name)
                     ),
                     reporting_to_profile:profiles!reporting_to(id, full_name, job_title, email)
                 `)
                 .eq('is_active', true)
                 .order('full_name')
-
-            if (normalizedPropertyId) {
-                query = query.not('organization_memberships', 'is', null).eq('organization_memberships.hotel_id', normalizedPropertyId)
-            }
 
             if (filters?.department_id) {
                 query = query.not('organization_memberships', 'is', null).eq('organization_memberships.department_id', filters.department_id)
@@ -80,7 +66,6 @@ export function useProfiles(filters?: {
             }
 
             // In a real app, strict RLS would handle this, but for now we might filter here
-            // e.g. Staff sees only their property coworkers?
             // For now, let everyone see everyone for directory purposes.
 
             // Apply limit to prevent fetching too many records
@@ -94,7 +79,6 @@ export function useProfiles(filters?: {
             return (data || []).map((profile: any) => ({
                 ...profile,
                 roles: [...new Set(appRolesFromMemberships(profile.organization_memberships).map((r) => r.role))],
-                properties: (profile.organization_memberships || []).map((om: any) => om.hotel).filter(Boolean),
                 departments: (profile.organization_memberships || []).map((om: any) => om.department).filter(Boolean)
             }))
         }

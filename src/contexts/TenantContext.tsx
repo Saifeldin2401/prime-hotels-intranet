@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUserData } from '@/contexts/auth/UserDataContext'
 import { useAccountContext } from '@/hooks/useAccountContext'
 import { supabase } from '@/lib/supabase'
-import type { Organization, Brand, Hotel, OrganizationMembership, TenantRole } from '@/lib/types/tenant'
+import type { Organization, Brand, OrganizationMembership, TenantRole } from '@/lib/types/tenant'
 import type { PlatformAccessSession } from '@/lib/types/platform'
 import { platformService } from '@/services/platformService'
 import { safeLocalStorage } from '@/lib/storage'
@@ -17,9 +17,7 @@ interface TenantContextType {
   
   // Scopes within the active organization
   availableBrands: Brand[]
-  availableHotels: Hotel[]
   currentBrand: Brand | null
-  currentHotel: Hotel | null
   
   // Membership & Role in current organization
   currentMembership: OrganizationMembership | null
@@ -38,7 +36,6 @@ interface TenantContextType {
   switchOrganization: (orgId: string) => Promise<void>
   returnToPlatformScope: () => Promise<void>
   setBrandScope: (brandId: string | null) => void
-  setHotelScope: (hotelId: string | null) => void
   refreshTenantData: () => Promise<void>
 }
 
@@ -51,9 +48,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
   const [availableBrands, setAvailableBrands] = useState<Brand[]>([])
-  const [availableHotels, setAvailableHotels] = useState<Hotel[]>([])
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null)
-  const [currentHotel, setCurrentHotel] = useState<Hotel | null>(null)
   const [memberships, setMemberships] = useState<OrganizationMembership[]>([])
   const [impersonationSession, setImpersonationSession] = useState<PlatformAccessSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -75,7 +70,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setOrganizations([])
       setCurrentOrganization(null)
       setAvailableBrands([])
-      setAvailableHotels([])
       setMemberships([])
       setImpersonationSession(null)
       setIsLoading(false)
@@ -94,9 +88,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
       const clearTenantScopes = () => {
         setAvailableBrands([])
-        setAvailableHotels([])
         setCurrentBrand(null)
-        setCurrentHotel(null)
       }
 
       // Full membership rows (for currentMembership metadata); the authoritative
@@ -226,27 +218,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     setAvailableBrands(brandRows || [])
 
-    // Fetch hotels
-    const { data: hotelRows } = await (supabase
-      .from('hotels')
-      .select('*')
-      .eq('organization_id', orgId)
-      .eq('is_active', true)
-      .eq('is_deleted', false) as unknown as Promise<{ data: Hotel[] | null }>)
-
-    setAvailableHotels(hotelRows || [])
-
-    // Restore scoped hotel
-    const storedHotelId =
-      safeLocalStorage.getItem(`altus_hotel_scope_${orgId}`) ||
-      safeLocalStorage.getItem(`prime_hotel_scope_${orgId}`)
-    if (storedHotelId && hotelRows) {
-      const matchedHotel = hotelRows.find(h => h.id === storedHotelId)
-      if (matchedHotel) setCurrentHotel(matchedHotel)
-      else setCurrentHotel(null)
-    } else {
-      setCurrentHotel(null)
-    }
   }
 
   useEffect(() => {
@@ -318,7 +289,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       safeLocalStorage.removeItem('altus_active_tenant_id')
     }
     setCurrentBrand(null)
-    setCurrentHotel(null)
     await loadScopesForOrg(targetOrgId)
     await account.refresh()
   }
@@ -350,7 +320,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     safeLocalStorage.removeItem('altus_active_tenant_id')
     setCurrentOrganization(targetOrg)
     setCurrentBrand(null)
-    setCurrentHotel(null)
 
     await loadScopesForOrg(orgId)
   }
@@ -370,9 +339,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       safeLocalStorage.removeItem('altus_active_tenant_id')
       setCurrentOrganization(null)
       setAvailableBrands([])
-      setAvailableHotels([])
       setCurrentBrand(null)
-      setCurrentHotel(null)
       await account.refresh()
     }
   }
@@ -396,9 +363,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
     setCurrentOrganization(null)
     setAvailableBrands([])
-    setAvailableHotels([])
     setCurrentBrand(null)
-    setCurrentHotel(null)
     safeLocalStorage.removeItem('altus_active_tenant_id')
     if (user) {
       safeLocalStorage.setItem(`active_tenant_id_${user.id}`, '__platform__')
@@ -415,21 +380,6 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
     const targetBrand = availableBrands.find(b => b.id === brandId) || null
     setCurrentBrand(targetBrand)
-  }
-
-  const setHotelScope = (hotelId: string | null) => {
-    if (!hotelId) {
-      setCurrentHotel(null)
-      if (currentOrganization) {
-        safeLocalStorage.removeItem(`altus_hotel_scope_${currentOrganization.id}`)
-      }
-      return
-    }
-    const targetHotel = availableHotels.find(h => h.id === hotelId) || null
-    setCurrentHotel(targetHotel)
-    if (currentOrganization && targetHotel) {
-      safeLocalStorage.setItem(`altus_hotel_scope_${currentOrganization.id}`, targetHotel.id)
-    }
   }
 
   const currentMembership = useMemo(() => {
@@ -455,9 +405,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     organizations,
     isLoading,
     availableBrands,
-    availableHotels,
     currentBrand,
-    currentHotel,
     currentMembership,
     userTenantRole,
     isOrgAdmin,
@@ -470,16 +418,13 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     switchOrganization,
     returnToPlatformScope,
     setBrandScope,
-    setHotelScope,
     refreshTenantData: fetchTenantData,
   }), [
     currentOrganization,
     organizations,
     isLoading,
     availableBrands,
-    availableHotels,
     currentBrand,
-    currentHotel,
     currentMembership,
     userTenantRole,
     isOrgAdmin,
@@ -506,9 +451,7 @@ const defaultTenantFallback: TenantContextType = {
   organizations: [],
   isLoading: false,
   availableBrands: [],
-  availableHotels: [],
   currentBrand: null,
-  currentHotel: null,
   currentMembership: null,
   userTenantRole: null,
   isOrgAdmin: false,
@@ -521,7 +464,6 @@ const defaultTenantFallback: TenantContextType = {
   switchOrganization: async () => {},
   returnToPlatformScope: async () => {},
   setBrandScope: () => {},
-  setHotelScope: () => {},
   refreshTenantData: async () => {},
 }
 

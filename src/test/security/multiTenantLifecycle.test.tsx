@@ -45,16 +45,6 @@ vi.mock('@/contexts/auth/AccountContext', () => ({
   useAccountContext: () => mockAccountState,
 }))
 
-vi.mock('@/contexts/PropertyContext', () => ({
-  useProperty: () => ({
-    currentProperty: null,
-    properties: [],
-    propertyIds: [],
-    setCurrentProperty: vi.fn(),
-  }),
-  PropertyProvider: ({ children }: any) => children,
-}))
-
 vi.mock('@/components/layout/AppLayout', () => ({
   InsideAppLayoutContext: React.createContext<boolean>(false),
   AppLayout: ({ children }: { children: React.ReactNode }) => (
@@ -349,7 +339,7 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
 
     it('passes through and renders children when valid tenant context is established', async () => {
       mockAuthUser = { id: 'manager-1', email: 'manager@acme.com' }
-      mockPrimaryRole = 'hotel_admin'
+      mockPrimaryRole = 'training_manager'
       mockAccountState = {
         ...mockAccountState,
         isPlatformOperator: false,
@@ -367,7 +357,7 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
         }
         if (table === 'organization_memberships') {
           return createChainableQuery([
-            { id: 'm1', organization_id: 'org-tenant-1', role: 'hotel_admin', is_active: true },
+            { id: 'm1', organization_id: 'org-tenant-1', role: 'training_manager', is_active: true },
           ])
         }
         return createChainableQuery([])
@@ -395,7 +385,7 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
 
     it('purges cache and switches context when switching between Tenant A and Tenant B', async () => {
       mockAuthUser = { id: 'multi-manager', email: 'multi@hotels.com' }
-      mockPrimaryRole = 'hotel_admin'
+      mockPrimaryRole = 'training_manager'
       mockAccountState = {
         ...mockAccountState,
         isPlatformOperator: false,
@@ -414,8 +404,8 @@ describe('Multi-Tenant Lifecycle & Security Tests', () => {
         }
         if (table === 'organization_memberships') {
           return createChainableQuery([
-            { id: 'm1', organization_id: 'org-a', role: 'hotel_admin', is_active: true },
-            { id: 'm2', organization_id: 'org-b', role: 'hotel_admin', is_active: true },
+            { id: 'm1', organization_id: 'org-a', role: 'training_manager', is_active: true },
+            { id: 'm2', organization_id: 'org-b', role: 'training_manager', is_active: true },
           ])
         }
         return createChainableQuery([])

@@ -1,12 +1,12 @@
 /**
  * SECURE SEARCH UTILITIES
- * 
+ *
  * This module provides SQL injection-safe alternatives to vulnerable search patterns.
- * 
+ *
  * VULNERABLE PATTERN (DO NOT USE):
  *   const escaped = escapeSearchQuery(userInput)
  *   query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
- * 
+ *
  * SECURE REPLACEMENT:
  *   Use the secure search functions below which call database RPC functions
  *   with proper parameterization.
@@ -23,7 +23,6 @@ interface SecureDocumentFilters {
   search?: string
   status?: string
   visibility?: string
-  property_id?: string
   department_id?: string
   folder_id?: string | null
   file_type?: string | string[]
@@ -40,7 +39,6 @@ interface SecureDocumentFilters {
 
 interface SecureUserFilters {
   search?: string
-  property_id?: string
   department_id?: string
   role?: string
   is_active?: boolean
@@ -60,7 +58,6 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
     search,
     status,
     visibility,
-    property_id,
     department_id,
     folder_id,
     file_type,
@@ -77,10 +74,9 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
 
   // Sanitize all inputs
   const sanitizedSearch = search ? sanitizeSearchInput(search) : null
-  const sanitizedPropertyId = sanitizeUUID(property_id)
   const sanitizedDepartmentId = sanitizeUUID(department_id)
   const sanitizedFolderId = folder_id === null ? null : sanitizeUUID(folder_id)
-  const sanitizedFileType = Array.isArray(file_type) 
+  const sanitizedFileType = Array.isArray(file_type)
     ? file_type.filter(t => /^[a-zA-Z0-9_-]+$/.test(t))
     : file_type && /^[a-zA-Z0-9_-]+$/.test(file_type) ? [file_type] : null
 
@@ -89,11 +85,11 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
   const validVisibilities = ['all_properties', 'property', 'department', 'role', 'specific_departments']
   const validConfidentiality = ['public', 'internal', 'confidential', 'restricted']
 
-  const sanitizedStatus = status && validStatuses.includes(status.toUpperCase()) 
-    ? status.toUpperCase() 
+  const sanitizedStatus = status && validStatuses.includes(status.toUpperCase())
+    ? status.toUpperCase()
     : null
-  const sanitizedVisibility = visibility && validVisibilities.includes(visibility) 
-    ? visibility 
+  const sanitizedVisibility = visibility && validVisibilities.includes(visibility)
+    ? visibility
     : null
   const sanitizedConfidentiality = confidentiality_level && validConfidentiality.includes(confidentiality_level)
     ? confidentiality_level
@@ -107,7 +103,6 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
   // Call secure database function
   const { data, error } = await supabase.rpc('secure_search_documents', {
     p_search_query: sanitizedSearch,
-    p_property_id: sanitizedPropertyId,
     p_folder_id: sanitizedFolderId,
     p_status: sanitizedStatus,
     p_visibility: sanitizedVisibility,
@@ -142,7 +137,6 @@ export async function secureSearchDocuments(filters: SecureDocumentFilters = {})
 export async function secureSearchUsers(filters: SecureUserFilters = {}) {
   const {
     search,
-    property_id,
     department_id,
     role,
     is_active = true,
@@ -150,7 +144,6 @@ export async function secureSearchUsers(filters: SecureUserFilters = {}) {
   } = filters
 
   const sanitizedSearch = search ? sanitizeSearchInput(search) : null
-  const sanitizedPropertyId = sanitizeUUID(property_id)
   const sanitizedDepartmentId = sanitizeUUID(department_id)
 
   // Validate role against allowed values
@@ -159,7 +152,6 @@ export async function secureSearchUsers(filters: SecureUserFilters = {}) {
 
   const { data, error } = await supabase.rpc('secure_search_users', {
     p_search_query: sanitizedSearch,
-    p_property_id: sanitizedPropertyId,
     p_department_id: sanitizedDepartmentId,
     p_role: sanitizedRole,
     p_is_active: is_active,

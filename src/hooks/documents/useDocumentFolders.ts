@@ -1,3 +1,4 @@
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
@@ -42,9 +43,10 @@ export function useDocumentFolders(parentId?: string | null) {
 export function useCreateDocumentFolder() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const { currentOrganization } = useTenant()
 
   return useMutation({
-    mutationFn: async (folder: { name: string; description?: string | null; parent_id?: string | null; property_id?: string | null; department_id?: string | null }) => {
+    mutationFn: async (folder: { name: string; description?: string | null; parent_id?: string | null; department_id?: string | null }) => {
       if (!user) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
@@ -53,7 +55,7 @@ export function useCreateDocumentFolder() {
           name: folder.name,
           description: folder.description ?? null,
           parent_id: folder.parent_id ?? null,
-          property_id: folder.property_id ?? null,
+          organization_id: currentOrganization?.id ?? null,
           department_id: folder.department_id ?? null,
           created_by: user.id,
         })

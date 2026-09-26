@@ -22,6 +22,7 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 import { useCreateTrainingSession } from '@/hooks/useILT'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
 import type { SessionDeliveryMode } from '@/types/enterpriseOperatingModel'
 import { Calendar, Clock, MapPin, Video, Users, BookOpen } from 'lucide-react'
 
@@ -29,7 +30,6 @@ interface ScheduleSessionModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   organizationId?: string
-  hotelId?: string
   onSessionCreated?: (sessionId: string) => void
 }
 
@@ -37,12 +37,12 @@ export function ScheduleSessionModal({
   open,
   onOpenChange,
   organizationId,
-  hotelId,
   onSessionCreated
 }: ScheduleSessionModalProps) {
   const { i18n } = useTranslation('common')
   const isAr = i18n.language === 'ar'
   const { toast } = useToast()
+  const { currentOrganization } = useTenant()
 
   const [title, setTitle] = useState('')
   const [titleAr, setTitleAr] = useState('')
@@ -75,6 +75,8 @@ export function ScheduleSessionModal({
     }
   }, [open])
 
+  const targetOrgId = organizationId || currentOrganization?.id
+
   // Fetch courses for dropdown
   useEffect(() => {
     if (!open) return
@@ -82,8 +84,8 @@ export function ScheduleSessionModal({
       setIsLoadingCourses(true)
       try {
         let q = supabase.from('courses').select('id, title').eq('is_deleted', false).order('title')
-        if (organizationId) {
-          q = q.eq('organization_id', organizationId)
+        if (targetOrgId) {
+          q = q.eq('organization_id', targetOrgId)
         }
         const { data } = await q
         if (data) setCourses(data)
@@ -94,7 +96,7 @@ export function ScheduleSessionModal({
       }
     }
     loadCourses()
-  }, [open, organizationId])
+  }, [open, targetOrgId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,14 +119,21 @@ export function ScheduleSessionModal({
       return
     }
 
-    const effectiveOrgId = organizationId || 'e0000000-0000-0000-0000-000000000001'
+    const effectiveOrgId = targetOrgId
+    if (!effectiveOrgId) {
+      toast({
+        title: isAr ? 'خطأ في المؤسسة' : 'Organization Error',
+        description: isAr ? 'لم يتم العثور على المؤسسة الحالية' : 'No active organization found',
+        variant: 'destructive'
+      })
+      return
+    }
 
     try {
       const { data: user } = await supabase.auth.getUser()
 
       const newSession = await createSessionMutation.mutateAsync({
         organization_id: effectiveOrgId,
-        hotel_id: hotelId || null,
         course_id: courseId === 'none' ? null : courseId,
         title: title.trim(),
         title_ar: titleAr.trim() || null,
@@ -232,7 +241,7 @@ export function ScheduleSessionModal({
                   <SelectItem value="in_person">
                     <span className="flex items-center gap-2">
                       <MapPin className="h-3.5 w-3.5 text-emerald-500" />
-                      {isAr ? 'حضوري (قاعة تدريب الفندق)' : 'In-Person (Hotel Training Room)'}
+                      {isAr ? 'حضوري (قاعة تدريب)' : 'In-Person (Training Room)'}
                     </span>
                   </SelectItem>
                   <SelectItem value="virtual">

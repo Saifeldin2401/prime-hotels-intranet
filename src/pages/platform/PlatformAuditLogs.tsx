@@ -82,10 +82,10 @@ export default function PlatformAuditLogs() {
   })
 
   const getActionBadgeColor = (action: string) => {
-    if (action.includes('enter') || action.includes('impersonate')) return 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
-    if (action.includes('deploy')) return 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30'
-    if (action.includes('create')) return 'bg-green-500/15 text-green-700 dark:text-green-300 border-green-500/30'
-    if (action.includes('suspend') || action.includes('delete')) return 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30'
+    if (action.includes('enter') || action.includes('impersonate')) return 'bg-ds-warning-soft text-ds-warning border-ds-warning/30'
+    if (action.includes('deploy')) return 'bg-ds-accent-soft text-ds-accent border-ds-accent/30'
+    if (action.includes('create')) return 'bg-ds-success-soft text-ds-success border-ds-success/30'
+    if (action.includes('suspend') || action.includes('delete')) return 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
     return 'bg-muted text-muted-foreground'
   }
 

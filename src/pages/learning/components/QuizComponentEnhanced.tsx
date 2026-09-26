@@ -312,7 +312,7 @@ export function QuizComponentEnhanced({
     onContinue,
 }: QuizComponentEnhancedProps) {
     const { toast } = useToast()
-    const { user, profile, properties, departments } = useAuth()
+    const { user, profile, departments } = useAuth()
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.language === 'ar'
     const translateAI = useTranslationAI()
@@ -866,7 +866,6 @@ export function QuizComponentEnhanced({
             // Certificate generation
             if (serverResult.passed && certificateEnabled) {
                 try {
-                    const primaryProperty = properties?.[0]
                     const primaryDepartment = departments?.[0]
                     const certificateData: CertificateData = {
                         userId: user.id,
@@ -879,8 +878,6 @@ export function QuizComponentEnhanced({
                         completionDate: new Date(),
                         score: serverResult.score_percentage,
                         passingScore: quiz.passing_score_percentage,
-                        propertyId: primaryProperty?.id,
-                        propertyName: primaryProperty?.name,
                         departmentId: primaryDepartment?.id,
                         departmentName: primaryDepartment?.name,
                     }

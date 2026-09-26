@@ -1,11 +1,11 @@
-﻿import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { AuthMotionVisual } from '@/components/auth/motion/AuthMotionVisual';
 import { useTenant } from '@/contexts/TenantContext';
 import { cn } from '@/lib/utils';
-import { Building2 } from 'lucide-react';
+import { Building2, ShieldCheck } from 'lucide-react';
 
 export default function Login() {
   const { t, i18n } = useTranslation('auth');
@@ -13,6 +13,28 @@ export default function Login() {
   const { currentOrganization } = useTenant();
   const year = new Date().getFullYear();
   const isRTL = i18n.dir() === 'rtl';
+
+  // Dynamic greeting based on KSA time
+  const { greeting, icon } = useMemo(() => {
+    const ksaHour = parseInt(
+      new Date().toLocaleString('en-US', {
+        hour: 'numeric',
+        hour12: false,
+        timeZone: 'Asia/Riyadh',
+      }),
+      10
+    );
+
+    if (ksaHour >= 5 && ksaHour < 12) {
+      return { greeting: t('greeting_morning', { defaultValue: 'Good morning' }), icon: '☀️' };
+    } else if (ksaHour >= 12 && ksaHour < 17) {
+      return { greeting: t('greeting_afternoon', { defaultValue: 'Good afternoon' }), icon: '🌤️' };
+    } else if (ksaHour >= 17 && ksaHour < 21) {
+      return { greeting: t('greeting_evening', { defaultValue: 'Good evening' }), icon: '🌅' };
+    } else {
+      return { greeting: t('greeting_night', { defaultValue: 'Good night' }), icon: '🌙' };
+    }
+  }, [t]);
 
   // Tenant resolution: check active organization or URL context
   const tenantOrg = currentOrganization;
@@ -28,6 +50,15 @@ export default function Login() {
       }
     }
   }, [tenantOrg?.favicon_url]);
+
+  useEffect(() => {
+    if (tenantOrg?.brand_colors?.primary) {
+      document.documentElement.style.setProperty('--tenant-accent', tenantOrg.brand_colors.primary);
+      return () => {
+        document.documentElement.style.removeProperty('--tenant-accent');
+      };
+    }
+  }, [tenantOrg?.brand_colors?.primary]);
 
   const handleLanguageToggle = (lang: string) => {
     if (i18n.language !== lang) {
@@ -113,7 +144,7 @@ export default function Login() {
             )}
           </div>
 
-          {/* Restrained Language Switcher (English | Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©) */}
+          {/* Restrained Language Switcher (English | العربية) */}
           <nav
             className="flex items-center gap-1.5 text-xs font-medium text-ds-muted select-none ms-auto shrink-0"
             aria-label={t('change_language', { defaultValue: 'Change Language' })}
@@ -145,20 +176,32 @@ export default function Login() {
               )}
               aria-pressed={i18n.language.startsWith('ar')}
             >
-              Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©
+              العربية
             </button>
           </nav>
         </header>
+
+        {/* Mobile-only compact brand visual */}
+        <div className="flex lg:hidden items-center justify-center py-2 shrink-0">
+          <div className="w-20 h-20 opacity-80">
+            <img src="/altus-emblem-icon.png" alt="" className="w-full h-full object-contain" aria-hidden="true" />
+          </div>
+        </div>
 
         {/* Center: Authentication Surface (Immediate interaction, no blocking) */}
         <main className="w-full max-w-sm mx-auto my-auto py-2 sm:py-4 flex-1 min-h-0 flex flex-col justify-center">
           {/* Confident Heading & Concise Enterprise Copy */}
           <div className="mb-4 sm:mb-5 text-start space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ds-ink">
-              {t('welcome_back', { defaultValue: 'Welcome back' })}
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-ds-ink flex items-center gap-2">
+              <span aria-hidden="true">{icon}</span>
+              <span>{greeting}</span>
             </h1>
             <p className="text-xs sm:text-sm text-ds-muted leading-relaxed">
               {t('sign_in_subtitle', { defaultValue: 'Sign in to continue to Altus Connect.' })}
+            </p>
+            <p className="text-[11px] text-ds-muted/80 flex items-center gap-1.5 mt-1">
+              <ShieldCheck className="w-3 h-3 text-ds-brass shrink-0" />
+              {t('social_proof', { defaultValue: 'Trusted by hospitality teams across the Kingdom' })}
             </p>
           </div>
 
@@ -170,7 +213,7 @@ export default function Login() {
         <footer className="w-full pt-4 border-t border-ds-border/60 flex items-center justify-between gap-3 text-xs text-ds-muted shrink-0">
           <span className="truncate">{t('copyright', { year, defaultValue: `Â© ${year} Altus Connect. All rights reserved.` })}</span>
           <span className="text-[11px] text-ds-muted/80 shrink-0">
-            {tenantOrg ? 'Verified Tenant Environment' : 'Hospitality Learning Cloud'}
+            {tenantOrg ? t('verified_tenant', { defaultValue: 'Verified Tenant Environment' }) : t('learning_cloud', { defaultValue: 'Hospitality Learning Cloud' })}
           </span>
         </footer>
       </div>

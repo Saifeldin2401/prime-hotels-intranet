@@ -191,25 +191,33 @@ export async function getPHGUserContext(
     .select("role")
     .eq("user_id", userId);
 
-  // Get properties
-  const { data: properties } = await supabase
-    .from("user_properties")
-    .select("property_id")
-    .eq("user_id", userId);
+  // Get memberships
+  const { data: memberships } = await supabase
+    .from("organization_memberships")
+    .select("department_id, role")
+    .eq("user_id", userId)
+    .eq("is_active", true);
 
-  // Get departments
-  const { data: departments } = await supabase
-    .from("user_departments")
-    .select("department_id")
-    .eq("user_id", userId);
+  const deptIds = (memberships || [])
+    .map((m: { department_id: string | null }) => m.department_id)
+    .filter(Boolean) as string[];
+
+  const membershipRoles = (memberships || [])
+    .map((m: { role: string | null }) => m.role)
+    .filter(Boolean) as string[];
+
+  const allRoles = Array.from(new Set([
+    ...(roles || []).map((r: { role: string }) => r.role),
+    ...membershipRoles
+  ]));
 
   return {
     userId: profile.id,
     email: profile.email || "",
     fullName: profile.full_name || "",
-    roles: (roles || []).map((r) => r.role),
-    properties: (properties || []).map((p) => p.property_id),
-    departments: (departments || []).map((d) => d.department_id),
+    roles: allRoles,
+    properties: [],
+    departments: deptIds,
   };
 }
 

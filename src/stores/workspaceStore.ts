@@ -34,7 +34,7 @@ export const WORKSPACES: Record<WorkspaceId, WorkspaceConfig> = {
     labelAr: 'الإدارة',
     description: 'See where compliance is at risk, assign courses and export evidence',
     descriptionAr: 'تحديد مخاطر الامتثال، إسناد الدورات وتصدير الأدلة',
-    defaultPath: '/manage/compliance',
+    defaultPath: '/manage/risk',
   },
   ORGANIZATION: {
     id: 'ORGANIZATION',

@@ -8,9 +8,12 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { aiService } from '@/lib/gemini'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { generateAndLinkCheckpointQuestions } from '@/services/checkpointQuizGenerator'
+import {
+  generateAndLinkCheckpointQuestions,
+  createCheckpointQuiz,
+  deleteQuiz
+} from '@/services/checkpointQuizGenerator'
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -306,7 +309,7 @@ function TrainingBuilderInner() {
                     size="sm"
                     onClick={ctx.goNextStep}
                     className={cn(
-                      "h-8 px-4 text-xs font-bold bg-hotel-gold hover:bg-hotel-gold/90 text-hotel-navy shadow-xs",
+                      "h-8 px-4 text-xs font-bold bg-ds-brass hover:bg-ds-accent-hover text-white shadow-xs",
                       ctx.isRTL ? "flex-row-reverse" : ""
                     )}
                   >
@@ -424,20 +427,15 @@ function TrainingBuilderInner() {
             for (let cpIdx = 0; cpIdx < sectionCheckpoints.length; cpIdx++) {
               const checkpoint = sectionCheckpoints[cpIdx]
               try {
-                const { data: createdQuiz } = await supabase
-                  .from('quizzes')
-                  .insert({
-                    title: `Checkpoint: ${checkpoint.topic || sec.heading}`,
-                    description: `Verification quiz for ${sec.heading}`,
-                    training_module_id: ctx.moduleId,
-                    passing_score_percentage: Number(ctx.passingScore) || 80,
-                    time_limit_minutes: 10,
-                    max_attempts: 3,
-                    status: 'published',
-                    created_by: profile?.id
-                  })
-                  .select()
-                  .single()
+                const createdQuiz = await createCheckpointQuiz({
+                  title: `Checkpoint: ${checkpoint.topic || sec.heading}`,
+                  description: `Verification quiz for ${sec.heading}`,
+                  trainingModuleId: ctx.moduleId,
+                  passingScorePercentage: Number(ctx.passingScore) || 80,
+                  timeLimitMinutes: 10,
+                  maxAttempts: 3,
+                  createdBy: profile?.id
+                })
 
                 if (createdQuiz) {
                   const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
@@ -467,7 +465,7 @@ function TrainingBuilderInner() {
                       order: sectionItems.length
                     })
                   } else {
-                    await supabase.from('quizzes').delete().eq('id', createdQuiz.id)
+                    await deleteQuiz(createdQuiz.id)
                     checkpointFailures.push(checkpoint.topic || sec.heading)
                   }
                 }

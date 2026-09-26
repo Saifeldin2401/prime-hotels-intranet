@@ -1,11 +1,10 @@
-import { AlertCircle, CheckCircle2, Download, Loader2, Mail, RefreshCw } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Download, Loader2, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -40,7 +39,7 @@ export default function InboundEmails() {
   const renderStatus = (row: InboundEmailRow) => {
     if (row.content_fetch_error) {
       return (
-        <Badge variant="outline" className={cn('bg-red-100 text-red-800')}> 
+        <Badge variant="outline" className={cn('bg-ds-danger-soft text-ds-danger')}> 
           <AlertCircle className="w-3 h-3 me-1" />
           {t('common:error', { defaultValue: 'Error' })}
         </Badge>
@@ -49,7 +48,7 @@ export default function InboundEmails() {
 
     if (row.content_fetched_at) {
       return (
-        <Badge variant="outline" className={cn('bg-green-100 text-green-800')}>
+        <Badge variant="outline" className={cn('bg-ds-success-soft text-ds-success')}>
           <CheckCircle2 className="w-3 h-3 me-1" />
           {t('common:status.ready', { defaultValue: 'Ready' })}
         </Badge>
@@ -57,17 +56,17 @@ export default function InboundEmails() {
     }
 
     return (
-      <Badge variant="outline" className={cn('bg-gray-100 text-gray-800')}>
+      <Badge variant="outline" className={cn('bg-ds-surface-subtle text-ds-ink')}>
         {t('common:status.pending', { defaultValue: 'Pending' })}
       </Badge>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
-        title={t('admin:inbound_emails', { defaultValue: 'Inbound Emails' })}
-        description={t('admin:inbound_emails_desc', { defaultValue: 'View emails received via Resend webhooks.' })}
+        title={t('admin:inbound_emails', { defaultValue: 'Inbound email' })}
+        description={t('admin:inbound_emails_desc', { defaultValue: 'Email received by Altus Connect through the Resend inbound webhook.' })}
         actions={
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
             {isFetching ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <RefreshCw className="w-4 h-4 me-2" />}
@@ -76,23 +75,17 @@ export default function InboundEmails() {
         }
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5" />
-            {t('admin:inbound_emails', { defaultValue: 'Inbound Emails' })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center p-8">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : rows.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('admin:no_inbound_emails', { defaultValue: 'No inbound emails yet.' })}
-            </div>
-          ) : (
+      {isLoading ? (
+        <div className="space-y-px overflow-hidden rounded-[6px] border border-ds-border" aria-busy="true">
+          {[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse bg-ds-surface-subtle" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+          <p className="text-base font-semibold text-ds-ink">{t('admin:no_inbound_emails', { defaultValue: 'No inbound emails yet.' })}</p>
+          <p className="mt-1 text-sm text-ds-muted">{t('admin:inbound_empty_body', { defaultValue: 'Email sent to the platform inbound address appears here.' })}</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-[6px] border border-ds-border bg-ds-surface">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -141,9 +134,8 @@ export default function InboundEmails() {
                 ))}
               </TableBody>
             </Table>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-w-3xl">
@@ -171,14 +163,14 @@ export default function InboundEmails() {
               {selected.text && (
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('admin:text', { defaultValue: 'Text' })}</div>
-                  <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 max-h-[240px] overflow-auto">{selected.text}</pre>
+                  <pre className="text-sm whitespace-pre-wrap rounded-md bg-ds-surface-subtle p-3 max-h-[240px] overflow-auto">{selected.text}</pre>
                 </div>
               )}
 
               {selected.html && (
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('admin:html', { defaultValue: 'HTML' })}</div>
-                  <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 max-h-[240px] overflow-auto">{selected.html}</pre>
+                  <pre className="text-sm whitespace-pre-wrap rounded-md bg-ds-surface-subtle p-3 max-h-[240px] overflow-auto">{selected.html}</pre>
                 </div>
               )}
 
@@ -190,7 +182,7 @@ export default function InboundEmails() {
                     ? (
                       <div className="text-sm text-muted-foreground">{t('admin:no_attachments', { defaultValue: 'No attachments' })}</div>
                     ) : (
-                      <pre className="text-sm whitespace-pre-wrap rounded-md bg-muted p-3 max-h-[160px] overflow-auto">{JSON.stringify(selected.attachment_downloads, null, 2)}</pre>
+                      <pre className="text-sm whitespace-pre-wrap rounded-md bg-ds-surface-subtle p-3 max-h-[160px] overflow-auto">{JSON.stringify(selected.attachment_downloads, null, 2)}</pre>
                     )
                   }
                 </div>
@@ -199,14 +191,14 @@ export default function InboundEmails() {
               {selected.raw_download_url && (
                 <div className="space-y-1">
                   <div className="text-sm text-muted-foreground">{t('admin:raw_email', { defaultValue: 'Raw email' })}</div>
-                  <a className="text-sm text-primary underline break-all" href={selected.raw_download_url} target="_blank" rel="noreferrer">
+                  <a className="break-all text-sm text-ds-accent underline" href={selected.raw_download_url} target="_blank" rel="noreferrer">
                     {selected.raw_download_url}
                   </a>
                 </div>
               )}
 
               {selected.content_fetch_error && (
-                <div className="text-sm text-red-600 break-words">{selected.content_fetch_error}</div>
+                <div className="text-sm text-ds-danger break-words">{selected.content_fetch_error}</div>
               )}
             </div>
           )}

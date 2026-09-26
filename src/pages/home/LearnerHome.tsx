@@ -10,11 +10,13 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { Award, BookMarked, BookOpen, ChevronRight, FileQuestion, PlayCircle } from 'lucide-react'
+import { Award, BookMarked, BookOpen, ChevronRight, FileCheck2, FileQuestion, PlayCircle } from 'lucide-react'
 
 import { useAuth } from '@/hooks/useAuth'
 import { useMyCertificates } from '@/hooks/useCertificates'
-import { useBookmarks } from '@/hooks/useKnowledge'
+import { useAccountContext } from '@/hooks/useAccountContext'
+import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
+import { useTenant } from '@/contexts/TenantContext'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useMyAssignments } from '@/hooks/useTraining'
 import type { LearningAssignment } from '@/types/learning'
@@ -23,7 +25,6 @@ import {
     ActionQueue,
     EmptyState,
     ErrorState,
-    PageHeader,
     ProgressBar,
     SectionHeader,
     Skeleton,
@@ -61,6 +62,13 @@ export default function LearnerHome() {
     const assignmentsQuery = useMyAssignments()
     const certificatesQuery = useMyCertificates()
     const bookmarksQuery = useBookmarks()
+    const readingQuery = useRequiredReading()
+    const account = useAccountContext()
+    const { currentOrganization } = useTenant()
+    const departmentId = account.tenantMemberships.find(
+        (m) => m.organization_id === currentOrganization?.id,
+    )?.department_id ?? undefined
+    const roleArticlesQuery = useArticles({ departmentId, limit: 5 })
 
     const formatDate = (iso: string) =>
         new Date(iso).toLocaleDateString(locale, { month: 'short', day: 'numeric' })
@@ -96,6 +104,22 @@ export default function LearnerHome() {
             })
         // eslint-disable-next-line react-hooks/exhaustive-deps -- formatDate only depends on locale
     }, [open, now, t, locale])
+
+    const readingToAcknowledge = useMemo<ActionQueueItem[]>(
+        () => (readingQuery.data ?? [])
+            .filter((r) => !r.is_acknowledged)
+            .map((r) => ({
+                id: `read-${r.document_id}`,
+                title: r.title,
+                description: t('training:myDay.readRequired', 'Required reading'),
+                tone: 'attention',
+                icon: FileCheck2,
+                href: `/knowledge/${r.document_id}`,
+                actionLabel: t('training:myDay.readAndAcknowledge', 'Read and acknowledge'),
+            } satisfies ActionQueueItem)),
+        [readingQuery.data, t],
+    )
+    const attention = useMemo(() => [...requiredNow, ...readingToAcknowledge], [requiredNow, readingToAcknowledge])
 
     // Due soon: everything else with a due date inside the window.
     const dueSoon = useMemo<ActionQueueItem[]>(() => {
@@ -141,10 +165,19 @@ export default function LearnerHome() {
 
     return (
         <div className="mx-auto max-w-6xl space-y-8 p-4 sm:p-6 lg:p-8">
-            <PageHeader
-                title={firstName ? `${greeting}, ${firstName}` : greeting}
-                subtitle={today}
-            />
+            <header className="space-y-2 border-b border-ds-border pb-6">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-accent">{today}</p>
+                <h1 className="font-editorial text-[34px] font-semibold leading-tight text-ds-ink sm:text-[42px]">
+                    {firstName ? `${greeting}, ${firstName}` : greeting}
+                </h1>
+                <p className="text-base text-ds-ink-secondary" aria-live="polite">
+                    {assignmentsQuery.isLoading
+                        ? '\u00a0'
+                        : attention.length > 0
+                            ? t('training:myDay.attentionCount', '{{count}} actions need your attention', { count: attention.length })
+                            : t('training:myDay.attentionNone', 'Nothing needs your attention right now.')}
+                </p>
+            </header>
 
             <div className="grid gap-8 lg:grid-cols-12 items-start">
                 <div className="lg:col-span-8 space-y-8">
@@ -164,7 +197,7 @@ export default function LearnerHome() {
                             />
                         ) : (
                             <ActionQueue
-                                items={requiredNow}
+                                items={attention}
                                 emptyTitle={t('training:myDay.nothingRequired', 'Nothing required right now')}
                                 emptyDescription={t('training:myDay.nothingRequiredHint', 'You have no overdue or mandatory training.')}
                             />
@@ -227,6 +260,45 @@ export default function LearnerHome() {
                 </div>
 
                 <aside className="lg:col-span-4 space-y-8">
+                    <section aria-labelledby="my-day-role-knowledge" className="space-y-3">
+                        <SectionHeader
+                            headingId="my-day-role-knowledge"
+                            title={departmentId
+                                ? t('training:myDay.roleKnowledge', 'Knowledge for your role')
+                                : t('training:myDay.latestKnowledge', 'Latest knowledge')}
+                            action={
+                                <Link to="/knowledge" className="text-xs font-semibold text-ds-accent hover:underline">
+                                    {t('common:browse', 'Browse')}
+                                </Link>
+                            }
+                        />
+                        {roleArticlesQuery.isLoading ? (
+                            <SectionSkeleton />
+                        ) : (roleArticlesQuery.data ?? []).length > 0 ? (
+                            <ul className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+                                {(roleArticlesQuery.data ?? []).slice(0, 5).map((a) => (
+                                    <li key={a.id}>
+                                        <Link
+                                            to={`/knowledge/${a.id}`}
+                                            className="flex min-h-[52px] flex-col justify-center px-3 py-2 hover:bg-ds-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ds-accent"
+                                        >
+                                            <span className="truncate text-sm font-medium text-ds-ink">{(isRTL && a.title_ar) || a.title}</span>
+                                            <span className="truncate text-xs text-ds-muted">
+                                                {[a.sop_code || a.code, t(`knowledge:types.${a.content_type}`, a.content_type)].filter(Boolean).join(' · ')}
+                                            </span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <EmptyState
+                                icon={<BookOpen className="h-5 w-5" aria-hidden="true" />}
+                                title={t('training:myDay.noRoleKnowledge', 'No articles for your department yet')}
+                                description={t('training:myDay.noRoleKnowledgeHint', 'Your knowledge manager publishes SOPs here. Search the knowledge base in the meantime.')}
+                            />
+                        )}
+                    </section>
+
                     {/* 4. Saved knowledge */}
                     <section aria-labelledby="my-day-knowledge" className="space-y-3">
                         <SectionHeader

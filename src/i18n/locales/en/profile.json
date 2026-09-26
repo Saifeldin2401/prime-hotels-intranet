@@ -93,5 +93,47 @@
     "national_id": "National ID",
     "salary_grade": "Salary Grade",
     "certifications": "Certifications",
-    "no_certifications": "No certifications yet"
+    "no_certifications": "No certifications yet",
+    "me": {
+        "eyebrow": "Account",
+        "title": "My profile",
+        "context": "What colleagues see when they look you up.",
+        "identity": "Photo and name",
+        "uploadPhoto": "Upload a photo",
+        "orPortrait": "Or use an Altus portrait:",
+        "usePortrait": "Use this portrait",
+        "missing": {
+            "photo": "a photo",
+            "phone": "a phone number",
+            "bio": "a short introduction"
+        },
+        "missingNote": "Colleagues find you faster with {{items}}.",
+        "about": "About you",
+        "aboutHint": "You can change these yourself.",
+        "extension": "Desk extension",
+        "bio": "Introduction",
+        "bioPlaceholder": "Your role, your team and what colleagues can ask you about.",
+        "saved": "Profile saved",
+        "saveFailed": "Your changes were not saved. Try again.",
+        "photoSaved": "Photo updated",
+        "record": "Your record",
+        "recordHint": "Kept by your organization. Ask your administrator to change these.",
+        "hotel": "Hotel",
+        "notSet": "Not set",
+        "signin": "Sign-in",
+        "tenureYears": "{{years}} yr {{months}} mo",
+        "tenureMonths": "{{count}} mo"
+    },
+    "colleague": {
+        "notFound": "This profile does not exist",
+        "notFoundBody": "The link may be incomplete or out of date.",
+        "loadFailed": "This profile could not be loaded",
+        "hotels": "Hotel",
+        "departments": "Department",
+        "inactive": "No longer active",
+        "email": "Email",
+        "team": "Team",
+        "training": "Training record",
+        "show": "Show"
+    }
 }

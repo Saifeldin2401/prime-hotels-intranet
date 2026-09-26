@@ -1,7 +1,6 @@
 export interface DocumentFilters {
   status?: string
   visibility?: string
-  property_id?: string
   department_id?: string
   search?: string
   /**
@@ -33,7 +32,6 @@ export interface DocumentFolder {
   name: string
   description: string | null
   parent_id: string | null
-  property_id: string | null
   department_id: string | null
   created_by: string
   created_at: string

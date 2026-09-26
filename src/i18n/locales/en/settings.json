@@ -104,5 +104,8 @@
     "messages": {
         "language_updated": "Language Updated",
         "language_updated_desc": "Language Updated Description"
+    },
+    "page": {
+        "eyebrow": "Account"
     }
 }

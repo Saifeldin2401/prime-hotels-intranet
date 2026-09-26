@@ -273,7 +273,7 @@ describe('knowledgeService', () => {
         }),
       }))
 
-      await getFeaturedArticles(5, 'property-123')
+      await getFeaturedArticles(5, 'org-123')
 
       expect(mockOr).toHaveBeenCalled()
     })

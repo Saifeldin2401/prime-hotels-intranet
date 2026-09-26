@@ -66,7 +66,6 @@ import {
     Filter,
     HelpCircle,
     Lightbulb,
-    ListChecks,
     Loader2,
     MoreVertical,
     Plus,
@@ -78,6 +77,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 
 export function QuestionBank() {
     const { t } = useTranslation(['knowledge', 'common'])
@@ -91,32 +91,30 @@ export function QuestionBank() {
     }
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
-            {/* Hero Header */}
-            <div className="bg-gradient-to-br from-hotel-navy via-[#1b2a47] to-[#0f172a] text-white p-6 sm:p-8 rounded-2xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-                <div className="absolute -top-24 -end-24 w-72 h-72 rounded-full bg-hotel-gold/10 blur-3xl pointer-events-none" />
-                <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold uppercase tracking-wider text-hotel-gold">Assessment & Checkpoints</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-tight text-white flex items-center gap-3">
-                        <span>{t('question_bank.title', 'Question Bank & Assessment Studio')}</span>
-                    </h1>
-                    <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
-                        {t('question_bank.description', 'Author questions, review procedural checkpoints, and build five-star certification assessments from one unified repository.')}
-                    </p>
-                </div>
-            </div>
+        <div className="mx-auto max-w-7xl space-y-6">
+            <WorkspaceHeader
+                eyebrow={t('quizBank.eyebrow', 'Studio')}
+                title={t('quizBank.title', 'Quizzes & questions')}
+                context={t('quizBank.context', 'Write questions once, then reuse them across quizzes and course checkpoints.')}
+                actions={
+                    <>
+                        <Link to="/studio/quizzes/generate" className={`${headerActionClass.secondary} hidden sm:inline-flex`}>
+                            {t('quizBank.generate', 'Generate from a document')}
+                        </Link>
+                        <Link to="/studio/quizzes/new" className={headerActionClass.primary}>
+                            <Plus aria-hidden="true" className="h-4 w-4" />{t('quizBank.newQuiz', 'New quiz')}
+                        </Link>
+                    </>
+                }
+            />
 
             <Tabs value={section} onValueChange={setSection}>
-                <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-11 shadow-2xs">
-                    <TabsTrigger value="questions" className="text-xs sm:text-sm font-bold px-5 h-9 data-[state=active]:bg-hotel-navy data-[state=active]:text-white data-[state=active]:shadow-sm">
-                        <Brain className="h-4 w-4 me-2" />
-                        {t('question_bank.sections.questions', 'Question Repository')}
+                <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b border-ds-border bg-transparent p-0">
+                    <TabsTrigger value="questions" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        {t('quizBank.questions', 'Questions')}
                     </TabsTrigger>
-                    <TabsTrigger value="assessments" className="text-xs sm:text-sm font-bold px-5 h-9 data-[state=active]:bg-hotel-navy data-[state=active]:text-white data-[state=active]:shadow-sm">
-                        <ListChecks className="h-4 w-4 me-2" />
-                        {t('question_bank.sections.assessments', 'Assessments & Quizzes')}
+                    <TabsTrigger value="assessments" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                        {t('quizBank.quizzes', 'Quizzes')}
                     </TabsTrigger>
                 </TabsList>
 
@@ -192,17 +190,17 @@ function QuestionsPanel() {
         <div className="space-y-6">
             {/* Header action bar */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
+                <p className="text-xs sm:text-sm text-ds-muted max-w-xl leading-relaxed">
                     {t('question_library.description', 'Browse, author, and calibrate procedural checkpoint questions linked to hotel SOPs and compliance standards.')}
                 </p>
                 <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" asChild className="hidden sm:flex border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold h-9">
+                    <Button variant="outline" asChild className="hidden sm:flex border-ds-accent/30 text-ds-accent hover:bg-ds-accent-soft text-xs font-bold h-9">
                         <Link to="/studio/quizzes/generate">
-                            <Sparkles className="h-3.5 w-3.5 me-1.5 text-purple-600 animate-pulse" />
+                            <Sparkles className="h-3.5 w-3.5 me-1.5 text-ds-accent animate-pulse" />
                             {t('question_library.generate_with_ai', 'AI Generation')}
                         </Link>
                     </Button>
-                    <Button asChild className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy font-bold text-xs h-9 shadow-sm">
+                    <Button asChild className="bg-ds-accent hover:bg-ds-accent text-ds-ink font-bold text-xs h-9 shadow-sm">
                         <Link to="/studio/questions/new">
                             <Plus className="h-3.5 w-3.5 me-1.5" />
                             {t('question_library.create_question', 'New Question')}
@@ -213,53 +211,53 @@ function QuestionsPanel() {
 
             {/* Metrics Deck */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <Card className="border-slate-200 bg-white shadow-xs">
+                <Card className="border-ds-border bg-white shadow-xs">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('question_library.stats.total', 'Total Repository')}</p>
-                            <p className="text-2xl font-serif font-black text-slate-900 mt-0.5">{data?.total || 0}</p>
+                            <p className="text-xs font-bold uppercase tracking-wider text-ds-muted">{t('question_library.stats.total', 'Total Repository')}</p>
+                            <p className="text-2xl font-serif font-black text-ds-ink mt-0.5">{data?.total || 0}</p>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600 border border-blue-200">
+                        <div className="p-2.5 rounded-xl bg-ds-accent-soft text-ds-accent border border-ds-accent/30">
                             <Brain className="h-5 w-5" />
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-emerald-200 bg-emerald-50/40 shadow-xs">
+                <Card className="border-ds-success/30 bg-ds-success-soft shadow-xs">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-emerald-800">{t('question_library.stats.published', 'Live / Published')}</p>
-                            <p className="text-2xl font-serif font-black text-emerald-600 mt-0.5">
+                            <p className="text-xs font-bold uppercase tracking-wider text-ds-success">{t('question_library.stats.published', 'Live / Published')}</p>
+                            <p className="text-2xl font-serif font-black text-ds-success mt-0.5">
                                 {data?.questions?.filter(q => q.status === 'published').length || 0}
                             </p>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-emerald-100 text-emerald-600 border border-emerald-300">
+                        <div className="p-2.5 rounded-xl bg-ds-success-soft text-ds-success border border-ds-success/30">
                             <CheckCircle className="h-5 w-5" />
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className={cn("border-slate-200 shadow-xs transition-colors", pendingData?.total ? 'border-amber-300 bg-amber-50/60' : 'bg-white')}>
+                <Card className={cn("border-ds-border shadow-xs transition-colors", pendingData?.total ? 'border-ds-warning/30 bg-ds-warning-soft' : 'bg-white')}>
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-amber-800">{t('question_library.stats.pending_review', 'Pending Review')}</p>
-                            <p className="text-2xl font-serif font-black text-amber-600 mt-0.5">{pendingData?.total || 0}</p>
+                            <p className="text-xs font-bold uppercase tracking-wider text-ds-warning">{t('question_library.stats.pending_review', 'Pending Review')}</p>
+                            <p className="text-2xl font-serif font-black text-ds-warning mt-0.5">{pendingData?.total || 0}</p>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600 border border-amber-300">
+                        <div className="p-2.5 rounded-xl bg-ds-warning-soft text-ds-warning border border-ds-warning/30">
                             <Clock className="h-5 w-5" />
                         </div>
                     </CardContent>
                 </Card>
 
-                <Card className="border-purple-200 bg-purple-50/40 shadow-xs">
+                <Card className="border-ds-accent/30 bg-ds-accent-soft shadow-xs">
                     <CardContent className="p-4 flex items-center justify-between">
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-wider text-purple-800">{t('question_library.stats.ai_generated', 'AI Synthesized')}</p>
-                            <p className="text-2xl font-serif font-black text-purple-600 mt-0.5">
+                            <p className="text-xs font-bold uppercase tracking-wider text-ds-accent">{t('question_library.stats.ai_generated', 'AI Synthesized')}</p>
+                            <p className="text-2xl font-serif font-black text-ds-accent mt-0.5">
                                 {data?.questions?.filter(q => q.ai_generated).length || 0}
                             </p>
                         </div>
-                        <div className="p-2.5 rounded-xl bg-purple-100 text-purple-600 border border-purple-300">
+                        <div className="p-2.5 rounded-xl bg-ds-accent-soft text-ds-accent border border-ds-accent/30">
                             <Sparkles className="h-5 w-5" />
                         </div>
                     </CardContent>
@@ -267,22 +265,22 @@ function QuestionsPanel() {
             </div>
 
             {/* Filter Surface */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-ds-border shadow-2xs">
                 <div className="flex flex-wrap items-center gap-3 flex-1">
                     <div className="relative flex-1 min-w-[200px] max-w-md">
-                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ds-muted" />
                         <Input
                             placeholder={t('question_library.search_placeholder', 'Search questions, keywords, SOP references...')}
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="ps-9 h-9 text-xs bg-slate-50 border-slate-200"
+                            className="ps-9 h-9 text-xs bg-ds-surface-subtle border-ds-border"
                         />
                     </div>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 text-xs font-semibold border-slate-200 bg-slate-50">
-                                <Filter className="h-3.5 w-3.5 me-1.5 text-slate-400" />
+                            <Button variant="outline" size="sm" className="h-9 text-xs font-semibold border-ds-border bg-ds-surface-subtle">
+                                <Filter className="h-3.5 w-3.5 me-1.5 text-ds-muted" />
                                 {typeFilter ? QUESTION_TYPE_CONFIG[typeFilter]?.label : t('question_library.all_types', 'All Types')}
                             </Button>
                         </DropdownMenuTrigger>
@@ -300,8 +298,8 @@ function QuestionsPanel() {
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 text-xs font-semibold border-slate-200 bg-slate-50">
-                                <Target className="h-3.5 w-3.5 me-1.5 text-slate-400" />
+                            <Button variant="outline" size="sm" className="h-9 text-xs font-semibold border-ds-border bg-ds-surface-subtle">
+                                <Target className="h-3.5 w-3.5 me-1.5 text-ds-muted" />
                                 {difficultyFilter ? DIFFICULTY_CONFIG[difficultyFilter]?.label : 'All Difficulties'}
                             </Button>
                         </DropdownMenuTrigger>
@@ -318,19 +316,19 @@ function QuestionsPanel() {
                     </DropdownMenu>
                 </div>
 
-                <div className="text-xs font-semibold text-slate-500">
+                <div className="text-xs font-semibold text-ds-muted">
                     {data?.total || 0} questions listed
                 </div>
             </div>
 
             {/* Tabs for status */}
             <Tabs value={tab} onValueChange={handleTabChange}>
-                <TabsList className="bg-slate-100 p-1 rounded-xl">
+                <TabsList className="bg-ds-surface-subtle p-1 rounded-xl">
                     <TabsTrigger value="all" className="text-xs font-bold">{t('question_library.tabs.all', 'All Questions')}</TabsTrigger>
                     <TabsTrigger value="draft" className="text-xs font-bold">{t('question_library.tabs.drafts', 'Drafts')}</TabsTrigger>
                     <TabsTrigger value="pending_review" className="text-xs font-bold relative">
                         {t('question_library.tabs.pending_review', 'Pending Review')}
-                        {pendingData?.total ? <Badge className="ms-1.5 bg-amber-500 text-white text-[10px] h-4 px-1.5 py-0">{pendingData.total}</Badge> : null}
+                        {pendingData?.total ? <Badge className="ms-1.5 bg-ds-warning text-white text-[10px] h-4 px-1.5 py-0">{pendingData.total}</Badge> : null}
                     </TabsTrigger>
                     <TabsTrigger value="published" className="text-xs font-bold">{t('question_library.tabs.published', 'Published')}</TabsTrigger>
                     <TabsTrigger value="archived" className="text-xs font-bold">{t('question_library.tabs.archived', 'Archived')}</TabsTrigger>
@@ -340,7 +338,7 @@ function QuestionsPanel() {
                     {isLoading ? (
                         <div className="space-y-3">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <Card key={i} className="rounded-xl border-slate-200">
+                                <Card key={i} className="rounded-xl border-ds-border">
                                     <CardContent className="p-5">
                                         <Skeleton className="h-4 w-3/4 mb-2" />
                                         <Skeleton className="h-3 w-1/2" />
@@ -349,16 +347,16 @@ function QuestionsPanel() {
                             ))}
                         </div>
                     ) : data?.questions?.length === 0 ? (
-                        <Card className="border-slate-200 rounded-xl">
+                        <Card className="border-ds-border rounded-xl">
                             <CardContent className="py-16 text-center max-w-md mx-auto">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+                                <div className="w-16 h-16 rounded-2xl bg-ds-surface-subtle text-ds-muted flex items-center justify-center mx-auto mb-3">
                                     <Brain className="h-8 w-8" />
                                 </div>
-                                <h3 className="text-base font-serif font-bold text-slate-900">{t('question_library.no_questions', 'No questions found')}</h3>
-                                <p className="text-xs text-slate-500 mt-1">
+                                <h3 className="text-base font-serif font-bold text-ds-ink">{t('question_library.no_questions', 'No questions found')}</h3>
+                                <p className="text-xs text-ds-muted mt-1">
                                     Try adjusting your search criteria or create a new procedural checkpoint question.
                                 </p>
-                                <Button asChild className="mt-4 bg-hotel-navy text-white text-xs font-bold h-9">
+                                <Button asChild className="mt-4 bg-ds-ink text-white text-xs font-bold h-9">
                                     <Link to="/studio/questions/new">{t('question_library.create_first', 'Draft First Question')}</Link>
                                 </Button>
                             </CardContent>
@@ -393,10 +391,10 @@ function QuestionsPanel() {
                                     {(() => {
                                         const diff = previewQuestion.difficulty_level
                                         const diffColors = {
-                                            easy: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-                                            medium: 'bg-amber-50 text-amber-700 border-amber-300',
-                                            hard: 'bg-rose-50 text-rose-700 border-rose-300',
-                                            expert: 'bg-purple-50 text-purple-700 border-purple-300'
+                                            easy: 'bg-ds-success-soft text-ds-success border-ds-success/30',
+                                            medium: 'bg-ds-warning-soft text-ds-warning border-ds-warning/30',
+                                            hard: 'bg-ds-danger-soft text-ds-danger border-ds-danger/30',
+                                            expert: 'bg-ds-accent-soft text-ds-accent border-ds-accent/30'
                                         }
                                         return (
                                             <Badge className={cn("text-[10px] font-bold uppercase tracking-wider border", diffColors[diff] || diffColors.medium)}>
@@ -406,38 +404,38 @@ function QuestionsPanel() {
                                     })()}
 
                                     {/* Type Badge */}
-                                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-slate-50 border-slate-200">
+                                    <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider bg-ds-surface-subtle border-ds-border">
                                         {QUESTION_TYPE_CONFIG[previewQuestion.question_type]?.label || previewQuestion.question_type}
                                     </Badge>
 
                                     {/* Status Badge */}
                                     <Badge className={cn(
                                         "text-[10px] font-bold uppercase tracking-wider",
-                                        previewQuestion.status === 'published' ? "bg-emerald-600 text-white" :
-                                        previewQuestion.status === 'pending_review' ? "bg-amber-500 text-white" :
-                                        "bg-slate-100 text-slate-700 border border-slate-200"
+                                        previewQuestion.status === 'published' ? "bg-ds-success text-white" :
+                                        previewQuestion.status === 'pending_review' ? "bg-ds-warning text-white" :
+                                        "bg-ds-surface-subtle text-ds-ink border border-ds-border"
                                     )}>
                                         {STATUS_CONFIG[previewQuestion.status]?.label || previewQuestion.status}
                                     </Badge>
 
                                     {/* Bloom Level */}
                                     {previewQuestion.bloom_level && (
-                                        <Badge variant="secondary" className="text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border-indigo-200">
+                                        <Badge variant="secondary" className="text-[10px] font-semibold uppercase bg-ds-accent-soft text-ds-accent border-ds-accent/30">
                                             Bloom: {previewQuestion.bloom_level}
                                         </Badge>
                                     )}
 
-                                    <span className="text-xs text-slate-400 font-mono ms-auto">
+                                    <span className="text-xs text-ds-muted font-mono ms-auto">
                                         {previewQuestion.points} pts · v{previewQuestion.version}
                                     </span>
                                 </div>
 
-                                <SheetTitle className="text-lg sm:text-xl font-serif font-bold text-slate-900 leading-snug">
+                                <SheetTitle className="text-lg sm:text-xl font-serif font-bold text-ds-ink leading-snug">
                                     {previewQuestion.question_text}
                                 </SheetTitle>
 
                                 {previewQuestion.question_text_ar && (
-                                    <p className="text-sm font-serif font-bold text-hotel-gold-dark font-arabic text-end border-t border-slate-100 pt-2" dir="rtl">
+                                    <p className="text-sm font-serif font-bold text-ds-accent font-arabic text-end border-t border-ds-border pt-2" dir="rtl">
                                         {previewQuestion.question_text_ar}
                                     </p>
                                 )}
@@ -445,8 +443,8 @@ function QuestionsPanel() {
 
                             {/* Answer Options Breakdown */}
                             <div className="space-y-3">
-                                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                                    <CheckCircle2 className="h-3.5 w-3.5 text-hotel-navy" />
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-ds-muted flex items-center gap-1.5">
+                                    <CheckCircle2 className="h-3.5 w-3.5 text-ds-ink" />
                                     Answer Choices & Key
                                 </h4>
 
@@ -458,33 +456,33 @@ function QuestionsPanel() {
                                                 className={cn(
                                                     "p-3.5 rounded-xl border transition-all text-xs",
                                                     option.is_correct
-                                                        ? "bg-emerald-50/80 border-emerald-300 text-emerald-950 font-semibold shadow-2xs"
-                                                        : "bg-white border-slate-200 text-slate-700"
+                                                        ? "bg-ds-success-soft border-ds-success/30 text-ds-success font-semibold shadow-2xs"
+                                                        : "bg-white border-ds-border text-ds-ink"
                                                 )}
                                             >
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="flex items-start gap-2 min-w-0">
                                                         <div className={cn(
                                                             "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5",
-                                                            option.is_correct ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-500 border border-slate-200"
+                                                            option.is_correct ? "bg-ds-success text-white" : "bg-ds-surface-subtle text-ds-muted border border-ds-border"
                                                         )}>
                                                             {option.is_correct ? <Check className="h-3 w-3" /> : String.fromCharCode(65 + idx)}
                                                         </div>
                                                         <div className="min-w-0">
                                                             <p className="leading-relaxed">{option.option_text}</p>
                                                             {option.option_text_ar && (
-                                                                <p className="text-slate-500 font-arabic text-end mt-1" dir="rtl">{option.option_text_ar}</p>
+                                                                <p className="text-ds-muted font-arabic text-end mt-1" dir="rtl">{option.option_text_ar}</p>
                                                             )}
                                                         </div>
                                                     </div>
                                                     {option.is_correct && (
-                                                        <Badge className="bg-emerald-600 text-white text-[9px] uppercase font-bold h-4 px-1.5 py-0 shrink-0">
+                                                        <Badge className="bg-ds-success text-white text-[9px] uppercase font-bold h-4 px-1.5 py-0 shrink-0">
                                                             Correct
                                                         </Badge>
                                                     )}
                                                 </div>
                                                 {option.feedback && (
-                                                    <p className="text-[11px] text-slate-500 mt-2 ps-7 italic border-t border-slate-100 pt-1">
+                                                    <p className="text-[11px] text-ds-muted mt-2 ps-7 italic border-t border-ds-border pt-1">
                                                         Feedback: {option.feedback}
                                                     </p>
                                                 )}
@@ -492,25 +490,25 @@ function QuestionsPanel() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600">
-                                        <p className="font-semibold text-slate-800">Correct Answer Key:</p>
-                                        <p className="mt-1 font-mono text-emerald-700">{previewQuestion.correct_answer || 'No direct key recorded'}</p>
+                                    <div className="p-4 rounded-xl bg-ds-surface-subtle border border-ds-border text-xs text-ds-muted">
+                                        <p className="font-semibold text-ds-ink">Correct Answer Key:</p>
+                                        <p className="mt-1 font-mono text-ds-success">{previewQuestion.correct_answer || 'No direct key recorded'}</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* Explanation & Rationale */}
                             {previewQuestion.explanation && (
-                                <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200/80 space-y-1 text-xs">
-                                    <h5 className="font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5 text-[11px]">
-                                        <Lightbulb className="h-3.5 w-3.5 text-amber-600" />
+                                <div className="p-4 rounded-xl bg-ds-warning-soft border border-ds-warning/30 space-y-1 text-xs">
+                                    <h5 className="font-bold uppercase tracking-wider text-ds-warning flex items-center gap-1.5 text-[11px]">
+                                        <Lightbulb className="h-3.5 w-3.5 text-ds-warning" />
                                         Standard Operating Rationale
                                     </h5>
-                                    <p className="text-amber-950 leading-relaxed font-medium">
+                                    <p className="text-ds-warning leading-relaxed font-medium">
                                         {previewQuestion.explanation}
                                     </p>
                                     {previewQuestion.explanation_ar && (
-                                        <p className="text-amber-900 font-arabic text-end mt-1 pt-1 border-t border-amber-200/60" dir="rtl">
+                                        <p className="text-ds-warning font-arabic text-end mt-1 pt-1 border-t border-ds-warning/30" dir="rtl">
                                             {previewQuestion.explanation_ar}
                                         </p>
                                     )}
@@ -519,12 +517,12 @@ function QuestionsPanel() {
 
                             {/* Hint */}
                             {previewQuestion.hint && (
-                                <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200 space-y-1 text-xs">
-                                    <h5 className="font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5 text-[11px]">
-                                        <HelpCircle className="h-3.5 w-3.5 text-blue-600" />
+                                <div className="p-3.5 rounded-xl bg-ds-accent-soft border border-ds-accent/30 space-y-1 text-xs">
+                                    <h5 className="font-bold uppercase tracking-wider text-ds-accent flex items-center gap-1.5 text-[11px]">
+                                        <HelpCircle className="h-3.5 w-3.5 text-ds-accent" />
                                         Learner Checkpoint Hint
                                     </h5>
-                                    <p className="text-blue-950 leading-relaxed">
+                                    <p className="text-ds-accent leading-relaxed">
                                         {previewQuestion.hint}
                                     </p>
                                 </div>
@@ -532,16 +530,16 @@ function QuestionsPanel() {
 
                             {/* Grounded SOP Link */}
                             {previewQuestion.linked_sop && (
-                                <div className="p-4 rounded-xl bg-white border border-slate-200 space-y-1.5 shadow-2xs">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                <div className="p-4 rounded-xl bg-white border border-ds-border space-y-1.5 shadow-2xs">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-ds-muted block">
                                         Grounded Standard Operating Procedure:
                                     </span>
                                     <Link
                                         to={`/knowledge/${previewQuestion.linked_sop.id}`}
-                                        className="font-serif font-bold text-sm text-hotel-navy hover:underline flex items-center gap-2"
+                                        className="font-serif font-bold text-sm text-ds-ink hover:underline flex items-center gap-2"
                                         onClick={() => setPreviewQuestion(null)}
                                     >
-                                        <FileText className="h-4 w-4 text-hotel-gold" />
+                                        <FileText className="h-4 w-4 text-ds-accent" />
                                         <span>{previewQuestion.linked_sop.title}</span>
                                     </Link>
                                 </div>
@@ -549,19 +547,19 @@ function QuestionsPanel() {
 
                             {/* Accuracy Meter if Attempts Exist */}
                             {passRates?.[previewQuestion.id] && passRates[previewQuestion.id].totalAttempts > 0 && (
-                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                                <div className="p-4 rounded-xl bg-ds-surface-subtle border border-ds-border space-y-2">
                                     <div className="flex items-center justify-between text-xs">
-                                        <span className="font-bold text-slate-700">Historical Pass Rate</span>
-                                        <span className="font-mono font-bold text-slate-900">
+                                        <span className="font-bold text-ds-ink">Historical Pass Rate</span>
+                                        <span className="font-mono font-bold text-ds-ink">
                                             {Math.round(passRates[previewQuestion.id].accuracyRate)}% ({passRates[previewQuestion.id].totalAttempts} attempts)
                                         </span>
                                     </div>
-                                    <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                                    <div className="w-full h-2 rounded-full bg-ds-surface-subtle overflow-hidden">
                                         <div
                                             className={cn(
                                                 "h-full rounded-full transition-all",
-                                                passRates[previewQuestion.id].accuracyRate >= 70 ? "bg-emerald-500" :
-                                                passRates[previewQuestion.id].accuracyRate >= 50 ? "bg-amber-500" : "bg-rose-500"
+                                                passRates[previewQuestion.id].accuracyRate >= 70 ? "bg-ds-success" :
+                                                passRates[previewQuestion.id].accuracyRate >= 50 ? "bg-ds-warning" : "bg-ds-danger"
                                             )}
                                             style={{ width: `${Math.min(100, passRates[previewQuestion.id].accuracyRate)}%` }}
                                         />
@@ -570,7 +568,7 @@ function QuestionsPanel() {
                             )}
 
                             {/* Quick Drawer Actions */}
-                            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200">
+                            <div className="flex items-center justify-between gap-3 pt-4 border-t border-ds-border">
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -583,7 +581,7 @@ function QuestionsPanel() {
                                     {previewQuestion.status === 'pending_review' && (
                                         <Button
                                             size="sm"
-                                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-9"
+                                            className="bg-ds-success hover:bg-ds-success text-white text-xs font-bold h-9"
                                             onClick={() => {
                                                 approveQuestion.mutate({ id: previewQuestion.id })
                                                 setPreviewQuestion(null)
@@ -596,7 +594,7 @@ function QuestionsPanel() {
                                     )}
                                     <Button
                                         size="sm"
-                                        className="bg-hotel-navy hover:bg-hotel-navy/90 text-white text-xs font-bold h-9"
+                                        className="bg-ds-ink hover:bg-ds-ink/90 text-white text-xs font-bold h-9"
                                         asChild
                                     >
                                         <Link to={`/studio/questions/${previewQuestion.id}/edit`}>
@@ -634,15 +632,15 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
     const isLowPassRate = !!passRate && passRate.totalAttempts >= MIN_ATTEMPTS_FOR_FLAG && passRate.accuracyRate < 50
 
     const diffColors: Record<string, string> = {
-        easy: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-        medium: 'bg-amber-50 text-amber-700 border-amber-300',
-        hard: 'bg-rose-50 text-rose-700 border-rose-300',
-        expert: 'bg-purple-50 text-purple-700 border-purple-300'
+        easy: 'bg-ds-success-soft text-ds-success border-ds-success/30',
+        medium: 'bg-ds-warning-soft text-ds-warning border-ds-warning/30',
+        hard: 'bg-ds-danger-soft text-ds-danger border-ds-danger/30',
+        expert: 'bg-ds-accent-soft text-ds-accent border-ds-accent/30'
     }
 
     return (
         <Card
-            className="border-slate-200/80 hover:border-hotel-gold/60 hover:shadow-md transition-all duration-200 bg-white rounded-xl overflow-hidden cursor-pointer"
+            className="border-ds-border hover:border-ds-accent/60 hover:shadow-md transition-all duration-200 bg-white rounded-xl overflow-hidden cursor-pointer"
             onClick={onPreview}
         >
             <CardContent className="p-5">
@@ -653,29 +651,29 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
                                 {difficultyConfig.label}
                             </Badge>
 
-                            <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-slate-50 border-slate-200 text-slate-700 h-5 px-2 py-0">
+                            <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-ds-surface-subtle border-ds-border text-ds-ink h-5 px-2 py-0">
                                 {typeConfig.label}
                             </Badge>
 
                             <Badge className={cn(
                                 "text-[10px] font-bold uppercase tracking-wider h-5 px-2 py-0",
-                                question.status === 'published' ? "bg-emerald-600 text-white" :
-                                question.status === 'pending_review' ? "bg-amber-500 text-white animate-pulse" :
-                                "bg-slate-100 text-slate-700 border border-slate-200"
+                                question.status === 'published' ? "bg-ds-success text-white" :
+                                question.status === 'pending_review' ? "bg-ds-warning text-white animate-pulse" :
+                                "bg-ds-surface-subtle text-ds-ink border border-ds-border"
                             )}>
                                 {statusConfig.label}
                             </Badge>
 
                             {question.is_master_template && (
-                                <Badge className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] h-5 px-2 py-0 flex items-center gap-1 font-bold">
-                                    <Sparkles className="h-2.5 w-2.5 text-amber-600" />
+                                <Badge className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[10px] h-5 px-2 py-0 flex items-center gap-1 font-bold">
+                                    <Sparkles className="h-2.5 w-2.5 text-ds-warning" />
                                     Master
                                 </Badge>
                             )}
 
                             {question.ai_generated && (
-                                <Badge className="bg-purple-50 text-purple-700 border-purple-200 text-[10px] h-5 px-2 py-0 font-semibold">
-                                    <Sparkles className="h-2.5 w-2.5 me-1 text-purple-600" />
+                                <Badge className="bg-ds-accent-soft text-ds-accent border-ds-accent/30 text-[10px] h-5 px-2 py-0 font-semibold">
+                                    <Sparkles className="h-2.5 w-2.5 me-1 text-ds-accent" />
                                     AI
                                 </Badge>
                             )}
@@ -685,29 +683,29 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
                                     variant="outline"
                                     className={cn(
                                         "text-[10px] h-5 px-2 py-0 font-mono",
-                                        isLowPassRate ? 'text-rose-700 border-rose-300 bg-rose-50 font-bold' : 'text-slate-600 border-slate-200'
+                                        isLowPassRate ? 'text-ds-danger border-ds-danger/30 bg-ds-danger-soft font-bold' : 'text-ds-muted border-ds-border'
                                     )}
                                     title={isLowPassRate ? t('question_library.low_pass_rate_hint', 'Low pass rate — may be ambiguous or require review') : undefined}
                                 >
-                                    {isLowPassRate && <AlertTriangle className="h-2.5 w-2.5 me-1 text-rose-600" />}
+                                    {isLowPassRate && <AlertTriangle className="h-2.5 w-2.5 me-1 text-ds-danger" />}
                                     {Math.round(passRate.accuracyRate)}% pass ({passRate.totalAttempts})
                                 </Badge>
                             )}
                         </div>
 
-                        <h3 className="font-serif font-bold text-base text-slate-900 line-clamp-2 mb-2 leading-snug hover:text-hotel-navy transition-colors">
+                        <h3 className="font-serif font-bold text-base text-ds-ink line-clamp-2 mb-2 leading-snug hover:text-ds-ink transition-colors">
                             {question.question_text}
                         </h3>
 
-                        <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                        <div className="flex flex-wrap items-center gap-4 text-xs text-ds-muted">
                             {question.linked_sop && (
-                                <span className="flex items-center gap-1 font-medium text-slate-600 truncate max-w-xs">
-                                    <FileText className="h-3.5 w-3.5 text-hotel-gold shrink-0" />
+                                <span className="flex items-center gap-1 font-medium text-ds-muted truncate max-w-xs">
+                                    <FileText className="h-3.5 w-3.5 text-ds-accent shrink-0" />
                                     <span className="truncate">{question.linked_sop.title}</span>
                                 </span>
                             )}
                             <span className="font-mono text-[11px]">v{question.version}</span>
-                            <span className="font-semibold text-slate-500">{question.points} pts</span>
+                            <span className="font-semibold text-ds-muted">{question.points} pts</span>
                         </div>
                     </div>
 
@@ -717,7 +715,7 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
                                 size="sm"
                                 onClick={onApprove}
                                 disabled={isApproving}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 shadow-xs"
+                                className="bg-ds-success hover:bg-ds-success text-white font-bold text-xs h-8 shadow-xs"
                             >
                                 {isApproving ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -734,26 +732,26 @@ function QuestionCard({ question, passRate, onPreview, onApprove, onDelete, isAp
                             variant="outline"
                             size="sm"
                             onClick={onPreview}
-                            className="text-xs h-8 font-semibold border-slate-200"
+                            className="text-xs h-8 font-semibold border-ds-border"
                         >
-                            <Eye className="h-3.5 w-3.5 me-1 text-slate-500" />
+                            <Eye className="h-3.5 w-3.5 me-1 text-ds-muted" />
                             Quick Preview
                         </Button>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-slate-700">
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-ds-muted hover:text-ds-ink">
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-36">
                                 <DropdownMenuItem asChild className="text-xs font-medium">
                                     <Link to={`/studio/questions/${question.id}/edit`}>
-                                        <FileEdit className="h-3.5 w-3.5 me-2 text-slate-500" />
+                                        <FileEdit className="h-3.5 w-3.5 me-2 text-ds-muted" />
                                         Edit
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={onDelete} className="text-xs font-medium text-rose-600">
+                                <DropdownMenuItem onClick={onDelete} className="text-xs font-medium text-ds-danger">
                                     <Archive className="h-3.5 w-3.5 me-2" />
                                     Archive
                                 </DropdownMenuItem>
@@ -866,7 +864,7 @@ function AssessmentsPanel() {
                 <p className="text-muted-foreground">{t('quizzes.description')}</p>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={handleOpenGenerate} disabled={generating} className="gap-2">
-                        <Sparkles className={`h-4 w-4 ${generating ? 'animate-pulse text-purple-600' : 'text-purple-600'}`} />
+                        <Sparkles className={`h-4 w-4 ${generating ? 'animate-pulse text-ds-accent' : 'text-ds-accent'}`} />
                         {generating ? t('quizzes.generating', 'Generating...') : t('quizzes.generate_from_document')}
                     </Button>
                     <Button onClick={() => navigate('/studio/quizzes/new')}>
@@ -924,7 +922,7 @@ function AssessmentsPanel() {
                                             <DropdownMenuItem onClick={() => navigate(`/studio/quizzes/${quiz.id}`)}>
                                                 {t('quizzes.edit')}
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(quiz.id)}>
+                                            <DropdownMenuItem className="text-ds-danger" onClick={() => handleDelete(quiz.id)}>
                                                 {t('common.delete', 'Delete')}
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
@@ -979,7 +977,7 @@ function AssessmentsPanel() {
                     </DialogHeader>
                     <div className="space-y-6 py-4">
                         {validationErrors.length > 0 && (
-                            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+                            <div className="rounded-md border border-ds-danger/30 bg-ds-danger-soft p-3 text-xs text-ds-danger">
                                 {validationErrors.map((message) => (
                                     <p key={message}>{message}</p>
                                 ))}
@@ -1158,7 +1156,7 @@ function AssessmentsPanel() {
                         <Button
                             onClick={handleGenerate}
                             disabled={validationErrors.length > 0 || generating}
-                            className="bg-purple-600 hover:bg-purple-700"
+                            className="bg-ds-accent hover:bg-ds-accent"
                         >
                             {generating ? (
                                 <>

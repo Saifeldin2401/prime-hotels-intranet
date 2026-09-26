@@ -31,7 +31,7 @@ export function useSubmitForApproval() {
 
       const { data: doc } = await supabase
         .from('documents')
-        .select('visibility, property_id, department_id, title, organization_id')
+        .select('visibility, department_id, title, organization_id')
         .eq('id', documentId)
         .single()
 
@@ -41,23 +41,18 @@ export function useSubmitForApproval() {
       // membership role that fits the document's scope.
       const adminRoles: MembershipRole[] = ['organization_owner', 'organization_admin']
       let roleFilters: MembershipRole[] = [...adminRoles, 'knowledge_manager']
-      if (doc.visibility === 'property') {
-        roleFilters = [...adminRoles, 'hotel_admin', 'knowledge_manager']
-      } else if (doc.visibility === 'department') {
+      if (doc.visibility === 'department') {
         roleFilters = [...adminRoles, 'department_manager', 'author']
       }
 
       let approverQuery = supabase
         .from('profiles')
-        .select('id, organization_memberships!inner(role, organization_id, hotel_id, department_id, is_active)')
+        .select('id, organization_memberships!inner(role, organization_id, department_id, is_active)')
         .eq('is_active', true)
         .eq('organization_memberships.is_active', true)
         .eq('organization_memberships.organization_id', doc.organization_id)
         .in('organization_memberships.role', roleFilters)
 
-      if (doc.visibility === 'property' && doc.property_id) {
-        approverQuery = approverQuery.eq('organization_memberships.hotel_id', doc.property_id)
-      }
       if (doc.visibility === 'department' && doc.department_id) {
         approverQuery = approverQuery.eq('organization_memberships.department_id', doc.department_id)
       }

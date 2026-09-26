@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { Bot, Check, CloudOff, Loader2, PanelLeft, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -21,12 +22,13 @@ interface PlayerTopBarProps {
 }
 
 function SaveChip({ state }: { state: PlayerSaveState }) {
+    const { t } = useTranslation('training')
     if (state === 'idle') return null
     const map: Record<Exclude<PlayerSaveState, 'idle'>, { icon: ReactNode; label: string; className: string }> = {
-        saving: { icon: <Loader2 className="h-3 w-3 animate-spin" />, label: 'Saving', className: 'text-muted-foreground' },
-        saved: { icon: <Check className="h-3 w-3" />, label: 'Saved', className: 'text-emerald-600 dark:text-emerald-400' },
-        error: { icon: <CloudOff className="h-3 w-3" />, label: 'Save failed', className: 'text-destructive' },
-        offline: { icon: <CloudOff className="h-3 w-3" />, label: 'Saved on device', className: 'text-amber-700 dark:text-amber-400' },
+        saving: { icon: <Loader2 className="h-3 w-3 animate-spin" />, label: t('player.saving', 'Saving'), className: 'text-muted-foreground' },
+        saved: { icon: <Check className="h-3 w-3" />, label: t('player.saved', 'Saved'), className: 'text-emerald-600 dark:text-emerald-400' },
+        error: { icon: <CloudOff className="h-3 w-3" />, label: t('player.saveFailed', 'Save failed'), className: 'text-destructive' },
+        offline: { icon: <CloudOff className="h-3 w-3" />, label: t('player.savedOnDevice', 'Saved on device'), className: 'text-amber-700 dark:text-amber-400' },
     }
     const entry = map[state]
     return (
@@ -52,6 +54,7 @@ export function PlayerTopBar({
     tutor,
     isRTL,
 }: PlayerTopBarProps) {
+    const { t } = useTranslation('training')
     const rounded = Math.round(Math.min(100, Math.max(0, progress)))
 
     return (
@@ -61,7 +64,7 @@ export function PlayerTopBar({
                     variant="ghost"
                     size="icon-sm"
                     onClick={onToggleRail}
-                    aria-label="Toggle lesson list"
+                    aria-label={t('player.toggleLessonList', 'Toggle lesson list')}
                     aria-pressed={railOpen}
                     className="shrink-0"
                 >
@@ -83,10 +86,10 @@ export function PlayerTopBar({
                     aria-valuenow={rounded}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label="Overall progress"
+                    aria-label={t('player.overallProgress', 'Overall progress')}
                 >
                     <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-                        <div className="h-full rounded-full bg-hotel-gold transition-[width] duration-500" style={{ width: `${rounded}%` }} />
+                        <div className="h-full rounded-full bg-ds-brass transition-[width] duration-500" style={{ width: `${rounded}%` }} />
                     </div>
                     <span className="font-mono text-xs font-bold text-foreground tabular-nums">{rounded}%</span>
                 </div>
@@ -96,10 +99,10 @@ export function PlayerTopBar({
                         variant={tutor.active ? 'default' : 'outline'}
                         size="sm"
                         onClick={tutor.onToggle}
-                        className={cn('h-9 shrink-0 gap-1.5', tutor.active && 'bg-hotel-navy text-white hover:bg-hotel-navy-light')}
+                        className={cn('h-9 shrink-0 gap-1.5', tutor.active && 'bg-ds-ink text-white hover:bg-ds-ink-secondary')}
                     >
-                        <Bot className="h-4 w-4 text-hotel-gold" />
-                        <span className="hidden lg:inline text-xs">AI Tutor</span>
+                        <Bot className="h-4 w-4 text-ds-brass" />
+                        <span className="hidden lg:inline text-xs">{t('player.aiTutor', 'AI Tutor')}</span>
                     </Button>
                 )}
 
@@ -110,17 +113,18 @@ export function PlayerTopBar({
                     size="sm"
                     onClick={onExit}
                     className="h-9 shrink-0 gap-1.5 font-medium text-foreground"
-                    aria-label="Exit training"
+                    aria-label={t('player.exitTraining', 'Exit training')}
                 >
                     <X className="h-4 w-4" />
-                    <span className="hidden sm:inline text-xs">Exit</span>
+                    <span className="hidden sm:inline text-xs">{t('player.exit', 'Exit')}</span>
                 </Button>
             </div>
 
             {/* Mobile progress line */}
             <div className="h-1 w-full bg-muted md:hidden">
-                <div className="h-full bg-hotel-gold transition-[width] duration-500" style={{ width: `${rounded}%` }} />
+                <div className="h-full bg-ds-brass transition-[width] duration-500" style={{ width: `${rounded}%` }} />
             </div>
         </header>
     )
 }
+

@@ -5,7 +5,6 @@ describe('membershipRoles', () => {
   it('maps membership roles onto the five platform roles (mirrors membership_app_roles())', () => {
     expect(membershipToAppRole('organization_owner')).toBe('administrator')
     expect(membershipToAppRole('brand_admin')).toBe('administrator')
-    expect(membershipToAppRole('hotel_admin')).toBe('training_manager')
     expect(membershipToAppRole('department_manager')).toBe('author')
     expect(membershipToAppRole('instructor')).toBe('author')
     expect(membershipToAppRole('learner')).toBe('learner')

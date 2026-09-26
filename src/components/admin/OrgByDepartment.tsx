@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { cn, escapeSearchQuery } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
@@ -26,20 +27,11 @@ interface Employee {
 interface Department {
     id: string
     name: string
-    property_id: string
     employees: Employee[]
-}
-
-interface PropertyGroup {
-    id: string
-    name: string
-    departments: Department[]
-    employeeCount: number
 }
 
 interface OrgByDepartmentProps {
     onEmployeeClick?: (employee: Employee) => void
-    selectedPropertyId?: string
     searchTerm?: string
 }
 
@@ -50,35 +42,28 @@ interface EmployeeRow {
     job_title: string | null
     reporting_to: string | null
     is_active: boolean
-    organization_memberships?: { department_id: string | null; hotel_id: string | null }[]
+    organization_memberships?: { department_id: string | null; organization_id: string | null }[]
 }
 
-export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTerm }: OrgByDepartmentProps) {
+/** People of the current organization, grouped by department. */
+export function OrgByDepartment({ onEmployeeClick, searchTerm }: OrgByDepartmentProps) {
     const { t } = useTranslation('admin')
-    const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set())
-    const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set())
+    const { currentOrganization } = useTenant()
+    const organizationId = currentOrganization?.id
+    const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
 
-    // Fetch all data needed
-    const { data: propertyGroups, isLoading } = useQuery({
-        queryKey: ['org-by-department', selectedPropertyId, searchTerm],
-        queryFn: async () => {
-            // 1. Fetch properties / hotels
-            let propQuery = supabase.from('hotels').select('id, name').eq('is_active', true).eq('is_deleted', false).order('name')
-            if (selectedPropertyId) {
-                propQuery = propQuery.eq('id', selectedPropertyId)
-            }
-            const { data: properties, error: propError } = await propQuery
-            if (propError) throw propError
-
-            // 2. Fetch departments
-            const { data: departments, error: deptError } = await supabase
+    const { data: departments, isLoading } = useQuery({
+        queryKey: ['org-by-department', organizationId, searchTerm],
+        enabled: !!organizationId,
+        queryFn: async (): Promise<Department[]> => {
+            const { data: deptRows, error: deptError } = await supabase
                 .from('departments')
-                .select('id, name, property_id')
-                .eq('is_deleted', false)
+                .select('id, name')
+                .eq('organization_id', organizationId!)
+                .eq('is_active', true)
                 .order('name')
             if (deptError) throw deptError
 
-            // 3. Fetch employees with their departments
             let empQuery = supabase
                 .from('profiles')
                 .select(`
@@ -88,9 +73,10 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
           job_title,
           reporting_to,
           is_active,
-          organization_memberships(hotel_id, department_id)
+          organization_memberships!inner(department_id, organization_id)
         `)
                 .eq('is_active', true)
+                .eq('organization_memberships.organization_id', organizationId!)
                 .order('full_name')
 
             if (searchTerm) {
@@ -100,94 +86,50 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
 
             const { data: employees, error: empError } = await empQuery
             if (empError) throw empError
+            const employeeRows = (employees || []) as EmployeeRow[]
 
-            // 4. Build grouped structure
-            const groups: PropertyGroup[] = (properties || []).map(prop => {
-                const propertyDepts = (departments || [])
-                    .filter(d => d.property_id === prop.id)
-                    .map(dept => {
-                        const employeeRows = (employees || []) as EmployeeRow[]
-
-                        const deptEmployees: Employee[] = employeeRows
-                            .filter((emp) => emp.organization_memberships?.some((om) => om.department_id === dept.id))
-                            .map((emp) => ({
-                                id: emp.id,
-                                full_name: emp.full_name,
-                                email: emp.email,
-                                job_title: emp.job_title,
-                                reporting_to: emp.reporting_to,
-                                is_active: emp.is_active
-                            }))
-
-                        return {
-                            id: dept.id,
-                            name: dept.name,
-                            property_id: dept.property_id,
-                            employees: deptEmployees
-                        }
-                    })
-                    .filter(d => d.employees.length > 0 || !searchTerm) // Show empty depts only when not searching
-
-                const totalEmps = propertyDepts.reduce((sum, d) => sum + d.employees.length, 0)
-
-                return {
-                    id: prop.id,
-                    name: prop.name,
-                    departments: propertyDepts,
-                    employeeCount: totalEmps
-                }
-            }).filter(g => g.departments.length > 0 || !searchTerm)
-
-            return groups
+            return (deptRows || [])
+                .map((dept) => ({
+                    id: dept.id,
+                    name: dept.name,
+                    employees: employeeRows
+                        .filter((emp) => emp.organization_memberships?.some((om) => om.department_id === dept.id))
+                        .map((emp) => ({
+                            id: emp.id,
+                            full_name: emp.full_name,
+                            email: emp.email,
+                            job_title: emp.job_title,
+                            reporting_to: emp.reporting_to,
+                            is_active: emp.is_active
+                        }))
+                }))
+                .filter((d) => d.employees.length > 0 || !searchTerm) // Show empty departments only when not searching
         }
     })
 
-    const toggleProperty = (propertyId: string) => {
-        setExpandedProperties(prev => {
-            const next = new Set(prev)
-            if (next.has(propertyId)) {
-                next.delete(propertyId)
-            } else {
-                next.add(propertyId)
-            }
-            return next
-        })
-    }
-
     const toggleDepartment = (deptId: string) => {
-        setExpandedDepartments(prev => {
+        setCollapsed(prev => {
             const next = new Set(prev)
-            if (next.has(deptId)) {
-                next.delete(deptId)
-            } else {
-                next.add(deptId)
-            }
+            if (next.has(deptId)) next.delete(deptId)
+            else next.add(deptId)
             return next
         })
-    }
-
-    // Expand all by default
-    if (propertyGroups && expandedProperties.size === 0) {
-        const allProps = new Set(propertyGroups.map(p => p.id))
-        const allDepts = new Set(propertyGroups.flatMap(p => p.departments.map(d => d.id)))
-        setExpandedProperties(allProps)
-        setExpandedDepartments(allDepts)
     }
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-48 text-gray-500">
-                <Users className="h-6 w-6 animate-pulse me-2" />
+            <div className="flex h-48 items-center justify-center text-ds-muted">
+                <Users className="me-2 h-6 w-6 animate-pulse" />
                 {t('common:loading', 'Loading...')}
             </div>
         )
     }
 
-    if (!propertyGroups || propertyGroups.length === 0) {
+    if (!departments || departments.length === 0) {
         return (
             <Card>
-                <CardContent className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <Building2 className="h-12 w-12 mb-4 opacity-50" />
+                <CardContent className="flex flex-col items-center justify-center py-12 text-ds-muted">
+                    <Building2 className="mb-4 h-12 w-12 opacity-50" />
                     <p className="text-lg font-medium">{t('organization.no_data', 'No data available')}</p>
                 </CardContent>
             </Card>
@@ -195,92 +137,64 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
     }
 
     return (
-        <div className="space-y-4">
-            {propertyGroups.map(property => (
-                <Card key={property.id} className="overflow-hidden">
-                    {/* Property Header */}
-                    <div
-                        className="flex items-center gap-3 p-4 bg-gradient-to-r from-hotel-navy/5 to-hotel-navy/10 dark:from-hotel-navy/20 dark:to-hotel-navy/10 cursor-pointer hover:bg-hotel-navy/10 transition-colors"
-                        onClick={() => toggleProperty(property.id)}
-                    >
-                        <button className="p-1">
-                            {expandedProperties.has(property.id) ? (
-                                <ChevronDown className="h-5 w-5 text-hotel-navy" />
-                            ) : (
-                                <ChevronRight className="h-5 w-5 text-hotel-navy" />
-                            )}
-                        </button>
-                        <Building2 className="h-6 w-6 text-hotel-navy" />
-                        <div className="flex-1">
-                            <h3 className="font-semibold text-gray-900 dark:text-white">{property.name}</h3>
-                            <p className="text-sm text-gray-500">{property.departments.length} {t('organization.departments', 'Departments')}</p>
-                        </div>
-                        <Badge variant="secondary" className="text-sm">
-                            <Users className="h-3.5 w-3.5 me-1" />
-                            {property.employeeCount} {t('organization.employees', 'Employees')}
-                        </Badge>
-                    </div>
+        <Card className="overflow-hidden">
+            <div className="divide-y divide-ds-border">
+                {departments.map(dept => {
+                    const open = !collapsed.has(dept.id)
+                    return (
+                        <div key={dept.id}>
+                            <button
+                                type="button"
+                                aria-expanded={open}
+                                className="flex w-full items-center gap-3 bg-ds-surface-subtle px-4 py-3 text-start transition-colors hover:bg-ds-accent-soft"
+                                onClick={() => toggleDepartment(dept.id)}
+                            >
+                                {open ? (
+                                    <ChevronDown className="h-4 w-4 text-ds-muted" />
+                                ) : (
+                                    <ChevronRight className="h-4 w-4 text-ds-muted rtl:rotate-180" />
+                                )}
+                                <Briefcase className="h-5 w-5 text-ds-accent" />
+                                <span className="font-medium text-ds-ink">{dept.name}</span>
+                                <Badge variant="outline" className="ms-auto text-xs">
+                                    <Users className="me-1 h-3 w-3" />
+                                    {dept.employees.length}
+                                </Badge>
+                            </button>
 
-                    {/* Departments */}
-                    {expandedProperties.has(property.id) && (
-                        <div className="divide-y">
-                            {property.departments.map(dept => (
-                                <div key={dept.id}>
-                                    {/* Department Header */}
-                                    <div
-                                        className="flex items-center gap-3 px-6 py-3 bg-gray-50 dark:bg-gray-800/50 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                        onClick={() => toggleDepartment(dept.id)}
-                                    >
-                                        <button className="p-0.5">
-                                            {expandedDepartments.has(dept.id) ? (
-                                                <ChevronDown className="h-4 w-4 text-gray-500" />
-                                            ) : (
-                                                <ChevronRight className="h-4 w-4 text-gray-500" />
+                            {open && dept.employees.length > 0 && (
+                                <div className="bg-ds-surface">
+                                    {dept.employees.map(emp => (
+                                        <div
+                                            key={emp.id}
+                                            className={cn(
+                                                "flex cursor-pointer items-center gap-3 border-s-4 border-transparent px-10 py-2.5 transition-colors hover:bg-ds-surface-subtle",
+                                                onEmployeeClick && "hover:border-s-ds-accent"
                                             )}
-                                        </button>
-                                        <Briefcase className="h-5 w-5 text-green-600" />
-                                        <span className="font-medium text-gray-700 dark:text-gray-200">{dept.name}</span>
-                                        <Badge variant="outline" className="ms-auto text-xs">
-                                            {dept.employees.length}
-                                        </Badge>
-                                    </div>
-
-                                    {/* Employees */}
-                                    {expandedDepartments.has(dept.id) && dept.employees.length > 0 && (
-                                        <div className="bg-white dark:bg-gray-900">
-                                            {dept.employees.map(emp => (
-                                                <div
-                                                    key={emp.id}
-                                                    className={cn(
-                                                        "flex items-center gap-3 px-10 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors border-s-4 border-transparent",
-                                                        onEmployeeClick && "hover:border-s-primary"
-                                                    )}
-                                                    onClick={() => onEmployeeClick?.(emp)}
-                                                >
-                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center text-xs font-semibold text-gray-600 dark:text-gray-300">
-                                                        {emp.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-gray-900 dark:text-white truncate">{emp.full_name}</p>
-                                                        <p className="text-sm text-gray-500 truncate">{emp.job_title || emp.email}</p>
-                                                    </div>
-                                                    <User className="h-4 w-4 text-gray-400" />
-                                                </div>
-                                            ))}
+                                            onClick={() => onEmployeeClick?.(emp)}
+                                        >
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ds-accent-soft text-xs font-semibold text-ds-accent">
+                                                {emp.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate font-medium text-ds-ink">{emp.full_name}</p>
+                                                <p className="truncate text-sm text-ds-muted">{emp.job_title || emp.email}</p>
+                                            </div>
+                                            <User className="h-4 w-4 text-ds-muted" />
                                         </div>
-                                    )}
-
-                                    {expandedDepartments.has(dept.id) && dept.employees.length === 0 && (
-                                        <div className="px-10 py-4 text-sm text-gray-400 italic">
-                                            {t('organization.no_employees_dept', 'No employees assigned to this department')}
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
-                            ))}
+                            )}
+
+                            {open && dept.employees.length === 0 && (
+                                <div className="px-10 py-4 text-sm italic text-ds-muted">
+                                    {t('organization.no_employees_dept', 'No employees assigned to this department')}
+                                </div>
+                            )}
                         </div>
-                    )}
-                </Card>
-            ))}
-        </div>
+                    )
+                })}
+            </div>
+        </Card>
     )
 }

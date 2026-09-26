@@ -6,18 +6,18 @@
  * 
  * 1. AuthIdentityContext - Core auth state (user, loading)
  * 2. AuthSecurityContext - Security features (MFA, session binding, requirements)
- * 3. UserDataContext - User profile data (profile, roles, properties, departments)
+ * 3. UserDataContext - User profile data (profile, roles, departments)
  * 4. AuthActionsContext - Actions with stable reference (signIn, signOut, refreshSession, verifyMFA)
  * 
  * For optimal performance, use the individual hooks from '@/contexts/auth':
  *   - useAuthIdentity() - when you only need user/loading
  *   - useAuthSecurity() - when you only need MFA/security state
- *   - useUserData() - when you only need profile/roles/properties/departments
+ *   - useUserData() - when you only need profile/roles/departments
  *   - useAuthActions() - when you only need to call actions (NEVER causes re-render!)
  */
 
 import type { AppRole } from '@/lib/constants'
-import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import type { Department, Profile, UserRole } from '@/lib/types'
 import type { User } from '@supabase/supabase-js'
 import type { ReactNode } from 'react'
 import { createContext, useMemo } from 'react'
@@ -38,12 +38,12 @@ export interface AuthContextType {
   user: User | null
   profile: Profile | null
   roles: UserRole[]
-  properties: Property[]
   departments: Department[]
   primaryRole: AppRole | null
   loading: boolean
   rolesLoading: boolean
   signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
   securityRequirements: {
@@ -59,20 +59,20 @@ function AuthProviderInternal({ children }: { children: ReactNode }) {
   // Get state from individual contexts
   const { user, loading } = useAuthIdentity()
   const { securityRequirements } = useAuthSecurity()
-  const { profile, roles, properties, departments, rolesLoading, primaryRole } = useUserData()
-  const { signIn, signOut, refreshSession } = useAuthActions()
+  const { profile, roles, departments, rolesLoading, primaryRole } = useUserData()
+  const { signIn, signInWithGoogle, signOut, refreshSession } = useAuthActions()
 
   // ── Memoized context value (backward compatible) ───────────────────────────
   const contextValue = useMemo(() => ({
     user,
     profile,
     roles,
-    properties,
     departments,
     primaryRole,
     loading,
     rolesLoading,
     signIn,
+    signInWithGoogle,
     signOut,
     refreshSession,
     securityRequirements,
@@ -80,12 +80,12 @@ function AuthProviderInternal({ children }: { children: ReactNode }) {
     user,
     profile,
     roles,
-    properties,
     departments,
     primaryRole,
     loading,
     rolesLoading,
     signIn,
+    signInWithGoogle,
     signOut,
     refreshSession,
     securityRequirements,

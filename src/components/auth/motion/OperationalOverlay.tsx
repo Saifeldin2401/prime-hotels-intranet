@@ -1,4 +1,4 @@
-﻿import { memo } from 'react';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FileCheck2, ClipboardCheck, Award, Sparkles } from 'lucide-react';
 import type { OperationalOverlayProps } from './types';

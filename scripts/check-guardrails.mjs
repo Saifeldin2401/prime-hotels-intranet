@@ -328,7 +328,7 @@ const countRetired = (value) => {
   return 0
 }
 for (const name of readdirSync(enDir).filter((f) => f.endsWith('.json'))) {
-  const count = countRetired(JSON.parse(readFileSync(join(enDir, name), 'utf8')))
+  const count = countRetired(JSON.parse(readFileSync(join(enDir, name), 'utf8').replace(/^﻿/, '')))
   const allowed = vocabBaseline[name] ?? 0
   if (count > allowed) {
     failures.push(

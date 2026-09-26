@@ -1,6 +1,6 @@
 /**
  * Knowledge Base (RAG) Grounding Agent
- * 
+ *
  * Interrogates the published PostgreSQL hotel knowledge repository using full-text search,
  * extracts authentic Standard Operating Procedures (SOPs), and synthesizes grounded context blocks
  * with citation metadata for downstream curriculum and content synthesis.
@@ -12,7 +12,6 @@ import type { AgentExecutionResult, AgentRole } from './types'
 
 interface KnowledgeAgentInput {
   query: string
-  propertyId?: string | null
   departmentId?: string | null
   contentType?: string
   limit?: number
@@ -41,7 +40,6 @@ Your role is to analyze hotel SOP articles, extract core procedural sequences, a
     // 1. Fetch real PostgreSQL SOP documents using full-text search
     const sources = await searchHotelKnowledge(input.query, {
       limit: input.limit || 5,
-      propertyId: input.propertyId,
       departmentId: input.departmentId,
       contentType: input.contentType,
     })

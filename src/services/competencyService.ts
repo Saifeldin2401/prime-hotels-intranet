@@ -58,8 +58,7 @@ export const competencyService = {
   },
 
   async getDepartmentCompetencyGaps(
-    departmentId?: string,
-    hotelId?: string
+    departmentId?: string
   ): Promise<DepartmentCompetencyGap[]> {
     const [competencies, requiredLevels] = await Promise.all([
       this.getCompetencies(),
@@ -67,16 +66,15 @@ export const competencyService = {
     ])
     if (!competencies.length) return []
 
-    // Resolve the department/hotel scope to a set of user IDs.
+    // Resolve the department scope to a set of user IDs.
     let scopedUserIds: Set<string> | null = null
-    if (departmentId || hotelId) {
+    if (departmentId) {
       let memberQuery = supabase
         .from('organization_memberships')
         .select('user_id')
         .eq('is_active', true)
 
-      if (departmentId) memberQuery = memberQuery.eq('department_id', departmentId)
-      if (hotelId) memberQuery = memberQuery.eq('hotel_id', hotelId)
+      memberQuery = memberQuery.eq('department_id', departmentId)
 
       const { data: members, error: memberErr } = await memberQuery
       if (memberErr) throw memberErr

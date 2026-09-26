@@ -1,14 +1,18 @@
-@import '@fontsource/ibm-plex-sans/400.css';
-@import '@fontsource/ibm-plex-sans/500.css';
-@import '@fontsource/ibm-plex-sans/600.css';
-@import '@fontsource/ibm-plex-sans/700.css';
+/* Altus Connect type system: DM Sans (Latin interface), IBM Plex Sans Arabic
+   (Arabic, first-class), Cormorant Garamond (rare editorial display only),
+   IBM Plex Mono (codes and aligned figures). */
+@import '@fontsource/dm-sans/400.css';
+@import '@fontsource/dm-sans/500.css';
+@import '@fontsource/dm-sans/600.css';
+@import '@fontsource/dm-sans/700.css';
 @import '@fontsource/ibm-plex-sans-arabic/400.css';
 @import '@fontsource/ibm-plex-sans-arabic/500.css';
 @import '@fontsource/ibm-plex-sans-arabic/600.css';
 @import '@fontsource/ibm-plex-sans-arabic/700.css';
+@import '@fontsource/cormorant-garamond/500.css';
+@import '@fontsource/cormorant-garamond/600.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 @import '@fontsource/ibm-plex-mono/500.css';
-@import '@fontsource/ibm-plex-mono/600.css';
 
 @import './editor/styles/ai-content.css';
 @import './styles/mobile-optimizations.css';
@@ -156,7 +160,7 @@
     --ring: 39 51% 35%;
     --focus-ring: 39 51% 35%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
     /* Semantic Status Palette (HSL values) */
     --success: 150 41% 29%;
@@ -211,8 +215,8 @@
     --altus-emerald: 153 46% 33%;
 
     /* Typography */
-    --font-heading: 'Canela', 'Playfair Display', Georgia, serif;
-    --font-body: 'Inter', sans-serif;
+    --font-heading: 'Cormorant Garamond', 'IBM Plex Sans Arabic', Georgia, serif;
+    --font-body: 'DM Sans', 'IBM Plex Sans Arabic', sans-serif;
   }
 
   .dark,
@@ -270,8 +274,15 @@
     @apply border-border;
   }
 
+  :lang(ar) body,
+  [dir="rtl"] body {
+    font-family: 'IBM Plex Sans Arabic', 'DM Sans', sans-serif;
+    line-height: 1.75;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv11';
     overflow-x: hidden;
   }
 

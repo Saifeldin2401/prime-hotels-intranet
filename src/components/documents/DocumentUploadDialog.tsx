@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
 import { scanFile } from '@/hooks/useVirusScan'
@@ -63,14 +62,12 @@ function requestAiTagging(documentId: string): void {
 export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialogProps) {
   const { t } = useTranslation()
   const { profile } = useAuth()
-  const { currentProperty, availableProperties } = useProperty()
   const queryClient = useQueryClient()
   const { toast } = useToast()
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [visibility, setVisibility] = useState<DocumentVisibility>('property')
-  const [selectedProperty, setSelectedProperty] = useState<string>('')
+  const [visibility, setVisibility] = useState<DocumentVisibility>('all_properties')
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
   const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -113,20 +110,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     }
   }
 
-  const propertyOptions = useMemo(() => {
-    return availableProperties || []
-  }, [availableProperties])
-
-  const departmentsPropertyId = useMemo(() => {
-    if (visibility === 'department') {
-      const id = currentProperty?.id
-      return id && id !== 'all' ? id : undefined
-    }
-    const id = selectedProperty || currentProperty?.id
-    return id && id !== 'all' ? id : undefined
-  }, [currentProperty?.id, selectedProperty, visibility])
-
-  const { departments: departmentOptions = [] } = useDepartments(departmentsPropertyId)
+  const { departments: departmentOptions = [] } = useDepartments()
 
   const uploadMutation = useMutation({
     mutationFn: async () => {
@@ -175,7 +159,6 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         file_type: string
         file_extension?: string
         content_type: string
-        property_id?: string
         department_id?: string
       } = {
         title,
@@ -194,13 +177,6 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         content_type: 'document', // Mark as file document (not knowledge base article)
       }
 
-      if (visibility === 'property') {
-        if (selectedProperty) {
-          documentData.property_id = selectedProperty
-        } else {
-          throw new Error('Please select a property')
-        }
-      }
       if (visibility === 'department') {
         if (selectedDepartment) {
           documentData.department_id = selectedDepartment
@@ -256,8 +232,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
     setFile(null)
     setTitle('')
     setDescription('')
-    setVisibility('property')
-    setSelectedProperty('')
+    setVisibility('all_properties')
     setSelectedDepartment('')
     setRequiresAcknowledgment(false)
   }
@@ -278,7 +253,6 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         file,
         requires_acknowledgment: requiresAcknowledgment,
         visibility,
-        property_id: selectedProperty || undefined,
         department_id: selectedDepartment || undefined
       })
 
@@ -400,30 +374,6 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             </Select>
           </div>
 
-          {visibility === 'property' && (
-            <div className="space-y-2">
-              <Label htmlFor="property">Property</Label>
-              <Select value={selectedProperty} onValueChange={setSelectedProperty}>
-                <SelectTrigger id="property" disabled={uploading}>
-                  <SelectValue placeholder="Select property" />
-                </SelectTrigger>
-                <SelectContent>
-                  {propertyOptions.length === 0 ? (
-                    <SelectItem value="__none__" disabled>
-                      No properties available
-                    </SelectItem>
-                  ) : (
-                    propertyOptions.map((property) => (
-                      <SelectItem key={property.id} value={property.id}>
-                        {property.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           {visibility === 'department' && (
             <div className="space-y-2">
               <Label htmlFor="department">{t('common:department')}</Label>
@@ -468,7 +418,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
             </Button>
             <LoadingButton
               type="submit"
-              disabled={!file || !title || (visibility === 'department' && !selectedDepartment) || (visibility === 'property' && !selectedProperty)}
+              disabled={!file || !title || (visibility === 'department' && !selectedDepartment)}
               loading={uploading}
               loadingText="Uploading..."
             >

@@ -36,27 +36,26 @@ import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '
 import { cn, formatFileSize } from '@/lib/utils'
 import { format } from 'date-fns'
 import {
-    AlertTriangle,
-    ArrowLeft,
-    BarChart3,
-    Building2,
-    Calendar,
-    Clock,
-    Download,
-    Edit3,
-    Eye,
-    FileText,
-    FolderOpen,
-    History,
-    Loader2,
-    MessageSquare,
-    MoreVertical,
-    Printer,
-    Settings,
-    Share2,
-    Sparkles,
-    Tag,
-    User
+  AlertTriangle,
+  ArrowLeft,
+  BarChart3,
+  Calendar,
+  Clock,
+  Download,
+  Edit3,
+  Eye,
+  FileText,
+  FolderOpen,
+  History,
+  Loader2,
+  MessageSquare,
+  MoreVertical,
+  Printer,
+  Settings,
+  Share2,
+  Sparkles,
+  Tag,
+  User,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -283,7 +282,7 @@ export default function DocumentDetail() {
   if (docLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-hotel-navy" />
+        <Loader2 className="w-8 h-8 animate-spin text-ds-ink" />
       </div>
     )
   }
@@ -437,13 +436,6 @@ export default function DocumentDetail() {
                 </div>
                 <div>
                   <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
-                    <Building2 className="w-3 h-3" />
-                    Property
-                  </span>
-                  <span className="text-muted-foreground">{document.properties?.name || t('common.all_properties')}</span>
-                </div>
-                <div>
-                  <span className="font-medium text-foreground block mb-1 flex items-center gap-1">
                     <User className="w-3 h-3" />
                     Created By
                   </span>
@@ -473,8 +465,8 @@ export default function DocumentDetail() {
                     </span>
                     <span className={cn(
                       "text-muted-foreground",
-                      isExpired && "text-red-600 font-medium",
-                      isExpiringSoon && "text-amber-600 font-medium"
+                      isExpired && "text-ds-danger font-medium",
+                      isExpiringSoon && "text-ds-warning font-medium"
                     )}>
                       {format(new Date(document.expires_at), 'PPP')}
                       {isExpired && ' (Expired)'}
@@ -501,7 +493,7 @@ export default function DocumentDetail() {
               {/* Tags */}
               {document.tags && document.tags.length > 0 && (
                 <div className="mt-4 flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-gray-400" />
+                  <Tag className="w-4 h-4 text-ds-muted" />
                   <div className="flex flex-wrap gap-2">
                     {document.tags.map((tag) => (
                       <span
@@ -693,12 +685,12 @@ export default function DocumentDetail() {
               </div>
 
               {document.requires_acknowledgment && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="p-3 bg-ds-warning-soft border border-ds-warning/30 rounded-lg">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5" />
+                    <AlertTriangle className="w-4 h-4 text-ds-warning mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-medium text-amber-800">Acknowledgment Required</h4>
-                      <p className="text-xs text-amber-700 mt-1">
+                      <h4 className="text-sm font-medium text-ds-warning">Acknowledgment Required</h4>
+                      <p className="text-xs text-ds-warning mt-1">
                         This document requires acknowledgment from all staff members.
                       </p>
                     </div>
@@ -712,8 +704,8 @@ export default function DocumentDetail() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">File Size</span>
                   <span className="font-medium">
-                    {document.file_size && document.file_size > 0 
-                      ? formatFileSize(document.file_size) 
+                    {document.file_size && document.file_size > 0
+                      ? formatFileSize(document.file_size)
                       : (document.content ? `${Math.max(1, Math.round(document.content.length / 1024))} KB (Text SOP)` : 'System Document')}
                   </span>
                 </div>
@@ -755,15 +747,15 @@ export default function DocumentDetail() {
 
           {/* Pending Approval Card */}
           {document.status === 'PENDING_REVIEW' && (
-            <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-900/10">
+            <Card className="border-ds-warning/30 bg-ds-warning-soft">
               <CardHeader>
-                <CardTitle className="text-lg text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                <CardTitle className="text-lg text-ds-warning flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   Pending Approval
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                <p className="text-sm text-ds-warning">
                   This document is currently under review and awaiting approval before publication.
                 </p>
               </CardContent>
@@ -771,10 +763,10 @@ export default function DocumentDetail() {
           )}
 
           {/* AI Assistant Card */}
-          <Card className="border-hotel-gold/20 bg-gradient-to-br from-hotel-gold/5 to-transparent">
+          <Card className="border-ds-accent/20">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-hotel-gold" />
+                <Sparkles className="w-5 h-5 text-ds-accent" />
                 AI Assistant
               </CardTitle>
             </CardHeader>
@@ -784,7 +776,7 @@ export default function DocumentDetail() {
               </p>
               <Button
                 variant="outline"
-                className="w-full border-hotel-gold/30 hover:bg-hotel-gold/10"
+                className="w-full border-ds-accent/30 hover:bg-ds-accent/10"
                 onClick={() => setAiAssistantOpen(true)}
               >
                 <Sparkles className="w-4 h-4 me-2" />
@@ -850,7 +842,7 @@ export default function DocumentDetail() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-hotel-gold" />
+              <Sparkles className="w-5 h-5 text-ds-accent" />
               AI Document Assistant
             </DialogTitle>
           </DialogHeader>

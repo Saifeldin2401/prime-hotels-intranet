@@ -1,12 +1,13 @@
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useMemo, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -26,22 +27,13 @@ import { ensureReadableOnWhiteText } from '@/lib/colorContrast'
 import { OrgStructureTree } from '@/components/org/OrgStructureTree'
 import {
   ArrowLeft,
-  Building2,
-  Users,
-  BookOpen,
-  FileText,
-  LayoutGrid,
   RefreshCw,
   Sliders,
-  Sparkles,
-  HardDrive,
   Check,
   Edit,
   Mail,
   Crown,
-  Building,
   Globe,
-  Image as ImageIcon,
   UserPlus,
   RotateCcw,
   ShieldCheck,
@@ -51,6 +43,7 @@ import {
   Upload,
   Loader2,
   X,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { TenantEmailPreviewModal } from '@/components/admin/TenantEmailPreviewModal'
 import { AITenantEmailBrandCopilotModal } from '@/components/admin/AITenantEmailBrandCopilotModal'
@@ -60,7 +53,6 @@ const LIFECYCLE = ['prospect', 'trial', 'onboarding', 'active', 'renewal', 'susp
 
 export default function OrganizationProfile() {
   const { id = '' } = useParams()
-  const navigate = useNavigate()
   const { toast } = useToast()
   const { user } = useAuth()
   const account = useAccountContext()
@@ -175,7 +167,6 @@ export default function OrganizationProfile() {
 
   // Edit Entitlements Modal State
   const [isEntOpen, setIsEntOpen] = useState(false)
-  const [editMaxHotels, setEditMaxHotels] = useState<number>(10)
   const [editMaxLearners, setEditMaxLearners] = useState<number>(100)
   const [editMaxStorage, setEditMaxStorage] = useState<number>(50)
   const [editMaxAiCredits, setEditMaxAiCredits] = useState<number>(1000)
@@ -236,7 +227,6 @@ export default function OrganizationProfile() {
 
   const entMutation = useMutation({
     mutationFn: (params: {
-      maxHotels?: number
       maxLearners?: number
       maxStorageGb?: number
       maxAiCreditsMonthly?: number
@@ -320,7 +310,6 @@ export default function OrganizationProfile() {
 
   const openEntitlementsModal = () => {
     if (!org) return
-    setEditMaxHotels(org.max_hotels ?? ent?.max_hotels ?? 10)
     setEditMaxLearners(org.max_learners ?? ent?.max_learners ?? 100)
     setEditMaxStorage(org.max_storage_gb ?? 50)
     setEditMaxAiCredits(org.max_ai_credits_monthly ?? 1000)
@@ -354,18 +343,24 @@ export default function OrganizationProfile() {
   if (isLoading) return <div className="py-16 text-center"><RefreshCw className="h-5 w-5 animate-spin mx-auto" /></div>
   if (!org) return <div className="py-16 text-center text-sm text-muted-foreground">Organization not found.</div>
 
-  const maxH = org.max_hotels ?? ent?.max_hotels ?? 10
-  const maxL = org.max_learners ?? ent?.max_learners ?? 100
-  const maxStorage = org.max_storage_gb ?? 50
-  const maxAi = org.max_ai_credits_monthly ?? 1000
-  const hotelPct = Math.min(100, Math.round(((counts?.hotels || 0) / maxH) * 100))
-  const memberPct = Math.min(100, Math.round(((counts?.members || 0) / maxL) * 100))
-  // org.ai_credits_used_this_month is a real column (present on the org row returned by
-  // get_organization_profile) — the meter below previously ignored it and always showed
-  // a hardcoded 15%. There is no equivalent real per-org storage-usage figure anywhere in
-  // the schema, so that meter shows quota only rather than fabricating a percentage.
+  // Limits are only what the organization or its plan actually sets - no
+  // invented defaults. A missing limit means "unlimited".
+  const maxL = org.max_learners ?? ent?.max_learners ?? null
+  const maxStorage = org.max_storage_gb ?? null
+  const maxAi = org.max_ai_credits_monthly ?? null
+  // org.ai_credits_used_this_month is a real column; there is no per-org storage
+  // usage figure in the schema, so storage shows its limit only.
   const aiCreditsUsed = org.ai_credits_used_this_month ?? 0
-  const aiCreditsPct = maxAi > 0 ? Math.min(100, Math.round((aiCreditsUsed / maxAi) * 100)) : 0
+  const usageRows: { label: string; used: number; limit: number | null; unit?: string; note?: string; untracked?: boolean }[] = [
+    { label: 'Learners', used: counts?.members ?? 0, limit: maxL },
+    { label: 'AI credits this month', used: aiCreditsUsed, limit: maxAi },
+    { label: 'Document storage', used: 0, limit: null, untracked: true,
+      note: maxStorage ? `${maxStorage} GB limit · usage is not tracked yet` : 'No limit set · usage is not tracked yet' },
+    { label: 'Brands', used: counts?.brands ?? 0, limit: null, note: '' },
+    { label: 'Departments', used: counts?.departments ?? 0, limit: null, note: '' },
+    { label: 'Courses', used: counts?.courses ?? 0, limit: null, note: '' },
+    { label: 'Knowledge articles', used: counts?.documents ?? 0, limit: null, note: '' },
+  ]
 
   const handleApplyAISuggestions = (sug: AIEmailBrandSuggestions) => {
     setEditSenderName(sug.emailSenderName)
@@ -395,201 +390,96 @@ export default function OrganizationProfile() {
   }
 
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/platform/organizations')} className="text-xs">
-          <ArrowLeft className="h-3.5 w-3.5 me-1.5" /> All organizations
-        </Button>
-        <div className="flex items-center gap-2">
-          {canManage && (
-            <AITenantEmailBrandCopilotModal
+    <div className="mx-auto max-w-6xl space-y-8 pb-12">
+      <Link to="/platform/organizations" className="inline-flex min-h-[40px] items-center gap-1.5 text-sm text-ds-muted hover:text-ds-ink">
+        <ArrowLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" /> All organizations
+      </Link>
+
+      <WorkspaceHeader
+        eyebrow="Organization"
+        title={org.name}
+        context={[
+          currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1),
+          ent?.plan ? `${ent.plan} plan` : 'No plan',
+          org.slug,
+          `created ${new Date(org.created_at).toLocaleDateString()}`,
+          org.billing_email,
+        ].filter(Boolean).join(' · ')}
+        actions={
+          <>
+            {canManage && (
+              <AITenantEmailBrandCopilotModal
+                orgName={org.name}
+                orgNameAr={org.name_ar || undefined}
+                slug={org.slug || undefined}
+                industry={org.industry || undefined}
+                currentPrimaryColor={org.brand_colors?.primary || '#0f172a'}
+                currentSecondaryColor={org.brand_colors?.secondary || '#2563eb'}
+                currentAccentColor={org.brand_colors?.accent || '#d97706'}
+                onApply={handleApplyAISuggestions}
+              />
+            )}
+            <TenantEmailPreviewModal
               orgName={org.name}
               orgNameAr={org.name_ar || undefined}
-              slug={org.slug || undefined}
-              industry={org.industry || undefined}
-              currentPrimaryColor={org.brand_colors?.primary || '#0f172a'}
-              currentSecondaryColor={org.brand_colors?.secondary || '#2563eb'}
-              currentAccentColor={org.brand_colors?.accent || '#d97706'}
-              onApply={handleApplyAISuggestions}
+              logoUrl={org.logo_url || undefined}
+              primaryColor={org.brand_colors?.primary || '#0f172a'}
+              secondaryColor={org.brand_colors?.secondary || '#2563eb'}
+              accentColor={org.brand_colors?.accent || '#d97706'}
+              senderName={org.email_sender_name || undefined}
+              replyTo={org.email_reply_to || undefined}
+              supportEmail={org.support_email || undefined}
+              websiteUrl={org.website_url || undefined}
+              footerText={org.email_footer_text || undefined}
+              footerTextAr={org.email_footer_text_ar || undefined}
             />
-          )}
-          <TenantEmailPreviewModal
-            orgName={org.name}
-            orgNameAr={org.name_ar || undefined}
-            logoUrl={org.logo_url || undefined}
-            primaryColor={org.brand_colors?.primary || '#0f172a'}
-            secondaryColor={org.brand_colors?.secondary || '#2563eb'}
-            accentColor={org.brand_colors?.accent || '#d97706'}
-            senderName={org.email_sender_name || undefined}
-            replyTo={org.email_reply_to || undefined}
-            supportEmail={org.support_email || undefined}
-            websiteUrl={org.website_url || undefined}
-            footerText={org.email_footer_text || undefined}
-            footerTextAr={org.email_footer_text_ar || undefined}
-          />
-          {canManage && (
-            <>
-              <Button variant="outline" size="sm" onClick={openDetailsModal} className="text-xs h-8">
-                <Edit className="h-3.5 w-3.5 me-1.5" /> Edit Details
-              </Button>
-              <Button size="sm" onClick={openEntitlementsModal} className="text-xs h-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold">
-                <Sliders className="h-3.5 w-3.5 me-1.5" /> Edit Plan & Quotas
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-card p-6 rounded-2xl border shadow-sm">
-        <div className="flex items-center gap-3">
-          <div
-            className="p-3 rounded-2xl text-white font-bold text-lg shadow-sm border shrink-0"
-            style={{ backgroundColor: ensureReadableOnWhiteText(org.brand_colors?.primary || '#0f172a') }}
-          >
-            {org.name.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold flex items-center gap-2">
-              {org.name}
-              <Badge variant="outline" className="capitalize text-[10px] font-semibold">{currentStatus}</Badge>
-              <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-primary/5 text-primary border-primary/20">
-                {ent?.plan ?? 'Enterprise'}
-              </Badge>
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {org.name_ar && <span className="font-arabic me-2 font-medium">{org.name_ar} · </span>}
-              <span className="font-mono">{org.slug}</span> · Created {new Date(org.created_at).toLocaleDateString()}
-              {org.billing_email && ` · ${org.billing_email}`}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Key Counts */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {[
-          { label: 'Brands', value: counts?.brands ?? 0, icon: LayoutGrid, hint: 'Hotel brands' },
-          { label: 'Hotels', value: `${counts?.hotels ?? 0} / ${maxH}`, icon: Building2, hint: `${hotelPct}% utilized` },
-          { label: 'Departments', value: counts?.departments ?? 0, icon: LayoutGrid, hint: 'Across properties' },
-          { label: 'Learners', value: `${counts?.members ?? 0} / ${maxL}`, icon: Users, hint: `${memberPct}% seats used` },
-          { label: 'Courses', value: counts?.courses ?? 0, icon: BookOpen, hint: 'LMS curriculum' },
-          { label: 'Documents', value: counts?.documents ?? 0, icon: FileText, hint: 'Knowledge SOPs' },
-        ].map((c) => (
-          <Card key={c.label} className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between text-muted-foreground mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-wide">{c.label}</span>
-                <c.icon className="h-3.5 w-3.5" />
-              </div>
-              <div className="text-lg font-black tabular-nums">{c.value}</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">{c.hint}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Quota & Resource Entitlements Card */}
-      <Card className="border shadow-sm">
-        <CardHeader className="p-5 pb-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-primary" />
-                Subscription Plan & Resource Entitlements
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Allocated runtime capacities, database triggers, and quota enforcement limits.
-              </CardDescription>
-            </div>
             {canManage && (
-              <Button size="sm" variant="outline" onClick={openEntitlementsModal} className="text-xs h-8">
-                Modify Quotas
-              </Button>
+              <>
+                <button type="button" onClick={openDetailsModal} className={headerActionClass.secondary}>
+                  <Edit aria-hidden="true" className="h-4 w-4" /> Edit details
+                </button>
+                <button type="button" onClick={openEntitlementsModal} className={headerActionClass.primary}>
+                  <Sliders aria-hidden="true" className="h-4 w-4" /> Plan & limits
+                </button>
+              </>
             )}
-          </div>
-        </CardHeader>
-        <CardContent className="p-5 pt-2">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            {/* Hotels Quota */}
-            <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  <Building className="h-3.5 w-3.5 text-blue-500" />
-                  Hotels Quota
-                </span>
-                <span className="font-mono">{counts?.hotels ?? 0} / {maxH}</span>
-              </div>
-              <Progress
-                value={hotelPct}
-                className="h-2 bg-muted"
-                indicatorClassName={hotelPct > 90 ? 'bg-rose-500' : hotelPct > 70 ? 'bg-amber-500' : 'bg-blue-600'}
-              />
-              <div className="text-[11px] text-muted-foreground flex justify-between">
-                <span>{hotelPct}% consumed</span>
-                <span>{Math.max(0, maxH - (counts?.hotels ?? 0))} remaining</span>
-              </div>
-            </div>
+          </>
+        }
+      />
 
-            {/* Learner Seats */}
-            <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  <Users className="h-3.5 w-3.5 text-indigo-500" />
-                  Learner Seats
-                </span>
-                <span className="font-mono">{counts?.members ?? 0} / {maxL}</span>
-              </div>
-              <Progress
-                value={memberPct}
-                className="h-2 bg-muted"
-                indicatorClassName={memberPct > 90 ? 'bg-rose-500' : memberPct > 70 ? 'bg-amber-500' : 'bg-indigo-600'}
-              />
-              <div className="text-[11px] text-muted-foreground flex justify-between">
-                <span>{memberPct}% provisioned</span>
-                <span>{Math.max(0, maxL - (counts?.members ?? 0))} seats free</span>
-              </div>
-            </div>
+      {org.name_ar && <p className="-mt-4 font-arabic text-sm text-ds-muted" dir="rtl">{org.name_ar}</p>}
 
-            {/* Storage Quota */}
-            <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  <HardDrive className="h-3.5 w-3.5 text-emerald-500" />
-                  Document Storage
+      <section aria-labelledby="org-usage" className="space-y-3">
+        <div>
+          <h2 id="org-usage" className="text-lg font-semibold text-ds-ink">Usage against plan</h2>
+          <p className="text-sm text-ds-muted">Limits come from the organization or its plan. Where none is set, usage is unlimited.</p>
+        </div>
+        <ul className="divide-y divide-ds-border rounded-[6px] border border-ds-border bg-ds-surface">
+          {usageRows.map((r) => {
+            const pct = r.limit ? Math.min(100, Math.round((r.used / r.limit) * 100)) : null
+            return (
+              <li key={r.label} className="grid gap-2 px-4 py-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                <span className="text-sm font-medium text-ds-ink">{r.label}</span>
+                <span className="min-w-0">
+                  {r.limit ? (
+                    <span className="block h-1.5 overflow-hidden rounded-full bg-ds-surface-subtle" aria-hidden="true">
+                      <span
+                        className={`block h-full rounded-full ${pct! >= 90 ? 'bg-ds-danger' : pct! >= 70 ? 'bg-ds-warning' : 'bg-ds-ink'}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </span>
+                  ) : (
+                    <span className="block text-xs text-ds-muted">{r.note ?? 'No limit set'}</span>
+                  )}
                 </span>
-                <span className="font-mono">{maxStorage} GB quota</span>
-              </div>
-              {/* No per-org storage-usage figure exists anywhere in the schema yet, so
-                  this previously showed a fabricated 20% rather than real consumption. */}
-              <div className="text-[11px] text-muted-foreground flex items-center justify-between p-1.5 rounded-lg bg-muted/40 border border-dashed">
-                <span>Usage tracking not available yet</span>
-                <span>Supabase S3</span>
-              </div>
-            </div>
-
-            {/* AI Credits */}
-            <div className="p-3.5 rounded-xl border bg-muted/20 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span className="flex items-center gap-1.5 text-foreground">
-                  <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                  Monthly AI Credits
+                <span className="font-mono text-sm tabular-nums text-ds-ink-secondary sm:text-end">
+                  {r.untracked ? '—' : r.used}{r.limit ? ` / ${r.limit}${r.unit ?? ''}` : ''}
                 </span>
-                <span className="font-mono">{aiCreditsUsed} / {maxAi}</span>
-              </div>
-              <Progress
-                value={aiCreditsPct}
-                className="h-2 bg-muted"
-                indicatorClassName={aiCreditsPct > 90 ? 'bg-rose-500' : aiCreditsPct > 70 ? 'bg-amber-500' : 'bg-purple-600'}
-              />
-              <div className="text-[11px] text-muted-foreground flex justify-between">
-                <span>{aiCreditsPct}% consumed this month</span>
-                <span>AI Course & SOP Gen</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="border shadow-sm lg:col-span-1">
@@ -629,7 +519,7 @@ export default function OrganizationProfile() {
             </Button>
 
             {currentStatus === 'suspended' && org.suspension_reason && (
-              <div className="text-[11px] text-rose-600 p-2 rounded-lg bg-rose-50 border border-rose-200">
+              <div className="text-[11px] text-ds-danger p-2 rounded-lg bg-ds-danger-soft border border-ds-danger/30">
                 <strong>Suspended:</strong> {org.suspension_reason}
               </div>
             )}
@@ -692,7 +582,7 @@ export default function OrganizationProfile() {
                   return (
                     <div key={c.user_id} className="text-xs flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-muted/30 border gap-2">
                       <div className="flex items-center gap-2.5">
-                        <div className={`p-2 rounded-lg ${isOwner ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300'}`}>
+                        <div className={`p-2 rounded-lg ${isOwner ? 'bg-ds-warning-soft text-ds-warning ' : 'bg-ds-accent-soft text-ds-accent '}`}>
                           {isOwner ? <Crown className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
                         </div>
                         <div>
@@ -701,10 +591,10 @@ export default function OrganizationProfile() {
                             <Badge
                               variant="outline"
                               className={`text-[10px] font-semibold capitalize ${
-                                isOwner
-                                  ? 'border-amber-400/40 text-amber-700 dark:text-amber-300 bg-amber-500/10'
-                                  : 'border-blue-400/40 text-blue-700 dark:text-blue-300 bg-blue-500/10'
-                              }`}
+ isOwner
+ ? 'border-ds-warning/30 text-ds-warning bg-ds-warning-soft'
+ : 'border-ds-accent/30 text-ds-accent bg-ds-accent-soft'
+ }`}
                             >
                               {isOwner ? 'Tenant Owner' : 'Tenant Administrator'}
                             </Badge>
@@ -818,10 +708,10 @@ export default function OrganizationProfile() {
                         {hasOverride ? (
                           <Badge
                             className={`text-[10px] font-semibold py-0 px-1.5 ${
-                              overrideVal
-                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
-                                : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30'
-                            }`}
+ overrideVal
+ ? 'bg-ds-success-soft text-ds-success border-ds-success/30'
+ : 'bg-ds-danger-soft text-ds-danger border-ds-danger/30'
+ }`}
                             variant="outline"
                           >
                             Override: {overrideVal ? 'Forced On' : 'Forced Off'}
@@ -851,7 +741,7 @@ export default function OrganizationProfile() {
                         />
                         <span className="text-xs font-medium w-14 text-end">
                           {isEffective ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Enabled</span>
+                            <span className="text-ds-success font-semibold">Enabled</span>
                           ) : (
                             <span className="text-muted-foreground">Disabled</span>
                           )}
@@ -903,7 +793,7 @@ export default function OrganizationProfile() {
                 <SelectContent>
                   {plans.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} ({p.max_hotels} hotels, {p.max_users} seats)
+                      {p.name} ({p.max_users} seats)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -911,16 +801,6 @@ export default function OrganizationProfile() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Max Hotels Quota</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={editMaxHotels}
-                  onChange={(e) => setEditMaxHotels(parseInt(e.target.value) || 1)}
-                  className="h-9 text-xs font-bold"
-                />
-              </div>
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Max Learner Seats</Label>
@@ -977,7 +857,6 @@ export default function OrganizationProfile() {
               size="sm"
               disabled={entMutation.isPending}
               onClick={() => entMutation.mutate({
-                maxHotels: Number(editMaxHotels),
                 maxLearners: Number(editMaxLearners),
                 maxStorageGb: Number(editMaxStorage),
                 maxAiCreditsMonthly: Number(editMaxAiCredits),
@@ -1222,7 +1101,7 @@ export default function OrganizationProfile() {
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accentColor }} />
                 </div>
                 {readablePrimaryColor !== primaryColor && (
-                  <div className="text-[10px] text-amber-600 dark:text-amber-400">
+                  <div className="text-[10px] text-ds-warning">
                     Header background darkened to {readablePrimaryColor} for legible white text — {primaryColor} is too light on its own.
                   </div>
                 )}

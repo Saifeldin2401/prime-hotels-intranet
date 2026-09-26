@@ -1,8 +1,11 @@
-import { cn } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { useTranslation } from 'react-i18next'
+import { Link, useLocation } from 'react-router-dom'
+
+import { getWorkspaceForPath } from '@/config/navigation'
+import type { WorkspaceId } from '@/stores/workspaceStore'
+import { cn } from '@/lib/utils'
 
 interface PageHeaderProps {
   title: string
@@ -12,39 +15,41 @@ interface PageHeaderProps {
   backTo?: string
 }
 
-export function PageHeader({ title, description, actions, className, backTo }: PageHeaderProps) {
-  return (
-    <div className={cn(
-      "flex flex-col gap-3 sm:gap-4 mb-6 sm:mb-8 animate-fade-in",
-      className
-    )}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            {backTo ? (
-              <Button variant="ghost" size="icon" asChild className="h-8 w-8 shrink-0 rounded-full">
-                <Link to={backTo}>
-                  <ArrowLeft className="h-4 w-4" />
-                </Link>
-              </Button>
-            ) : (
-              <div className="h-6 sm:h-8 w-1 bg-primary rounded-full shrink-0"></div>
-            )}
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight truncate">{title}</h1>
-          </div>
-        </div>
-        {actions && (
-          <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            {actions}
-          </div>
-        )}
-      </div>
-      {description && (
-        <div className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-2xl ps-3 sm:ps-4">
-          {description}
-        </div>
-      )}
-    </div>
-  )
+const EYEBROW: Record<WorkspaceId, [string, string]> = {
+  LEARN: ['workspaceEyebrow.learn', 'Learn'],
+  STUDIO: ['workspaceEyebrow.studio', 'Studio'],
+  MANAGE: ['workspaceEyebrow.manage', 'Manage'],
+  ORGANIZATION: ['workspaceEyebrow.organization', 'Organization'],
+  PLATFORM: ['workspaceEyebrow.platform', 'Platform'],
 }
 
+/**
+ * Legacy page header, kept for pages not yet rebuilt on `WorkspaceHeader`.
+ * It renders the same visual language - workspace eyebrow, title, context
+ * line, actions on the end - so every page reads as one product.
+ */
+export function PageHeader({ title, description, actions, className, backTo }: PageHeaderProps) {
+  const { t } = useTranslation('nav')
+  const { pathname } = useLocation()
+  const workspace = getWorkspaceForPath(pathname)
+  const eyebrow = workspace ? t(EYEBROW[workspace][0], EYEBROW[workspace][1]) : null
+
+  return (
+    <header className={cn('mb-6 space-y-3 border-b border-ds-border pb-6', className)}>
+      {backTo && (
+        <Link to={backTo} className="inline-flex min-h-[36px] items-center gap-1.5 text-sm text-ds-muted hover:text-ds-ink">
+          <ArrowLeft aria-hidden="true" className="h-4 w-4 rtl:rotate-180" />
+          {t('back', 'Back')}
+        </Link>
+      )}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 space-y-1.5">
+          {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-accent">{eyebrow}</p>}
+          <h1 className="text-2xl font-semibold tracking-tight text-ds-ink sm:text-[28px]">{title}</h1>
+          {description && <div className="max-w-3xl text-sm text-ds-muted">{description}</div>}
+        </div>
+        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      </div>
+    </header>
+  )
+}

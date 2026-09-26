@@ -49,7 +49,7 @@ function endOfLocalDayIso(dateStr: string | null | undefined): string | null {
 
 interface LearningAssignment {
   id: string
-  target_type: 'all' | 'everyone' | 'user' | 'department' | 'property' | 'role' | 'new_hire'
+  target_type: 'all' | 'everyone' | 'user' | 'department' | 'role' | 'new_hire'
   target_id: string | null
   content_type: string
   content_id: string
@@ -73,7 +73,6 @@ type EnrichedProgressRecord = LearningProgress & {
   resolvedDepartmentName: string
   resolvedModuleTitle: string
   resolvedProgress: number
-  resolvedPropertyName: string
   resolvedScore: number | null
   resolvedUserName: string
   statusLabel: string
@@ -96,7 +95,6 @@ interface EmployeeProgressGroup {
   lastTouchedAt: string | null
   locationLabel: string
   overdueModules: number
-  propertyName: string
   records: EnrichedProgressRecord[]
   totalModules: number
   userId: string
@@ -114,14 +112,6 @@ const progressStatusOrder: Record<LearningProgress['status'], number> = {
 }
 
 const ROSTER_PAGE_SIZE = 10
-
-const isPriorityPropertyName = (name: string) => /head office|altus group/i.test(name)
-
-const sortPropertyNames = (a: string, b: string) => {
-  if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
-  if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
-  return a.localeCompare(b)
-}
 
 const describeAssignmentMutationResult = (
   result: PersistLearningAssignmentsResult,
@@ -195,8 +185,6 @@ interface TrainingAssignmentsContextValue {
   setOverviewFilterStatus: Dispatch<SetStateAction<string>>
   overviewFilterDept: string
   setOverviewFilterDept: Dispatch<SetStateAction<string>>
-  overviewFilterProp: string
-  setOverviewFilterProp: Dispatch<SetStateAction<string>>
 
   // Selected progress detail
   selectedProgressId: string | null
@@ -210,8 +198,8 @@ interface TrainingAssignmentsContextValue {
   // Form state (create assignment)
   formModuleId: string
   setFormModuleId: Dispatch<SetStateAction<string>>
-  formTargetType: 'all' | 'users' | 'departments' | 'properties'
-  setFormTargetType: Dispatch<SetStateAction<'all' | 'users' | 'departments' | 'properties'>>
+  formTargetType: 'all' | 'users' | 'departments'
+  setFormTargetType: Dispatch<SetStateAction<'all' | 'users' | 'departments'>>
   formTargetIds: string[]
   setFormTargetIds: Dispatch<SetStateAction<string[]>>
   formDeadline: string
@@ -232,8 +220,6 @@ interface TrainingAssignmentsContextValue {
   setNotifyOnDue: Dispatch<SetStateAction<boolean>>
   reminderDaysBefore: number[]
   setReminderDaysBefore: Dispatch<SetStateAction<number[]>>
-  propertyFilters: string[]
-  setPropertyFilters: Dispatch<SetStateAction<string[]>>
   targetSearch: string
   setTargetSearch: Dispatch<SetStateAction<string>>
   validationErrors: string[]
@@ -243,8 +229,6 @@ interface TrainingAssignmentsContextValue {
   assignableModules: TrainingModule[]
   currentListItems: Array<{ id: string; name: string; details?: string }>
   departmentGroups: Array<{ name: string; items: Array<{ id: string; name: string }> }>
-  departmentProperties: string[]
-  togglePropertyFilter: (propertyName: string, enabled: boolean) => void
   toggleGroupSelection: (items: Array<{ id: string }>, shouldSelect: boolean) => void
   resetForm: () => void
 
@@ -287,8 +271,7 @@ interface TrainingAssignmentsContextValue {
   // Data
   users: Array<{ id: string; full_name: string; email: string }> | undefined
   modules: TrainingModule[] | undefined
-  departments: Array<{ id: string; name: string; propertyName?: string; rawName?: string }> | undefined
-  properties: Array<{ id: string; name: string }> | undefined
+  departments: Array<{ id: string; name: string; rawName?: string }> | undefined
 
   // Derived data
   groupedAssignments: Array<{
@@ -302,7 +285,7 @@ interface TrainingAssignmentsContextValue {
   assignmentStats: {
     total: number
     byPriority: { compliance: number; high: number; normal: number }
-    byTargetType: { everyone: number; user: number; department: number; property: number }
+    byTargetType: { everyone: number; user: number; department: number }
     overdue: number
     dueSoon: number
   }
@@ -431,7 +414,6 @@ export function TrainingAssignmentsProvider({
   const [overviewSearch, setOverviewSearch] = useState('')
   const [overviewFilterStatus, setOverviewFilterStatus] = useState<string>('all')
   const [overviewFilterDept, setOverviewFilterDept] = useState<string>('all')
-  const [overviewFilterProp, setOverviewFilterProp] = useState<string>('all')
   const [selectedProgressId, setSelectedProgressId] = useState<string | null>(null)
 
   // Form state
@@ -441,7 +423,7 @@ export function TrainingAssignmentsProvider({
     if (defaultModuleId) setFormModuleId(defaultModuleId)
     setPrevDefaultModuleId(defaultModuleId)
   }
-  const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments' | 'properties'>('all')
+  const [formTargetType, setFormTargetType] = useState<'all' | 'users' | 'departments'>('all')
   const [formTargetIds, setFormTargetIds] = useState<string[]>([])
   const [formDeadline, setFormDeadline] = useState('')
   const [formValidFrom, setFormValidFrom] = useState(() => format(new Date(), 'yyyy-MM-dd'))
@@ -452,7 +434,6 @@ export function TrainingAssignmentsProvider({
   const [sendNotifications, setSendNotifications] = useState(true)
   const [notifyOnDue, setNotifyOnDue] = useState(true)
   const [reminderDaysBefore, setReminderDaysBefore] = useState<number[]>([])
-  const [propertyFilters, setPropertyFilters] = useState<string[]>([])
   const [targetSearch, setTargetSearch] = useState('')
 
   // Manage assignees dialog
@@ -557,18 +538,6 @@ export function TrainingAssignmentsProvider({
     }
   })
 
-  const { data: userProperties } = useQuery({
-    queryKey: ['user-properties', 'memberships'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('organization_memberships')
-        .select('user_id, property:hotels(id, name)')
-        .eq('is_active', true)
-      if (error) throw error
-      return data
-    }
-  })
-
   const { data: users } = useQuery({
     queryKey: ['users-list'],
     queryFn: async () => {
@@ -583,33 +552,10 @@ export function TrainingAssignmentsProvider({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name, property_id, property:hotels(name)')
-        .order('name')
-      if (error) throw error
-      return (data || []).map((d) => {
-        const propertyName = Array.isArray(d.property) && d.property.length > 0
-          ? d.property[0]?.name
-          : (d.property as { name?: string } | null)?.name
-        return {
-          id: d.id,
-          name: propertyName ? `${d.name} (${propertyName})` : d.name,
-          propertyName: propertyName,
-          rawName: d.name
-        }
-      })
-    }
-  })
-
-  const { data: properties } = useQuery({
-    queryKey: ['properties-for-assignment', 'hotels'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('hotels')
         .select('id, name')
-        .eq('is_deleted', false)
         .order('name')
       if (error) throw error
-      return data || []
+      return (data || []).map((d) => ({ id: d.id, name: d.name, rawName: d.name }))
     }
   })
 
@@ -781,7 +727,6 @@ export function TrainingAssignmentsProvider({
       const typeMap: Record<string, string> = {
         users: 'user',
         departments: 'department',
-        properties: 'property'
       }
       const normalizedReminderDaysBefore = Array.from(
         new Set(reminderDaysBefore.filter((value) => Number.isInteger(value) && value > 0))
@@ -868,16 +813,6 @@ export function TrainingAssignmentsProvider({
               .eq('is_active', true)
               .in('department_id', departmentIds)
             userIdsToNotify = [...new Set(deptUsers?.map((d: any) => d.user_id) || [])]
-          } else if (formTargetType === 'properties') {
-            const propertyIds = changedAssignments
-              .map((assignment) => assignment.target_id)
-              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
-            const { data: propUsers } = await supabase
-              .from('organization_memberships')
-              .select('user_id')
-              .eq('is_active', true)
-              .in('hotel_id', propertyIds)
-            userIdsToNotify = [...new Set(propUsers?.map((p: any) => p.user_id) || [])]
           }
 
           if (userIdsToNotify.length === 0) return
@@ -1106,10 +1041,6 @@ export function TrainingAssignmentsProvider({
     return new Map((departments || []).map((dept) => [dept.id, dept]))
   }, [departments])
 
-  const propertyLookup = useMemo(() => {
-    return new Map((properties || []).map((property) => [property.id, property]))
-  }, [properties])
-
   const userLookup = useMemo(() => {
     return new Map((users || []).map((user) => [user.id, user]))
   }, [users])
@@ -1131,12 +1062,6 @@ export function TrainingAssignmentsProvider({
       case 'department': {
         const dept = departmentLookup.get(assignment.target_id ?? '')
         const name = dept?.rawName || dept?.name || t('department', 'Department')
-        const propertyName = dept?.propertyName || t('unknownProperty', 'Unknown property')
-        return { label: name, meta: propertyName }
-      }
-      case 'property': {
-        const property = propertyLookup.get(assignment.target_id ?? '')
-        const name = property?.name || t('property', 'Property')
         return { label: name, meta: undefined }
       }
       case 'user': {
@@ -1163,7 +1088,7 @@ export function TrainingAssignmentsProvider({
       default:
         return { label: assignment.target_type || t('allUsers'), meta: undefined }
     }
-  }, [departmentLookup, propertyLookup, userLookup, t])
+  }, [departmentLookup, userLookup, t])
 
   const formatDate = useCallback((dateStr: string) => {
     if (!dateStr) return '-'
@@ -1312,8 +1237,7 @@ export function TrainingAssignmentsProvider({
     const byTargetType = {
       everyone: filteredAssignments.filter(a => a.target_type === 'everyone').length,
       user: filteredAssignments.filter(a => a.target_type === 'user').length,
-      department: filteredAssignments.filter(a => a.target_type === 'department').length,
-      property: filteredAssignments.filter(a => a.target_type === 'property').length
+      department: filteredAssignments.filter(a => a.target_type === 'department').length
     }
     const overdue = filteredAssignments.filter(a => getAssignmentStatus(a) === 'overdue').length
     const dueSoon = filteredAssignments.filter(a => getAssignmentStatus(a) === 'due_soon').length
@@ -1337,12 +1261,10 @@ export function TrainingAssignmentsProvider({
         return false
       }
       const userDeptId = (userDepartments?.find(ud => ud.user_id === item.user_id)?.department as any)?.id
-      const userPropId = (userProperties?.find(up => up.user_id === item.user_id)?.property as any)?.id
       if (overviewFilterDept !== 'all' && userDeptId !== overviewFilterDept) return false
-      if (overviewFilterProp !== 'all' && userPropId !== overviewFilterProp) return false
       return true
     })
-  }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, overviewFilterProp, userDepartments, userProperties, users, modules, isProgressOverdue])
+  }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, userDepartments, users, modules, isProgressOverdue])
 
   const progressMetrics = useMemo(() => ({
     total: filteredProgress.length,
@@ -1355,13 +1277,9 @@ export function TrainingAssignmentsProvider({
   const enrichedProgress = useMemo<EnrichedProgressRecord[]>(() => {
     return filteredProgress.map((item) => {
       const joinedDepartmentName = item.profiles?.user_departments?.[0]?.departments?.name || ''
-      const joinedPropertyName = item.profiles?.user_properties?.[0]?.properties?.name || ''
       const departmentData = userDepartments?.find((d) => d.user_id === item.user_id)?.department as
         | { name?: string } | Array<{ name?: string }> | null | undefined
-      const propertyData = userProperties?.find((p) => p.user_id === item.user_id)?.property as
-        | { name?: string } | Array<{ name?: string }> | null | undefined
       const fallbackDepartmentName = Array.isArray(departmentData) ? departmentData[0]?.name || '' : departmentData?.name || ''
-      const fallbackPropertyName = Array.isArray(propertyData) ? propertyData[0]?.name || '' : propertyData?.name || ''
       const user = users?.find((entry) => entry.id === item.user_id)
       const resolvedUserName = item.profiles?.full_name || user?.full_name || t('unknownUser')
       const resolvedModuleTitle = item.courses?.title || modules?.find((m) => m.id === item.content_id)?.title || t('unknownModule')
@@ -1373,22 +1291,20 @@ export function TrainingAssignmentsProvider({
       const normalizedName = resolvedUserName.trim()
       const userInitials = normalizedName.split(/\s+/).filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'NA'
       const resolvedDepartmentName = joinedDepartmentName || fallbackDepartmentName
-      const resolvedPropertyName = joinedPropertyName || fallbackPropertyName
       return {
         ...item,
         resolvedDepartmentName,
         resolvedModuleTitle,
         resolvedProgress,
-        resolvedPropertyName,
         resolvedScore: parsedScore !== null && Number.isFinite(parsedScore) ? parsedScore : null,
         resolvedUserName,
         statusLabel: statusMeta.label,
         userInitials,
         lastTouchedAt,
-        locationLabel: resolvedDepartmentName || resolvedPropertyName || t('noDept')
+        locationLabel: resolvedDepartmentName || t('noDept')
       }
     })
-  }, [filteredProgress, getProgressStatusMeta, modules, t, userDepartments, userProperties, users])
+  }, [filteredProgress, getProgressStatusMeta, modules, t, userDepartments, users])
 
   const employeeProgressGroups = useMemo<EmployeeProgressGroup[]>(() => {
     const groupedRecords = new Map<string, EmployeeProgressGroup>()
@@ -1401,7 +1317,7 @@ export function TrainingAssignmentsProvider({
           completedModules: 0, departmentName: record.resolvedDepartmentName,
           excusedModules: 0, highlightModule: null, inProgressModules: 0,
           lastTouchedAt: record.lastTouchedAt, locationLabel: record.locationLabel,
-          overdueModules: 0, propertyName: record.resolvedPropertyName,
+          overdueModules: 0,
           records: [], totalModules: 0, userId: record.user_id,
           userInitials: record.userInitials, userName: record.resolvedUserName
         })
@@ -1643,31 +1559,14 @@ export function TrainingAssignmentsProvider({
     return primary.includes(normalizedTargetSearch) || secondaryValue.includes(normalizedTargetSearch)
   }, [normalizedTargetSearch])
 
-  const departmentProperties = useMemo(() => {
-    if (!departments) return []
-    const props = new Set<string>()
-    departments.forEach(d => {
-      props.add(d.propertyName || t('other', 'Other'))
-    })
-    return Array.from(props).sort(sortPropertyNames)
-  }, [departments, t])
-
   const departmentGroups = useMemo(() => {
     if (!departments) return []
-    const filters = new Set(propertyFilters)
-    const groups = new Map<string, { name: string; items: Array<{ id: string; name: string }> }>()
-    departments.forEach((dept) => {
-      const propertyName = dept.propertyName || t('other', 'Other')
-      if (propertyFilters.length > 0 && !filters.has(propertyName)) return
-      const displayName = dept.rawName || dept.name.replace(/\s*\(.+\)$/, '')
-      if (!matchesTargetSearch(displayName, propertyName)) return
-      if (!groups.has(propertyName)) groups.set(propertyName, { name: propertyName, items: [] })
-      groups.get(propertyName)!.items.push({ id: dept.id, name: displayName })
-    })
-    return Array.from(groups.values())
-      .map(group => ({ ...group, items: group.items.sort((a, b) => a.name.localeCompare(b.name)) }))
-      .sort((a, b) => sortPropertyNames(a.name, b.name))
-  }, [departments, propertyFilters, matchesTargetSearch, t])
+    const items = departments
+      .map((dept) => ({ id: dept.id, name: dept.rawName || dept.name }))
+      .filter((dept) => matchesTargetSearch(dept.name))
+      .sort((a, b) => a.name.localeCompare(b.name))
+    return items.length > 0 ? [{ name: t('departments', 'Departments'), items }] : []
+  }, [departments, matchesTargetSearch, t])
 
   const assignableModules = modules || []
   const selectedAssignableModule = assignableModules.find((module) => module.id === formModuleId)
@@ -1681,21 +1580,10 @@ export function TrainingAssignmentsProvider({
           .filter(u => matchesTargetSearch(u.name, u.details))
       case 'departments':
         return departmentGroups.flatMap(group => group.items)
-      case 'properties':
-        return (properties || []).map(p => ({ id: p.id, name: p.name })).filter(p => matchesTargetSearch(p.name))
       default:
         return []
     }
-  }, [formTargetType, users, properties, departmentGroups, matchesTargetSearch])
-
-  const togglePropertyFilter = useCallback((propertyName: string, enabled: boolean) => {
-    setPropertyFilters(prev => {
-      const next = new Set(prev)
-      if (enabled) next.add(propertyName)
-      else next.delete(propertyName)
-      return Array.from(next)
-    })
-  }, [])
+  }, [formTargetType, users, departmentGroups, matchesTargetSearch])
 
   const toggleGroupSelection = useCallback((items: Array<{ id: string }>, shouldSelect: boolean) => {
     const itemIds = items.map(item => item.id)
@@ -1730,7 +1618,6 @@ export function TrainingAssignmentsProvider({
     setSendNotifications(true)
     setNotifyOnDue(true)
     setReminderDaysBefore([])
-    setPropertyFilters([])
     setTargetSearch('')
   }, [])
 
@@ -1840,7 +1727,7 @@ export function TrainingAssignmentsProvider({
     if (!enrichedProgress.length) return
     const employeeLookup = new Map(employeeProgressGroups.map((group) => [group.userId, group]))
     const headers = [
-      t('employee'), t('email', 'Email'), t('department'), t('property'),
+      t('employee'), t('email', 'Email'), t('department'),
       t('module'), t('status'), t('progress'), t('score'), t('passed', 'Passed'),
       t('timeSpent', 'Time spent'), t('lastAccess'), t('completedAt', 'Completed at'),
       t('currentStep', 'Current step'), t('totalEnrollments'),
@@ -1863,7 +1750,7 @@ export function TrainingAssignmentsProvider({
           ? t('requiredAction', 'Required Action') : t('onTime')
         return [
           escapeCsvValue(group.userName), escapeCsvValue(record.profiles?.email || user?.email || '-'),
-          escapeCsvValue(group.departmentName || '-'), escapeCsvValue(group.propertyName || '-'),
+          escapeCsvValue(group.departmentName || '-'),
           escapeCsvValue(record.resolvedModuleTitle), escapeCsvValue(record.statusLabel),
           escapeCsvValue(`${record.resolvedProgress}%`),
           escapeCsvValue(record.resolvedScore !== null ? `${Math.round(record.resolvedScore)}%` : '-'),
@@ -1922,7 +1809,6 @@ export function TrainingAssignmentsProvider({
     overviewSearch, setOverviewSearch,
     overviewFilterStatus, setOverviewFilterStatus,
     overviewFilterDept, setOverviewFilterDept,
-    overviewFilterProp, setOverviewFilterProp,
 
     // Selected progress
     selectedProgressId, setSelectedProgressId,
@@ -1945,7 +1831,6 @@ export function TrainingAssignmentsProvider({
     sendNotifications, setSendNotifications,
     notifyOnDue, setNotifyOnDue,
     reminderDaysBefore, setReminderDaysBefore,
-    propertyFilters, setPropertyFilters,
     targetSearch, setTargetSearch,
     validationErrors,
     moduleSelectValue,
@@ -1954,8 +1839,6 @@ export function TrainingAssignmentsProvider({
     assignableModules,
     currentListItems,
     departmentGroups,
-    departmentProperties,
-    togglePropertyFilter,
     toggleGroupSelection,
     resetForm,
 
@@ -1981,7 +1864,7 @@ export function TrainingAssignmentsProvider({
     openOverrideDialog, closeOverrideDialog,
 
     // Data
-    users, modules, departments, properties,
+    users, modules, departments,
 
     // Derived data
     groupedAssignments, assignmentStats, exemptionCountByModule,

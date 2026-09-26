@@ -9,27 +9,19 @@
 
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import { WorkspaceHeader, headerActionClass } from '@/ui';
 import {
-  Mail,
   Plus,
   RefreshCw,
   X,
-  Check,
-  Clock,
   AlertCircle,
   Search,
   UserPlus,
-  Building,
-  Briefcase,
   Send,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -60,7 +52,6 @@ import { useAccountContext } from '@/contexts/auth/AccountContext';
 import { platformService } from '@/services/platformService';
 import { useQuery } from '@tanstack/react-query';
 import { useInvitations } from '@/hooks/useInvitations';
-import { useProperties } from '@/hooks/useProperties';
 import { useDepartments } from '@/hooks/useDepartments';
 import { ROLE_HIERARCHY } from '@/lib/constants';
 import type { AppRole } from '@/lib/types';
@@ -80,7 +71,6 @@ export default function UserInvitations() {
     cancelInvitation,
     refreshInvitations,
   } = useInvitations();
-  const { data: properties = [], isLoading: propertiesLoading } = useProperties();
   const { departments = [], isLoading: departmentsLoading } = useDepartments();
 
   const { data: entitlements, refetch: refetchEntitlements } = useQuery({
@@ -89,7 +79,7 @@ export default function UserInvitations() {
     enabled: !!currentOrganization?.id,
   });
 
-  const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100);
+  const isSeatLimitReached = !isPlatformOperator && !!entitlements && !!entitlements.max_learners && (entitlements.usage?.learners ?? 0) >= entitlements.max_learners;
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [invitationToCancel, setInvitationToCancel] = useState<string | null>(null);
@@ -99,7 +89,6 @@ export default function UserInvitations() {
   const [formData, setFormData] = useState({
     email: '',
     role: '' as AppRole | '',
-    propertyId: '',
     departmentId: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -139,12 +128,11 @@ export default function UserInvitations() {
     const success = await createInvitation({
       email: formData.email,
       role: formData.role,
-      propertyId: formData.propertyId || undefined,
       departmentId: formData.departmentId || undefined,
     });
 
     if (success) {
-      setFormData({ email: '', role: '', propertyId: '', departmentId: '' });
+      setFormData({ email: '', role: '', departmentId: '' });
       setIsCreateDialogOpen(false);
       refetchEntitlements();
     }
@@ -155,41 +143,6 @@ export default function UserInvitations() {
 
     await cancelInvitation(invitationToCancel);
     setInvitationToCancel(null);
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return (
-          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            <Clock className="w-3 h-3 me-1" />
-            {t('status.pending', { defaultValue: 'Pending' })}
-          </Badge>
-        );
-      case 'accepted':
-        return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <Check className="w-3 h-3 me-1" />
-            {t('status.accepted', { defaultValue: 'Accepted' })}
-          </Badge>
-        );
-      case 'expired':
-        return (
-          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-            <AlertCircle className="w-3 h-3 me-1" />
-            {t('status.expired', { defaultValue: 'Expired' })}
-          </Badge>
-        );
-      case 'cancelled':
-        return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-            <X className="w-3 h-3 me-1" />
-            {t('status.cancelled', { defaultValue: 'Cancelled' })}
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
   };
 
   const formatDate = (dateString: string) => {
@@ -205,238 +158,129 @@ export default function UserInvitations() {
     return new Date(expiresAt) < new Date();
   };
 
+  const effectiveStatus = (inv: { status: string; expires_at: string }) =>
+    inv.status === 'pending' && isExpired(inv.expires_at) ? 'expired' : inv.status;
+  const STATUS_ORDER = ['pending', 'expired', 'accepted', 'cancelled'] as const;
+  const statusLabel: Record<string, string> = {
+    pending: t('admin:invites.waiting', 'Waiting to be accepted'),
+    expired: t('admin:invites.expired', 'Expired'),
+    accepted: t('admin:invites.accepted', 'Joined'),
+    cancelled: t('admin:invites.cancelled', 'Cancelled'),
+  };
+  const groups = STATUS_ORDER
+    .map((st) => ({ st, items: filteredInvitations.filter((inv) => effectiveStatus(inv) === st) }))
+    .filter((g) => g.items.length > 0);
+  const waiting = invitations.filter((i) => effectiveStatus(i) === 'pending').length;
+  const placeOf = (inv: { department_id?: string | null }) =>
+    inv.department_id ? departments.find((d) => d.id === inv.department_id)?.name ?? '' : '';
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {t('invitations.title', { defaultValue: 'User Invitations' })}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {t('invitations.subtitle', { defaultValue: 'Invite new users and manage pending invitations' })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => refreshInvitations()} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
-            {t('common.refresh', { defaultValue: 'Refresh' })}
-          </Button>
-          <Button
-            onClick={() => setIsCreateDialogOpen(true)}
-            disabled={isSeatLimitReached}
-            title={isSeatLimitReached ? t('invitations.seat_limit_reached', { defaultValue: 'Plan seat limit reached. Upgrade to invite more users.' }) : undefined}
-          >
-            <UserPlus className="w-4 h-4 me-2" />
-            {t('invitations.invite_user', { defaultValue: 'Invite User' })}
-          </Button>
-        </div>
-      </div>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('admin:invites.eyebrow', 'People')}
+        title={t('admin:invites.title', 'Invitations')}
+        context={waiting > 0
+          ? t('admin:invites.context', '{{count}} waiting to be accepted.', { count: waiting })
+          : t('admin:invites.contextNone', 'No invitations are waiting.')}
+        actions={
+          <>
+            <button type="button" onClick={() => refreshInvitations()} disabled={isLoading} className={headerActionClass.secondary} aria-label={t('common:refresh', 'Refresh')}>
+              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button type="button" onClick={() => setIsCreateDialogOpen(true)} disabled={isSeatLimitReached} className={`${headerActionClass.primary} disabled:opacity-50`}>
+              <UserPlus aria-hidden="true" className="h-4 w-4" />{t('admin:invites.invite', 'Invite someone')}
+            </button>
+          </>
+        }
+      />
 
       {isSeatLimitReached && (
-        <div className="p-4 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-700 dark:text-amber-300 text-sm">
-          <AlertCircle className="w-5 h-5 shrink-0 text-amber-500" />
+        <div role="status" className="flex items-start gap-3 rounded-[6px] border border-ds-warning/30 bg-ds-warning-soft px-4 py-3 text-sm text-ds-ink">
+          <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-ds-warning" />
           <span>
-            {t('invitations.seat_limit_reached_desc', {
-              defaultValue: 'User seat limit reached ({{current}} / {{max}} seats used). Contact your platform administrator to upgrade.',
+            {t('admin:invites.seatLimit', 'All {{max}} seats are in use ({{current}} people). Ask your platform administrator for more seats before inviting anyone else.', {
               current: entitlements?.usage?.learners ?? 0,
-              max: entitlements?.max_learners ?? 100,
+              max: entitlements?.max_learners ?? 0,
             })}
           </span>
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('invitations.total', { defaultValue: 'Total Invitations' })}
-                </p>
-                <p className="text-2xl font-bold mt-1">{invitations.length}</p>
-              </div>
-              <Mail className="w-8 h-8 text-muted-foreground/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('invitations.pending', { defaultValue: 'Pending' })}
-                </p>
-                <p className="text-2xl font-bold mt-1 text-amber-600">
-                  {invitations.filter((i) => i.status === 'pending' && !isExpired(i.expires_at)).length}
-                </p>
-              </div>
-              <Clock className="w-8 h-8 text-amber-500/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('invitations.accepted', { defaultValue: 'Accepted' })}
-                </p>
-                <p className="text-2xl font-bold mt-1 text-green-600">
-                  {invitations.filter((i) => i.status === 'accepted').length}
-                </p>
-              </div>
-              <Check className="w-8 h-8 text-green-500/50" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {t('invitations.expired', { defaultValue: 'Expired' })}
-                </p>
-                <p className="text-2xl font-bold mt-1 text-gray-600">
-                  {invitations.filter((i) => i.status === 'expired' || (i.status === 'pending' && isExpired(i.expires_at))).length}
-                </p>
-              </div>
-              <AlertCircle className="w-8 h-8 text-gray-500/50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {invitations.length > 0 && (
+        <div className="relative">
+          <label htmlFor="invite-search" className="sr-only">{t('admin:invites.search', 'Search by email or role')}</label>
+          <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-muted" />
+          <Input
+            id="invite-search"
+            placeholder={t('admin:invites.search', 'Search by email or role')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="min-h-[44px] ps-10"
+          />
+        </div>
+      )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder={t('invitations.search_placeholder', { defaultValue: 'Search by email or role...' })}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="ps-10"
-        />
-      </div>
-
-      {/* Invitations List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('invitations.list_title', { defaultValue: 'Pending Invitations' })}</CardTitle>
-          <CardDescription>
-            {t('invitations.list_description', { defaultValue: 'Manage invitations that are pending acceptance' })}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20" />
-              ))}
-            </div>
-          ) : filteredInvitations.length === 0 ? (
-            <div className="text-center py-12">
-              <Mail className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-              <h3 className="text-lg font-medium">
-                {t('invitations.empty_title', { defaultValue: 'No invitations found' })}
-              </h3>
-              <p className="text-muted-foreground mt-1">
-                {searchQuery
-                  ? t('invitations.empty_search', { defaultValue: 'Try adjusting your search' })
-                  : t('invitations.empty_description', { defaultValue: 'Get started by inviting a new user' })}
-              </p>
-              {!searchQuery && (
-                <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="w-4 h-4 me-2" />
-                  {t('invitations.invite_user', { defaultValue: 'Invite User' })}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <ScrollArea className="h-[500px]">
-              <div className="space-y-3">
-                <AnimatePresence>
-                  {filteredInvitations.map((invitation) => (
-                    <motion.div
-                      key={invitation.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <Mail className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{invitation.email}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-0.5">
-                            <Badge variant="secondary" className="text-xs">
-                              {invitation.role}
-                            </Badge>
-                            {invitation.property_id && (
-                              <span className="flex items-center gap-1">
-                                <Building className="w-3 h-3" />
-                                {properties.find((p) => p.id === invitation.property_id)?.name ||
-                                  invitation.property_id}
-                              </span>
-                            )}
-                            {invitation.department_id && (
-                              <span className="flex items-center gap-1">
-                                <Briefcase className="w-3 h-3" />
-                                {departments.find((d) => d.id === invitation.department_id)?.name ||
-                                  invitation.department_id}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {t('invitations.sent_on', { defaultValue: 'Sent on' })} {formatDate(invitation.invited_at)}
-                            {' · '}
-                            {isExpired(invitation.expires_at)
-                              ? t('invitations.expired_on', { defaultValue: 'Expired on' })
-                              : t('invitations.expires_on', { defaultValue: 'Expires on' })}{' '}
-                            {formatDate(invitation.expires_at)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {getStatusBadge(
-                          isExpired(invitation.expires_at) && invitation.status === 'pending'
-                            ? 'expired'
-                            : invitation.status
-                        )}
-
-                        {invitation.status === 'pending' && !isExpired(invitation.expires_at) && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => resendInvitation(invitation.id)}
-                              disabled={isResending}
-                            >
-                              <Send className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive"
-                              onClick={() => setInvitationToCancel(invitation.id)}
-                              disabled={isCancelling}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </div>
-            </ScrollArea>
+      {isLoading ? (
+        <div className="space-y-2" aria-busy="true">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16" />)}
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="rounded-[6px] border border-dashed border-ds-border px-6 py-12 text-center">
+          <h2 className="text-base font-semibold text-ds-ink">
+            {searchQuery ? t('admin:invites.noMatch', 'No invitations match') : t('admin:invites.emptyTitle', 'No invitations yet')}
+          </h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-ds-muted">
+            {searchQuery
+              ? t('admin:invites.noMatchBody', 'Try a different email or role.')
+              : t('admin:invites.emptyBody', 'Invite colleagues by email. They choose their own password when they accept.')}
+          </p>
+          {!searchQuery && !isSeatLimitReached && (
+            <button type="button" onClick={() => setIsCreateDialogOpen(true)} className={`${headerActionClass.primary} mt-5`}>
+              <Plus aria-hidden="true" className="h-4 w-4" />{t('admin:invites.invite', 'Invite someone')}
+            </button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {groups.map(({ st, items }) => (
+            <section key={st} aria-labelledby={`invites-${st}`} className="space-y-2">
+              <h2 id={`invites-${st}`} className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ds-muted">
+                {statusLabel[st] ?? st} <span className="font-mono tabular-nums">{items.length}</span>
+              </h2>
+              <ul className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+                {items.map((invitation) => {
+                  const place = placeOf(invitation);
+                  return (
+                    <li key={invitation.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-ds-ink" dir="ltr">{invitation.email}</p>
+                        <p className="mt-0.5 text-sm text-ds-muted">
+                          {[invitation.role.replaceAll('_', ' '), place].filter(Boolean).join(' · ')}
+                        </p>
+                        <p className="mt-0.5 text-xs text-ds-muted">
+                          {t('invitations.sent_on', { defaultValue: 'Sent on' })} {formatDate(invitation.invited_at)}
+                          {st === 'pending' && <> · {t('invitations.expires_on', { defaultValue: 'Expires on' })} {formatDate(invitation.expires_at)}</>}
+                          {st === 'expired' && <> · {t('invitations.expired_on', { defaultValue: 'Expired on' })} {formatDate(invitation.expires_at)}</>}
+                        </p>
+                      </div>
+                      {st === 'pending' && (
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Button variant="outline" size="sm" className="min-h-[40px]" onClick={() => resendInvitation(invitation.id)} disabled={isResending}>
+                            <Send aria-hidden="true" className="me-1.5 h-4 w-4" />{t('admin:invites.resend', 'Resend')}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="min-h-[40px] text-ds-danger hover:bg-ds-danger-soft" onClick={() => setInvitationToCancel(invitation.id)} disabled={isCancelling}>
+                            <X aria-hidden="true" className="me-1.5 h-4 w-4" />{t('admin:invites.cancel', 'Cancel')}
+                          </Button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
 
       {/* Create Invitation Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -486,27 +330,6 @@ export default function UserInvitations() {
                 </SelectContent>
               </Select>
               {formErrors.role && <p className="text-sm text-destructive">{formErrors.role}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="property">{t('fields.property', { defaultValue: 'Property (Optional)' })}</Label>
-              <Select
-                value={formData.propertyId}
-                onValueChange={(value) => setFormData({ ...formData, propertyId: value })}
-                disabled={propertiesLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t('fields.select_property', { defaultValue: 'Select a property' })} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">{t('fields.none', { defaultValue: 'None' })}</SelectItem>
-                  {properties.map((property) => (
-                    <SelectItem key={property.id} value={property.id}>
-                      {property.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">

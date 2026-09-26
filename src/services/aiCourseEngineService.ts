@@ -469,21 +469,19 @@ export const aiCourseEngineService = {
     const { data: userAuth } = await supabase.auth.getUser()
     const currentUserId = userAuth?.user?.id
 
-    // 1. Fetch user organization & property
-    let userPropertyId: string | null = null
+    // 1. Fetch user organization
     let userOrgId: string | null = null
     if (currentUserId) {
-      // Org and hotel both live on the active membership (profiles has no property column).
+      // The organization lives on the active membership.
       const { data: member } = await supabase
         .from('organization_memberships')
-        .select('organization_id, hotel_id')
+        .select('organization_id')
         .eq('user_id', currentUserId)
         .eq('is_active', true)
         .order('is_primary', { ascending: false })
         .limit(1)
         .maybeSingle()
       userOrgId = member?.organization_id || null
-      userPropertyId = member?.hotel_id || null
     }
 
     // 2. Insert or update training_module
@@ -509,7 +507,6 @@ export const aiCourseEngineService = {
         qa_report: blueprint.qaReport as any,
         created_by: currentUserId,
         organization_id: userOrgId,
-        property_id: userPropertyId,
       })
       .select('id')
       .single()

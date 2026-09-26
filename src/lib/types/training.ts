@@ -14,7 +14,6 @@ export interface TrainingModule {
   estimated_duration?: string | null
   is_active?: boolean
   views_count?: number
-  property_id: string | null
   updated_by?: string | null
   validity_period_days: number | null
   certificate_enabled: boolean
@@ -89,7 +88,6 @@ export interface TrainingPath {
   certificate_enabled: boolean
   target_role?: string | null
   target_department_id?: string | null
-  target_property_id?: string | null
   target_user_ids?: string[]
   is_published: boolean
   created_by: string

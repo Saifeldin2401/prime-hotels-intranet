@@ -36,7 +36,7 @@ export function TemplatePreviewDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-            <Layers className="w-5 h-5 text-hotel-gold" />
+            <Layers className="w-5 h-5 text-ds-brass" />
             {t('builder.templatePreviewTitle', { name: selectedTemplate?.name || t('builder.template') })}
           </DialogTitle>
           <DialogDescription className={isRTL ? 'text-end' : ''}>
@@ -81,7 +81,7 @@ export function TemplatePreviewDialog({
           <Button
             onClick={() => requestApplyTemplate(selectedTemplate)}
             disabled={!selectedTemplate || templatePreset === 'none'}
-            className="bg-hotel-gold hover:bg-hotel-gold-dark text-white"
+            className="bg-ds-brass hover:bg-ds-accent-hover text-white"
           >
             {t('builder.applyTemplate', 'Apply template')}
           </Button>
@@ -122,7 +122,7 @@ export function TemplateApplyConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('builder.keepExisting', 'Keep existing')}
           </Button>
-          <Button onClick={confirmApplyTemplate} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
+          <Button onClick={confirmApplyTemplate} className="bg-ds-brass hover:bg-ds-accent-hover text-white">
             {t('builder.applyTemplate', 'Apply template')}
           </Button>
         </div>

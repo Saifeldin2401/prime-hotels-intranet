@@ -8,7 +8,7 @@ import { DocumentRecommendations } from '@/components/documents/DocumentRecommen
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { RecentlyViewedDocuments } from '@/components/documents/RecentlyViewedDocuments'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -51,7 +51,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
-import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
 import { crudToasts } from '@/lib/toastHelpers'
@@ -63,7 +62,6 @@ import {
     BarChart3,
     BookOpen,
     Clock,
-    Cloud,
     Eye,
     EyeOff,
     FileText,
@@ -541,7 +539,6 @@ export default function DocumentLibrary() {
   const storageUsedGB = (stats?.totalBytes || 0) / (1024 * 1024 * 1024)
   const storageStats = {
     used: Math.max(0.01, Math.round(storageUsedGB * 100) / 100),
-    total: 10,
     documents: stats?.total || 0,
     shared: stats?.published || 0
   }
@@ -573,7 +570,7 @@ export default function DocumentLibrary() {
         aria-label={`Open document ${doc.title}`}
         className={cn(
           "group relative bg-white rounded-xl border transition-all duration-200 cursor-pointer hover:shadow-lg",
-          isSelected ? "border-hotel-gold ring-2 ring-hotel-gold/20" : "border-gray-200 hover:border-hotel-navy/30"
+          isSelected ? "border-ds-accent ring-2 ring-ds-accent/20" : "border-ds-border hover:border-ds-ink/30"
         )}
       >
         {/* Selection checkbox */}
@@ -583,7 +580,7 @@ export default function DocumentLibrary() {
             checked={isSelected}
             onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
+            className="w-4 h-4 rounded border-ds-border text-ds-ink focus:ring-hotel-navy"
           />
         </div>
 
@@ -591,7 +588,7 @@ export default function DocumentLibrary() {
         {(isExpiringSoon || isExpired) && (
           <div className={cn(
             "absolute top-3 end-3 z-10 p-1.5 rounded-full",
-            isExpired ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
+            isExpired ? "bg-ds-danger-soft text-ds-danger" : "bg-ds-warning-soft text-ds-warning"
           )}>
             <AlertTriangle className="w-4 h-4" />
           </div>
@@ -599,27 +596,27 @@ export default function DocumentLibrary() {
 
         <div className="p-5">
           {/* File icon */}
-          <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-gradient-to-br from-hotel-navy/10 to-hotel-navy/5 flex items-center justify-center">
-            <FileText className="w-6 h-6 text-hotel-navy" />
+          <div className="w-12 h-12 mx-auto mb-4 rounded-xl /5 flex items-center justify-center">
+            <FileText className="w-6 h-6 text-ds-ink" />
           </div>
 
           {/* Title */}
-          <h3 className="font-semibold text-hotel-navy text-sm text-center line-clamp-2 mb-2">
+          <h3 className="font-semibold text-ds-ink text-sm text-center line-clamp-2 mb-2">
             {doc.title}
           </h3>
 
           {/* Meta info */}
-          <div className="space-y-2 text-xs text-gray-500 text-center">
+          <div className="space-y-2 text-xs text-ds-muted text-center">
             <div className="flex items-center justify-center gap-1.5 flex-wrap">
               <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
               <StatusBadge status={doc.status} />
               {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
-                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
+                <Badge className="bg-ds-success hover:bg-ds-success text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
                   <Sparkles className="w-3 h-3" />
                   AI KB Active
                 </Badge>
               ) : doc.knowledge_base_status === 'superseded' ? (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-slate-500">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-ds-muted">
                   Superseded
                 </Badge>
               ) : (
@@ -632,7 +629,7 @@ export default function DocumentLibrary() {
             <p>{formatRelativeTime(doc.created_at)}</p>
             {doc.expires_at && (
               <p className={cn(
-                isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
+                isExpired ? "text-ds-danger" : isExpiringSoon ? "text-ds-warning" : "text-ds-muted"
               )}>
                 <Clock className="w-3 h-3 inline me-1" />
                 {isExpired ? 'Expired' : `Expires ${formatRelativeTime(doc.expires_at)}`}
@@ -653,7 +650,7 @@ export default function DocumentLibrary() {
                 </span>
               ))}
               {doc.tags.length > 3 && (
-                <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-500">
+                <span className="px-2 py-0.5 text-xs rounded-full bg-ds-surface-subtle text-ds-muted">
                   +{doc.tags.length - 3}
                 </span>
               )}
@@ -661,15 +658,15 @@ export default function DocumentLibrary() {
           )}
 
           {/* Actions */}
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+          <div className="mt-4 pt-4 border-t border-ds-border flex items-center justify-between">
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 toggleFavorite.mutate({ documentId: doc.id, isFavorite })
               }}
-              className="text-gray-400 hover:text-red-500 transition-colors"
+              className="text-ds-muted hover:text-ds-danger transition-colors"
             >
-              <Heart className={cn("w-4 h-4", isFavorite && "fill-red-500 text-red-500")} />
+              <Heart className={cn("w-4 h-4", isFavorite && "fill-ds-danger text-ds-danger")} />
             </button>
 
             <DropdownMenu>
@@ -692,7 +689,7 @@ export default function DocumentLibrary() {
                   AI Assistant
                 </DropdownMenuItem>
                 {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
-                  <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-amber-600">
+                  <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-ds-warning">
                     <EyeOff className="w-4 h-4 me-2" />
                     Remove from Knowledge Base
                   </DropdownMenuItem>
@@ -711,7 +708,7 @@ export default function DocumentLibrary() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={(e) => handleDelete(doc.id, e)}
-                  className="text-red-600"
+                  className="text-ds-danger"
                 >
                   <Trash2 className="w-4 h-4 me-2" />
                   Delete
@@ -742,8 +739,8 @@ export default function DocumentLibrary() {
         className={cn(
           "flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-lg transition-all duration-200 border gap-3 group cursor-pointer",
           isSelected 
-            ? "bg-hotel-gold/5 border-hotel-gold" 
-            : "bg-gray-50/50 hover:bg-white border-transparent hover:border-hotel-navy/10 hover:shadow-md"
+            ? "bg-ds-accent/5 border-ds-accent" 
+            : "bg-ds-surface-subtle hover:bg-white border-transparent hover:border-ds-ink/10 hover:shadow-md"
         )}
       >
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
@@ -752,11 +749,11 @@ export default function DocumentLibrary() {
             checked={isSelected}
             onChange={(e) => handleSelectDocument(doc.id, e.target.checked)}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
+            className="w-4 h-4 rounded border-ds-border text-ds-ink focus:ring-hotel-navy"
           />
 
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-hotel-navy/5 rounded-lg flex items-center justify-center border border-hotel-navy/10 flex-shrink-0">
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-hotel-navy" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-ds-ink/5 rounded-lg flex items-center justify-center border border-ds-ink/10 flex-shrink-0">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-ds-ink" />
           </div>
 
           <div className="min-w-0">
@@ -764,12 +761,12 @@ export default function DocumentLibrary() {
               <Link
                 to={`/documents/${doc.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="font-semibold text-hotel-navy text-sm sm:text-base truncate hover:underline"
+                className="font-semibold text-ds-ink text-sm sm:text-base truncate hover:underline"
               >
                 {doc.title}
               </Link>
               {(isExpired || isExpiringSoon) && (
-                <AlertTriangle className={cn("w-4 h-4", isExpired ? "text-red-500" : "text-amber-500")} />
+                <AlertTriangle className={cn("w-4 h-4", isExpired ? "text-ds-danger" : "text-ds-warning")} />
               )}
               <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
             </div>
@@ -777,19 +774,19 @@ export default function DocumentLibrary() {
               <Badge variant="outline" className="text-xs">
                 {doc.file_extension?.toUpperCase() || 'FILE'}
               </Badge>
-              <span className="text-xs text-gray-500">{formatFileSize(doc.file_size || 0)}</span>
-              <span className="text-xs text-gray-500">{formatRelativeTime(doc.created_at)}</span>
+              <span className="text-xs text-ds-muted">{formatFileSize(doc.file_size || 0)}</span>
+              <span className="text-xs text-ds-muted">{formatRelativeTime(doc.created_at)}</span>
               {doc.expires_at && (
                 <span className={cn(
                   "text-xs",
-                  isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
+                  isExpired ? "text-ds-danger" : isExpiringSoon ? "text-ds-warning" : "text-ds-muted"
                 )}>
                   <Clock className="w-3 h-3 inline me-1" />
                   {isExpired ? 'Expired' : `Expires ${format(new Date(doc.expires_at), 'MMM d')}`}
                 </span>
               )}
               {doc.view_count !== undefined && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-ds-muted">
                   <Eye className="w-3 h-3 inline me-1" />
                   {doc.view_count}
                 </span>
@@ -801,12 +798,12 @@ export default function DocumentLibrary() {
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={doc.status} />
           {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
-            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
+            <Badge className="bg-ds-success hover:bg-ds-success text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
               <Sparkles className="w-3 h-3" />
               AI KB Active
             </Badge>
           ) : doc.knowledge_base_status === 'superseded' ? (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-slate-500">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-ds-muted">
               Superseded
             </Badge>
           ) : (
@@ -850,7 +847,7 @@ export default function DocumentLibrary() {
               isFavorite && "opacity-100"
             )}
           >
-            <Heart className={cn("w-4 h-4", isFavorite ? "fill-red-500 text-red-500" : "text-gray-400 hover:text-red-500")} />
+            <Heart className={cn("w-4 h-4", isFavorite ? "fill-ds-danger text-ds-danger" : "text-ds-muted hover:text-ds-danger")} />
           </button>
 
           <DropdownMenu>
@@ -873,7 +870,7 @@ export default function DocumentLibrary() {
                 AI Assistant
               </DropdownMenuItem>
               {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
-                <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-amber-600">
+                <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-ds-warning">
                   <EyeOff className="w-4 h-4 me-2" />
                   Remove from Knowledge Base
                 </DropdownMenuItem>
@@ -892,7 +889,7 @@ export default function DocumentLibrary() {
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={(e) => handleDelete(doc.id, e)}
-                className="text-red-600"
+                className="text-ds-danger"
               >
                 <Trash2 className="w-4 h-4 me-2" />
                 Delete
@@ -905,81 +902,48 @@ export default function DocumentLibrary() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <PageHeader
+    <div className="mx-auto max-w-7xl space-y-6">
+      <WorkspaceHeader
+        eyebrow={t('page.eyebrow', 'Knowledge')}
         title={t('title')}
-        description={t('description')}
+        context={t('page.context', '{{count}} files · {{used}} GB used', { count: storageStats.documents, used: storageStats.used })}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
+          <>
+            <button
+              type="button"
+              aria-pressed={showFilters}
               onClick={() => setShowFilters(!showFilters)}
-              className={cn(showFilters && "bg-hotel-navy/5")}
+              className={headerActionClass.secondary}
             >
-              <Filter className="w-4 h-4 me-2" />
+              <Filter aria-hidden="true" className="h-4 w-4" />
               {t('filters')}
               {Object.values(filters).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) && (
-                <span className="ms-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
+                <span className="h-2 w-2 rounded-full bg-ds-accent" aria-hidden="true" />
               )}
-            </Button>
-
-            <div className="flex border border-border rounded-lg overflow-hidden shadow-sm">
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-e-none border-e-0 h-9"
-              >
-                <List className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="rounded-s-none h-9"
-              >
-                <Grid className="w-4 h-4" />
-              </Button>
+            </button>
+            <div role="group" aria-label={t('page.view', 'View')} className="hidden overflow-hidden rounded-md border border-ds-border sm:flex">
+              <button type="button" aria-pressed={viewMode === 'list'} aria-label={t('page.listView', 'List view')} onClick={() => setViewMode('list')}
+                className={cn('inline-flex h-10 w-10 items-center justify-center', viewMode === 'list' ? 'bg-ds-ink text-ds-on-ink' : 'bg-ds-surface text-ds-muted hover:text-ds-ink')}>
+                <List aria-hidden="true" className="h-4 w-4" />
+              </button>
+              <button type="button" aria-pressed={viewMode === 'grid'} aria-label={t('page.gridView', 'Grid view')} onClick={() => setViewMode('grid')}
+                className={cn('inline-flex h-10 w-10 items-center justify-center border-s border-ds-border', viewMode === 'grid' ? 'bg-ds-ink text-ds-on-ink' : 'bg-ds-surface text-ds-muted hover:text-ds-ink')}>
+                <Grid aria-hidden="true" className="h-4 w-4" />
+              </button>
             </div>
-
-            <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all">
-              <Plus className="w-4 h-4 me-2" />
-              {t('upload_document')}
-            </Button>
-          </div>
+            <button type="button" onClick={() => setUploadDialogOpen(true)} className={headerActionClass.primary}>
+              <Plus aria-hidden="true" className="h-4 w-4" />{t('upload_document')}
+            </button>
+          </>
         }
       />
 
-      {/* Storage Stats Card */}
-      <Card variant="gold" className="bg-gradient-to-r from-hotel-gold/10 to-hotel-cream/30 border-hotel-gold/20">
-        <div className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-hotel-gold/20 rounded-lg">
-                <Cloud className="h-4 w-4 sm:h-5 sm:w-5 text-hotel-gold-dark" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">{t('storage.title')}</h3>
-                <p className="text-xs sm:text-sm text-gray-600">{t('storage.files_stored', { count: storageStats.documents })}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {stats?.expiringSoon ? (
-                <Badge variant="warning" className="text-xs">
-                  <AlertTriangle className="w-3 h-3 me-1" />
-                  {t('storage.expiring_soon_badge', { count: stats.expiringSoon })}
-                </Badge>
-              ) : null}
-              <Badge variant="gold" className="text-xs">
-                {storageStats.used} GB / {storageStats.total} GB
-              </Badge>
-            </div>
-          </div>
-          <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
-        </div>
-      </Card>
+      {stats?.expiringSoon ? (
+        <p className="flex items-center gap-2 border-s-2 border-ds-warning ps-3 text-sm text-ds-ink">
+          <AlertTriangle aria-hidden="true" className="h-4 w-4 text-ds-warning" />
+          {t('storage.expiring_soon_badge', { count: stats.expiringSoon })}
+        </p>
+      ) : null}
 
       {/* Advanced Filters */}
       {showFilters && (
@@ -1090,7 +1054,7 @@ export default function DocumentLibrary() {
           <Card className="border-0 shadow-sm">
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-hotel-navy flex items-center gap-2">
+                <h3 className="font-semibold text-ds-ink flex items-center gap-2">
                   <FolderOpen className="w-4 h-4" />
                   {t('folders.title')}
                 </h3>
@@ -1114,7 +1078,7 @@ export default function DocumentLibrary() {
           {/* Tags Cloud */}
           <Card className="border-0 shadow-sm">
             <div className="p-4">
-              <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
+              <h3 className="font-semibold text-ds-ink flex items-center gap-2 mb-4">
                 <Tag className="w-4 h-4" />
                 {t('common.popular_tags')}
               </h3>
@@ -1150,26 +1114,26 @@ export default function DocumentLibrary() {
           {/* Quick Stats */}
           <Card className="border-0 shadow-sm">
             <div className="p-4">
-              <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
+              <h3 className="font-semibold text-ds-ink flex items-center gap-2 mb-4">
                 <BarChart3 className="w-4 h-4" />
                 {t('common.quick_stats')}
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('stats.total_documents')}</span>
+                  <span className="text-ds-muted">{t('stats.total_documents')}</span>
                   <span className="font-medium">{stats?.total || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('stats.published')}</span>
-                  <span className="font-medium text-green-600">{stats?.published || 0}</span>
+                  <span className="text-ds-muted">{t('stats.published')}</span>
+                  <span className="font-medium text-ds-success">{stats?.published || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('stats.pending_review')}</span>
-                  <span className="font-medium text-amber-600">{stats?.pending || 0}</span>
+                  <span className="text-ds-muted">{t('stats.pending_review')}</span>
+                  <span className="font-medium text-ds-warning">{stats?.pending || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">{t('stats.expiring_soon')}</span>
-                  <span className="font-medium text-red-600">{stats?.expiringSoon || 0}</span>
+                  <span className="text-ds-muted">{t('stats.expiring_soon')}</span>
+                  <span className="font-medium text-ds-danger">{stats?.expiringSoon || 0}</span>
                 </div>
               </div>
             </div>
@@ -1196,15 +1160,15 @@ export default function DocumentLibrary() {
 
             <TabsContent value="documents" className="space-y-4">
               <Card className="border-0 shadow-lg" padding="none">
-                  <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                  <div className="p-4 border-b border-ds-border flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={selectedDocuments.size === documents.length && documents.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-hotel-navy focus:ring-hotel-navy"
+                        className="w-4 h-4 rounded border-ds-border text-ds-ink focus:ring-hotel-navy"
                       />
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-ds-muted">
                         {selectedDocuments.size > 0 
                           ? t('selection.selected', { count: selectedDocuments.size })
                           : t('selection.documents_count', { count: documents.length })
@@ -1213,7 +1177,7 @@ export default function DocumentLibrary() {
                     </div>
                     {documents.length > 0 && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">{t('sort.label')}</span>
+                        <span className="text-xs text-ds-muted">{t('sort.label')}</span>
                         <select
                           value={sortBy}
                           onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
@@ -1290,13 +1254,13 @@ export default function DocumentLibrary() {
                         type="button"
                         key={folder.id}
                         onClick={() => setFilters(prev => ({ ...prev, folderId: folder.id }))}
-                        className="p-4 rounded-xl border border-gray-200 hover:border-hotel-navy/30 hover:shadow-md transition-all cursor-pointer bg-white"
+                        className="p-4 rounded-xl border border-ds-border hover:border-ds-ink/30 hover:shadow-md transition-all cursor-pointer bg-white"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-hotel-navy/5 flex items-center justify-center mb-3">
-                          <FolderOpen className="w-6 h-6 text-hotel-navy" />
+                        <div className="w-12 h-12 rounded-xl bg-ds-ink/5 flex items-center justify-center mb-3">
+                          <FolderOpen className="w-6 h-6 text-ds-ink" />
                         </div>
-                        <h3 className="font-medium text-hotel-navy truncate">{folder.name}</h3>
-                        <p className="text-sm text-gray-500">{folderStats[folder.id] || 0} documents</p>
+                        <h3 className="font-medium text-ds-ink truncate">{folder.name}</h3>
+                        <p className="text-sm text-ds-muted">{folderStats[folder.id] || 0} documents</p>
                       </button>
                     ))}
                   </div>
@@ -1496,7 +1460,7 @@ export default function DocumentLibrary() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-hotel-gold" />
+              <Sparkles className="w-5 h-5 text-ds-accent" />
               AI Document Assistant
             </DialogTitle>
           </DialogHeader>

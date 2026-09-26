@@ -88,7 +88,6 @@ interface TrainingModule {
   status?: ModuleStatus
   organization_id?: string | null
   brand_id?: string | null
-  hotel_id?: string | null
   scope_type?: string | null
   is_master_template?: boolean | null
   master_source_id?: string | null
@@ -100,7 +99,7 @@ interface TrainingModule {
 
 export default function TrainingHub() {
   const { primaryRole } = useAuth()
-  const { currentOrganization, currentHotel, currentBrand, isPlatformAdmin, isPlatformScope } = useTenant()
+  const { currentOrganization, currentBrand, isPlatformAdmin, isPlatformScope } = useTenant()
   const navigate = useNavigate()
   const { id: moduleId } = useParams()
   const [searchParams] = useSearchParams()
@@ -160,7 +159,7 @@ export default function TrainingHub() {
     }
 
     const builderId = options?.moduleId || moduleId || 'new'
-    const targetPath = mode === 'builder' ? `/studio/courses/${builderId}` : '/studio'
+    const targetPath = mode === 'builder' ? `/studio/courses/${builderId}` : '/studio/courses'
     const query = nextParams.toString()
     navigate(query ? `${targetPath}?${query}` : targetPath)
   }
@@ -205,7 +204,7 @@ export default function TrainingHub() {
 
   // Data fetching: fetch all non-deleted modules scoped to tenant
   const { data: rawModules, isLoading } = useQuery({
-    queryKey: ['training-modules', currentOrganization?.id, currentHotel?.id, currentBrand?.id],
+    queryKey: ['training-modules', currentOrganization?.id, currentBrand?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return []
 
@@ -607,6 +606,17 @@ export default function TrainingHub() {
   const handleCreateFromTemplate = () => {
     setShowTemplateDialog(true)
   }
+
+  // Studio > Create links here with ?create=ai|template to open that flow once.
+  const createParam = searchParams.get('create')
+  useEffect(() => {
+    if (createParam !== 'ai' && createParam !== 'template') return
+    if (createParam === 'ai') setShowSmartAIModal(true)
+    else setShowTemplateDialog(true)
+    const next = new URLSearchParams(searchParams)
+    next.delete('create')
+    navigate({ search: next.toString() }, { replace: true })
+  }, [createParam, searchParams, navigate])
 
   const handleCreateWithAI = () => {
     setShowSmartAIModal(true)
@@ -1327,7 +1337,7 @@ export default function TrainingHub() {
                       {hasActiveFilters ? <FilterX className="h-7 w-7" /> : <Sparkles className="h-7 w-7 text-hotel-gold" />}
                     </div>
                     <h3 className="text-lg font-semibold text-slate-800 mb-1">
-                      {hasActiveFilters ? t('noMatchingModules', 'No matching modules found') : t('noModules', 'Build Hotel Training Catalog')}
+                      {hasActiveFilters ? t('noMatchingModules', 'No matching modules found') : t('noModules', 'Build your training catalog')}
                     </h3>
                     <p className="text-sm text-slate-500 mb-6 max-w-md">
                       {hasActiveFilters
@@ -1343,7 +1353,7 @@ export default function TrainingHub() {
                     ) : (
                       <div className="w-full max-w-xl space-y-4">
                         <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                          {t('popularAiStarters', 'Recommended Hotel Courses (1-Click AI Generation):')}
+                          {t('popularAiStarters', 'Start from a suggested course:')}
                         </p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {hospitalityAiStarters.map((starter) => {

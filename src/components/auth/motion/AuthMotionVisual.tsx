@@ -1,4 +1,4 @@
-﻿import { memo, useState, useEffect } from 'react';
+import { memo, useState, useEffect } from 'react';
 import type { AuthMotionVisualProps } from './types';
 import { MotionLottie } from './MotionLottie';
 import { MotionVideo } from './MotionVideo';

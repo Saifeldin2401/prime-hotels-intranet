@@ -16,7 +16,6 @@ import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck, User
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { isRealPropertyId } from '@/lib/propertyScope'
 
 type SupportedOtpType = 'invite' | 'recovery' | 'signup' | 'magiclink' | 'email' | 'email_change'
 
@@ -29,15 +28,8 @@ function isSupportedOtpType(value: string | null): value is SupportedOtpType {
         || value === 'email_change'
 }
 
-interface PropertyOption {
-    id: string
-    name: string
-}
-
 type InviteOptionsResponse = {
     jobTitles?: string[]
-    properties?: PropertyOption[]
-    assignedPropertyIds?: string[]
     error?: string
 }
 
@@ -50,7 +42,6 @@ export default function CompleteInvite() {
     const [dateOfBirth, setDateOfBirth] = useState('')
     const [phone, setPhone] = useState('')
     const [jobTitle, setJobTitle] = useState('')
-    const [propertyId, setPropertyId] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -62,7 +53,6 @@ export default function CompleteInvite() {
     const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState<string | null>(null)
     const [validationNonce, setValidationNonce] = useState(0)
     const [jobTitleOptions, setJobTitleOptions] = useState<string[]>([])
-    const [propertyOptions, setPropertyOptions] = useState<PropertyOption[]>([])
     const [loadingFormOptions, setLoadingFormOptions] = useState(false)
 
     useEffect(() => {
@@ -223,38 +213,17 @@ export default function CompleteInvite() {
                 const normalizedJobTitles = (response.jobTitles || [])
                     .filter((title): title is string => typeof title === 'string' && title.trim().length > 0)
 
-                const availableProperties = (response.properties || [])
-                    .filter((property): property is PropertyOption =>
-                        typeof property?.id === 'string' &&
-                        property.id.length > 0 &&
-                        typeof property?.name === 'string' &&
-                        property.name.length > 0
-                    )
-
                 if (cancelled) return
 
                 setJobTitleOptions(Array.from(new Set(normalizedJobTitles)))
-                setPropertyOptions(Array.from(new Map(availableProperties.map((property) => [property.id, property])).values()))
 
-                const assignedPropertyIds = (response.assignedPropertyIds || [])
-                    .filter((value): value is string => typeof value === 'string' && value.length > 0)
-
-                if (availableProperties.length === 1) {
-                    setPropertyId(availableProperties[0].id)
-                } else if (assignedPropertyIds.length === 1) {
-                    setPropertyId(assignedPropertyIds[0])
-                }
-
-                if (availableProperties.length === 0) {
-                    setError('No properties are available for this invite. Please contact your administrator.')
-                }
             } catch (candidateError) {
                 console.error('Failed to load invite setup options:', candidateError)
                 if (!cancelled) {
                     const classified = classifyAuthLinkError(candidateError)
                     setError(
                         classified.kind === 'invalid_link'
-                            ? 'Failed to load job titles and properties. Please refresh the page.'
+                            ? 'Failed to load your invitation. Please refresh the page.'
                             : AUTH_SERVICE_UNAVAILABLE_MESSAGE
                     )
                 }
@@ -329,11 +298,6 @@ export default function CompleteInvite() {
             return
         }
 
-        if (!isRealPropertyId(propertyId)) {
-            setError('Please select your property.')
-            return
-        }
-
         setLoading(true)
 
         try {
@@ -353,7 +317,6 @@ export default function CompleteInvite() {
                         dateOfBirth: trimmedDob,
                         phone: phone.trim() || null,
                         jobTitle: jobTitle || null,
-                        propertyId,
                     },
                 }),
                 'Invite profile completion'
@@ -428,11 +391,11 @@ export default function CompleteInvite() {
 
     if (validatingToken) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle">
                 <Card className="w-full max-w-md">
                     <CardContent className="flex flex-col items-center justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                        <p className="text-gray-600">Validating invite link...</p>
+                        <p className="text-ds-muted">Validating invite link...</p>
                     </CardContent>
                 </Card>
             </div>
@@ -441,11 +404,11 @@ export default function CompleteInvite() {
 
     if (!tokenValid && serviceUnavailableMessage) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle px-4">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                            <AlertCircle className="h-6 w-6 text-amber-600" />
+                        <div className="mx-auto w-12 h-12 bg-ds-warning-soft rounded-full flex items-center justify-center mb-4">
+                            <AlertCircle className="h-6 w-6 text-ds-warning" />
                         </div>
                         <CardTitle>{t('reset_password.service_unavailable_title', { defaultValue: 'Authentication service unavailable' })}</CardTitle>
                         <CardDescription>
@@ -476,11 +439,11 @@ export default function CompleteInvite() {
 
     if (!tokenValid) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle px-4">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                            <AlertCircle className="h-6 w-6 text-red-600" />
+                        <div className="mx-auto w-12 h-12 bg-ds-danger-soft rounded-full flex items-center justify-center mb-4">
+                            <AlertCircle className="h-6 w-6 text-ds-danger" />
                         </div>
                         <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
                         <CardDescription>
@@ -511,11 +474,11 @@ export default function CompleteInvite() {
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+            <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle px-4">
                 <Card className="w-full max-w-md">
                     <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                            <CheckCircle className="h-6 w-6 text-green-600" />
+                        <div className="mx-auto w-12 h-12 bg-ds-success-soft rounded-full flex items-center justify-center mb-4">
+                            <CheckCircle className="h-6 w-6 text-ds-success" />
                         </div>
                         <CardTitle>Account setup complete</CardTitle>
                         <CardDescription>
@@ -523,7 +486,7 @@ export default function CompleteInvite() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="text-center">
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto text-ds-muted" />
                     </CardContent>
                 </Card>
             </div>
@@ -531,7 +494,7 @@ export default function CompleteInvite() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle px-4">
             <Card className="w-full max-w-lg">
                 <CardHeader className="text-center">
                     <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
@@ -545,7 +508,7 @@ export default function CompleteInvite() {
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
                         {error && (
-                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
+                            <div className="flex items-center gap-2 p-3 bg-ds-danger-soft border border-ds-danger/30 rounded-md text-ds-danger">
                                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                                 <span className="text-sm">{error}</span>
                             </div>
@@ -605,28 +568,6 @@ export default function CompleteInvite() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="property-id">Property</Label>
-                            <select
-                                id="property-id"
-                                value={propertyId}
-                                onChange={(e) => setPropertyId(e.target.value)}
-                                disabled={loading || loadingFormOptions}
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                required
-                            >
-                                <option value="">Select property</option>
-                                {propertyOptions.map((propertyOption) => (
-                                    <option key={propertyOption.id} value={propertyOption.id}>
-                                        {propertyOption.name}
-                                    </option>
-                                ))}
-                            </select>
-                            {loadingFormOptions && (
-                                <p className="text-xs text-gray-500">Loading properties...</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
                             <Label htmlFor="password">{t('reset_password.new_password')}</Label>
                             <div className="relative">
                                 <Input
@@ -640,7 +581,7 @@ export default function CompleteInvite() {
                                 />
                                 <button
                                     type="button"
-                                    className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                    className="absolute end-3 top-1/2 -translate-y-1/2 text-ds-muted hover:text-ds-ink"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -648,8 +589,8 @@ export default function CompleteInvite() {
                             </div>
                         </div>
 
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                            <p className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <div className="bg-ds-surface-subtle rounded-lg p-3 space-y-2">
+                            <p className="text-xs font-medium text-ds-ink flex items-center gap-1">
                                 <ShieldCheck className="h-3 w-3" />
                                 Password Requirements:
                             </p>
@@ -661,8 +602,8 @@ export default function CompleteInvite() {
                                     { check: /\d/.test(password), text: 'One number' },
                                     { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' },
                                 ].map((requirement) => (
-                                    <li key={requirement.text} className={`flex items-center gap-1 ${requirement.check ? 'text-green-600' : 'text-gray-500'}`}>
-                                        {requirement.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
+                                    <li key={requirement.text} className={`flex items-center gap-1 ${requirement.check ? 'text-ds-success' : 'text-ds-muted'}`}>
+                                        {requirement.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-ds-border" />}
                                         {requirement.text}
                                     </li>
                                 ))}
@@ -680,10 +621,10 @@ export default function CompleteInvite() {
                                 required
                             />
                             {confirmPassword && !doPasswordsMatch && (
-                                <p className="text-xs text-red-500">Passwords do not match</p>
+                                <p className="text-xs text-ds-danger">Passwords do not match</p>
                             )}
                             {doPasswordsMatch && (
-                                <p className="text-xs text-green-600 flex items-center gap-1">
+                                <p className="text-xs text-ds-success flex items-center gap-1">
                                     <CheckCircle className="h-3 w-3" /> Passwords match
                                 </p>
                             )}
@@ -699,8 +640,7 @@ export default function CompleteInvite() {
                                 !isPasswordValid ||
                                 !doPasswordsMatch ||
                                 !fullName.trim() ||
-                                !dateOfBirth.trim() ||
-                                !isRealPropertyId(propertyId)
+                                !dateOfBirth.trim()
                             }
                         >
                             {loading ? (

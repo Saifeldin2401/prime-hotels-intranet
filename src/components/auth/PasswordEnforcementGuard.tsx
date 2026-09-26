@@ -22,6 +22,10 @@ export function PasswordEnforcementGuard({ children }: PasswordEnforcementGuardP
         // Never interfere with the standalone reset-password flow
         if (isOnResetPasswordPage) return
 
+        // OAuth users (e.g. Google) do not use internal passwords
+        const isOAuth = user.app_metadata?.provider === 'google' || user.identities?.some(id => id.provider === 'google')
+        if (isOAuth) return
+
         const isOnCompleteInvitePage =
             location.pathname === '/complete-invite' ||
             location.pathname.startsWith('/complete-invite/')

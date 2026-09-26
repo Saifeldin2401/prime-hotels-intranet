@@ -5,14 +5,14 @@ import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 
 const LearnerHome = lazy(() => import('@/pages/home/LearnerHome'))
-const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
-const CourseCatalog = lazy(() => import('@/pages/learning/CourseCatalog'))
-const CourseDetail = lazy(() => import('@/pages/learning/CourseDetail'))
+const MyLearningPage = lazy(() => import('@/features/learn/pages/MyLearningPage'))
+const ExplorePage = lazy(() => import('@/features/learn/pages/ExplorePage'))
+const CourseDetailPage = lazy(() => import('@/features/learn/pages/CourseDetailPage'))
 const TrainingPaths = lazy(() => import('@/pages/training/TrainingPaths'))
 const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
 const AssessmentPlayer = lazy(() => import('@/pages/assessments/AssessmentPlayer'))
-const MyCertificates = lazy(() => import('@/pages/training/MyCertificates'))
-const KnowledgeBrowse = lazy(() => import('@/pages/knowledge/KnowledgeBrowse'))
+const CertificatesPage = lazy(() => import('@/features/learn/pages/CertificatesPage'))
+const KnowledgeHubPage = lazy(() => import('@/features/knowledge/pages/KnowledgeHubPage'))
 const KnowledgeRead = lazy(() => import('@/pages/knowledge/KnowledgeRead'))
 const DocumentLibrary = lazy(() => import('@/pages/documents/DocumentLibrary'))
 const DocumentDetail = lazy(() => import('@/pages/documents/DocumentDetail'))
@@ -24,15 +24,15 @@ const DocumentDetail = lazy(() => import('@/pages/documents/DocumentDetail'))
 export const LearnRoutes = () => (
     <Route element={<TenantContextGuard resourceName="Learn" />} errorElement={<RouteErrorBoundary section="Learn" />}>
         <Route path="/learn" element={page(<LearnerHome />)} />
-        <Route path="/learn/my" element={page(<MyLearning />)} />
-        <Route path="/learn/courses" element={page(<CourseCatalog />)} />
-        <Route path="/learn/courses/:id" element={page(<CourseDetail />)} />
+        <Route path="/learn/my" element={page(<MyLearningPage />)} />
+        <Route path="/learn/courses" element={page(<ExplorePage />)} />
+        <Route path="/learn/courses/:id" element={page(<CourseDetailPage />)} />
         <Route path="/learn/paths" element={page(<TrainingPaths />)} />
         <Route path="/learn/player/:id" element={page(<TrainingPlayer />)} />
         <Route path="/learn/quizzes/:id" element={page(<AssessmentPlayer />)} />
-        <Route path="/learn/certificates" element={page(<MyCertificates />)} />
+        <Route path="/learn/certificates" element={page(<CertificatesPage />)} />
 
-        <Route path="/knowledge" element={page(<KnowledgeBrowse />, { capability: 'knowledge.read' })} />
+        <Route path="/knowledge" element={page(<KnowledgeHubPage />, { capability: 'knowledge.read' })} />
         <Route path="/knowledge/:id" element={page(<KnowledgeRead />, { capability: 'knowledge.read' })} />
 
         {/* Files are attachments of articles and courses, not a destination of

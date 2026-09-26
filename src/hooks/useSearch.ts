@@ -1,7 +1,5 @@
-import { useProperty } from '@/contexts/PropertyContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { SYSTEM_PAGES } from '@/lib/searchConfig'
 import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
@@ -25,7 +23,6 @@ interface UseSearchOptions {
   includeTraining?: boolean
   includeSOPs?: boolean
   limit?: number
-  propertyId?: string
   departmentId?: string
 }
 
@@ -70,8 +67,7 @@ const USER_SEARCH_ROLES = new Set([
 ])
 
 export function useSearch(query: string, options: UseSearchOptions = {}) {
-  const { user, primaryRole, roles, departments, properties } = useAuth()
-  const { currentProperty, propertyIds } = useProperty()
+  const { user, primaryRole, roles, departments } = useAuth()
   const { currentOrganization, isPlatformScope } = useTenant()
   const [isSearching, setIsSearching] = useState(false)
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -82,7 +78,6 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     includeTraining = true,
     includeSOPs = true,
     limit = 20,
-    propertyId: explicitPropertyId,
     departmentId: explicitDepartmentId
   } = options
 
@@ -91,24 +86,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')
 
-  const userPropertyIds = uniqueStrings((properties || []).map((p) => p?.id))
   const userDepartmentIds = uniqueStrings((departments || []).map((d) => d?.id))
-
-  const scopedPropertyIds = (() => {
-    // If an explicit property is provided, ensure it's within the user's authorized properties
-    if (isRealPropertyId(explicitPropertyId)) {
-      if (isAdmin) return [explicitPropertyId]
-      if (userPropertyIds.includes(explicitPropertyId)) return [explicitPropertyId]
-      // Fallback to authorized properties if override is invalid/unauthorized
-    }
-    
-    if (isRealPropertyId(currentProperty?.id)) {
-      const id = currentProperty.id
-      if (isAdmin || userPropertyIds.includes(id)) return [id]
-    }
-    
-    return isAdmin && propertyIds.length === 0 ? [] : userPropertyIds
-  })()
 
   const scopedDepartmentIds = (() => {
     if (explicitDepartmentId) {
@@ -118,7 +96,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
   })()
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['global-search', query, options, user?.id, primaryRole, scopedPropertyIds, scopedDepartmentIds, roleValues, currentOrganization?.id, isPlatformScope],
+    queryKey: ['global-search', query, options, user?.id, primaryRole, scopedDepartmentIds, roleValues, currentOrganization?.id, isPlatformScope],
     queryFn: async () => {
       if (!query.trim()) return []
 
@@ -158,7 +136,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const runDocumentQuery = async (mutate) => {
               let q = supabase
                 .from('documents')
-                .select('id, title, description, status, visibility, property_id, department_id, role, created_by')
+                .select('id, title, description, status, visibility, department_id, role, created_by')
                 .eq('is_deleted', false)
                 .or(textFilter)
                 .limit(documentLimit)
@@ -177,11 +155,10 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               queryResults.push(result)
             }
 
-            await runDocumentQuery((q) => q.eq('visibility', 'all_properties'))
-
-            if (scopedPropertyIds.length > 0) {
-              await runDocumentQuery((q) => applyIdsScope(q.eq('visibility', 'property'), 'property_id', scopedPropertyIds))
-            }
+            // Organization-wide documents. 'property' is the retired hotel-scoped
+            // visibility; the hotel-removal migration converts those rows, until
+            // then they are treated as organization-wide.
+            await runDocumentQuery((q) => q.in('visibility', ['all_properties', 'property']))
 
             if (scopedDepartmentIds.length > 0) {
               await runDocumentQuery((q) =>
@@ -286,7 +263,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const buildTrainingQuery = () => {
               let q = supabase
                 .from('courses')
-                .select('id, title, description, category, status, property_id')
+                .select('id, title, description, category, status')
                 .or(textFilter)
                 .limit(trainingLimit)
 
@@ -303,10 +280,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            trainingQueries.push(toPromise(buildTrainingQuery().is('property_id', null)))
-            if (scopedPropertyIds.length > 0) {
-              trainingQueries.push(toPromise(applyIdsScope(buildTrainingQuery(), 'property_id', scopedPropertyIds)))
-            }
+            trainingQueries.push(toPromise(buildTrainingQuery()))
 
             const trainingResults = await Promise.all(trainingQueries)
             const training = dedupeById(trainingResults.flatMap((result) => result.data || []))
@@ -342,7 +316,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const buildSopQuery = () => {
               let q = supabase
                 .from('documents')
-                .select('id, title, description, sop_code as category, current_version as version, property_id, department_id, status')
+                .select('id, title, description, sop_code as category, current_version as version, department_id, status')
                 .eq('content_type', 'sop')
                 .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
                 .limit(sopLimit)
@@ -360,10 +334,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            sopQueries.push(toPromise(buildSopQuery().is('property_id', null).is('department_id', null)))
-            if (scopedPropertyIds.length > 0) {
-              sopQueries.push(toPromise(applyIdsScope(buildSopQuery(), 'property_id', scopedPropertyIds)))
-            }
+            sopQueries.push(toPromise(buildSopQuery().is('department_id', null)))
             if (scopedDepartmentIds.length > 0) {
               sopQueries.push(toPromise(applyIdsScope(buildSopQuery(), 'department_id', scopedDepartmentIds)))
             }

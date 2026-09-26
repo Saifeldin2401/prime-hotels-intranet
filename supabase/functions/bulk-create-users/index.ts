@@ -59,7 +59,6 @@ type InputRow = {
   roleLevel: string;
   jobTitle: string;
   department: string;
-  property: string;
 };
 
 type JobTitleMatch = {
@@ -84,13 +83,6 @@ function normalizeDepartmentAlias(department: string): string {
   if (normalized === "operations") return "Management";
   if (normalized === "sales") return "Sales & Marketing";
   return department;
-}
-
-function normalizePropertyAlias(property: string): string {
-  const normalized = normalizeText(property);
-  if (normalized === "jeddah") return "__CITY_JEDDAH__";
-  if (normalized === "riyadh") return "__CITY_RIYADH__";
-  return property;
 }
 
 function normalizeText(value: string): string {
@@ -123,8 +115,9 @@ function parseCsv(csv: string): InputRow[] {
     "roleLevel",
     "jobTitle",
     "department",
-    "property",
   ];
+  // A "property" column from older templates is accepted and ignored:
+  // hotels were removed, people belong to the organization directly.
 
   for (const col of required) {
     if (!header.includes(col)) {
@@ -143,7 +136,6 @@ function parseCsv(csv: string): InputRow[] {
       roleLevel: get("roleLevel"),
       jobTitle: get("jobTitle"),
       department: get("department"),
-      property: get("property"),
     } satisfies InputRow;
   });
 }
@@ -238,119 +230,8 @@ function mapRoleLevel(roleLevel: string): AppRole {
   throw new Error(`Unknown roleLevel: ${roleLevel}`);
 }
 
-async function resolveProperties(
-  propertyCell: string,
-  organizationId: string,
-): Promise<{ ids: string[]; matches: NameMatch[]; errors: string[] }> {
-  const trimmed = propertyCell.trim();
-  if (!trimmed) return { ids: [], matches: [], errors: ["Missing property"] };
-
-  const normalizedAlias = normalizePropertyAlias(trimmed);
-
-  if (trimmed.toUpperCase() === "ALL") {
-    const { data, error } = await adminClient
-      .from("hotels")
-      .select("id,name")
-      .eq("organization_id", organizationId)
-      .eq("is_deleted", false);
-    if (error)
-      return {
-        ids: [],
-        matches: [],
-        errors: [`Failed to fetch properties: ${error.message}`],
-      };
-    const ids = ((data ?? []) as Array<{ id: string; name: string }>).map(
-      (p: { id: string; name: string }) => p.id,
-    );
-    return {
-      ids,
-      matches: [
-        {
-          input: "ALL",
-          matched: { id: "ALL", name: "ALL" },
-          score: 1,
-          candidates: [],
-          kind: "exact",
-        },
-      ],
-      errors: [],
-    };
-  }
-
-  if (
-    normalizedAlias === "__CITY_JEDDAH__" ||
-    normalizedAlias === "__CITY_RIYADH__"
-  ) {
-    const city = normalizedAlias === "__CITY_JEDDAH__" ? "Jeddah" : "Riyadh";
-    const { data, error } = await adminClient
-      .from("hotels")
-      .select("id,name")
-      .eq("organization_id", organizationId)
-      .eq("is_deleted", false)
-      .ilike("name", `%${city}%`);
-
-    if (error) {
-      return {
-        ids: [],
-        matches: [],
-        errors: [`Failed to fetch ${city} properties: ${error.message}`],
-      };
-    }
-
-    const rows = (data ?? []) as Array<{ id: string; name: string }>;
-    if (rows.length === 0) {
-      return {
-        ids: [],
-        matches: [],
-        errors: [`No properties matched city: ${city}`],
-      };
-    }
-
-    const ids = rows.map((p: { id: string; name: string }) => p.id);
-    return {
-      ids: Array.from(new Set(ids)),
-      matches: [
-        {
-          input: city,
-          matched: { id: `CITY:${city.toUpperCase()}`, name: `${city} (all)` },
-          score: 1,
-          candidates: rows.map((p: { id: string; name: string }) => ({
-            id: p.id,
-            name: p.name,
-            score: 1,
-          })),
-          kind: "exact",
-        },
-      ],
-      errors: [],
-    };
-  }
-
-  const parts = trimmed
-    .split("|")
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0);
-
-  const ids: string[] = [];
-  const matches: NameMatch[] = [];
-  const errors: string[] = [];
-
-  for (const part of parts) {
-    const m = await fuzzyResolveByName("hotels", part, organizationId);
-    matches.push(m);
-    if (!m.matched) {
-      errors.push(`Property not found: ${part}`);
-      continue;
-    }
-    ids.push(m.matched.id);
-  }
-
-  return { ids: Array.from(new Set(ids)), matches, errors };
-}
-
 async function resolveDepartment(
   departmentCell: string,
-  propertyIds: string[],
   organizationId: string,
 ): Promise<{ ids: string[]; match: NameMatch; errors: string[] }> {
   const trimmed = departmentCell.trim();
@@ -368,37 +249,9 @@ async function resolveDepartment(
     };
   }
 
-  const match = await fuzzyResolveDepartment(trimmed, propertyIds, organizationId);
+  const match = await fuzzyResolveDepartment(trimmed, organizationId);
   if (!match.matched) {
     return { ids: [], match, errors: [`Department not found: ${trimmed}`] };
-  }
-
-  // If propertyIds includes multiple properties, assign the resolved department ID(s) per property
-  // by selecting best match per property.
-  if (propertyIds.length > 1) {
-    const ids: string[] = [];
-    const candidates: { id: string; name: string; score: number }[] = [];
-
-    for (const propertyId of propertyIds) {
-      const perProp = await fuzzyResolveDepartment(trimmed, [propertyId], organizationId);
-      if (perProp.matched) {
-        ids.push(perProp.matched.id);
-        candidates.push(
-          ...perProp.candidates.map(
-            (c: { id: string; name: string; score: number }) => ({ ...c }),
-          ),
-        );
-      }
-    }
-
-    return {
-      ids: Array.from(new Set(ids)),
-      match: { ...match, candidates },
-      errors:
-        ids.length === 0
-          ? [`Department not found for any property: ${trimmed}`]
-          : [],
-    };
   }
 
   return { ids: [match.matched.id], match, errors: [] };
@@ -406,31 +259,19 @@ async function resolveDepartment(
 
 async function fuzzyResolveDepartment(
   name: string,
-  propertyIds: string[],
   organizationId: string,
 ): Promise<NameMatch> {
   const normalizedInput = normalizeText(name);
 
   // Exact (normalized) match first, scoped to organization_id.
   {
-    let query = adminClient
+    const { data } = await adminClient
       .from("departments")
-      .select("id,name,property_id")
+      .select("id,name")
       .eq("organization_id", organizationId)
       .eq("is_deleted", false);
-    if (propertyIds.length > 0) {
-      query = query.in("property_id", propertyIds);
-    }
-    const { data } = await query;
-    const exact = (
-      (data ?? []) as Array<{
-        id: string;
-        name: string;
-        property_id: string | null;
-      }>
-    ).find(
-      (d: { id: string; name: string; property_id: string | null }) =>
-        normalizeText(d.name) === normalizedInput,
+    const exact = ((data ?? []) as Array<{ id: string; name: string }>).find(
+      (d) => normalizeText(d.name) === normalizedInput,
     );
     if (exact) {
       return {
@@ -454,43 +295,6 @@ async function fuzzyResolveDepartment(
     candidates: [],
     kind: "none",
   };
-}
-
-async function fuzzyResolveByName(
-  table: "hotels",
-  input: string,
-  organizationId: string,
-): Promise<NameMatch> {
-  const normalizedInput = normalizeText(input);
-
-  const { data: allRows, error: allError } = await adminClient
-    .from(table)
-    .select("id,name")
-    .eq("organization_id", organizationId)
-    .eq("is_deleted", false);
-
-  if (allError) {
-    return { input, matched: null, score: null, candidates: [], kind: "none" };
-  }
-
-  const exact = ((allRows ?? []) as Array<{ id: string; name: string }>).find(
-    (r: { id: string; name: string }) =>
-      normalizeText(r.name) === normalizedInput,
-  );
-  if (exact) {
-    return {
-      input,
-      matched: { id: exact.id, name: exact.name },
-      score: 1,
-      candidates: [],
-      kind: "exact",
-    };
-  }
-
-  // The fuzzy-matching RPC (search_properties_by_similarity) this used to
-  // fall back to no longer exists in the schema, so an unmatched property
-  // name is reported as not found rather than approximately guessed at.
-  return { input, matched: null, score: null, candidates: [], kind: "none" };
 }
 
 async function resolveJobTitle(input: string): Promise<JobTitleMatch> {
@@ -605,7 +409,6 @@ Deno.serve(async (req: Request) => {
           "organization_owner",
           "organization_admin",
           "brand_admin",
-          "hotel_admin",
           "training_manager",
         ].includes(callerMembership.role)
       ) {
@@ -646,8 +449,6 @@ Deno.serve(async (req: Request) => {
     const results: Array<
       InputRow & {
         mappedRole: AppRole | null;
-        propertyIds: string[];
-        propertyMatches: NameMatch[];
         departmentIds: string[];
         departmentMatch: NameMatch;
         jobTitleMatch: JobTitleMatch;
@@ -671,12 +472,8 @@ Deno.serve(async (req: Request) => {
         errors.push(e instanceof Error ? e.message : String(e));
       }
 
-      const prop = await resolveProperties(row.property, targetOrgId);
-      errors.push(...prop.errors);
-
       const dept = await resolveDepartment(
         normalizeDepartmentAlias(row.department),
-        prop.ids,
         targetOrgId,
       );
       errors.push(...dept.errors);
@@ -689,8 +486,6 @@ Deno.serve(async (req: Request) => {
       results.push({
         ...row,
         mappedRole,
-        propertyIds: prop.ids,
-        propertyMatches: prop.matches,
         departmentIds: dept.ids,
         departmentMatch: dept.match,
         jobTitleMatch,
@@ -710,8 +505,7 @@ Deno.serve(async (req: Request) => {
           requiresApproval: results.some(
             (r) =>
               r.jobTitleMatch.kind === "fuzzy" ||
-              r.departmentMatch.kind === "fuzzy" ||
-              r.propertyMatches.some((m) => m.kind === "fuzzy"),
+              r.departmentMatch.kind === "fuzzy",
           ),
         }),
         {
@@ -774,7 +568,6 @@ Deno.serve(async (req: Request) => {
             phone: null,
             jobTitle: r.jobTitleMatch.matched ?? r.jobTitle,
             role: r.mappedRole,
-            propertyIds: r.propertyIds,
             departmentIds: r.departmentIds,
             reportingTo: null,
             organizationId: targetOrgId,

@@ -209,5 +209,12 @@
         "removed_success_desc": "Document has been excluded from AI vector retrieval and public knowledge searches.",
         "internal_success_title": "Marked as Internal Only",
         "internal_success_desc": "Document is approved for internal reference but strictly excluded from AI knowledge retrieval."
+    },
+    "page": {
+        "eyebrow": "Knowledge",
+        "context": "{{count}} files · {{used}} GB used",
+        "view": "View",
+        "listView": "List view",
+        "gridView": "Grid view"
     }
 }

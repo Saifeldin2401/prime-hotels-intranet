@@ -27,7 +27,6 @@ export const userSchema = z.object({
   job_title: z.string().optional(),
   staff_id: z.string().optional(),
   is_active: z.boolean().default(true),
-  property_ids: z.array(uuidSchema).default([]),
   department_ids: z.array(uuidSchema).default([]),
   role: z.enum([
     'administrator',
@@ -49,16 +48,7 @@ export const userSchema = z.object({
   }),
   reporting_to: uuidSchema.optional()
 }).superRefine((data, ctx) => {
-  const propertyRequiredRoles = new Set(['property_manager', 'property_hr', 'department_head', 'manager', 'staff'])
   const departmentRequiredRoles = new Set(['department_head', 'manager', 'staff'])
-
-  if (propertyRequiredRoles.has(data.role) && data.property_ids.length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Select at least one property',
-      path: ['property_ids']
-    })
-  }
 
   if (departmentRequiredRoles.has(data.role) && data.department_ids.length === 0) {
     ctx.addIssue({
@@ -77,10 +67,9 @@ export const documentSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(200, 'Title is too long'),
   description: z.string().max(2000, 'Description is too long').optional(),
   category: z.string().optional(),
-  property_id: uuidSchema.optional(),
   department_id: uuidSchema.optional(),
   requires_acknowledgment: z.boolean().default(false),
-  visibility: z.enum(['all_properties', 'property', 'department', 'role']).default('all_properties'),
+  visibility: z.enum(['all_properties', 'department', 'specific_departments', 'role']).default('all_properties'),
   file: z.instanceof(File, { message: 'Please select a file' }).refine((file) => {
     // File size limit: 50MB
     const maxSize = 50 * 1024 * 1024
@@ -117,11 +106,4 @@ export const documentSchema = z.object({
     })
   }
 
-  if (data.visibility === 'property' && !data.property_id) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: 'Property is required when visibility is set to Specific Property',
-      path: ['property_id']
-    })
-  }
 })

@@ -17,6 +17,7 @@ import { analytics } from '@/services/analyticsService'
 import { auditLog } from '@/lib/auditLog'
 import { classifyAuthError, getErrorMessage } from '@/lib/authErrorUtils'
 import { recordAuthEvent } from '@/lib/authMonitor'
+import { queryClient } from '@/lib/queryClient'
 import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
 import {
   getAccountLockoutStatus,
@@ -56,6 +57,7 @@ interface SignInResult {
 
 interface AuthActionsContextType {
   signIn: (email: string, password: string, captchaToken?: string) => Promise<SignInResult>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
 }
@@ -64,6 +66,7 @@ const AuthActionsContext = createContext<AuthActionsContextType | undefined>(und
 
 const FALLBACK_AUTH_ACTIONS: AuthActionsContextType = {
   signIn: async () => ({ error: new Error('Auth not initialized') }),
+  signInWithGoogle: async () => ({ error: new Error('Auth not initialized') }),
   signOut: async () => {},
   refreshSession: async () => {},
 }
@@ -213,8 +216,10 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(`active_tenant_id_${identityContext.user.id}`)
       }
       sessionStorage.removeItem('altus_session_active')
+      queryClient.cancelQueries()
+      queryClient.clear()
     } catch {
-      // Ignore storage errors
+      // Ignore storage and query client errors
     }
 
     await logSecurityEvent('logout.user_initiated', {
@@ -287,11 +292,37 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [clearLocalSession, identityContext, userDataContext, securityContext])
 
+  // ── Sign In With Google (OAuth) ───────────────────────────────────────────
+  const signInWithGoogle = useCallback(async (): Promise<{ error: Error | null }> => {
+    try {
+      const redirectTo = `${window.location.origin}/login`
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      })
+      if (error) {
+        log.error('[AuthActions] Google sign-in failed:', error)
+        return { error }
+      }
+      return { error: null }
+    } catch (err) {
+      log.error('[AuthActions] Unexpected error in signInWithGoogle:', err)
+      return { error: err instanceof Error ? err : new Error('Failed to sign in with Google') }
+    }
+  }, [])
+
   const value = useMemo(() => ({
     signIn,
+    signInWithGoogle,
     signOut,
     refreshSession,
-  }), [signIn, signOut, refreshSession])
+  }), [signIn, signInWithGoogle, signOut, refreshSession])
 
   return (
     <AuthActionsContext.Provider value={value}>

@@ -76,7 +76,8 @@
         "views": "مشاهدات",
         "min_read": "دقائق قراءة",
         "updated": "تم التحديث",
-        "updated_at": "تم التحديث في {{date}}"
+        "updated_at": "تم التحديث في {{date}}",
+        "min_read_n": "{{count}} دقيقة قراءة"
     },
     "viewer": {
         "ask_ai_title": "اسأل الذكاء الاصطناعي",
@@ -113,8 +114,8 @@
         "acknowledge_title": "الإقرار على المستند",
         "acknowledge_desc": "قم بتأكيد قراءتك وفهمك لهذا المحتوى.",
         "i_acknowledge": "أقر بذلك",
-        "already_acknowledged": "تم الإقرار على المقال",
-        "acknowledged_on": "لقد أقررت على هذا في {{date}}",
+        "already_acknowledged": "تم الإقرار",
+        "acknowledged_on": "أقررت بهذا في {{date}}",
         "discussion": "المناقشة",
         "leave_comment": "اترك تعليقاً...",
         "post": "نشر",
@@ -175,7 +176,9 @@
         "master_sop": "إجراء التشغيل القياسي الرئيسي",
         "property_specific": "خاص بالمنشأة",
         "release_notes_desc": "أهم التحديثات التشغيلية والتوجيهات الإجرائية القياسية المضافة في هذه المراجعة.",
-        "release_notes_title": "ملاحظات إصدار المراجعة والإرشادات"
+        "release_notes_title": "ملاحظات إصدار المراجعة والإرشادات",
+        "acknowledge_required": "قراءة إلزامية: اقرأ حتى النهاية وأكّد أنك فهمت المحتوى.",
+        "reading_time": "مدة القراءة"
     },
     "feedback": {
         "helpful": "هل كان هذا المقال مفيداً؟",
@@ -264,7 +267,12 @@
         "linked_video": "الفيديو المرتبط",
         "unlink_video": "إزالة الفيديو",
         "replace_video": "استبدال الفيديو",
-        "video_preview": "معاينة الفيديو"
+        "video_preview": "معاينة الفيديو",
+        "tabs": {
+            "write": "الكتابة",
+            "checklists": "قوائم التحقق والضوابط",
+            "preview_short": "معاينة"
+        }
     },
     "browse": {
         "title": "تصفح قاعدة المعرفة",
@@ -480,5 +488,93 @@
     "common": {
         "no_data": "لا توجد بيانات"
     },
-    "required_reading": "القراءة الإلزامية"
+    "required_reading": "القراءة الإلزامية",
+    "hub": {
+        "eyebrow": "المعرفة",
+        "title": "ماذا تحتاج أن تعرف؟",
+        "searchLabel": "البحث في المعرفة",
+        "searchPlaceholder": "ابحث في إجراءات التشغيل والأدلة والسياسات - مثلاً \"المغادرة المتأخرة\"",
+        "clearSearch": "مسح البحث",
+        "filter": {
+            "all": "الكل",
+            "sop": "إجراءات التشغيل",
+            "guide": "الأدلة",
+            "policy": "السياسات",
+            "required": "قراءة إلزامية",
+            "saved": "المحفوظة"
+        },
+        "scopeLine": "عرض المعرفة لـ {{scope}}",
+        "resultsFor": "{{count}} نتيجة لـ \"{{q}}\"",
+        "resultsCount": "{{count}} مقالة",
+        "noResults": "لا توجد مقالات تطابق \"{{q}}\"",
+        "noResultsFilter": "لا توجد مقالات هنا بعد",
+        "noResultsHotel": "لا يوجد ما يطابق في {{hotel}}. جرّب كلمات أقل أو نوعاً آخر أو كل الفنادق.",
+        "noResultsHint": "جرّب كلمات أقل أو نوعاً آخر. إذا كان يجب وجود إجراء تشغيل، أبلغ مدير المعرفة.",
+        "clearFilters": "مسح البحث والتصفية",
+        "emptyTitle": "لم تُنشر أي معرفة بعد",
+        "emptyAuthor": "اكتب أول إجراء تشغيل أو دليل أو سياسة لفرقك.",
+        "emptyLearner": "لم تنشر مؤسستك أي مقالات بعد.",
+        "writeFirst": "اكتب مقالاً",
+        "requiredTitle": "قراءة إلزامية",
+        "requiredHint": "اقرأ هذه المقالات وأكّد أنك فهمتها.",
+        "roleTitle": "ذات صلة بدورك",
+        "latestTitle": "الأحدث في مؤسستك",
+        "roleEmpty": "لا توجد مقالات موجهة لقسمك بعد.",
+        "recentTitle": "حُدّثت مؤخراً",
+        "popularTitle": "الأكثر استخداماً بين الزملاء",
+        "popularEmpty": "تظهر المقالات الشائعة هنا عندما يبدأ الزملاء بالقراءة.",
+        "reviewTitle": "تجاوزت موعد المراجعة",
+        "openReview": "فتح قائمة المراجعة",
+        "required": "إلزامي",
+        "owner": "المالك",
+        "version": "الإصدار",
+        "effective": "ساري من",
+        "reviewed": "آخر مراجعة",
+        "appliesTo": "ينطبق على",
+        "reviewOverdue": "المراجعة متأخرة",
+        "current": "ساري",
+        "scope": {
+            "global": "كل المؤسسات",
+            "organization": "المؤسسة بالكامل",
+            "brand": "العلامة",
+            "hotel": "الفندق",
+            "department": "القسم"
+        }
+    },
+    "content_types_short": {
+        "sop": "إجراء تشغيل",
+        "policy": "سياسة",
+        "guide": "دليل",
+        "checklist": "قائمة تحقق",
+        "reference": "مرجع",
+        "faq": "أسئلة شائعة",
+        "video": "فيديو",
+        "visual": "مرئي",
+        "document": "مستند"
+    },
+    "quizBank": {
+        "eyebrow": "الاستوديو",
+        "title": "الاختبارات والأسئلة",
+        "context": "اكتب الأسئلة مرة واحدة ثم أعد استخدامها في الاختبارات ونقاط التحقق داخل الدورات.",
+        "generate": "إنشاء من مستند",
+        "newQuiz": "اختبار جديد",
+        "questions": "الأسئلة",
+        "quizzes": "الاختبارات"
+    },
+    "articleReview": {
+        "eyebrow": "الاستوديو · المراجعة",
+        "title": "مراجعة المقالات",
+        "context": "اقرأ الإجراءات المرسلة، ثم انشرها أو أعدها مع ملاحظات.",
+        "waiting": "بانتظار المراجعة",
+        "returned": "معادة",
+        "drafts": "مسودات",
+        "published": "منشورة",
+        "all": "الكل"
+    },
+    "articleLibrary": {
+        "eyebrow": "الاستوديو",
+        "title": "المقالات",
+        "context": "كل إجراء وسياسة ودليل في مؤسستك: المسودات وما قيد المراجعة والمنشور.",
+        "draftWithAi": "صياغة بالذكاء الاصطناعي"
+    }
 }

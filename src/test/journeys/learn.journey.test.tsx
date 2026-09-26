@@ -21,14 +21,16 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useAuth', () => ({ useAuth: vi.fn() }))
 vi.mock('@/hooks/useCertificates', () => ({ useMyCertificates: vi.fn() }))
-vi.mock('@/hooks/useKnowledge', () => ({ useBookmarks: vi.fn() }))
+vi.mock('@/hooks/useKnowledge', () => ({ useBookmarks: vi.fn(), useArticles: vi.fn(), useRequiredReading: vi.fn() }))
+vi.mock('@/hooks/useAccountContext', () => ({ useAccountContext: () => ({ tenantMemberships: [] }) }))
+vi.mock('@/contexts/TenantContext', () => ({ useTenant: () => ({ currentOrganization: { id: 'org-1' } }) }))
 vi.mock('@/hooks/useLearningProgress', () => ({ useLearningProgress: vi.fn() }))
 vi.mock('@/hooks/useTraining', () => ({ useMyAssignments: vi.fn() }))
 
 import LearnerHome from '@/pages/home/LearnerHome'
 import { useAuth } from '@/hooks/useAuth'
 import { useMyCertificates } from '@/hooks/useCertificates'
-import { useBookmarks } from '@/hooks/useKnowledge'
+import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useMyAssignments } from '@/hooks/useTraining'
 import { learningService } from '@/services/learningService'
@@ -47,6 +49,8 @@ function setup(overrides: Partial<Record<string, unknown>> = {}) {
     vi.mocked(useMyAssignments).mockReturnValue((overrides.assignments ?? queryOk([])) as never)
     vi.mocked(useMyCertificates).mockReturnValue((overrides.certificates ?? queryOk([])) as never)
     vi.mocked(useBookmarks).mockReturnValue((overrides.bookmarks ?? queryOk([])) as never)
+    vi.mocked(useArticles).mockReturnValue((overrides.articles ?? queryOk([])) as never)
+    vi.mocked(useRequiredReading).mockReturnValue((overrides.reading ?? queryOk([])) as never)
 }
 
 beforeEach(() => vi.clearAllMocks())
@@ -57,7 +61,7 @@ describe('journey: learn', () => {
         renderJourney(<LearnerHome />, { route: '/learn' })
         expect(screen.getByRole('heading', { level: 1, name: /Dana/ })).toBeInTheDocument()
         const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-        expect(headings).toEqual(['Required now', 'Due soon', 'Saved knowledge', 'Your record'])
+        expect(headings).toEqual(['Required now', 'Due soon', 'Latest knowledge', 'Saved knowledge', 'Your record'])
         // Only the member's own progress is requested, never the organization's.
         expect(useLearningProgress).toHaveBeenCalledWith({ userId: USER_ID })
     })
@@ -151,6 +155,21 @@ describe('journey: learn', () => {
         expect(within(dueSoon).getByText('Soon Course')).toBeInTheDocument()
         expect(screen.queryByText('Far Course')).not.toBeInTheDocument()
         expect(screen.queryByText('Done Course')).not.toBeInTheDocument()
+    })
+
+    it('step 5b: unacknowledged required reading joins Required now', () => {
+        setup({
+            reading: queryOk([
+                { document_id: 'doc-1', title: 'Fire Evacuation SOP', content_type: 'sop', is_acknowledged: false },
+                { document_id: 'doc-2', title: 'Already Read SOP', content_type: 'sop', is_acknowledged: true },
+            ]),
+        })
+        renderJourney(<LearnerHome />, { route: '/learn' })
+        const required = screen.getByRole('region', { name: 'Required now' })
+        expect(within(required).getByText('Fire Evacuation SOP')).toBeInTheDocument()
+        expect(within(required).queryByText('Already Read SOP')).not.toBeInTheDocument()
+        expect(within(required).getByRole('link', { name: /Read and acknowledge/ })).toHaveAttribute('href', '/knowledge/doc-1')
+        expect(screen.getByText('{{count}} actions need your attention')).toBeInTheDocument()
     })
 
     it('step 6: submitQuizProgress exposes training progress mutation', () => {

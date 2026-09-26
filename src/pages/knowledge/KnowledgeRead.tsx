@@ -273,16 +273,8 @@ export default function KnowledgeRead() {
         }
     }, [article?.id, htmlContent, htmlContentAr, translatedData?.content, showBilingual])
 
-    const canEdit = !!user && !!article && hasPermission(
-        'documents.edit',
-        article.property_id ?? undefined,
-        article.department_id ?? undefined
-    )
-    const canDelete = !!user && !!article && hasPermission(
-        'documents.delete',
-        article.property_id ?? undefined,
-        article.department_id ?? undefined
-    )
+    const canEdit = !!user && !!article && hasPermission('documents.edit', article.department_id ?? undefined)
+    const canDelete = !!user && !!article && hasPermission('documents.delete', article.department_id ?? undefined)
 
     // Delete function
     const handleDelete = async () => {
@@ -1071,7 +1063,7 @@ export default function KnowledgeRead() {
 
             {/* Header - Back Navigation & Actions */}
             <div className={cn(
-                "bg-card/90 backdrop-blur-xl border-b border-border/80 text-card-foreground sticky top-0 z-40 kb-focus-transition kb-action-blur print:hidden",
+                "bg-ds-surface border-b border-ds-border text-ds-ink sticky top-14 z-30 kb-focus-transition print:hidden",
                 isFocusMode && "-translate-y-full opacity-0"
             )}>
                 <div className="max-w-[1400px] mx-auto px-3 py-2.5 sm:px-4 sm:py-3">
@@ -1289,7 +1281,7 @@ export default function KnowledgeRead() {
                 shouldUseRtl={shouldUseRtl}
                 readingTime={readingTime}
                 className={cn(
-                    "kb-article-header py-8 md:py-16 border-b border-slate-200/60 kb-focus-transition",
+                    "kb-article-header pt-10 sm:pt-14 kb-focus-transition",
                     isFocusMode && "opacity-0 -translate-y-8 pointer-events-none"
                 )}
             />
@@ -1303,7 +1295,7 @@ export default function KnowledgeRead() {
                     <div className="text-center">
                         <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
                         <p className="text-sm text-gray-600">
-                            Altus Advisory - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
+                            Altus Connect · Knowledge | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
                         </p>
                     </div>
                 </div>
@@ -1633,51 +1625,44 @@ export default function KnowledgeRead() {
                             </CardContent>
                         </Card>
 
-                        {/* Acknowledgment & Feedback - Horizontal Layout */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:hidden">
-                            {/* Acknowledgment */}
+                        {/* Conclusion: the reader's acknowledgement, then feedback */}
+                        <div className="space-y-6 print:hidden">
                             {article.requires_acknowledgment && (
-                                <Card className={cn(
-                                    "border-none shadow-md overflow-hidden relative transition-all duration-300",
-                                    article.is_acknowledged ? "bg-emerald-50/50" : "bg-indigo-50/50"
-                                )}>
-                                    <div className={cn(
-                                        "absolute top-0 start-0 w-1 h-full",
-                                        article.is_acknowledged ? "bg-emerald-500" : "bg-indigo-500"
-                                    )} />
-                                    <CardContent className="p-6">
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={cn(
-                                                    "h-10 w-10 rounded-full flex items-center justify-center",
-                                                    article.is_acknowledged ? "bg-emerald-100 text-emerald-600" : "bg-indigo-100 text-indigo-600"
-                                                )}>
-                                                    {article.is_acknowledged ? <CheckCircle2 className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-slate-900">
-                                                        {article.is_acknowledged ? t('viewer.already_acknowledged', 'Article Acknowledged') : t('viewer.acknowledge_title')}
-                                                    </p>
-                                                    <p className="text-xs text-slate-500">
-                                                        {article.is_acknowledged
-                                                            ? t('viewer.acknowledged_on', 'Completed on {{date}}', { date: new Date(article.acknowledged_at!).toLocaleDateString() })
-                                                            : t('viewer.acknowledge_desc')}
-                                                    </p>
-                                                </div>
+                                <section
+                                    aria-labelledby="kb-ack"
+                                    className={cn(
+                                        "border-y-2 px-1 py-6",
+                                        article.is_acknowledged ? "border-ds-success" : "border-ds-ink"
+                                    )}
+                                >
+                                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex items-start gap-3">
+                                            {article.is_acknowledged
+                                                ? <CheckCircle2 aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-ds-success" />
+                                                : <ShieldCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-ds-ink" />}
+                                            <div>
+                                                <h2 id="kb-ack" className="text-base font-semibold text-ds-ink">
+                                                    {article.is_acknowledged ? t('viewer.already_acknowledged', 'Acknowledged') : t('viewer.acknowledge_title')}
+                                                </h2>
+                                                <p className="mt-0.5 text-sm text-ds-ink-secondary">
+                                                    {article.is_acknowledged
+                                                        ? t('viewer.acknowledged_on', 'You acknowledged this on {{date}}', { date: new Date(article.acknowledged_at!).toLocaleDateString() })
+                                                        : t('viewer.acknowledge_desc')}
+                                                </p>
                                             </div>
-                                            {!article.is_acknowledged && (
-                                                <Button
-                                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-11"
-                                                    onClick={() => acknowledgeArticle.mutate(id!)}
-                                                    disabled={acknowledgeArticle.isPending}
-                                                >
-                                                    {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <Zap className="h-4 w-4 me-2" />}
-                                                    {t('viewer.i_acknowledge')}
-                                                </Button>
-                                            )}
                                         </div>
-                                    </CardContent>
-                                </Card>
+                                        {!article.is_acknowledged && (
+                                            <Button
+                                                className="h-12 shrink-0 rounded-md bg-ds-ink px-6 text-ds-on-ink hover:bg-ds-ink/90"
+                                                onClick={() => acknowledgeArticle.mutate(id!)}
+                                                disabled={acknowledgeArticle.isPending}
+                                            >
+                                                {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <CheckCircle2 className="h-4 w-4 me-2" />}
+                                                {t('viewer.i_acknowledge')}
+                                            </Button>
+                                        )}
+                                    </div>
+                                </section>
                             )}
 
                             {/* Feedback Section */}

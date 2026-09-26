@@ -67,10 +67,18 @@ acceptable is new database access in `src/pages` or `src/components`
 | Workspace | Home (post-login landing) | Canonical routes |
 | --- | --- | --- |
 | Learn | `/learn` - learners | `/learn`, `/learn/my`, `/learn/courses[/:id]`, `/learn/paths`, `/learn/player/:id`, `/learn/quizzes/:id`, `/learn/certificates`, `/knowledge[/:id]`, `/documents[/:id]` (attachments, not in navigation) |
-| Studio | `/studio` - authors, knowledge managers, instructors | `/studio`, `/studio/courses/:id`, `/studio/quizzes[/new\|/generate\|/:id]`, `/studio/questions/...`, `/studio/articles/new`, `/studio/articles/:id/edit`, `/studio/review[/articles]`, `/studio/media` |
-| Manage | `/manage` (= `/manage/compliance`) - training and department managers | `/manage/compliance`, `/manage/assignments[/rules]`, `/manage/team`, `/manage/certificates[/issue]`, `/manage/reports[/builder]`, `/manage/skills` |
-| Organization | `/admin/organization` - organization, brand and hotel admins | `/admin/organization`, `/admin/users[/bulk]`, `/admin/invitations`, `/admin/properties`, `/admin/settings`, `/admin/audit`, `/admin/pii-access`, `/admin/export`, `/admin/notifications`, `/admin/wizards` |
-| Platform | `/platform` - operators | `/platform/*` |
+| Studio | `/studio` - authors, knowledge managers, instructors | `/studio` (my content), `/studio/courses` (library), `/studio/create`, `/studio/articles`, `/studio/courses/:id`, `/studio/quizzes[/new\|/generate\|/:id]`, `/studio/questions/...`, `/studio/articles/new`, `/studio/articles/:id/edit`, `/studio/review[/articles]`, `/studio/media` |
+| Manage | `/manage` (= `/manage/risk`) - training and department managers | `/manage/risk`, `/manage/compliance`, `/manage/tracking`, `/manage/assignments[/rules]`, `/manage/team`, `/manage/certificates[/issue]`, `/manage/reports[/builder]`, `/manage/skills` |
+| Organization | `/admin/organization` (overview) - organization, brand and hotel admins | `/admin/organization`, `/admin/structure` (hotels & departments), `/admin/users[/bulk]`, `/admin/invitations`, `/admin/properties`, `/admin/settings`, `/admin/audit`, `/admin/pii-access`, `/admin/export`, `/admin/notifications`, `/admin/wizards` |
+| Platform | `/platform` (exceptions) - operators | `/platform/*`, `/platform/control-center` (statistics) |
+
+The shell lives in `src/app/shell/` (workspace rail, top bar with the
+organization › hotel · role context, context switcher). New workspace pages
+live in `src/features/<domain>/pages` with their `api.ts`, `hooks.ts` and
+`model.ts` (examples: `features/manage`, `features/organization`,
+`features/platform`, `features/studio`, `features/knowledge`, `features/learn`).
+Workspace homes are exception queues backed by one read-only, permission-checked
+function each: `get_risk_queue`, `get_org_setup_gaps`, `get_platform_exceptions`.
 
 Account utilities (`/profile`, `/settings`, `/search`, `/notifications`) keep
 the current workspace. `/dashboard` is not a page: it redirects to the

@@ -6,20 +6,17 @@
  * on them. Skill-centric layout: lowest-coverage skills first, expand to see who's missing it.
  */
 
-import { PageHeader } from '@/components/layout/PageHeader'
+import { WorkspaceHeader } from '@/ui'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useDepartments } from '@/hooks/useDepartments'
-import { useProperty } from '@/contexts/PropertyContext'
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
-import { Award, CheckCircle2, ShieldCheck, Users, XCircle } from 'lucide-react'
+import { CheckCircle2, Users, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -34,14 +31,11 @@ interface SkillRow {
 }
 
 export default function SkillsMatrix() {
-    const { t, i18n } = useTranslation('training')
-    const isRTL = i18n.dir() === 'rtl'
+    const { t } = useTranslation('training')
     const [departmentFilter, setDepartmentFilter] = useState<string>('all')
     const [myTeamOnly, setMyTeamOnly] = useState(false)
-    const { currentProperty } = useProperty()
     const { departments } = useDepartments()
 
-    const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty!.id : null
     const departmentId = departmentFilter !== 'all' ? departmentFilter : null
 
     const { data: managedDepartments } = useQuery({
@@ -55,11 +49,10 @@ export default function SkillsMatrix() {
     const isManager = !!managedDepartments && managedDepartments.length > 0
 
     const { data: skillRows, isLoading } = useQuery({
-        queryKey: ['skills-matrix', departmentId, propertyId, myTeamOnly],
+        queryKey: ['skills-matrix', departmentId, myTeamOnly],
         queryFn: async (): Promise<SkillRow[]> => {
             const { data, error } = await supabase.rpc('get_skills_matrix', {
                 p_department_id: departmentId,
-                p_property_id: propertyId,
                 p_my_team_only: myTeamOnly
             })
             if (error) throw error
@@ -115,88 +108,51 @@ export default function SkillsMatrix() {
     }, [skillRows])
 
     return (
-        <div className={`space-y-6 ${isRTL ? 'text-end' : 'text-start'}`}>
-            <PageHeader
-                title={t('skills.matrixTitle', 'Skills Matrix')}
-                description={t('skills.matrixDescription', 'Coverage and gaps across your team, based on skills earned through training completion.')}
-                actions={
-                    <div className="flex items-center gap-3">
-                        {isManager && (
-                            <Button
-                                variant={myTeamOnly ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                    setMyTeamOnly(prev => !prev)
-                                    setDepartmentFilter('all')
-                                }}
-                                className={myTeamOnly ? 'bg-hotel-navy hover:bg-hotel-navy-dark' : ''}
-                            >
-                                <Users className="w-4 h-4 me-1.5" />
-                                {t('analytics.myTeam', 'My Team')}
-                            </Button>
-                        )}
-                        <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={myTeamOnly}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">{t('analytics.allDepartments', 'All Departments')}</SelectItem>
-                                {departments.map((dept) => (
-                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                }
+        <div className="mx-auto max-w-6xl space-y-8">
+            <WorkspaceHeader
+                eyebrow={t('skillsPage.eyebrow', 'Manage')}
+                title={t('skills.matrixTitle', 'Skills matrix')}
+                context={t('skills.matrixDescription', 'Coverage and gaps across your team, based on skills earned through training completion.')}
             />
 
+            <div role="group" aria-label={t('trends.filters', 'Filters')} className="flex flex-wrap items-center gap-2">
+                {isManager && (
+                    <button
+                        type="button"
+                        aria-pressed={myTeamOnly}
+                        onClick={() => { setMyTeamOnly((prev) => !prev); setDepartmentFilter('all') }}
+                        className={`inline-flex min-h-[40px] items-center gap-1.5 rounded-full border px-3.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent ${myTeamOnly ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong'}`}
+                    >
+                        <Users aria-hidden="true" className="h-4 w-4" />{t('analytics.myTeam', 'My team')}
+                    </button>
+                )}
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={myTeamOnly}>
+                    <SelectTrigger className="min-h-[40px] w-[200px]" aria-label={t('trends.department', 'Department')}>
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">{t('analytics.allDepartments', 'All departments')}</SelectItem>
+                        {departments.map((dept) => (
+                            <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
             {summary && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">{t('staff', 'Staff')}</p>
-                                    <p className="text-3xl font-bold mt-1">{summary.totalUsers}</p>
-                                </div>
-                                <Users className="w-6 h-6 text-blue-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">{t('skills.tracked', 'Skills Tracked')}</p>
-                                    <p className="text-3xl font-bold mt-1">{summary.totalSkills}</p>
-                                </div>
-                                <Award className="w-6 h-6 text-purple-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">{t('skills.avgCoverage', 'Avg Coverage')}</p>
-                                    <p className="text-3xl font-bold mt-1">{summary.avgCoverage}%</p>
-                                </div>
-                                <ShieldCheck className="w-6 h-6 text-green-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                    <Card className={summary.criticalGaps > 0 ? 'border-rose-200' : ''}>
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">{t('skills.criticalGaps', 'Critical Gaps (<50%)')}</p>
-                                    <p className="text-3xl font-bold mt-1">{summary.criticalGaps}</p>
-                                </div>
-                                <XCircle className="w-6 h-6 text-rose-600" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[6px] border border-ds-border bg-ds-border lg:grid-cols-4">
+                    {[
+                        { label: t('staff', 'Staff'), value: summary.totalUsers },
+                        { label: t('skills.tracked', 'Skills tracked'), value: summary.totalSkills },
+                        { label: t('skills.avgCoverage', 'Average coverage'), value: `${summary.avgCoverage}%` },
+                        { label: t('skills.criticalGaps', 'Critical gaps (<50%)'), value: summary.criticalGaps, danger: summary.criticalGaps > 0 },
+                    ].map((f) => (
+                        <div key={f.label} className="bg-ds-surface px-4 py-4">
+                            <dt className="text-xs text-ds-muted">{f.label}</dt>
+                            <dd className={`mt-1 font-mono text-2xl tabular-nums ${f.danger ? 'text-ds-danger' : 'text-ds-ink'}`}>{f.value}</dd>
+                        </div>
+                    ))}
+                </dl>
             )}
 
             <Card>
@@ -219,13 +175,13 @@ export default function SkillsMatrix() {
                                     value={skill.skillId}
                                     className={cn(
                                         "rounded-lg border px-4",
-                                        skill.coverageRate < 50 ? "border-rose-200 bg-rose-50/40" : "border-slate-200"
+                                        skill.coverageRate < 50 ? "border-ds-danger/30 bg-ds-danger-soft" : "border-ds-border"
                                     )}
                                 >
                                     <AccordionTrigger className="hover:no-underline py-3">
                                         <div className="flex flex-1 items-center justify-between gap-4 pe-2">
                                             <div className="flex items-center gap-2 text-start">
-                                                <span className="font-medium text-slate-900">{skill.skillName}</span>
+                                                <span className="font-medium text-ds-ink">{skill.skillName}</span>
                                                 <Badge variant="outline" className="text-[10px]">{skill.skillCategory}</Badge>
                                             </div>
                                             <div className="flex items-center gap-3 shrink-0">
@@ -240,7 +196,7 @@ export default function SkillsMatrix() {
                                     <AccordionContent>
                                         <div className="grid md:grid-cols-2 gap-4 pt-2 pb-3">
                                             <div>
-                                                <p className="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1.5">
+                                                <p className="text-xs font-semibold text-ds-success mb-2 flex items-center gap-1.5">
                                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                                     {t('skills.hasSkill', 'Has this skill')} ({skill.coveredUsers.length})
                                                 </p>
@@ -256,7 +212,7 @@ export default function SkillsMatrix() {
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-xs font-semibold text-rose-700 mb-2 flex items-center gap-1.5">
+                                                <p className="text-xs font-semibold text-ds-danger mb-2 flex items-center gap-1.5">
                                                     <XCircle className="w-3.5 h-3.5" />
                                                     {t('skills.lacksSkill', 'Needs this skill')} ({skill.lackingUsers.length})
                                                 </p>

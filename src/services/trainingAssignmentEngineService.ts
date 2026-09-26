@@ -5,15 +5,12 @@ interface CallerAssignmentScopes {
   effective_org_id?: string
   can_assign_org: boolean
   can_assign_brand: boolean
-  can_assign_hotel: boolean
   can_assign_dept: boolean
   can_assign_role: boolean
   can_assign_individual: boolean
   authorized_brand_ids?: string[] | null
-  authorized_hotel_ids?: string[] | null
   authorized_dept_ids?: string[] | null
   primary_role: string
-  primary_hotel_id?: string | null
   primary_department_id?: string | null
 }
 
@@ -22,8 +19,6 @@ interface AssignableLearner {
   full_name: string
   email: string
   avatar_url?: string | null
-  hotel_id?: string | null
-  hotel_name?: string | null
   brand_id?: string | null
   brand_name?: string | null
   department_id?: string | null
@@ -34,18 +29,16 @@ interface AssignableLearner {
 
 interface AssignableRecipientsSummary {
   recipient_count: number
-  hotel_count: number
   dept_count: number
 }
 
-export type AssignmentScopeType = 'organization' | 'brand' | 'hotel' | 'department' | 'role' | 'individual'
+export type AssignmentScopeType = 'organization' | 'brand' | 'department' | 'role' | 'individual'
 
 interface CreateScopedAssignmentParams {
   courseId: string
   scopeType: AssignmentScopeType
   organizationId: string
   brandId?: string | null
-  hotelId?: string | null
   departmentId?: string | null
   targetRole?: string | null
   targetUserIds?: string[] | null
@@ -71,7 +64,6 @@ export const trainingAssignmentEngineService = {
         is_platform_admin: false,
         can_assign_org: false,
         can_assign_brand: false,
-        can_assign_hotel: false,
         can_assign_dept: false,
         can_assign_role: false,
         can_assign_individual: false,
@@ -88,7 +80,6 @@ export const trainingAssignmentEngineService = {
   async getAssignableLearners(params: {
     organizationId: string
     brandId?: string | null
-    hotelId?: string | null
     departmentId?: string | null
     role?: string | null
     search?: string | null
@@ -98,7 +89,6 @@ export const trainingAssignmentEngineService = {
     const { data, error } = await supabase.rpc('get_assignable_learners', {
       p_org_id: params.organizationId,
       p_brand_id: params.brandId || null,
-      p_hotel_id: params.hotelId || null,
       p_dept_id: params.departmentId || null,
       p_role: params.role && params.role !== 'all' ? params.role : null,
       p_search: params.search ? params.search.trim() : null,
@@ -118,7 +108,6 @@ export const trainingAssignmentEngineService = {
   async getAssignableRecipientsCount(params: {
     organizationId: string
     brandId?: string | null
-    hotelId?: string | null
     departmentId?: string | null
     role?: string | null
     search?: string | null
@@ -128,7 +117,6 @@ export const trainingAssignmentEngineService = {
     const { data, error } = await supabase.rpc('get_assignable_recipients_count', {
       p_org_id: params.organizationId,
       p_brand_id: params.brandId || null,
-      p_hotel_id: params.hotelId || null,
       p_dept_id: params.departmentId || null,
       p_role: params.role && params.role !== 'all' ? params.role : null,
       p_search: params.search ? params.search.trim() : null,
@@ -137,7 +125,7 @@ export const trainingAssignmentEngineService = {
     })
     if (error) {
       console.error('Failed to compute recipient count:', error)
-      return { recipient_count: 0, hotel_count: 0, dept_count: 0 }
+      return { recipient_count: 0, dept_count: 0 }
     }
     return data as unknown as AssignableRecipientsSummary
   },
@@ -158,7 +146,6 @@ export const trainingAssignmentEngineService = {
       p_scope_type: params.scopeType,
       p_organization_id: params.organizationId,
       p_brand_id: params.brandId || null,
-      p_hotel_id: params.hotelId || null,
       p_department_id: params.departmentId || null,
       p_target_role: params.targetRole && params.targetRole !== 'all' ? params.targetRole : null,
       p_target_user_ids: params.targetUserIds || null,
@@ -183,25 +170,20 @@ export const trainingAssignmentEngineService = {
   },
 
   /**
-   * Fetches active assignment rules scoped to organization and optional hotel.
+   * Fetches active assignment rules for an organization.
    */
-  async getScopedAssignmentRules(organizationId: string, hotelId?: string) {
-    let query = supabase
+  async getScopedAssignmentRules(organizationId: string) {
+    const query = supabase
       .from('assignments')
       .select(`
         *,
         course:courses(id, title, description, estimated_duration_minutes, passing_score_percentage),
-        hotel:hotels(id, name),
         department:departments(id, name),
         brand:brands(id, name)
       `)
       .eq('organization_id', organizationId)
       .eq('is_active', true)
       .order('created_at', { ascending: false })
-
-    if (hotelId && hotelId !== 'all') {
-      query = query.or(`hotel_id.eq.${hotelId},scope_type.eq.organization`)
-    }
 
     const { data, error } = await query
     if (error) {

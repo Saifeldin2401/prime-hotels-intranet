@@ -48,7 +48,7 @@ import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Users, UserPlus, Building2, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, Search, Shield } from 'lucide-react'
+import { Users, UserPlus, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, Search, Shield } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TenantRole } from '@/lib/types/tenant'
 
@@ -58,7 +58,6 @@ interface MemberRow {
   user_id: string
   role: TenantRole
   brand_id: string | null
-  hotel_id: string | null
   department_id: string | null
   is_primary: boolean
   is_active: boolean
@@ -69,10 +68,6 @@ interface MemberRow {
     email: string
     avatar_url: string | null
     job_title: string | null
-  } | null
-  hotel?: {
-    id: string
-    name: string
   } | null
   brand?: {
     id: string
@@ -97,14 +92,13 @@ const ROLE_OPTIONS: { value: TenantRole; label: string }[] = [
   { value: 'training_manager', label: 'Training Manager' },
   { value: 'knowledge_manager', label: 'Knowledge Manager' },
   { value: 'brand_admin', label: 'Brand Admin' },
-  { value: 'hotel_admin', label: 'Hotel Admin' },
   { value: 'department_manager', label: 'Department Manager' },
   { value: 'instructor', label: 'Instructor / Trainer' },
   { value: 'learner', label: 'Learner / Associate' },
 ]
 
 export function MembershipsManagement() {
-  const { currentOrganization, availableHotels, availableBrands, isOrgAdmin } = useTenant()
+  const { currentOrganization, availableBrands, isOrgAdmin } = useTenant()
   const { toast } = useToast()
   const { t } = useTranslation(['admin', 'common'])
   const queryClient = useQueryClient()
@@ -115,24 +109,22 @@ export function MembershipsManagement() {
 
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState<string>('all')
-  const [filterHotel, setFilterHotel] = useState<string>('all')
 
   // Form State
   const [selectedUserId, setSelectedUserId] = useState('')
   const [selectedRole, setSelectedRole] = useState<TenantRole>('learner')
-  const [selectedHotelId, setSelectedHotelId] = useState<string>('none')
   const [selectedBrandId, setSelectedBrandId] = useState<string>('none')
   const [selectedDeptId, setSelectedDeptId] = useState<string>('none')
   const [isSaving, setIsSaving] = useState(false)
 
   // Fetch available departments for current org
-  const { data: departments = [] } = useQuery<{ id: string; name: string; hotel_id: string | null }[]>({
+  const { data: departments = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ['membership-depts', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return []
       const { data } = await supabase
         .from('departments')
-        .select('id, name, hotel_id')
+        .select('id, name')
         .eq('organization_id', currentOrganization.id)
         .eq('is_deleted', false)
       return data || []
@@ -173,13 +165,11 @@ export function MembershipsManagement() {
           user_id,
           role,
           brand_id,
-          hotel_id,
           department_id,
           is_primary,
           is_active,
           created_at,
           profile:profiles(id, full_name, email, avatar_url, job_title),
-          hotel:hotels(id, name),
           brand:brands(id, name),
           department:departments(id, name)
         `)
@@ -200,7 +190,6 @@ export function MembershipsManagement() {
   const filteredMembers = useMemo(() => {
     return members.filter(m => {
       if (filterRole !== 'all' && m.role !== filterRole) return false
-      if (filterHotel !== 'all' && m.hotel_id !== filterHotel) return false
 
       if (!searchTerm.trim()) return true
       const term = searchTerm.toLowerCase()
@@ -209,12 +198,11 @@ export function MembershipsManagement() {
       const jobTitle = m.profile?.job_title?.toLowerCase() || ''
       return name.includes(term) || email.includes(term) || jobTitle.includes(term)
     })
-  }, [members, filterRole, filterHotel, searchTerm])
+  }, [members, filterRole, searchTerm])
 
   const handleOpenAdd = () => {
     setSelectedUserId(allProfiles[0]?.id || '')
     setSelectedRole('learner')
-    setSelectedHotelId('none')
     setSelectedBrandId('none')
     setSelectedDeptId('none')
     setIsAddOpen(true)
@@ -223,7 +211,6 @@ export function MembershipsManagement() {
   const handleOpenEdit = (member: MemberRow) => {
     setEditingMember(member)
     setSelectedRole(member.role)
-    setSelectedHotelId(member.hotel_id || 'none')
     setSelectedBrandId(member.brand_id || 'none')
     setSelectedDeptId(member.department_id || 'none')
   }
@@ -233,7 +220,6 @@ export function MembershipsManagement() {
     setIsSaving(true)
 
     try {
-      const hotelVal = selectedHotelId === 'none' ? null : selectedHotelId
       const brandVal = selectedBrandId === 'none' ? null : selectedBrandId
       const deptVal = selectedDeptId === 'none' ? null : selectedDeptId
 
@@ -243,7 +229,6 @@ export function MembershipsManagement() {
           .from('organization_memberships')
           .update({
             role: selectedRole,
-            hotel_id: hotelVal,
             brand_id: brandVal,
             department_id: deptVal,
             updated_at: new Date().toISOString()
@@ -263,18 +248,30 @@ export function MembershipsManagement() {
           throw new Error('Please select a user to add.')
         }
 
-        const { error } = await supabase
+        const { data: existing, error: lookupError } = await supabase
           .from('organization_memberships')
-          .upsert({
-            organization_id: currentOrganization.id,
-            user_id: selectedUserId,
-            role: selectedRole,
-            hotel_id: hotelVal,
-            brand_id: brandVal,
-            department_id: deptVal,
-            is_primary: true,
-            is_active: true,
-          }, { onConflict: 'organization_id,user_id,COALESCE(hotel_id, \'00000000-0000-0000-0000-000000000000\'::uuid)' })
+          .select('id')
+          .eq('organization_id', currentOrganization.id)
+          .eq('user_id', selectedUserId)
+          .limit(1)
+          .maybeSingle()
+        if (lookupError) throw lookupError
+
+        const fields = {
+          role: selectedRole,
+          brand_id: brandVal,
+          department_id: deptVal,
+          is_primary: true,
+          is_active: true,
+        }
+        const { error } = existing
+          ? await supabase
+            .from('organization_memberships')
+            .update({ ...fields, updated_at: new Date().toISOString() })
+            .eq('id', existing.id)
+          : await supabase
+            .from('organization_memberships')
+            .insert({ organization_id: currentOrganization.id, user_id: selectedUserId, ...fields })
 
         if (error) throw error
 
@@ -366,7 +363,7 @@ export function MembershipsManagement() {
             <CardTitle>{t('admin:user_memberships', 'Organization Members & Roles')}</CardTitle>
           </div>
           <CardDescription>
-            {t('admin:user_memberships_desc', 'Assign users to this organization, specify their tenant role, and scope their hotel or department access.')}
+            {t('admin:user_memberships_desc', 'Who belongs to this organization, their role and their department.')}
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
@@ -409,18 +406,6 @@ export function MembershipsManagement() {
             </SelectContent>
           </Select>
 
-          <Select value={filterHotel} onValueChange={setFilterHotel}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <Building2 className="h-4 w-4 me-2 text-muted-foreground" />
-              <SelectValue placeholder="All Hotels" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('admin:all_hotels', 'All Hotels')}</SelectItem>
-              {availableHotels.map(h => (
-                <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Members Table */}
@@ -442,7 +427,6 @@ export function MembershipsManagement() {
                 <TableRow>
                   <TableHead>{t('admin:member', 'Member')}</TableHead>
                   <TableHead>{t('admin:role', 'Tenant Role')}</TableHead>
-                  <TableHead>{t('admin:hotel_scope', 'Hotel Scope')}</TableHead>
                   <TableHead>{t('admin:dept_scope', 'Department')}</TableHead>
                   <TableHead>{t('admin:status', 'Status')}</TableHead>
                   {isOrgAdmin && <TableHead className="text-end">{t('admin:actions', 'Actions')}</TableHead>}
@@ -475,19 +459,6 @@ export function MembershipsManagement() {
                         <Badge variant="outline" className="font-medium text-xs">
                           {roleDef?.label || m.role}
                         </Badge>
-                      </TableCell>
-
-                      <TableCell>
-                        {m.hotel ? (
-                          <div className="flex items-center gap-1.5 text-xs">
-                            <Building2 className="h-3.5 w-3.5 text-primary" />
-                            <span>{m.hotel.name}</span>
-                          </div>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">
-                            {t('admin:all_hotels_scope', 'All Hotels (Group)')}
-                          </Badge>
-                        )}
                       </TableCell>
 
                       <TableCell>
@@ -553,7 +524,7 @@ export function MembershipsManagement() {
                 {editingMember ? t('admin:edit_member_role', 'Edit Member Assignment') : t('admin:assign_new_member', 'Assign Member to Organization')}
               </DialogTitle>
               <DialogDescription>
-                {t('admin:member_dialog_desc', 'Set user role, scoped hotel, and departmental privileges in this organization.')}
+                {t('admin:member_dialog_desc', 'Set this person’s role and department.')}
               </DialogDescription>
             </DialogHeader>
 
@@ -587,22 +558,6 @@ export function MembershipsManagement() {
                   <SelectContent>
                     {ROLE_OPTIONS.map(r => (
                       <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Hotel Scope */}
-              <div className="space-y-2">
-                <Label htmlFor="hotel-select">{t('admin:hotel_scope', 'Hotel Location Scope')}</Label>
-                <Select value={selectedHotelId} onValueChange={setSelectedHotelId}>
-                  <SelectTrigger id="hotel-select">
-                    <SelectValue placeholder="Organization-wide (All Hotels)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">{t('admin:all_hotels_org', 'Organization-Wide (All Hotels)')}</SelectItem>
-                    {availableHotels.map(h => (
-                      <SelectItem key={h.id} value={h.id}>{h.name} {h.city ? `(${h.city})` : ''}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

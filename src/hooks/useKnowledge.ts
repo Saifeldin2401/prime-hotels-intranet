@@ -4,10 +4,8 @@
  * React Query hooks for Knowledge Base data fetching.
  */
 
-import { useProperty } from '@/contexts/PropertyContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
 import type {
@@ -22,21 +20,15 @@ import { toast } from 'sonner'
 // ============================================================================
 
 export function useKnowledgeArticles(filters: KnowledgeSearchFilters, page = 1, pageSize = 20) {
-    const { currentProperty } = useProperty()
-    const { currentOrganization, currentHotel, currentBrand } = useTenant()
+    const { currentOrganization, currentBrand } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-articles', filters, page, pageSize, currentProperty?.id, currentOrganization?.id, currentHotel?.id, currentBrand?.id],
+        queryKey: ['knowledge-articles', filters, page, pageSize, currentOrganization?.id, currentBrand?.id],
         queryFn: () => {
-            const propertyFilter = isRealPropertyId(currentProperty?.id)
-                ? currentProperty.id
-                : undefined
             const mergedFilters: KnowledgeSearchFilters = {
                 ...filters,
                 organization_id: filters.organization_id ?? currentOrganization?.id,
-                hotel_id: filters.hotel_id ?? currentHotel?.id,
                 brand_id: filters.brand_id ?? currentBrand?.id,
-                property_id: filters.property_id ?? propertyFilter
             }
             return KnowledgeService.getArticles(mergedFilters, page, pageSize)
         }
@@ -51,15 +43,13 @@ export function useArticles(options?: {
     departmentId?: string
     required?: boolean
     organizationId?: string
-    hotelId?: string
     brandId?: string
     isMasterTemplate?: boolean
 }) {
-    const { currentProperty } = useProperty()
-    const { currentOrganization, currentHotel, currentBrand } = useTenant()
+    const { currentOrganization, currentBrand } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-articles', options, currentProperty?.id, currentOrganization?.id, currentHotel?.id, currentBrand?.id],
+        queryKey: ['knowledge-articles', options, currentOrganization?.id, currentBrand?.id],
         queryFn: async () => {
             const filters: KnowledgeSearchFilters = {
                 query: options?.search,
@@ -67,10 +57,8 @@ export function useArticles(options?: {
                 department_id: options?.departmentId,
                 requires_acknowledgment: options?.required,
                 organization_id: options?.organizationId ?? currentOrganization?.id,
-                hotel_id: options?.hotelId ?? currentHotel?.id,
                 brand_id: options?.brandId ?? currentBrand?.id,
                 is_master_template: options?.isMasterTemplate,
-                property_id: isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
             }
             const result = await KnowledgeService.getArticles(filters, 1, options?.limit || 50)
             return result.articles
@@ -90,22 +78,20 @@ export function useKnowledgeArticle(id: string | undefined) {
 }
 
 export function useFeaturedArticles(limit = 5) {
-    const { currentProperty } = useProperty()
-    const { currentOrganization, currentHotel } = useTenant()
+    const { currentOrganization } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-featured', limit, currentProperty?.id, currentOrganization?.id, currentHotel?.id],
-        queryFn: () => KnowledgeService.getFeaturedArticles(limit, currentHotel?.id || currentProperty?.id)
+        queryKey: ['knowledge-featured', limit, currentOrganization?.id],
+        queryFn: () => KnowledgeService.getFeaturedArticles(limit, currentOrganization?.id)
     })
 }
 
 export function useRecentArticles(limit = 10) {
-    const { currentProperty } = useProperty()
-    const { currentOrganization, currentHotel } = useTenant()
+    const { currentOrganization } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-recent', limit, currentProperty?.id, currentOrganization?.id, currentHotel?.id],
-        queryFn: () => KnowledgeService.getRecentArticles(limit, currentHotel?.id || currentProperty?.id)
+        queryKey: ['knowledge-recent', limit, currentOrganization?.id],
+        queryFn: () => KnowledgeService.getRecentArticles(limit, currentOrganization?.id)
     })
 }
 
@@ -115,11 +101,11 @@ export function useRecentArticles(limit = 10) {
 
 export function useRequiredReading() {
     const { user } = useAuth()
-    const { currentProperty } = useProperty()
+    const { currentOrganization } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-required', user?.id, currentProperty?.id],
-        queryFn: () => KnowledgeService.getRequiredReading(user!.id, currentProperty?.id),
+        queryKey: ['knowledge-required', user?.id, currentOrganization?.id],
+        queryFn: () => KnowledgeService.getRequiredReading(user!.id, currentOrganization?.id),
         enabled: !!user?.id
     })
 }
@@ -258,11 +244,9 @@ export function useCategories(departmentId?: string) {
 // ============================================================================
 
 export function useContentTypeCounts() {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['knowledge-type-counts', currentProperty?.id],
-        queryFn: () => KnowledgeService.getContentTypeCounts(currentProperty?.id),
+        queryKey: ['knowledge-type-counts'],
+        queryFn: () => KnowledgeService.getContentTypeCounts(),
         staleTime: 1000 * 60, // Keep reasonably fresh for sidebar badges
         refetchOnWindowFocus: false,
     })
@@ -277,23 +261,18 @@ export function useContentTypeCounts() {
 
 export function useDepartmentContentCounts() {
     const { user } = useAuth()
-    const { currentProperty } = useProperty()
 
     return useQuery({
-        queryKey: ['knowledge-department-counts-global', user?.id, currentProperty?.id],
+        queryKey: ['knowledge-department-counts-global', user?.id],
         queryFn: async () => {
             if (!user?.id) return {}
 
             // Get counts by department and type for ALL visible documents (RLS applied)
-            let documentsQuery = supabase
+            const documentsQuery = supabase
                 .from('documents')
                 .select('department_id, content_type, visibility, departments(id, name)')
                 .not('department_id', 'is', null)
                 .eq('is_deleted', false)
-
-            if (isRealPropertyId(currentProperty?.id)) {
-                documentsQuery = documentsQuery.or(`property_id.is.null,property_id.eq.${currentProperty.id}`)
-            }
 
             const { data: documents, error: docsError } = await documentsQuery
 
@@ -319,7 +298,7 @@ export function useDepartmentContentCounts() {
                 }
             }
 
-            // Group by normalized department name to merge same-named departments across properties.
+            // Group by normalized department name so same-named departments merge.
             const byName = documents.reduce((acc, doc) => {
                 const deptId = doc.department_id
                 const joinedDept = Array.isArray(doc.departments) ? doc.departments[0] : doc.departments

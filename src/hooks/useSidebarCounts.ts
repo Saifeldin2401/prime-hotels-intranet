@@ -67,6 +67,10 @@ export function useSidebarCounts() {
 
             const { data, error } = await supabase.rpc('get_sidebar_counts', { p_user_id: user.id })
             if (error) {
+                // Ignore expected permission denial during signout/unauthenticated transitions
+                if ((error as any).code === '42501' || (error as any).message?.includes('permission denied')) {
+                    return EMPTY_COUNTS
+                }
                 console.error('get_sidebar_counts RPC failed:', error)
                 return EMPTY_COUNTS
             }

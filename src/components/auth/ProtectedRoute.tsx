@@ -15,6 +15,7 @@ import type { AppRole } from '@/lib/constants'
 import { CapabilityGate } from './CapabilityGate'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
 import { useEffect } from 'react'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -25,7 +26,6 @@ interface ProtectedRouteProps {
    * for the current organization. Prefer this over allowedRoles for new routes.
    */
   requiredCapability?: Capability | Capability[]
-  requiredPropertyId?: string
   requiredDepartmentId?: string
   fallbackPath?: string
   smartFallback?: boolean
@@ -36,12 +36,11 @@ export function ProtectedRoute({
   allowedRoles,
   requiredPermission,
   requiredCapability,
-  requiredPropertyId,
   requiredDepartmentId,
   fallbackPath = '/unauthorized',
   smartFallback = true,
 }: ProtectedRouteProps) {
-  const { user, primaryRole, rolesLoading, loading } = useAuth()
+  const { user, primaryRole, rolesLoading, loading, signOut } = useAuth()
   const { rolesError, loadUserData } = useUserData()
   const account = useAccountContext()
   const { hasPermission } = usePermissions()
@@ -69,6 +68,29 @@ export function ProtectedRoute({
   if (!user) {
     const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
     return <Navigate to={loginUrl} replace />
+  }
+
+  const isRegisteredUser =
+    account.isPlatformOperator ||
+    account.tenantMemberships.length > 0 ||
+    Boolean(account.primaryOrganizationId)
+
+  // Unregistered users (e.g. external Google accounts not invited/provisioned by an admin)
+  // are immediately signed out and redirected to /login with not_registered notice.
+  useEffect(() => {
+    if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+      safeSessionStorage.removeItem('altus_session_active')
+      safeLocalStorage.removeItem('altus_active_tenant_id')
+      if (user?.id) {
+        safeLocalStorage.removeItem(`active_tenant_id_${user.id}`)
+      }
+      void signOut()
+    }
+  }, [user, account.loading, account.resolveFailed, isRegisteredUser, signOut])
+
+  if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+    const unregEmail = user.email ? encodeURIComponent(user.email) : ''
+    return <Navigate to={`/login?error=not_registered${unregEmail ? `&email=${unregEmail}` : ''}`} replace />
   }
 
   // A tenant user whose every organization is suspended/archived is held on the
@@ -135,7 +157,7 @@ export function ProtectedRoute({
 
   if (
     requiredPermission &&
-    !hasPermission(requiredPermission, requiredPropertyId, requiredDepartmentId) &&
+    !hasPermission(requiredPermission, requiredDepartmentId) &&
     !operatorInSession
   ) {
     if (smartFallback && primaryRole) {

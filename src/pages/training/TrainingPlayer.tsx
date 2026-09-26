@@ -208,7 +208,7 @@ export default function TrainingPlayer() {
     const assignmentId = searchParams.get('assignment')
     const navigate = useNavigate()
     const { toast } = useToast()
-    const { user, profile, properties, departments, primaryRole } = useAuth()
+    const { user, profile, departments, primaryRole } = useAuth()
     const isValidModuleId = isValidUuid(id)
 
     const canViewUnpublishedModules = ['administrator', 'super_admin', 'corporate_admin', 'training_manager', 'author', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
@@ -867,7 +867,6 @@ export default function TrainingPlayer() {
             }
 
             if (isPassed && user && moduleData.module) {
-                const primaryProperty = properties?.[0]
                 const primaryDepartment = departments?.[0]
                 let certificateErrorMessage: string | null = null
                 let pathErrorMessage: string | null = null
@@ -887,10 +886,7 @@ export default function TrainingPlayer() {
                             trainingModuleId: moduleData.module.id,
                             trainingProgressId: linkedTrainingProgressId,
                             organizationId: (moduleData.module as any).organization_id,
-                            hotelId: (moduleData.module as any).hotel_id || primaryProperty?.id,
                             brandId: (moduleData.module as any).brand_id,
-                            propertyId: primaryProperty?.id,
-                            propertyName: primaryProperty?.name,
                             departmentId: primaryDepartment?.id,
                             departmentName: primaryDepartment?.name
                         }
@@ -914,8 +910,6 @@ export default function TrainingPlayer() {
                                 completedModuleId: moduleData.module.id,
                                 recipientName: profile?.full_name || user.email || 'Training Participant',
                                 recipientEmail: user.email,
-                                propertyId: primaryProperty?.id,
-                                propertyName: primaryProperty?.name,
                                 departmentId: primaryDepartment?.id,
                                 departmentName: primaryDepartment?.name
                             })

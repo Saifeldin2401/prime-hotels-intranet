@@ -15,7 +15,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { Building2, Check, ChevronsUpDown, X } from 'lucide-react'
+import { Check, ChevronsUpDown, X } from 'lucide-react'
 import React, { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -23,17 +23,10 @@ import { useTranslation } from 'react-i18next'
 type SelectorDepartment = {
     id: string
     name: string
-    property_id: string
-}
-
-type SelectorProperty = {
-    id: string
-    name: string
 }
 
 interface MultiDepartmentSelectorProps {
     departments: SelectorDepartment[] | undefined
-    properties: SelectorProperty[] | undefined
     value: string[]
     onValueChange: (value: string[]) => void
     placeholder?: string
@@ -43,7 +36,6 @@ interface MultiDepartmentSelectorProps {
 
 export function MultiDepartmentSelector({
     departments,
-    properties,
     value = [],
     onValueChange,
     placeholder,
@@ -54,29 +46,7 @@ export function MultiDepartmentSelector({
     const [open, setOpen] = useState(false)
     const id = useId()
 
-    // Group departments by property
-    const groupedDepartments = useMemo(() => {
-        if (!departments) return {}
-
-        return departments.reduce((acc, dept) => {
-            const property = properties?.find(p => p.id === dept.property_id)
-            const propertyName = property?.name || t('common.unknown_property', 'Other / Unknown Property')
-
-            if (!acc[propertyName]) {
-                acc[propertyName] = []
-            }
-            acc[propertyName].push(dept)
-            return acc
-        }, {} as Record<string, SelectorDepartment[]>)
-    }, [departments, properties, t])
-
-    const sortedPropertyNames = useMemo(() => {
-        return Object.keys(groupedDepartments).sort((a, b) => {
-            if (a.includes('Head Office') || a.includes('HEAD OFFICE')) return -1
-            if (b.includes('Head Office') || b.includes('HEAD OFFICE')) return 1
-            return a.localeCompare(b)
-        })
-    }, [groupedDepartments])
+    const sorted = useMemo(() => [...(departments ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [departments])
 
     const handleSelect = (deptId: string) => {
         if (value.includes(deptId)) {
@@ -120,36 +90,24 @@ export function MultiDepartmentSelector({
                         <CommandInput placeholder={t('common.search_department', 'Search department...')} />
                         <CommandList className="max-h-[400px]" id={id}>
                             <CommandEmpty>{t('common.no_departments_found', 'No department found.')}</CommandEmpty>
-                            {sortedPropertyNames.map((propertyName) => (
-                                <CommandGroup
-                                    key={propertyName}
-                                    heading={
-                                        <div className="flex items-center gap-2 text-primary font-semibold">
-                                            <Building2 className="w-3.5 h-3.5" />
-                                            {propertyName}
+                            <CommandGroup>
+                                {sorted.map((dept) => (
+                                    <CommandItem
+                                        key={dept.id}
+                                        value={dept.name}
+                                        onSelect={() => handleSelect(dept.id)}
+                                        className="relative cursor-pointer ps-8"
+                                    >
+                                        <div className={cn(
+                                            "absolute start-2 flex h-3.5 w-3.5 items-center justify-center rounded-sm border border-ds-border-strong",
+                                            value.includes(dept.id) ? "border-ds-ink bg-ds-ink text-ds-on-ink" : "opacity-60"
+                                        )}>
+                                            {value.includes(dept.id) && <Check aria-hidden="true" className="h-2.5 w-2.5" />}
                                         </div>
-                                    }
-                                >
-                                    {groupedDepartments[propertyName]
-                                        .sort((a, b) => a.name.localeCompare(b.name))
-                                        .map((dept) => (
-                                            <CommandItem
-                                                key={dept.id}
-                                                value={`${propertyName} - ${dept.name}`} // Combine for search
-                                                onSelect={() => handleSelect(dept.id)}
-                                                className="ps-8 relative cursor-pointer"
-                                            >
-                                                <div className={cn(
-                                                    "absolute start-2 flex h-3.5 w-3.5 items-center justify-center border border-primary/30 rounded-sm",
-                                                    value.includes(dept.id) ? "bg-primary border-primary text-primary-foreground" : "opacity-50"
-                                                )}>
-                                                    {value.includes(dept.id) && <Check className="h-2.5 w-2.5" />}
-                                                </div>
-                                                {dept.name}
-                                            </CommandItem>
-                                        ))}
-                                </CommandGroup>
-                            ))}
+                                        {dept.name}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
                         </CommandList>
                     </Command>
                 </PopoverContent>
@@ -161,12 +119,12 @@ export function MultiDepartmentSelector({
                     {value.map(deptId => {
                         const dept = departments?.find(d => d.id === deptId)
                         if (!dept) return null
-                        const prop = properties?.find(p => p.id === dept.property_id)
                         return (
                             <Badge key={deptId} variant="secondary" className="text-[10px] ps-2 pe-1 py-0.5 h-6 gap-1 group">
-                                <span className="opacity-70">{prop?.name.split(' ')[0]}:</span>
                                 {dept.name}
                                 <button
+                                    type="button"
+                                    aria-label={t('common.remove', 'Remove')}
                                     onClick={(e) => removeValue(deptId, e)}
                                     className="ms-1 hover:bg-black/10 rounded-full p-0.5 transition-colors"
                                 >

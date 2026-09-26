@@ -16,7 +16,6 @@ export function usePracticalSubmissions(filters?: {
   assessmentId?: string
   learnerId?: string
   evaluatorId?: string
-  hotelId?: string
 }) {
   return useQuery({
     queryKey: ['practical-submissions', filters],
@@ -30,7 +29,6 @@ export function useSubmitPracticalEvaluation() {
     mutationFn: (evaluation: {
       assessment_id: string
       learner_id: string
-      hotel_id?: string
       score_achieved: number
       is_passed: boolean
       rubric_evaluations: Record<string, { points: number; comments?: string }>

@@ -52,7 +52,6 @@ export async function fetchPersonalExecutiveContext(
 - Employee Name: ${profile?.full_name || 'Staff Member'}
 - Job Title: ${profile?.job_title || 'Hospitality Associate'}
 - Department: ${profile?.departments?.[0]?.name || profile?.department_id || 'Not assigned'}
-- Hotel: ${profile?.property?.name || 'Not assigned'}
 - Role / Permissions: ${profile?.role || 'staff'}
 `.trim()
 
@@ -76,7 +75,7 @@ ${learningSummary}
     return {
       profileSummary: `- Employee Name: ${profile?.full_name || 'Staff Member'}`,
       learningSummary: 'Live learning data temporarily unavailable.',
-      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}, Hotel: ${profile?.property?.name || 'Not assigned'}`,
+      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}`,
     }
   }
 }

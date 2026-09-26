@@ -93,5 +93,47 @@
     "national_id": "الهوية الوطنية",
     "salary_grade": "الدرجة الوظيفية",
     "certifications": "الشهادات",
-    "no_certifications": "لا توجد شهادات بعد"
+    "no_certifications": "لا توجد شهادات بعد",
+    "me": {
+        "eyebrow": "الحساب",
+        "title": "ملفي الشخصي",
+        "context": "ما يراه زملاؤك عندما يبحثون عنك.",
+        "identity": "الصورة والاسم",
+        "uploadPhoto": "رفع صورة",
+        "orPortrait": "أو استخدم صورة Altus:",
+        "usePortrait": "استخدام هذه الصورة",
+        "missing": {
+            "photo": "صورة",
+            "phone": "رقم هاتف",
+            "bio": "نبذة قصيرة"
+        },
+        "missingNote": "يجدك زملاؤك أسرع بإضافة {{items}}.",
+        "about": "عنك",
+        "aboutHint": "يمكنك تغيير هذه البيانات بنفسك.",
+        "extension": "التحويلة",
+        "bio": "نبذة",
+        "bioPlaceholder": "دورك وفريقك وما يمكن لزملائك سؤالك عنه.",
+        "saved": "تم حفظ الملف",
+        "saveFailed": "لم تُحفظ التغييرات. حاول مرة أخرى.",
+        "photoSaved": "تم تحديث الصورة",
+        "record": "سجلك",
+        "recordHint": "تحتفظ به مؤسستك. اطلب من المسؤول تغيير هذه البيانات.",
+        "hotel": "الفندق",
+        "notSet": "غير محدد",
+        "signin": "تسجيل الدخول",
+        "tenureYears": "{{years}} سنة {{months}} شهر",
+        "tenureMonths": "{{count}} شهر"
+    },
+    "colleague": {
+        "notFound": "هذا الملف غير موجود",
+        "notFoundBody": "قد يكون الرابط ناقصاً أو قديماً.",
+        "loadFailed": "تعذر تحميل هذا الملف",
+        "hotels": "الفندق",
+        "departments": "القسم",
+        "inactive": "لم يعد نشطاً",
+        "email": "بريد إلكتروني",
+        "team": "الفريق",
+        "training": "سجل التدريب",
+        "show": "عرض"
+    }
 }

@@ -9,6 +9,8 @@
 -- 4. Draft courses cannot be approved or assigned
 -- 5. Knowledge publishing: learner blocked, cross-tenant supersede/dept blocked, caller attribution enforced
 -- 6. Server-side department compliance: role-gated (reports.view)
+-- 7. Manage risk queue: managers of the organization only
+-- 8. Organization setup gaps and platform exceptions: scoped to admins / operators
 
 BEGIN;
 
@@ -241,6 +243,63 @@ BEGIN
 
   PERFORM set_config('request.jwt.claims', json_build_object('sub', current_setting('t.tm'), 'role', 'authenticated')::text, true);
   PERFORM * FROM public.get_department_compliance(current_setting('t.org')::uuid);
+
+  -- 5. Manage risk queue: managers only, own organization only
+  PERFORM * FROM public.get_risk_queue(current_setting('t.org')::uuid);
+  BEGIN
+    PERFORM * FROM public.get_risk_queue(current_setting('t.org2')::uuid);
+    RAISE EXCEPTION 'FAIL: Training manager read another organization''s risk queue!';
+  EXCEPTION WHEN others THEN
+    GET STACKED DIAGNOSTICS v_hint = PG_EXCEPTION_HINT;
+    IF v_hint <> 'REPORTS_NOT_ALLOWED' THEN
+      RAISE EXCEPTION 'FAIL: Expected REPORTS_NOT_ALLOWED hint for cross-org risk queue, got %', v_hint;
+    END IF;
+  END;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', current_setting('t.learner'), 'role', 'authenticated')::text, true);
+  BEGIN
+    PERFORM * FROM public.get_risk_queue(current_setting('t.org')::uuid);
+    RAISE EXCEPTION 'FAIL: Learner read the risk queue!';
+  EXCEPTION WHEN others THEN
+    GET STACKED DIAGNOSTICS v_hint = PG_EXCEPTION_HINT;
+    IF v_hint <> 'REPORTS_NOT_ALLOWED' THEN
+      RAISE EXCEPTION 'FAIL: Expected REPORTS_NOT_ALLOWED hint for learner risk queue, got %', v_hint;
+    END IF;
+  END;
+
+  -- 6. Organization setup gaps: org admins / people managers only
+  BEGIN
+    PERFORM * FROM public.get_org_setup_gaps(current_setting('t.org')::uuid);
+    RAISE EXCEPTION 'FAIL: Learner read organization setup gaps!';
+  EXCEPTION WHEN others THEN
+    GET STACKED DIAGNOSTICS v_hint = PG_EXCEPTION_HINT;
+    IF v_hint <> 'ORG_ADMIN_REQUIRED' THEN
+      RAISE EXCEPTION 'FAIL: Expected ORG_ADMIN_REQUIRED for learner setup gaps, got %', v_hint;
+    END IF;
+  END;
+
+  PERFORM set_config('request.jwt.claims', json_build_object('sub', current_setting('t.owner'), 'role', 'authenticated')::text, true);
+  PERFORM * FROM public.get_org_setup_gaps(current_setting('t.org')::uuid);
+  BEGIN
+    PERFORM * FROM public.get_org_setup_gaps(current_setting('t.org2')::uuid);
+    RAISE EXCEPTION 'FAIL: Owner read another organization''s setup gaps!';
+  EXCEPTION WHEN others THEN
+    GET STACKED DIAGNOSTICS v_hint = PG_EXCEPTION_HINT;
+    IF v_hint <> 'ORG_ADMIN_REQUIRED' THEN
+      RAISE EXCEPTION 'FAIL: Expected ORG_ADMIN_REQUIRED for cross-org setup gaps, got %', v_hint;
+    END IF;
+  END;
+
+  -- 7. Platform exceptions: never for tenant roles, however senior
+  BEGIN
+    PERFORM * FROM public.get_platform_exceptions();
+    RAISE EXCEPTION 'FAIL: Organization owner read platform exceptions!';
+  EXCEPTION WHEN others THEN
+    GET STACKED DIAGNOSTICS v_hint = PG_EXCEPTION_HINT;
+    IF v_hint <> 'PLATFORM_OPERATOR_REQUIRED' THEN
+      RAISE EXCEPTION 'FAIL: Expected PLATFORM_OPERATOR_REQUIRED, got %', v_hint;
+    END IF;
+  END;
 END $$;
 
 RESET ROLE;

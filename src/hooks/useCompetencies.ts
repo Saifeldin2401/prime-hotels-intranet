@@ -8,9 +8,9 @@ export function useCompetencies(organizationId?: string) {
   })
 }
 
-export function useDepartmentCompetencyGaps(departmentId?: string, hotelId?: string) {
+export function useDepartmentCompetencyGaps(departmentId?: string) {
   return useQuery({
-    queryKey: ['department-competency-gaps', departmentId, hotelId],
-    queryFn: () => competencyService.getDepartmentCompetencyGaps(departmentId, hotelId)
+    queryKey: ['department-competency-gaps', departmentId],
+    queryFn: () => competencyService.getDepartmentCompetencyGaps(departmentId)
   })
 }

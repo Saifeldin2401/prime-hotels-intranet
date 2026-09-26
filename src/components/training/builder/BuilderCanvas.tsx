@@ -370,7 +370,7 @@ export const BuilderCanvas = ({
                   onChange={(e) => setTitle?.(e.target.value)}
                   placeholder={t('builder.courseTitlePlaceholder', 'e.g., Front Desk Guest Check-In & Service Standards SOP')}
                   className={cn(
-                    "text-sm font-bold bg-amber-50/20 dark:bg-amber-950/10 border-slate-200 dark:border-slate-800 focus:border-hotel-gold focus:ring-2 focus:ring-hotel-gold/20 h-9",
+                    "text-sm font-bold bg-amber-50/20 dark:bg-amber-950/10 border-slate-200 dark:border-slate-800 focus:border-ds-brass focus:ring-2 focus:ring-ds-brass/20 h-9",
                     isRTL ? "text-end" : "text-start"
                   )}
                 />

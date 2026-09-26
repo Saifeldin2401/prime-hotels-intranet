@@ -1,54 +1,40 @@
-import React from 'react'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
-import {
-  Briefcase,
-  Calendar,
-  Crown,
-  Eye,
-  FileText,
-  GitBranch,
-  Pencil,
-  ShieldCheck,
-  Timer,
-} from 'lucide-react'
+import { AlertCircle, CheckCircle2, Crown, GitBranch, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+
+import { cn } from '@/lib/utils'
 
 export interface ArticleHeaderProps {
   article: {
     id?: string
     title: string
     description?: string | null
+    summary?: string | null
     updated_at?: string
     content_type?: string
+    sop_code?: string | null
+    code?: string | null
     version?: number
     current_version?: number
-    published_version_number?: number
+    published_version_number?: number | null
+    published_at?: string | null
+    last_published_at?: string | null
+    last_reviewed_at?: string | null
+    next_review_date?: string | null
+    requires_acknowledgment?: boolean
+    is_acknowledged?: boolean
+    acknowledged_at?: string | null
     is_master_template?: boolean
     master_source_id?: string | null
     scope_type?: string
-    author?: {
-      full_name?: string
-      avatar_url?: string
-    } | null
-    department?: {
-      id?: string
-      name?: string
-    } | null
-    last_editor?: {
-      full_name?: string
-    } | null
+    author?: { full_name?: string; avatar_url?: string } | null
+    department?: { id?: string; name?: string } | null
+    last_editor?: { full_name?: string } | null
     view_count?: number
   }
   statusColor?: string
   statusLabel: string
   hasBeenUpdatedSinceLastView?: boolean
-  translatedData?: {
-    title: string
-    description?: string
-  } | null
+  translatedData?: { title: string; description?: string } | null
   showBilingual?: boolean
   isRtlTarget?: boolean
   shouldUseRtl?: boolean
@@ -56,10 +42,16 @@ export interface ArticleHeaderProps {
   className?: string
 }
 
+/**
+ * The top of an article: an editorial title, then one trust band that
+ * answers "can I rely on this?" - who owns it, which version, since when it
+ * applies, whether its review is current, who it applies to, and whether the
+ * reader has already acknowledged it.
+ */
 export function ArticleHeader({
   article,
-  statusColor = 'gray',
   statusLabel,
+  statusColor = 'gray',
   hasBeenUpdatedSinceLastView = false,
   translatedData,
   showBilingual = false,
@@ -68,168 +60,110 @@ export function ArticleHeader({
   readingTime = 1,
   className,
 }: ArticleHeaderProps) {
-  const { t } = useTranslation('knowledge')
+  const { t, i18n } = useTranslation('knowledge')
+  const locale = i18n.language?.startsWith('ar') ? 'ar-SA' : 'en-GB'
+  const date = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : null
+
+  const version = article.published_version_number ?? article.current_version ?? article.version
+  const effective = date(article.last_published_at ?? article.published_at)
+  const reviewed = date(article.last_reviewed_at)
+  const reviewDue = article.next_review_date ? Date.parse(article.next_review_date) : null
+  const reviewOverdue = reviewDue !== null && reviewDue < Date.now()
+  const code = article.sop_code || article.code
+  const scope = article.department?.id === 'multiple'
+    ? t('viewer.multiple_departments', 'Multiple departments')
+    : article.department?.name ?? t(`hub.scope.${article.scope_type ?? 'organization'}`, 'Whole organization')
+  const title = translatedData && !showBilingual ? translatedData.title : article.title
+  const lede = translatedData ? translatedData.description : (article.summary || article.description)
+
+  type BandItem = { label: string; value: string; tone?: 'ok' | 'warn' }
+  const band = ([
+    article.author?.full_name ? { label: t('hub.owner', 'Owner'), value: article.author.full_name } : null,
+    version != null ? { label: t('hub.version', 'Version'), value: `v${version}` } : null,
+    effective ? { label: t('hub.effective', 'Effective'), value: effective } : null,
+    reviewed || reviewDue !== null
+      ? {
+          label: t('hub.reviewed', 'Last reviewed'),
+          value: reviewOverdue ? t('hub.reviewOverdue', 'Review overdue') : (reviewed ?? t('hub.current', 'Current')),
+          tone: reviewOverdue ? 'warn' as const : 'ok' as const,
+        }
+      : null,
+    { label: t('hub.appliesTo', 'Applies to'), value: scope },
+    { label: t('viewer.reading_time', 'Reading time'), value: t('article.min_read_n', '{{count}} min read', { count: readingTime }) },
+  ] as (BandItem | null)[]).filter((x): x is BandItem => !!x)
 
   return (
-    <header className={cn("border-b border-ds-border/60 bg-ds-surface/50 backdrop-blur-sm print:border-none print:bg-transparent", className)}>
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <div className="flex flex-col gap-6">
-          {/* Upper Metadata */}
-          <div className="flex flex-wrap items-center gap-3">
-            {hasBeenUpdatedSinceLastView && (
-              <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-orange-100 text-orange-700 ring-1 ring-orange-200 animate-pulse">
-                {t('viewer.updated_since_view', 'Updated since you last viewed')}
-              </Badge>
-            )}
-            <Badge
-              className={cn(
-                'rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider',
-                statusColor === 'green' && 'bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200',
-                statusColor === 'yellow' && 'bg-amber-100 text-amber-700 ring-1 ring-amber-200',
-                statusColor === 'gray' && 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
-                statusColor === 'red' && 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
-              )}
-            >
-              {statusLabel}
-            </Badge>
-            {article.content_type && (
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/60 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                <FileText className="h-3 w-3" />
-                {t(`content_types.${article.content_type}`)}
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100/50 dark:border-indigo-800/40 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">
-              <ShieldCheck className="h-3 w-3" />
-              {`v${article.current_version || article.version || 1}`}
-              {article.published_version_number &&
-              article.published_version_number !== (article.current_version || article.version)
-                ? ` · ${t('viewer.published_revision', 'Published')} v${article.published_version_number}`
-                : ''}
-            </div>
-            {article.is_master_template && (
-              <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-900 dark:text-amber-300 ring-1 ring-amber-400/50 flex items-center gap-1.5 shadow-2xs">
-                <Crown className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                {t('viewer.corporate_standard', 'Corporate Master Standard')}
-              </Badge>
-            )}
-            {article.master_source_id && (
-              <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-indigo-50 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300 ring-1 ring-indigo-300/60 flex items-center gap-1.5 shadow-2xs">
-                <GitBranch className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
-                {t('viewer.inherited_master', 'Inherited Brand Standard')}
-              </Badge>
-            )}
-            {article.scope_type && article.scope_type !== 'organization' && (
-              <Badge
-                variant="outline"
-                className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-white/70 dark:bg-slate-800/70 border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300"
-              >
-                {article.scope_type}
-              </Badge>
-            )}
-          </div>
+    <header className={cn('border-b border-ds-border bg-ds-background print:border-none', className)}>
+      <div className="mx-auto max-w-[1100px] px-4 sm:px-6 lg:px-8">
+        {/* Kind of document and its standing */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-semibold uppercase tracking-[0.12em]">
+          <span className="text-ds-accent">{t(`content_types_short.${article.content_type}`, article.content_type ?? '')}</span>
+          {code && <span className="font-mono normal-case tracking-normal text-ds-muted">{code}</span>}
+          {statusColor !== 'green' && <span className="rounded-[3px] bg-ds-warning-soft px-1.5 py-0.5 text-ds-warning">{statusLabel}</span>}
+          {article.is_master_template && (
+            <span className="inline-flex items-center gap-1 text-ds-muted"><Crown aria-hidden="true" className="h-3 w-3" />{t('viewer.corporate_standard', 'Altus master standard')}</span>
+          )}
+          {article.master_source_id && (
+            <span className="inline-flex items-center gap-1 text-ds-muted"><GitBranch aria-hidden="true" className="h-3 w-3" />{t('viewer.inherited_master', 'Based on an Altus master standard')}</span>
+          )}
+          {hasBeenUpdatedSinceLastView && (
+            <span className="rounded-[3px] bg-ds-info-soft px-1.5 py-0.5 text-ds-info">{t('viewer.updated_since_view', 'Updated since you last read it')}</span>
+          )}
+        </div>
 
-          {/* Title & Description */}
-          <div className="max-w-4xl space-y-4">
-            <h1
-              className={cn(
-                'text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-display font-black text-ds-ink dark:text-white leading-[1.15] tracking-tight',
-                shouldUseRtl && 'font-arabic leading-[1.25]'
-              )}
-            >
-              {translatedData && !showBilingual ? translatedData.title : article.title}
-            </h1>
+        {/* Title and lede */}
+        <h1
+          className={cn(
+            'mt-4 max-w-4xl font-editorial text-[36px] font-semibold leading-[1.1] text-ds-ink sm:text-[48px]',
+            shouldUseRtl && 'font-arabic leading-[1.3]'
+          )}
+        >
+          {title}
+        </h1>
+        {showBilingual && translatedData && (
+          <p
+            dir={isRtlTarget ? 'rtl' : 'ltr'}
+            className="mt-3 max-w-4xl border-s-2 border-ds-accent ps-4 font-editorial text-2xl text-ds-accent"
+          >
+            {translatedData.title}
+          </p>
+        )}
+        {lede && <p className="mt-4 max-w-3xl text-[18px] leading-relaxed text-ds-ink-secondary">{lede}</p>}
 
-            {showBilingual && translatedData && (
-              <h1
-                dir={isRtlTarget ? 'rtl' : 'ltr'}
+        {/* Trust band */}
+        <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-ds-border py-5 sm:grid-cols-3 lg:flex lg:flex-wrap lg:gap-x-10">
+          {band.map((item) => (
+            <div key={item.label} className="min-w-0">
+              <dt className="text-[11px] font-semibold uppercase tracking-[0.1em] text-ds-muted">{item.label}</dt>
+              <dd
                 className={cn(
-                  'text-2xl md:text-4xl font-serif font-bold text-ds-brass dark:text-ds-brass leading-snug',
-                  isRtlTarget
-                    ? 'font-arabic pe-6 border-e-4 border-ds-brass/60'
-                    : 'ps-6 border-s-4 border-ds-brass/60'
+                  'mt-0.5 flex items-center gap-1.5 truncate text-sm',
+                  item.tone === 'warn' ? 'font-medium text-ds-warning' : item.tone === 'ok' ? 'text-ds-ink' : 'text-ds-ink'
                 )}
               >
-                {translatedData.title}
-              </h1>
-            )}
-
-            {(translatedData?.description || article.description) && (
-              <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 font-normal leading-relaxed max-w-3xl">
-                {translatedData ? translatedData.description : article.description}
-              </p>
-            )}
-          </div>
-
-          {/* Lower Metadata Row */}
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-4 sm:gap-x-8 mt-4 pt-6 sm:pt-8 border-t border-slate-200/60 dark:border-slate-800">
-            {article.author && (
-              <div className="flex items-center gap-3 group">
-                <Avatar className="h-10 w-10 border-2 border-white dark:border-slate-800 shadow-sm transition-transform group-hover:scale-105">
-                  <AvatarImage src={article.author.avatar_url} />
-                  <AvatarFallback className="bg-ds-ink text-white font-bold">
-                    {article.author.full_name?.charAt(0) || '?'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    {article.author.full_name}
-                  </span>
-                  {article.department?.name && (
-                    <span className="text-xs text-slate-500 flex items-center gap-1">
-                      <Briefcase className="h-3 w-3 text-slate-400" />
-                      {article.department.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {article.last_editor?.full_name && (
-              <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-                <Pencil className="h-3.5 w-3.5 text-slate-400" />
-                <span>{article.last_editor.full_name}</span>
-              </div>
-            )}
-
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {t('viewer.updated')}
-                </span>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  <Calendar className="h-3.5 w-3.5 text-ds-brass" />
-                  {t('viewer.updated_at', {
-                    date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '',
-                  })}
-                </div>
-              </div>
-
-              <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60 dark:bg-slate-800" />
-
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {t('viewer.reading_time', 'Est. Time')}
-                </span>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  <Timer className="h-3.5 w-3.5 text-ds-ink dark:text-ds-brass" />
-                  {readingTime} {t('article.min_read', 'min read')}
-                </div>
-              </div>
-
-              <Separator orientation="vertical" className="hidden sm:block h-8 bg-slate-200/60 dark:bg-slate-800" />
-
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                  {t('viewer.views', 'Views')}
-                </span>
-                <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  <Eye className="h-3.5 w-3.5 text-slate-400" />
-                  {article.view_count || 0}
-                </div>
-              </div>
+                {item.tone === 'warn' && <AlertCircle aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
+                {item.tone === 'ok' && <CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-ds-success" />}
+                {item.value}
+              </dd>
             </div>
+          ))}
+        </dl>
+
+        {/* The reader's own obligation, stated up front */}
+        {article.requires_acknowledgment && (
+          <div
+            className={cn(
+              'mb-6 flex items-center gap-2 border-s-[3px] px-3 py-2 text-sm',
+              article.is_acknowledged ? 'border-ds-success bg-ds-success-soft text-ds-success' : 'border-ds-warning bg-ds-warning-soft text-ds-ink'
+            )}
+          >
+            <ShieldCheck aria-hidden="true" className="h-4 w-4 shrink-0" />
+            {article.is_acknowledged
+              ? t('viewer.acknowledged_on', 'You acknowledged this on {{date}}', { date: date(article.acknowledged_at) ?? '' })
+              : t('viewer.acknowledge_required', 'Required reading: read to the end and confirm you have understood it.')}
           </div>
-        </div>
+        )}
       </div>
     </header>
   )

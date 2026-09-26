@@ -56,15 +56,15 @@ export default function ForgotPassword() {
 
     if (success) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-hotel-navy-dark px-4 py-12">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-ds-surface-subtle px-4 py-12">
                 <div className="w-full max-w-md flex flex-col items-center">
                     <div className="mt-16 mb-8 text-center">
                         <img src="/altus-logo-light.png" alt="Altus" className="h-14 w-auto mx-auto object-contain" />
                     </div>
                     <Card className="w-full">
                         <CardHeader className="text-center">
-                            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
-                                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                            <div className="mx-auto w-12 h-12 bg-ds-success-soft rounded-full flex items-center justify-center mb-4">
+                                <CheckCircle className="h-6 w-6 text-ds-success" />
                             </div>
                             <CardTitle>{t('forgot_password.success_title')}</CardTitle>
                             <CardDescription>
@@ -72,11 +72,11 @@ export default function ForgotPassword() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="text-center space-y-4">
-                            <div className="p-4 bg-gray-50 dark:bg-muted/50 rounded-lg">
-                                <Mail className="h-5 w-5 mx-auto text-gray-500 mb-2" />
-                                <p className="text-sm text-gray-600 dark:text-gray-300">{email}</p>
+                            <div className="p-4 bg-ds-surface-subtle dark:bg-muted/50 rounded-lg">
+                                <Mail className="h-5 w-5 mx-auto text-ds-muted mb-2" />
+                                <p className="text-sm text-ds-muted">{email}</p>
                             </div>
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-ds-muted">
                                 {t('forgot_password.check_spam')}
                             </p>
                         </CardContent>
@@ -105,7 +105,7 @@ export default function ForgotPassword() {
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-hotel-navy-dark px-4 py-12">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-ds-surface-subtle px-4 py-12">
             <div className="w-full max-w-md flex flex-col items-center">
                 <div className="mt-16 mb-8 text-center">
                     <img src="/altus-logo-light.png" alt="Altus" className="h-14 w-auto mx-auto object-contain" />
@@ -120,7 +120,7 @@ export default function ForgotPassword() {
                     <form onSubmit={handleSubmit}>
                         <CardContent className="space-y-4">
                             {error && (
-                                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-850/50 rounded-md text-red-700 dark:text-red-400">
+                                <div className="flex items-center gap-2 p-3 bg-ds-danger-soft border border-ds-danger/30 rounded-md text-ds-danger">
                                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                                     <span className="text-sm">{error}</span>
                                 </div>
@@ -147,7 +147,7 @@ export default function ForgotPassword() {
                                         {t('forgot_password.sending')}
                                     </>
                                 ) : (
-                                    t('forgot_password.submit')
+                                    t('forgot_password.send_link')
                                 )}
                             </Button>
                             <Link to={loginUrl} className="w-full">

@@ -20,7 +20,6 @@ export function useDocumentTrash() {
           content_type,
           status,
           visibility,
-          property_id,
           department_id,
           folder_id,
           file_type,

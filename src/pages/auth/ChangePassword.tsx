@@ -144,7 +144,7 @@ export default function ChangePassword() {
     if (authLoading) return null
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-ds-surface-subtle p-4">
             <Card className="w-full max-w-md shadow-lg">
                 <CardHeader className="space-y-1">
                     <div className="flex items-center justify-center mb-4">
@@ -240,11 +240,11 @@ export default function ChangePassword() {
                             {requirements.map((req, index) => (
                                 <div key={index} className="flex items-center space-x-2">
                                     {req.valid ? (
-                                        <Check className="w-4 h-4 text-green-500" />
+                                        <Check className="w-4 h-4 text-ds-success" />
                                     ) : (
                                         <X className="w-4 h-4 text-muted-foreground" />
                                     )}
-                                    <span className={req.valid ? "text-green-600" : "text-muted-foreground"}>
+                                    <span className={req.valid ? "text-ds-success" : "text-muted-foreground"}>
                                         {req.label}
                                     </span>
                                 </div>

@@ -526,6 +526,151 @@ export type Database = {
           },
         ]
       }
+      assignments: {
+        Row: {
+          assigned_by: string | null
+          brand_id: string | null
+          content_id: string | null
+          content_type: string | null
+          created_at: string | null
+          created_by: string | null
+          department_id: string | null
+          due_date: string | null
+          due_in_days: number | null
+          expires_at: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          is_deleted: boolean | null
+          is_mandatory: boolean | null
+          notify_on_due: boolean | null
+          organization_id: string
+          priority: string | null
+          recipient_count: number | null
+          reminder_days_before: number[] | null
+          requires_acknowledgement: boolean | null
+          scope_id: string | null
+          scope_type: string | null
+          status: string | null
+          target_department_id: string | null
+          target_id: string | null
+          target_role: string | null
+          target_type: string | null
+          target_user_ids: string[] | null
+          training_module_id: string | null
+          valid_from: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          brand_id?: string | null
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          due_date?: string | null
+          due_in_days?: number | null
+          expires_at?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          is_mandatory?: boolean | null
+          notify_on_due?: boolean | null
+          organization_id?: string
+          priority?: string | null
+          recipient_count?: number | null
+          reminder_days_before?: number[] | null
+          requires_acknowledgement?: boolean | null
+          scope_id?: string | null
+          scope_type?: string | null
+          status?: string | null
+          target_department_id?: string | null
+          target_id?: string | null
+          target_role?: string | null
+          target_type?: string | null
+          target_user_ids?: string[] | null
+          training_module_id?: string | null
+          valid_from?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          brand_id?: string | null
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          due_date?: string | null
+          due_in_days?: number | null
+          expires_at?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_deleted?: boolean | null
+          is_mandatory?: boolean | null
+          notify_on_due?: boolean | null
+          organization_id?: string
+          priority?: string | null
+          recipient_count?: number | null
+          reminder_days_before?: number[] | null
+          requires_acknowledgement?: boolean | null
+          scope_id?: string | null
+          scope_type?: string | null
+          status?: string | null
+          target_department_id?: string | null
+          target_id?: string | null
+          target_role?: string | null
+          target_type?: string | null
+          target_user_ids?: string[] | null
+          training_module_id?: string | null
+          valid_from?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_assignment_rules_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignment_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignment_rules_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignment_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignment_rules_target_department_id_fkey"
+            columns: ["target_department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_assignment_rules_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_export_retention_policies: {
         Row: {
           applies_to_formats: string[] | null
@@ -801,7 +946,6 @@ export type Database = {
           department_id: string | null
           description: string | null
           expiry_date: string | null
-          hotel_id: string | null
           id: string
           issued_by: string | null
           metadata: Json | null
@@ -809,7 +953,6 @@ export type Database = {
           passing_score: number | null
           pdf_generated_at: string | null
           pdf_url: string | null
-          property_id: string | null
           quiz_attempt_id: string | null
           recipient_email: string | null
           recipient_name: string
@@ -834,7 +977,6 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           expiry_date?: string | null
-          hotel_id?: string | null
           id?: string
           issued_by?: string | null
           metadata?: Json | null
@@ -842,7 +984,6 @@ export type Database = {
           passing_score?: number | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
-          property_id?: string | null
           quiz_attempt_id?: string | null
           recipient_email?: string | null
           recipient_name: string
@@ -867,7 +1008,6 @@ export type Database = {
           department_id?: string | null
           description?: string | null
           expiry_date?: string | null
-          hotel_id?: string | null
           id?: string
           issued_by?: string | null
           metadata?: Json | null
@@ -875,7 +1015,6 @@ export type Database = {
           passing_score?: number | null
           pdf_generated_at?: string | null
           pdf_url?: string | null
-          property_id?: string | null
           quiz_attempt_id?: string | null
           recipient_email?: string | null
           recipient_name?: string
@@ -898,13 +1037,6 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "certificates_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -1291,7 +1423,6 @@ export type Database = {
           mode: string
           models_used: string[] | null
           organization_id: string | null
-          property_id: string | null
           qa_report: Json | null
           status: string
           tokens_used: number | null
@@ -1311,7 +1442,6 @@ export type Database = {
           mode: string
           models_used?: string[] | null
           organization_id?: string | null
-          property_id?: string | null
           qa_report?: Json | null
           status?: string
           tokens_used?: number | null
@@ -1331,7 +1461,6 @@ export type Database = {
           mode?: string
           models_used?: string[] | null
           organization_id?: string | null
-          property_id?: string | null
           qa_report?: Json | null
           status?: string
           tokens_used?: number | null
@@ -1373,7 +1502,6 @@ export type Database = {
           name_ar: string | null
           organization_id: string
           preset_config: Json
-          property_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1387,7 +1515,6 @@ export type Database = {
           name_ar?: string | null
           organization_id?: string
           preset_config?: Json
-          property_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1401,7 +1528,6 @@ export type Database = {
           name_ar?: string | null
           organization_id?: string
           preset_config?: Json
-          property_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1500,27 +1626,6 @@ export type Database = {
             foreignKeyName: "course_source_documents_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_source_documents_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "course_source_documents_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_source_documents_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -1540,6 +1645,58 @@ export type Database = {
           },
           {
             foreignKeyName: "course_source_documents_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_versions: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          published_by: string | null
+          snapshot: Json
+          training_module_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          published_by?: string | null
+          snapshot: Json
+          training_module_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          published_by?: string | null
+          snapshot?: Json
+          training_module_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_module_versions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_module_versions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_module_versions_training_module_id_fkey"
             columns: ["training_module_id"]
             isOneToOne: false
             referencedRelation: "courses"
@@ -1667,28 +1824,7 @@ export type Database = {
             foreignKeyName: "course_visual_assets_content_block_id_fkey"
             columns: ["content_block_id"]
             isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "documents_article_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "documents_sop_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "sop_documents_v"
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
           {
@@ -1697,34 +1833,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "training_content_blocks_v"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_resources_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "course_visual_assets_content_block_id_fkey"
-            columns: ["content_block_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_resources_v"
-            referencedColumns: ["resource_id"]
           },
           {
             foreignKeyName: "course_visual_assets_course_id_fkey"
@@ -1738,6 +1846,210 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          allow_retake: boolean | null
+          audience: string | null
+          auto_advance: boolean | null
+          blueprint: Json | null
+          brand_id: string | null
+          category: string | null
+          certificate_enabled: boolean
+          content_language: string | null
+          course_type: string | null
+          created_at: string | null
+          created_by: string | null
+          department_id: string | null
+          description: string | null
+          difficulty_level: string | null
+          estimated_duration_minutes: number | null
+          experience_level: string | null
+          expires_on: string | null
+          generation_job_id: string | null
+          generation_mode: string | null
+          id: string
+          instructional_strategy: string | null
+          is_deleted: boolean
+          is_master_template: boolean
+          last_reviewed_at: string | null
+          lifecycle_status: Database["public"]["Enums"]["content_status"]
+          master_source_id: string | null
+          max_attempts: number | null
+          organization_id: string
+          owner_id: string | null
+          passing_score_percentage: number | null
+          prior_knowledge: string | null
+          qa_report: Json | null
+          quality_score: number | null
+          randomize_questions: boolean | null
+          review_due_on: string | null
+          scope_type: string
+          show_answers: boolean | null
+          show_feedback: boolean | null
+          status: string
+          target_audience: string | null
+          template_id: string | null
+          time_limit_minutes: number | null
+          title: string
+          updated_at: string | null
+          updated_by: string | null
+          validity_period_days: number | null
+        }
+        Insert: {
+          allow_retake?: boolean | null
+          audience?: string | null
+          auto_advance?: boolean | null
+          blueprint?: Json | null
+          brand_id?: string | null
+          category?: string | null
+          certificate_enabled?: boolean
+          content_language?: string | null
+          course_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          estimated_duration_minutes?: number | null
+          experience_level?: string | null
+          expires_on?: string | null
+          generation_job_id?: string | null
+          generation_mode?: string | null
+          id?: string
+          instructional_strategy?: string | null
+          is_deleted?: boolean
+          is_master_template?: boolean
+          last_reviewed_at?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["content_status"]
+          master_source_id?: string | null
+          max_attempts?: number | null
+          organization_id?: string
+          owner_id?: string | null
+          passing_score_percentage?: number | null
+          prior_knowledge?: string | null
+          qa_report?: Json | null
+          quality_score?: number | null
+          randomize_questions?: boolean | null
+          review_due_on?: string | null
+          scope_type?: string
+          show_answers?: boolean | null
+          show_feedback?: boolean | null
+          status?: string
+          target_audience?: string | null
+          template_id?: string | null
+          time_limit_minutes?: number | null
+          title: string
+          updated_at?: string | null
+          updated_by?: string | null
+          validity_period_days?: number | null
+        }
+        Update: {
+          allow_retake?: boolean | null
+          audience?: string | null
+          auto_advance?: boolean | null
+          blueprint?: Json | null
+          brand_id?: string | null
+          category?: string | null
+          certificate_enabled?: boolean
+          content_language?: string | null
+          course_type?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          estimated_duration_minutes?: number | null
+          experience_level?: string | null
+          expires_on?: string | null
+          generation_job_id?: string | null
+          generation_mode?: string | null
+          id?: string
+          instructional_strategy?: string | null
+          is_deleted?: boolean
+          is_master_template?: boolean
+          last_reviewed_at?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["content_status"]
+          master_source_id?: string | null
+          max_attempts?: number | null
+          organization_id?: string
+          owner_id?: string | null
+          passing_score_percentage?: number | null
+          prior_knowledge?: string | null
+          qa_report?: Json | null
+          quality_score?: number | null
+          randomize_questions?: boolean | null
+          review_due_on?: string | null
+          scope_type?: string
+          show_answers?: boolean | null
+          show_feedback?: boolean | null
+          status?: string
+          target_audience?: string | null
+          template_id?: string | null
+          time_limit_minutes?: number | null
+          title?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          validity_period_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_modules_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_generation_job_id_fkey"
+            columns: ["generation_job_id"]
+            isOneToOne: false
+            referencedRelation: "course_generation_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_master_source_id_fkey"
+            columns: ["master_source_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "training_content_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_modules_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1772,7 +2084,6 @@ export type Database = {
       departments: {
         Row: {
           created_at: string | null
-          hotel_id: string | null
           id: string
           is_active: boolean | null
           is_deleted: boolean | null
@@ -1780,11 +2091,9 @@ export type Database = {
           name: string
           name_ar: string | null
           organization_id: string
-          property_id: string | null
         }
         Insert: {
           created_at?: string | null
-          hotel_id?: string | null
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null
@@ -1792,11 +2101,9 @@ export type Database = {
           name: string
           name_ar?: string | null
           organization_id?: string
-          property_id?: string | null
         }
         Update: {
           created_at?: string | null
-          hotel_id?: string | null
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null
@@ -1804,16 +2111,8 @@ export type Database = {
           name?: string
           name_ar?: string | null
           organization_id?: string
-          property_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "departments_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "departments_manager_id_fkey"
             columns: ["manager_id"]
@@ -1879,27 +2178,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_acknowledgments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_acknowledgments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_acknowledgments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -2037,27 +2315,6 @@ export type Database = {
             foreignKeyName: "document_approvals_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_approvals_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_approvals_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_approvals_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -2133,27 +2390,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_bookmarks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_bookmarks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_bookmarks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -2298,27 +2534,6 @@ export type Database = {
             foreignKeyName: "document_comments_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -2414,27 +2629,6 @@ export type Database = {
             foreignKeyName: "document_department_access_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_department_access_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_department_access_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_department_access_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -2500,27 +2694,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_favorites_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_favorites_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_favorites_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -2622,27 +2795,6 @@ export type Database = {
             foreignKeyName: "document_feedback_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_feedback_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_feedback_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_feedback_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -2680,7 +2832,6 @@ export type Database = {
           name: string
           organization_id: string
           parent_id: string | null
-          property_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2693,7 +2844,6 @@ export type Database = {
           name: string
           organization_id?: string
           parent_id?: string | null
-          property_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2706,7 +2856,6 @@ export type Database = {
           name?: string
           organization_id?: string
           parent_id?: string | null
-          property_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2841,27 +2990,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_tag_assignments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_tag_assignments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_tag_assignments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -3007,27 +3135,6 @@ export type Database = {
             foreignKeyName: "document_versions_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_versions_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "document_versions_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "document_versions_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -3091,7 +3198,6 @@ export type Database = {
           file_type: string | null
           file_url: string | null
           folder_id: string | null
-          hotel_id: string | null
           id: string
           images: Json
           is_active_kb_version: boolean | null
@@ -3115,7 +3221,6 @@ export type Database = {
           passing_score: number | null
           points: number | null
           priority: string | null
-          property_id: string | null
           published_at: string | null
           published_by: string | null
           quiz_enabled: boolean | null
@@ -3196,7 +3301,6 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           folder_id?: string | null
-          hotel_id?: string | null
           id?: string
           images?: Json
           is_active_kb_version?: boolean | null
@@ -3220,7 +3324,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -3301,7 +3404,6 @@ export type Database = {
           file_type?: string | null
           file_url?: string | null
           folder_id?: string | null
-          hotel_id?: string | null
           id?: string
           images?: Json
           is_active_kb_version?: boolean | null
@@ -3325,7 +3427,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -3400,13 +3501,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "documents_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "documents_last_published_by_fkey"
             columns: ["last_published_by"]
             isOneToOne: false
@@ -3453,27 +3547,6 @@ export type Database = {
             columns: ["master_source_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_master_source_id_fkey"
-            columns: ["master_source_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_master_source_id_fkey"
-            columns: ["master_source_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "documents_master_source_id_fkey"
-            columns: ["master_source_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -3543,27 +3616,6 @@ export type Database = {
             foreignKeyName: "documents_supersedes_document_id_fkey"
             columns: ["supersedes_document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -3573,162 +3625,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["resource_id"]
-          },
-        ]
-      }
-      employee_transfer_logs: {
-        Row: {
-          assigned_delta_courses_count: number | null
-          created_at: string | null
-          from_department_id: string | null
-          from_hotel_id: string | null
-          from_role: string | null
-          id: string
-          new_department_id: string | null
-          new_hotel_id: string | null
-          new_role: string | null
-          notes: string | null
-          organization_id: string | null
-          previous_department_id: string | null
-          previous_hotel_id: string | null
-          previous_role: string | null
-          reason: string | null
-          retained_certificates_count: number | null
-          to_department_id: string | null
-          to_hotel_id: string | null
-          to_role: string | null
-          transfer_effective_date: string
-          transferred_by: string | null
-          user_id: string | null
-          waived_obsolete_courses_count: number | null
-        }
-        Insert: {
-          assigned_delta_courses_count?: number | null
-          created_at?: string | null
-          from_department_id?: string | null
-          from_hotel_id?: string | null
-          from_role?: string | null
-          id?: string
-          new_department_id?: string | null
-          new_hotel_id?: string | null
-          new_role?: string | null
-          notes?: string | null
-          organization_id?: string | null
-          previous_department_id?: string | null
-          previous_hotel_id?: string | null
-          previous_role?: string | null
-          reason?: string | null
-          retained_certificates_count?: number | null
-          to_department_id?: string | null
-          to_hotel_id?: string | null
-          to_role?: string | null
-          transfer_effective_date?: string
-          transferred_by?: string | null
-          user_id?: string | null
-          waived_obsolete_courses_count?: number | null
-        }
-        Update: {
-          assigned_delta_courses_count?: number | null
-          created_at?: string | null
-          from_department_id?: string | null
-          from_hotel_id?: string | null
-          from_role?: string | null
-          id?: string
-          new_department_id?: string | null
-          new_hotel_id?: string | null
-          new_role?: string | null
-          notes?: string | null
-          organization_id?: string | null
-          previous_department_id?: string | null
-          previous_hotel_id?: string | null
-          previous_role?: string | null
-          reason?: string | null
-          retained_certificates_count?: number | null
-          to_department_id?: string | null
-          to_hotel_id?: string | null
-          to_role?: string | null
-          transfer_effective_date?: string
-          transferred_by?: string | null
-          user_id?: string | null
-          waived_obsolete_courses_count?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "employee_transfer_logs_from_department_id_fkey"
-            columns: ["from_department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_from_hotel_id_fkey"
-            columns: ["from_hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_new_department_id_fkey"
-            columns: ["new_department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_new_hotel_id_fkey"
-            columns: ["new_hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_previous_department_id_fkey"
-            columns: ["previous_department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_previous_hotel_id_fkey"
-            columns: ["previous_hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_to_department_id_fkey"
-            columns: ["to_department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_to_hotel_id_fkey"
-            columns: ["to_hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_transferred_by_fkey"
-            columns: ["transferred_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "employee_transfer_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -3767,75 +3663,6 @@ export type Database = {
           user_agent?: string | null
         }
         Relationships: []
-      }
-      hotels: {
-        Row: {
-          address: string | null
-          brand_id: string | null
-          city: string | null
-          country: string | null
-          created_at: string
-          hotel_code: string | null
-          id: string
-          is_active: boolean
-          is_deleted: boolean
-          is_headquarters: boolean
-          name: string
-          name_ar: string | null
-          organization_id: string
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          brand_id?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          hotel_code?: string | null
-          id?: string
-          is_active?: boolean
-          is_deleted?: boolean
-          is_headquarters?: boolean
-          name: string
-          name_ar?: string | null
-          organization_id?: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          brand_id?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          hotel_code?: string | null
-          id?: string
-          is_active?: boolean
-          is_deleted?: boolean
-          is_headquarters?: boolean
-          name?: string
-          name_ar?: string | null
-          organization_id?: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "hotels_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "brands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "hotels_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       inbound_emails: {
         Row: {
@@ -3987,27 +3814,6 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledge_chunks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "knowledge_chunks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "knowledge_chunks_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -4197,165 +4003,213 @@ export type Database = {
           },
         ]
       }
-      quizzes: {
+      lesson_progress: {
         Row: {
-          category_id: string | null
+          block_id: string
+          completed_at: string | null
           created_at: string | null
-          created_by: string | null
-          description: string | null
-          expires_on: string | null
           id: string
-          is_deleted: boolean | null
-          last_reviewed_at: string | null
-          lifecycle_status: Database["public"]["Enums"]["content_status"]
-          linked_sop_id: string | null
-          max_attempts: number | null
+          last_viewed_at: string | null
           organization_id: string
-          owner_id: string | null
-          passing_score_percentage: number | null
-          randomize_answers: boolean
-          randomize_questions: boolean | null
-          review_due_on: string | null
-          show_feedback_during: boolean | null
-          source_document_id: string | null
-          status: Database["public"]["Enums"]["question_status"]
-          time_limit_minutes: number | null
-          title: string
-          training_module_id: string | null
+          time_spent_seconds: number | null
+          training_module_id: string
           updated_at: string | null
+          user_id: string
         }
         Insert: {
-          category_id?: string | null
+          block_id: string
+          completed_at?: string | null
           created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          expires_on?: string | null
           id?: string
-          is_deleted?: boolean | null
-          last_reviewed_at?: string | null
-          lifecycle_status?: Database["public"]["Enums"]["content_status"]
-          linked_sop_id?: string | null
-          max_attempts?: number | null
+          last_viewed_at?: string | null
           organization_id?: string
-          owner_id?: string | null
-          passing_score_percentage?: number | null
-          randomize_answers?: boolean
-          randomize_questions?: boolean | null
-          review_due_on?: string | null
-          show_feedback_during?: boolean | null
-          source_document_id?: string | null
-          status?: Database["public"]["Enums"]["question_status"]
-          time_limit_minutes?: number | null
-          title: string
-          training_module_id?: string | null
+          time_spent_seconds?: number | null
+          training_module_id: string
           updated_at?: string | null
+          user_id: string
         }
         Update: {
-          category_id?: string | null
+          block_id?: string
+          completed_at?: string | null
           created_at?: string | null
-          created_by?: string | null
-          description?: string | null
-          expires_on?: string | null
           id?: string
-          is_deleted?: boolean | null
-          last_reviewed_at?: string | null
-          lifecycle_status?: Database["public"]["Enums"]["content_status"]
-          linked_sop_id?: string | null
-          max_attempts?: number | null
+          last_viewed_at?: string | null
           organization_id?: string
-          owner_id?: string | null
-          passing_score_percentage?: number | null
-          randomize_answers?: boolean
-          randomize_questions?: boolean | null
-          review_due_on?: string | null
-          show_feedback_during?: boolean | null
-          source_document_id?: string | null
-          status?: Database["public"]["Enums"]["question_status"]
-          time_limit_minutes?: number | null
-          title?: string
-          training_module_id?: string | null
+          time_spent_seconds?: number | null
+          training_module_id?: string
           updated_at?: string | null
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "learning_quizzes_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "lesson_progress_block_id_fkey"
+            columns: ["block_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_organization_id_fkey"
+            foreignKeyName: "lesson_progress_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "training_content_blocks_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_block_progress_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "training_block_progress_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_block_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          ai_generated: boolean
+          ai_source_content: string | null
+          block_order: number
+          block_type: string
+          content: string | null
+          content_ar: string | null
+          content_data: Json
+          content_url: string | null
+          created_at: string
+          created_by: string | null
+          duration_seconds: number | null
+          id: string
+          is_deleted: boolean
+          is_mandatory: boolean
+          master_source_id: string | null
+          organization_id: string
+          passing_score: number | null
+          points: number | null
+          source_document_id: string | null
+          title: string
+          training_module_id: string
+          updated_at: string
+        }
+        Insert: {
+          ai_generated?: boolean
+          ai_source_content?: string | null
+          block_order?: number
+          block_type: string
+          content?: string | null
+          content_ar?: string | null
+          content_data?: Json
+          content_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_deleted?: boolean
+          is_mandatory?: boolean
+          master_source_id?: string | null
+          organization_id: string
+          passing_score?: number | null
+          points?: number | null
+          source_document_id?: string | null
+          title?: string
+          training_module_id: string
+          updated_at?: string
+        }
+        Update: {
+          ai_generated?: boolean
+          ai_source_content?: string | null
+          block_order?: number
+          block_type?: string
+          content?: string | null
+          content_ar?: string | null
+          content_data?: Json
+          content_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_deleted?: boolean
+          is_mandatory?: boolean
+          master_source_id?: string | null
+          organization_id?: string
+          passing_score?: number | null
+          points?: number | null
+          source_document_id?: string | null
+          title?: string
+          training_module_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "documents"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "documents_article_v"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "documents_sop_v"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["resource_id"]
           },
           {
-            foreignKeyName: "learning_quizzes_training_module_id_fkey"
+            foreignKeyName: "lessons_training_module_id_fkey"
             columns: ["training_module_id"]
             isOneToOne: false
             referencedRelation: "courses"
@@ -4484,7 +4338,6 @@ export type Database = {
           mime_type: string
           organization_id: string
           original_filename: string
-          property_id: string | null
           public_url: string
           scanned_at: string | null
           sha256_hash: string | null
@@ -4518,7 +4371,6 @@ export type Database = {
           mime_type: string
           organization_id?: string
           original_filename: string
-          property_id?: string | null
           public_url: string
           scanned_at?: string | null
           sha256_hash?: string | null
@@ -4552,7 +4404,6 @@ export type Database = {
           mime_type?: string
           organization_id?: string
           original_filename?: string
-          property_id?: string | null
           public_url?: string
           scanned_at?: string | null
           sha256_hash?: string | null
@@ -4574,13 +4425,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_assets_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -4647,7 +4491,6 @@ export type Database = {
           is_system: boolean | null
           name: string
           organization_id: string
-          property_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -4658,7 +4501,6 @@ export type Database = {
           is_system?: boolean | null
           name: string
           organization_id?: string
-          property_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -4669,7 +4511,6 @@ export type Database = {
           is_system?: boolean | null
           name?: string
           organization_id?: string
-          property_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -4685,13 +4526,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "media_collections_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
         ]
@@ -5293,7 +5127,6 @@ export type Database = {
           brand_id: string | null
           created_at: string
           department_id: string | null
-          hotel_id: string | null
           id: string
           invited_by: string | null
           is_active: boolean
@@ -5307,7 +5140,6 @@ export type Database = {
           brand_id?: string | null
           created_at?: string
           department_id?: string | null
-          hotel_id?: string | null
           id?: string
           invited_by?: string | null
           is_active?: boolean
@@ -5321,7 +5153,6 @@ export type Database = {
           brand_id?: string | null
           created_at?: string
           department_id?: string | null
-          hotel_id?: string | null
           id?: string
           invited_by?: string | null
           is_active?: boolean
@@ -5344,13 +5175,6 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "organization_memberships_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -5435,7 +5259,6 @@ export type Database = {
             | null
           logo_url: string | null
           max_ai_credits_monthly: number | null
-          max_hotels: number | null
           max_learners: number | null
           max_storage_gb: number | null
           name: string
@@ -5469,7 +5292,6 @@ export type Database = {
             | null
           logo_url?: string | null
           max_ai_credits_monthly?: number | null
-          max_hotels?: number | null
           max_learners?: number | null
           max_storage_gb?: number | null
           name: string
@@ -5503,7 +5325,6 @@ export type Database = {
             | null
           logo_url?: string | null
           max_ai_credits_monthly?: number | null
-          max_hotels?: number | null
           max_learners?: number | null
           max_storage_gb?: number | null
           name?: string
@@ -6080,7 +5901,6 @@ export type Database = {
           evaluated_at: string | null
           evaluator_feedback: string | null
           evaluator_id: string | null
-          hotel_id: string | null
           id: string
           is_passed: boolean
           learner_acknowledged_at: string | null
@@ -6095,7 +5915,6 @@ export type Database = {
           evaluated_at?: string | null
           evaluator_feedback?: string | null
           evaluator_id?: string | null
-          hotel_id?: string | null
           id?: string
           is_passed?: boolean
           learner_acknowledged_at?: string | null
@@ -6110,7 +5929,6 @@ export type Database = {
           evaluated_at?: string | null
           evaluator_feedback?: string | null
           evaluator_id?: string | null
-          hotel_id?: string | null
           id?: string
           is_passed?: boolean
           learner_acknowledged_at?: string | null
@@ -6132,13 +5950,6 @@ export type Database = {
             columns: ["evaluator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "practical_submissions_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -6359,7 +6170,6 @@ export type Database = {
           name: string
           name_ar: string | null
           organization_id: string
-          property_id: string | null
           tags: string[] | null
           updated_at: string
         }
@@ -6375,7 +6185,6 @@ export type Database = {
           name: string
           name_ar?: string | null
           organization_id?: string
-          property_id?: string | null
           tags?: string[] | null
           updated_at?: string
         }
@@ -6391,7 +6200,6 @@ export type Database = {
           name?: string
           name_ar?: string | null
           organization_id?: string
-          property_id?: string | null
           tags?: string[] | null
           updated_at?: string
         }
@@ -6422,6 +6230,151 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          expires_on: string | null
+          id: string
+          is_deleted: boolean | null
+          last_reviewed_at: string | null
+          lifecycle_status: Database["public"]["Enums"]["content_status"]
+          linked_sop_id: string | null
+          max_attempts: number | null
+          organization_id: string
+          owner_id: string | null
+          passing_score_percentage: number | null
+          randomize_answers: boolean
+          randomize_questions: boolean | null
+          review_due_on: string | null
+          show_feedback_during: boolean | null
+          source_document_id: string | null
+          status: Database["public"]["Enums"]["question_status"]
+          time_limit_minutes: number | null
+          title: string
+          training_module_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_on?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          last_reviewed_at?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["content_status"]
+          linked_sop_id?: string | null
+          max_attempts?: number | null
+          organization_id?: string
+          owner_id?: string | null
+          passing_score_percentage?: number | null
+          randomize_answers?: boolean
+          randomize_questions?: boolean | null
+          review_due_on?: string | null
+          show_feedback_during?: boolean | null
+          source_document_id?: string | null
+          status?: Database["public"]["Enums"]["question_status"]
+          time_limit_minutes?: number | null
+          title: string
+          training_module_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          expires_on?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          last_reviewed_at?: string | null
+          lifecycle_status?: Database["public"]["Enums"]["content_status"]
+          linked_sop_id?: string | null
+          max_attempts?: number | null
+          organization_id?: string
+          owner_id?: string | null
+          passing_score_percentage?: number | null
+          randomize_answers?: boolean
+          randomize_questions?: boolean | null
+          review_due_on?: string | null
+          show_feedback_during?: boolean | null
+          source_document_id?: string | null
+          status?: Database["public"]["Enums"]["question_status"]
+          time_limit_minutes?: number | null
+          title?: string
+          training_module_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_quizzes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_article_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sop_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "sop_documents_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "training_module_resources_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "training_module_resources_v"
+            referencedColumns: ["resource_id"]
+          },
+          {
+            foreignKeyName: "learning_quizzes_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -6556,27 +6509,6 @@ export type Database = {
             foreignKeyName: "related_articles_related_document_id_fkey"
             columns: ["related_document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_articles_related_document_id_fkey"
-            columns: ["related_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "related_articles_related_document_id_fkey"
-            columns: ["related_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_articles_related_document_id_fkey"
-            columns: ["related_document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -6619,27 +6551,6 @@ export type Database = {
             foreignKeyName: "related_articles_source_document_id_fkey"
             columns: ["source_document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_articles_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "related_articles_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "related_articles_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -6665,7 +6576,6 @@ export type Database = {
           name: string
           next_run_at: string | null
           organization_id: string
-          property_id: string | null
           report_type: string
           schedule_cron: string | null
           schedule_frequency: string | null
@@ -6684,7 +6594,6 @@ export type Database = {
           name: string
           next_run_at?: string | null
           organization_id?: string
-          property_id?: string | null
           report_type: string
           schedule_cron?: string | null
           schedule_frequency?: string | null
@@ -6703,7 +6612,6 @@ export type Database = {
           name?: string
           next_run_at?: string | null
           organization_id?: string
-          property_id?: string | null
           report_type?: string
           schedule_cron?: string | null
           schedule_frequency?: string | null
@@ -6806,6 +6714,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      role_capabilities: {
+        Row: {
+          capability: string
+          plane: string
+          role: string
+        }
+        Insert: {
+          capability: string
+          plane: string
+          role: string
+        }
+        Update: {
+          capability?: string
+          plane?: string
+          role?: string
+        }
+        Relationships: []
       }
       role_competency_requirements: {
         Row: {
@@ -7042,7 +6968,6 @@ export type Database = {
           department_id: string | null
           id: string
           organization_id: string
-          property_id: string | null
           query: string
           result_count: number
           user_id: string | null
@@ -7052,7 +6977,6 @@ export type Database = {
           department_id?: string | null
           id?: string
           organization_id?: string
-          property_id?: string | null
           query: string
           result_count?: number
           user_id?: string | null
@@ -7062,7 +6986,6 @@ export type Database = {
           department_id?: string | null
           id?: string
           organization_id?: string
-          property_id?: string | null
           query?: string
           result_count?: number
           user_id?: string | null
@@ -7098,6 +7021,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          organization_id: string | null
         }
         Insert: {
           category?: string | null
@@ -7105,6 +7029,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          organization_id?: string | null
         }
         Update: {
           category?: string | null
@@ -7112,8 +7037,17 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          organization_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "skills_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sop_comment_votes: {
         Row: {
@@ -7237,27 +7171,6 @@ export type Database = {
             foreignKeyName: "sop_comments_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sop_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "sop_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sop_comments_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -7358,27 +7271,6 @@ export type Database = {
             foreignKeyName: "source_change_flags_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "source_change_flags_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "source_change_flags_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "source_change_flags_document_id_fkey"
-            columns: ["document_id"]
-            isOneToOne: false
             referencedRelation: "training_module_resources_v"
             referencedColumns: ["id"]
           },
@@ -7413,7 +7305,6 @@ export type Database = {
           features: Json
           id: string
           is_active: boolean
-          max_hotels: number
           max_storage_gb: number
           max_users: number
           name: string
@@ -7425,7 +7316,6 @@ export type Database = {
           features?: Json
           id?: string
           is_active?: boolean
-          max_hotels?: number
           max_storage_gb?: number
           max_users?: number
           name: string
@@ -7437,7 +7327,6 @@ export type Database = {
           features?: Json
           id?: string
           is_active?: boolean
-          max_hotels?: number
           max_storage_gb?: number
           max_users?: number
           name?: string
@@ -7504,7 +7393,6 @@ export type Database = {
           ip_address: unknown
           metadata: Json
           organization_id: string
-          property_id: string | null
           user_agent: string | null
         }
         Insert: {
@@ -7518,7 +7406,6 @@ export type Database = {
           ip_address?: unknown
           metadata?: Json
           organization_id?: string
-          property_id?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -7532,7 +7419,6 @@ export type Database = {
           ip_address?: unknown
           metadata?: Json
           organization_id?: string
-          property_id?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -7589,161 +7475,6 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      assignments: {
-        Row: {
-          assigned_by: string | null
-          brand_id: string | null
-          content_id: string | null
-          content_type: string | null
-          created_at: string | null
-          created_by: string | null
-          department_id: string | null
-          due_date: string | null
-          due_in_days: number | null
-          expires_at: string | null
-          hotel_id: string | null
-          id: string
-          instructions: string | null
-          is_active: boolean | null
-          is_deleted: boolean | null
-          is_mandatory: boolean | null
-          notify_on_due: boolean | null
-          organization_id: string
-          priority: string | null
-          recipient_count: number | null
-          reminder_days_before: number[] | null
-          requires_acknowledgement: boolean | null
-          scope_id: string | null
-          scope_type: string | null
-          status: string | null
-          target_department_id: string | null
-          target_id: string | null
-          target_role: string | null
-          target_type: string | null
-          target_user_ids: string[] | null
-          training_module_id: string | null
-          valid_from: string | null
-        }
-        Insert: {
-          assigned_by?: string | null
-          brand_id?: string | null
-          content_id?: string | null
-          content_type?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          due_date?: string | null
-          due_in_days?: number | null
-          expires_at?: string | null
-          hotel_id?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean | null
-          is_deleted?: boolean | null
-          is_mandatory?: boolean | null
-          notify_on_due?: boolean | null
-          organization_id?: string
-          priority?: string | null
-          recipient_count?: number | null
-          reminder_days_before?: number[] | null
-          requires_acknowledgement?: boolean | null
-          scope_id?: string | null
-          scope_type?: string | null
-          status?: string | null
-          target_department_id?: string | null
-          target_id?: string | null
-          target_role?: string | null
-          target_type?: string | null
-          target_user_ids?: string[] | null
-          training_module_id?: string | null
-          valid_from?: string | null
-        }
-        Update: {
-          assigned_by?: string | null
-          brand_id?: string | null
-          content_id?: string | null
-          content_type?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          due_date?: string | null
-          due_in_days?: number | null
-          expires_at?: string | null
-          hotel_id?: string | null
-          id?: string
-          instructions?: string | null
-          is_active?: boolean | null
-          is_deleted?: boolean | null
-          is_mandatory?: boolean | null
-          notify_on_due?: boolean | null
-          organization_id?: string
-          priority?: string | null
-          recipient_count?: number | null
-          reminder_days_before?: number[] | null
-          requires_acknowledgement?: boolean | null
-          scope_id?: string | null
-          scope_type?: string | null
-          status?: string | null
-          target_department_id?: string | null
-          target_id?: string | null
-          target_role?: string | null
-          target_type?: string | null
-          target_user_ids?: string[] | null
-          training_module_id?: string | null
-          valid_from?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "training_assignment_rules_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "brands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_target_department_id_fkey"
-            columns: ["target_department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_assignment_rules_training_module_id_fkey"
-            columns: ["training_module_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -7843,171 +7574,6 @@ export type Database = {
           },
           {
             foreignKeyName: "training_assignment_submissions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lessons: {
-        Row: {
-          id: string
-          organization_id: string
-          training_module_id: string
-          title: string
-          block_type: string
-          block_order: number
-          content: string | null
-          content_ar: string | null
-          content_url: string | null
-          content_data: Json
-          is_mandatory: boolean
-          points: number | null
-          passing_score: number | null
-          duration_seconds: number | null
-          ai_generated: boolean
-          ai_source_content: string | null
-          source_document_id: string | null
-          master_source_id: string | null
-          is_deleted: boolean
-          created_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          organization_id?: string
-          training_module_id: string
-          title?: string
-          block_type: string
-          block_order?: number
-          content?: string | null
-          content_ar?: string | null
-          content_url?: string | null
-          content_data?: Json
-          is_mandatory?: boolean
-          points?: number | null
-          passing_score?: number | null
-          duration_seconds?: number | null
-          ai_generated?: boolean
-          ai_source_content?: string | null
-          source_document_id?: string | null
-          master_source_id?: string | null
-          is_deleted?: boolean
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          organization_id?: string
-          training_module_id?: string
-          title?: string
-          block_type?: string
-          block_order?: number
-          content?: string | null
-          content_ar?: string | null
-          content_url?: string | null
-          content_data?: Json
-          is_mandatory?: boolean
-          points?: number | null
-          passing_score?: number | null
-          duration_seconds?: number | null
-          ai_generated?: boolean
-          ai_source_content?: string | null
-          source_document_id?: string | null
-          master_source_id?: string | null
-          is_deleted?: boolean
-          created_by?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "lessons_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_training_module_id_fkey"
-            columns: ["training_module_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "documents"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "lessons_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      lesson_progress: {
-        Row: {
-          block_id: string
-          completed_at: string | null
-          created_at: string | null
-          id: string
-          last_viewed_at: string | null
-          organization_id: string
-          time_spent_seconds: number | null
-          training_module_id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          block_id: string
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          last_viewed_at?: string | null
-          organization_id?: string
-          time_spent_seconds?: number | null
-          training_module_id: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          block_id?: string
-          completed_at?: string | null
-          created_at?: string | null
-          id?: string
-          last_viewed_at?: string | null
-          organization_id?: string
-          time_spent_seconds?: number | null
-          training_module_id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "training_block_progress_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_block_progress_training_module_id_fkey"
-            columns: ["training_module_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_block_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -8160,275 +7726,6 @@ export type Database = {
           },
         ]
       }
-      course_versions: {
-        Row: {
-          created_at: string
-          id: string
-          organization_id: string
-          published_by: string | null
-          snapshot: Json
-          training_module_id: string
-          version_number: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          organization_id?: string
-          published_by?: string | null
-          snapshot: Json
-          training_module_id: string
-          version_number: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          organization_id?: string
-          published_by?: string | null
-          snapshot?: Json
-          training_module_id?: string
-          version_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "training_module_versions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_module_versions_published_by_fkey"
-            columns: ["published_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_module_versions_training_module_id_fkey"
-            columns: ["training_module_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      courses: {
-        Row: {
-          allow_retake: boolean | null
-          audience: string | null
-          auto_advance: boolean | null
-          blueprint: Json | null
-          brand_id: string | null
-          category: string | null
-          certificate_enabled: boolean
-          content_language: string | null
-          course_type: string | null
-          created_at: string | null
-          created_by: string | null
-          department_id: string | null
-          description: string | null
-          difficulty_level: string | null
-          estimated_duration_minutes: number | null
-          experience_level: string | null
-          expires_on: string | null
-          generation_job_id: string | null
-          generation_mode: string | null
-          hotel_id: string | null
-          id: string
-          instructional_strategy: string | null
-          is_deleted: boolean
-          is_master_template: boolean
-          last_reviewed_at: string | null
-          lifecycle_status: Database["public"]["Enums"]["content_status"]
-          master_source_id: string | null
-          max_attempts: number | null
-          organization_id: string
-          owner_id: string | null
-          passing_score_percentage: number | null
-          prior_knowledge: string | null
-          property_id: string | null
-          qa_report: Json | null
-          quality_score: number | null
-          randomize_questions: boolean | null
-          review_due_on: string | null
-          scope_type: string
-          show_answers: boolean | null
-          show_feedback: boolean | null
-          status: string
-          target_audience: string | null
-          template_id: string | null
-          time_limit_minutes: number | null
-          title: string
-          updated_at: string | null
-          updated_by: string | null
-          validity_period_days: number | null
-        }
-        Insert: {
-          allow_retake?: boolean | null
-          audience?: string | null
-          auto_advance?: boolean | null
-          blueprint?: Json | null
-          brand_id?: string | null
-          category?: string | null
-          certificate_enabled?: boolean
-          content_language?: string | null
-          course_type?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          description?: string | null
-          difficulty_level?: string | null
-          estimated_duration_minutes?: number | null
-          experience_level?: string | null
-          expires_on?: string | null
-          generation_job_id?: string | null
-          generation_mode?: string | null
-          hotel_id?: string | null
-          id?: string
-          instructional_strategy?: string | null
-          is_deleted?: boolean
-          is_master_template?: boolean
-          last_reviewed_at?: string | null
-          lifecycle_status?: Database["public"]["Enums"]["content_status"]
-          master_source_id?: string | null
-          max_attempts?: number | null
-          organization_id?: string
-          owner_id?: string | null
-          passing_score_percentage?: number | null
-          prior_knowledge?: string | null
-          property_id?: string | null
-          qa_report?: Json | null
-          quality_score?: number | null
-          randomize_questions?: boolean | null
-          review_due_on?: string | null
-          scope_type?: string
-          show_answers?: boolean | null
-          show_feedback?: boolean | null
-          status?: string
-          target_audience?: string | null
-          template_id?: string | null
-          time_limit_minutes?: number | null
-          title: string
-          updated_at?: string | null
-          updated_by?: string | null
-          validity_period_days?: number | null
-        }
-        Update: {
-          allow_retake?: boolean | null
-          audience?: string | null
-          auto_advance?: boolean | null
-          blueprint?: Json | null
-          brand_id?: string | null
-          category?: string | null
-          certificate_enabled?: boolean
-          content_language?: string | null
-          course_type?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          description?: string | null
-          difficulty_level?: string | null
-          estimated_duration_minutes?: number | null
-          experience_level?: string | null
-          expires_on?: string | null
-          generation_job_id?: string | null
-          generation_mode?: string | null
-          hotel_id?: string | null
-          id?: string
-          instructional_strategy?: string | null
-          is_deleted?: boolean
-          is_master_template?: boolean
-          last_reviewed_at?: string | null
-          lifecycle_status?: Database["public"]["Enums"]["content_status"]
-          master_source_id?: string | null
-          max_attempts?: number | null
-          organization_id?: string
-          owner_id?: string | null
-          passing_score_percentage?: number | null
-          prior_knowledge?: string | null
-          property_id?: string | null
-          qa_report?: Json | null
-          quality_score?: number | null
-          randomize_questions?: boolean | null
-          review_due_on?: string | null
-          scope_type?: string
-          show_answers?: boolean | null
-          show_feedback?: boolean | null
-          status?: string
-          target_audience?: string | null
-          template_id?: string | null
-          time_limit_minutes?: number | null
-          title?: string
-          updated_at?: string | null
-          updated_by?: string | null
-          validity_period_days?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "training_modules_brand_id_fkey"
-            columns: ["brand_id"]
-            isOneToOne: false
-            referencedRelation: "brands"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_generation_job_id_fkey"
-            columns: ["generation_job_id"]
-            isOneToOne: false
-            referencedRelation: "course_generation_jobs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_master_source_id_fkey"
-            columns: ["master_source_id"]
-            isOneToOne: false
-            referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_modules_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       training_path_modules: {
         Row: {
           id: string
@@ -8491,7 +7788,6 @@ export type Database = {
           organization_id: string
           path_type: string
           target_department_id: string | null
-          target_property_id: string | null
           target_role: Database["public"]["Enums"]["app_role"] | null
           target_user_ids: string[] | null
           title: string
@@ -8509,7 +7805,6 @@ export type Database = {
           organization_id?: string
           path_type: string
           target_department_id?: string | null
-          target_property_id?: string | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
           target_user_ids?: string[] | null
           title: string
@@ -8527,7 +7822,6 @@ export type Database = {
           organization_id?: string
           path_type?: string
           target_department_id?: string | null
-          target_property_id?: string | null
           target_role?: Database["public"]["Enums"]["app_role"] | null
           target_user_ids?: string[] | null
           title?: string
@@ -8563,6 +7857,7 @@ export type Database = {
           assignment_id: string | null
           certificate_url: string | null
           completed_at: string | null
+          course_id: string | null
           created_at: string | null
           cycle_started_at: string | null
           id: string
@@ -8572,11 +7867,12 @@ export type Database = {
           last_block_id: string | null
           last_block_index: number | null
           last_session_id: string | null
-          lp_content_type: string | null
+          lp_content_type: string
           metadata: Json | null
           organization_id: string | null
           passed: boolean | null
           progress_percentage: number | null
+          quiz_id: string | null
           quiz_score: number | null
           score_percentage: number | null
           started_at: string | null
@@ -8585,14 +7881,13 @@ export type Database = {
           training_id: string
           updated_at: string | null
           user_id: string
-          course_id: string | null
-          quiz_id: string | null
         }
         Insert: {
           acknowledged_at?: string | null
           assignment_id?: string | null
           certificate_url?: string | null
           completed_at?: string | null
+          course_id?: string | null
           created_at?: string | null
           cycle_started_at?: string | null
           id?: string
@@ -8602,11 +7897,12 @@ export type Database = {
           last_block_id?: string | null
           last_block_index?: number | null
           last_session_id?: string | null
-          lp_content_type?: string | null
+          lp_content_type: string
           metadata?: Json | null
           organization_id?: string | null
           passed?: boolean | null
           progress_percentage?: number | null
+          quiz_id?: string | null
           quiz_score?: number | null
           score_percentage?: number | null
           started_at?: string | null
@@ -8621,6 +7917,7 @@ export type Database = {
           assignment_id?: string | null
           certificate_url?: string | null
           completed_at?: string | null
+          course_id?: string | null
           created_at?: string | null
           cycle_started_at?: string | null
           id?: string
@@ -8630,11 +7927,12 @@ export type Database = {
           last_block_id?: string | null
           last_block_index?: number | null
           last_session_id?: string | null
-          lp_content_type?: string | null
+          lp_content_type?: string
           metadata?: Json | null
           organization_id?: string | null
           passed?: boolean | null
           progress_percentage?: number | null
+          quiz_id?: string | null
           quiz_score?: number | null
           score_percentage?: number | null
           started_at?: string | null
@@ -8653,10 +7951,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "training_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "training_progress_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_progress_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
             referencedColumns: ["id"]
           },
           {
@@ -8751,7 +8063,6 @@ export type Database = {
             | null
           description: string | null
           end_time: string
-          hotel_id: string | null
           id: string
           instructor_id: string | null
           location_venue: string | null
@@ -8773,7 +8084,6 @@ export type Database = {
             | null
           description?: string | null
           end_time: string
-          hotel_id?: string | null
           id?: string
           instructor_id?: string | null
           location_venue?: string | null
@@ -8795,7 +8105,6 @@ export type Database = {
             | null
           description?: string | null
           end_time?: string
-          hotel_id?: string | null
           id?: string
           instructor_id?: string | null
           location_venue?: string | null
@@ -8815,13 +8124,6 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_sessions_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -9123,7 +8425,6 @@ export type Database = {
           explanation_ar: string | null
           hint: string | null
           hint_ar: string | null
-          hotel_id: string | null
           id: string
           is_master_template: boolean
           linked_sop_id: string | null
@@ -9167,7 +8468,6 @@ export type Database = {
           explanation_ar?: string | null
           hint?: string | null
           hint_ar?: string | null
-          hotel_id?: string | null
           id?: string
           is_master_template?: boolean
           linked_sop_id?: string | null
@@ -9211,7 +8511,6 @@ export type Database = {
           explanation_ar?: string | null
           hint?: string | null
           hint_ar?: string | null
-          hotel_id?: string | null
           id?: string
           is_master_template?: boolean
           linked_sop_id?: string | null
@@ -9249,13 +8548,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "unified_questions_hotel_id_fkey"
-            columns: ["hotel_id"]
-            isOneToOne: false
-            referencedRelation: "hotels"
             referencedColumns: ["id"]
           },
           {
@@ -9513,7 +8805,6 @@ export type Database = {
           invited_by: string
           metadata: Json
           organization_id: string | null
-          property_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: string
           token_hash: string | null
@@ -9532,7 +8823,6 @@ export type Database = {
           invited_by: string
           metadata?: Json
           organization_id?: string | null
-          property_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           status?: string
           token_hash?: string | null
@@ -9551,7 +8841,6 @@ export type Database = {
           invited_by?: string
           metadata?: Json
           organization_id?: string | null
-          property_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           token_hash?: string | null
@@ -10035,7 +9324,6 @@ export type Database = {
           department_id: string | null
           id: string | null
           metadata: Json | null
-          property_id: string | null
           target_id: string | null
           target_name: string | null
           target_type: string | null
@@ -10047,7 +9335,6 @@ export type Database = {
           department_id?: string | null
           id?: string | null
           metadata?: never
-          property_id?: string | null
           target_id?: string | null
           target_name?: never
           target_type?: string | null
@@ -10059,7 +9346,6 @@ export type Database = {
           department_id?: string | null
           id?: string | null
           metadata?: never
-          property_id?: string | null
           target_id?: string | null
           target_name?: never
           target_type?: string | null
@@ -10228,7 +9514,6 @@ export type Database = {
           passing_score: number | null
           points: number | null
           priority: string | null
-          property_id: string | null
           published_at: string | null
           published_by: string | null
           quiz_enabled: boolean | null
@@ -10324,7 +9609,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -10420,7 +9704,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -10546,27 +9829,6 @@ export type Database = {
             columns: ["supersedes_document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -10646,7 +9908,6 @@ export type Database = {
           passing_score: number | null
           points: number | null
           priority: string | null
-          property_id: string | null
           published_at: string | null
           published_by: string | null
           quiz_enabled: boolean | null
@@ -10742,7 +10003,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -10838,7 +10098,6 @@ export type Database = {
           passing_score?: number | null
           points?: number | null
           priority?: string | null
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: boolean | null
@@ -10964,27 +10223,6 @@ export type Database = {
             columns: ["supersedes_document_id"]
             isOneToOne: false
             referencedRelation: "sop_documents_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_content_blocks_v"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
-            referencedColumns: ["document_id"]
-          },
-          {
-            foreignKeyName: "documents_supersedes_document_id_fkey"
-            columns: ["supersedes_document_id"]
-            isOneToOne: false
-            referencedRelation: "training_module_documents_v"
             referencedColumns: ["id"]
           },
           {
@@ -11564,7 +10802,6 @@ export type Database = {
           next_review_date: string | null
           passing_score: number | null
           priority: string | null
-          property_id: string | null
           published_at: string | null
           published_by: string | null
           quiz_enabled: boolean | null
@@ -11615,7 +10852,6 @@ export type Database = {
           next_review_date?: string | null
           passing_score?: never
           priority?: never
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: never
@@ -11666,7 +10902,6 @@ export type Database = {
           next_review_date?: string | null
           passing_score?: never
           priority?: never
-          property_id?: string | null
           published_at?: string | null
           published_by?: string | null
           quiz_enabled?: never
@@ -11786,7 +11021,7 @@ export type Database = {
           type: string | null
         }
         Insert: {
-          ai_generated?: never
+          ai_generated?: boolean | null
           ai_source_content?: string | null
           content?: never
           content_data?: Json | null
@@ -11794,9 +11029,9 @@ export type Database = {
           created_at?: string | null
           duration_seconds?: number | null
           id?: string | null
-          is_deleted?: never
-          is_mandatory?: never
-          order?: never
+          is_deleted?: boolean | null
+          is_mandatory?: boolean | null
+          order?: number | null
           points?: never
           source_document_id?: string | null
           title?: string | null
@@ -11804,7 +11039,7 @@ export type Database = {
           type?: string | null
         }
         Update: {
-          ai_generated?: never
+          ai_generated?: boolean | null
           ai_source_content?: string | null
           content?: never
           content_data?: Json | null
@@ -11812,9 +11047,9 @@ export type Database = {
           created_at?: string | null
           duration_seconds?: number | null
           id?: string | null
-          is_deleted?: never
-          is_mandatory?: never
-          order?: never
+          is_deleted?: boolean | null
+          is_mandatory?: boolean | null
+          order?: number | null
           points?: never
           source_document_id?: string | null
           title?: string | null
@@ -11823,8 +11058,50 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "documents_linked_training_id_fkey"
+            foreignKeyName: "lessons_source_document_id_fkey"
             columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_article_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents_sop_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "sop_documents_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "training_module_resources_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_source_document_id_fkey"
+            columns: ["source_document_id"]
+            isOneToOne: false
+            referencedRelation: "training_module_resources_v"
+            referencedColumns: ["resource_id"]
+          },
+          {
+            foreignKeyName: "lessons_training_module_id_fkey"
+            columns: ["training_module_id"]
             isOneToOne: false
             referencedRelation: "courses"
             referencedColumns: ["id"]
@@ -11839,22 +11116,6 @@ export type Database = {
           is_required: boolean | null
           training_module_id: string | null
           updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          document_id?: string | null
-          id?: string | null
-          is_required?: never
-          training_module_id?: string | null
-          updated_at?: never
-        }
-        Update: {
-          created_at?: string | null
-          document_id?: string | null
-          id?: string | null
-          is_required?: never
-          training_module_id?: string | null
-          updated_at?: never
         }
         Relationships: []
       }
@@ -11928,7 +11189,6 @@ export type Database = {
           p_assigned_by: string
           p_department_id: string
           p_due_date: string
-          p_hotel_id: string
           p_is_mandatory: boolean
           p_module_id: string
           p_note: string
@@ -11981,7 +11241,6 @@ export type Database = {
           p_department_id: string
           p_my_team_only: boolean
           p_org_id: string
-          p_property_id: string
           p_user_id: string
         }
         Returns: boolean
@@ -12016,10 +11275,6 @@ export type Database = {
         Returns: string
       }
       _safe_uuid: { Args: { p_value: string }; Returns: string }
-      announce_eom_from_selection: {
-        Args: { p_selection_id: string }
-        Returns: string
-      }
       approve_pending_user: {
         Args: { p_approve?: boolean; p_user_id: string }
         Returns: Json
@@ -12056,8 +11311,9 @@ export type Database = {
         Args: { p_created_by: string; p_is_master: boolean; p_org_id: string }
         Returns: boolean
       }
+      can_issue_certificates: { Args: { p_org_id: string }; Returns: boolean }
       can_manage_learning_assignment: {
-        Args: { p_hotel_id: string; p_org_id: string }
+        Args: { p_org_id: string }
         Returns: boolean
       }
       can_review_training_module: {
@@ -12266,10 +11522,6 @@ export type Database = {
         Returns: string
       }
       generate_certificate_number: { Args: never; Returns: string }
-      generate_eom_auto_selection: {
-        Args: { p_month: number; p_property_id: string; p_year: number }
-        Returns: string
-      }
       generate_mfa_secret: { Args: { p_user_id: string }; Returns: Json }
       generate_totp: {
         Args: {
@@ -12461,6 +11713,21 @@ export type Database = {
           id: string
         }[]
       }
+      get_department_compliance: {
+        Args: { p_org_id: string }
+        Returns: {
+          assigned_count: number
+          completed_count: number
+          department_id: string
+          department_name: string
+          head_name: string
+          overall_score: number
+          overdue_count: number
+          sop_compliance_rate: number
+          staff_count: number
+          training_completion_rate: number
+        }[]
+      }
       get_department_skill_matrix: {
         Args: { p_department_id: string }
         Returns: Json
@@ -12563,11 +11830,7 @@ export type Database = {
         }[]
       }
       get_expiring_certificates: {
-        Args: {
-          p_department_id?: string
-          p_property_id?: string
-          p_within_days?: number
-        }
+        Args: { p_department_id?: string; p_within_days?: number }
         Returns: {
           certificate_id: string
           days_until_expiry: number
@@ -12683,6 +11946,7 @@ export type Database = {
           usages: Json
         }[]
       }
+      get_my_capabilities: { Args: { p_org_id: string }; Returns: string[] }
       get_my_managed_department_ids: {
         Args: never
         Returns: {
@@ -12740,9 +12004,30 @@ export type Database = {
           reporting_to: string
         }[]
       }
+      get_org_setup_gaps: {
+        Args: { p_org_id: string }
+        Returns: {
+          detail: string
+          kind: string
+          since: string
+          subject_id: string
+          subject_name: string
+        }[]
+      }
       get_org_structure: { Args: { p_org_id: string }; Returns: Json }
       get_organization_profile: { Args: { p_org_id: string }; Returns: Json }
       get_platform_ai_operations: { Args: never; Returns: Json }
+      get_platform_exceptions: {
+        Args: never
+        Returns: {
+          detail: string
+          kind: string
+          organization_id: string
+          organization_name: string
+          since: string
+          subject_id: string
+        }[]
+      }
       get_platform_feature_matrix: { Args: never; Returns: Json }
       get_platform_global_search: { Args: { p_query: string }; Returns: Json }
       get_platform_operations_summary: { Args: never; Returns: Json }
@@ -12794,6 +12079,21 @@ export type Database = {
           level: number
         }[]
       }
+      get_risk_queue: {
+        Args: { p_org_id: string }
+        Returns: {
+          days_overdue: number
+          department_id: string
+          department_name: string
+          due_date: string
+          item_id: string
+          item_title: string
+          kind: string
+          person_name: string
+          score: number
+          user_id: string
+        }[]
+      }
       get_role_priority: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
@@ -12832,11 +12132,7 @@ export type Database = {
         Returns: Json
       }
       get_skills_matrix: {
-        Args: {
-          p_department_id?: string
-          p_my_team_only?: boolean
-          p_property_id?: string
-        }
+        Args: { p_department_id?: string; p_my_team_only?: boolean }
         Returns: {
           department_name: string
           has_skill: boolean
@@ -12861,7 +12157,6 @@ export type Database = {
         Args: {
           p_department_id?: string
           p_my_team_only?: boolean
-          p_property_id?: string
           p_start_date?: string
         }
         Returns: {
@@ -12878,7 +12173,6 @@ export type Database = {
         Args: {
           p_department_id?: string
           p_my_team_only?: boolean
-          p_property_id?: string
           p_weeks?: number
         }
         Returns: {
@@ -12898,11 +12192,7 @@ export type Database = {
         }[]
       }
       get_training_module_performance: {
-        Args: {
-          p_department_id?: string
-          p_limit?: number
-          p_property_id?: string
-        }
+        Args: { p_department_id?: string; p_limit?: number }
         Returns: {
           assignee_count: number
           average_score: number
@@ -12923,7 +12213,6 @@ export type Database = {
       }
       get_user_departments: { Args: { user_id: string }; Returns: string[] }
       get_user_organizations: { Args: never; Returns: string[] }
-      get_user_properties: { Args: { user_id: string }; Returns: string[] }
       get_user_sessions: { Args: { p_user_id: string }; Returns: Json }
       get_user_skill_gaps: { Args: { p_user_id?: string }; Returns: Json }
       get_vault_secret: { Args: { secret_name: string }; Returns: string }
@@ -12953,10 +12242,6 @@ export type Database = {
       }
       has_profile_access: {
         Args: { _admin_id: string; _target_user_id: string }
-        Returns: boolean
-      }
-      has_property_access: {
-        Args: { _property_id: string; _user_id: string }
         Returns: boolean
       }
       has_role: {
@@ -13006,6 +12291,136 @@ export type Database = {
       is_tenant_content_editor: { Args: { p_org_id: string }; Returns: boolean }
       is_tenant_people_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_training_manager: { Args: { _user_id?: string }; Returns: boolean }
+      issue_manual_certificate: {
+        Args: {
+          p_certificate_type: string
+          p_completion_date: string
+          p_description?: string
+          p_expiry_date?: string
+          p_metadata?: Json
+          p_organization_id: string
+          p_title: string
+          p_training_module_id?: string
+          p_user_id: string
+        }
+        Returns: {
+          certificate_number: string
+          certificate_type: string
+          completion_date: string
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          issued_by: string | null
+          metadata: Json | null
+          organization_id: string
+          passing_score: number | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          quiz_attempt_id: string | null
+          recipient_email: string | null
+          recipient_name: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          score: number | null
+          sop_id: string | null
+          status: string | null
+          title: string
+          training_module_id: string | null
+          training_progress_id: string | null
+          updated_at: string | null
+          user_id: string
+          verification_code: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "certificates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      issue_path_certificate: {
+        Args: { p_path_id: string }
+        Returns: {
+          certificate_number: string
+          certificate_type: string
+          completion_date: string
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          issued_by: string | null
+          metadata: Json | null
+          organization_id: string
+          passing_score: number | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          quiz_attempt_id: string | null
+          recipient_email: string | null
+          recipient_name: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          score: number | null
+          sop_id: string | null
+          status: string | null
+          title: string
+          training_module_id: string | null
+          training_progress_id: string | null
+          updated_at: string | null
+          user_id: string
+          verification_code: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "certificates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      issue_quiz_certificate: {
+        Args: { p_quiz_id: string }
+        Returns: {
+          certificate_number: string
+          certificate_type: string
+          completion_date: string
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          issued_by: string | null
+          metadata: Json | null
+          organization_id: string
+          passing_score: number | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          quiz_attempt_id: string | null
+          recipient_email: string | null
+          recipient_name: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          score: number | null
+          sop_id: string | null
+          status: string | null
+          title: string
+          training_module_id: string | null
+          training_progress_id: string | null
+          updated_at: string | null
+          user_id: string
+          verification_code: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "certificates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       issue_training_certificate: {
         Args: { p_training_progress_id: string }
         Returns: {
@@ -13016,7 +12431,6 @@ export type Database = {
           department_id: string | null
           description: string | null
           expiry_date: string | null
-          hotel_id: string | null
           id: string
           issued_by: string | null
           metadata: Json | null
@@ -13024,7 +12438,6 @@ export type Database = {
           passing_score: number | null
           pdf_generated_at: string | null
           pdf_url: string | null
-          property_id: string | null
           quiz_attempt_id: string | null
           recipient_email: string | null
           recipient_name: string
@@ -13203,17 +12616,6 @@ export type Database = {
         Returns: undefined
       }
       process_certificate_expirations: { Args: never; Returns: number }
-      process_employee_transfer: {
-        Args: {
-          p_actor_id?: string
-          p_reason: string
-          p_target_dept_id: string
-          p_target_hotel_id: string
-          p_target_role: string
-          p_user_id: string
-        }
-        Returns: Json
-      }
       process_notification_batch: {
         Args: { p_batch_size?: number }
         Returns: {
@@ -13249,15 +12651,6 @@ export type Database = {
       request_id_from_storage_path: {
         Args: { p_path: string }
         Returns: string
-      }
-      request_knowledge_content: {
-        Args: {
-          p_department_id?: string
-          p_description?: string
-          p_property_id?: string
-          p_title: string
-        }
-        Returns: undefined
       }
       reset_monthly_ai_credits: { Args: never; Returns: undefined }
       reset_user_wizard_progress: {
@@ -13307,6 +12700,10 @@ export type Database = {
         Returns: Database["public"]["Enums"]["notification_type"]
       }
       sanitize_search_input: { Args: { p_input: string }; Returns: string }
+      save_course_lessons: {
+        Args: { p_course_id: string; p_lessons: Json }
+        Returns: Json
+      }
       scan_source_change_flags: { Args: never; Returns: number }
       search_knowledge_articles: {
         Args: {
@@ -13315,14 +12712,47 @@ export type Database = {
           p_limit?: number
           p_offset?: number
           p_property_id?: string
-          p_query?: string
+          p_query: string
           p_requires_acknowledgment?: boolean
           p_status?: string
         }
         Returns: {
+          author_avatar: string
+          author_name: string
+          category_id: string
+          compliance_level: string
+          content: string
+          content_type: string
+          created_by: string
+          current_version: number
+          department_id: string
+          description: string
+          download_count: number
+          estimated_read_time: number
+          file_extension: string
+          file_size: number
+          file_url: string
           id: string
+          linked_quiz_id: string
+          linked_training_id: string
+          next_review_date: string
+          passing_score: number
+          priority: string
+          published_at: string
+          quiz_enabled: boolean
           rank: number
-          total_count: number
+          requires_acknowledgment: boolean
+          requires_quiz: boolean
+          review_frequency_months: number
+          role: Database["public"]["Enums"]["app_role"]
+          sop_code: string
+          status: Database["public"]["Enums"]["document_status"]
+          subcategory_id: string
+          summary: string
+          title: string
+          updated_at: string
+          view_count: number
+          visibility: string
         }[]
       }
       secure_search_documents: {
@@ -13493,6 +12923,10 @@ export type Database = {
       suggest_system_role: {
         Args: { p_job_title: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      tenant_can: {
+        Args: { p_capability: string; p_org_id: string }
+        Returns: boolean
       }
       track_related_article_click: {
         Args: {

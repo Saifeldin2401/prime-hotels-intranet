@@ -25,22 +25,18 @@ import { AuthorInspector } from './components/author/AuthorInspector'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import RichTextEditor from '@/components/ui/RichTextEditor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { useProperty } from '@/contexts/PropertyContext'
 import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
 import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { useCategories, useRelatedArticles } from '@/hooks/useKnowledge'
-import { useProperties } from '@/hooks/useProperties'
 import { useTagSuggestions } from '@/hooks/useTagSuggestions'
 import { useTrainingModules } from '@/hooks/useTraining'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
@@ -69,19 +65,9 @@ import {
 } from '@/types/knowledge'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-    AlertTriangle,
-    Building,
-    CheckSquare,
-    Clock,
-    Crown,
-    Eye,
-    FileText,
-    HelpCircle,
-    Image as ImageIcon,
-    Languages,
-    Loader2,
-    Palette,
-    Video as VideoIcon
+  Languages,
+  Loader2,
+  Palette,
 } from 'lucide-react'
 import { marked } from 'marked'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -107,14 +93,13 @@ interface ArticleFormData {
     storage_path: string
     content_type: string
     visibility: KnowledgeVisibility
-    scope_type: 'organization' | 'brand' | 'hotel' | 'department' | 'global'
+    scope_type: 'organization' | 'brand' | 'department' | 'global'
     is_master_template: boolean
     master_source_id?: string | null
     requires_acknowledgment: boolean
     featured: boolean
     department_id: string | null
     category_id: string | null
-    target_property_id: string | null
     specific_department_ids: string[] // For specific departments visibility
     linked_training_id: string | null
     // Content Type Specific
@@ -168,7 +153,6 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     featured: false,
     department_id: null,
     category_id: null,
-    target_property_id: null,
     specific_department_ids: [],
     linked_training_id: null,
     checklist_items: [],
@@ -221,7 +205,6 @@ const hasDraftableArticleContent = (formData: ArticleFormData) => {
         formData.video_url.trim() ||
         formData.department_id ||
         formData.category_id ||
-        formData.target_property_id ||
         formData.linked_training_id ||
         formData.requires_acknowledgment ||
         formData.featured ||
@@ -302,14 +285,20 @@ function categorizeDocument(tags: string[]): string {
     return 'General'
 }
 
+/** Hotel-era visibilities read as their organization-wide equivalents. */
+function normalizeVisibility(value: unknown): KnowledgeVisibility {
+    if (value === 'property' || !value) return 'all_properties' as KnowledgeVisibility
+    if (value === 'group_department') return 'department' as KnowledgeVisibility
+    return value as KnowledgeVisibility
+}
+
 export default function KnowledgeAuthor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const location = useLocation()
     const { t } = useTranslation(['knowledge', 'common'])
     const { user, profile, primaryRole } = useAuth()
-    const { currentOrganization, currentBrand, currentHotel, isPlatformAdmin } = useTenant()
-    const { currentProperty } = useProperty()
+    const { currentOrganization, currentBrand, isPlatformAdmin } = useTenant()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id)
 
@@ -394,10 +383,9 @@ export default function KnowledgeAuthor() {
             ...createEmptyArticleFormData(),
             ...draft,
             content_type: draft.content_type || 'document',
-            visibility: (draft.visibility || 'all_properties') as KnowledgeVisibility,
+            visibility: normalizeVisibility(draft.visibility),
             department_id: draft.department_id || null,
             category_id: draft.category_id || null,
-            target_property_id: draft.target_property_id || null,
             linked_training_id: draft.linked_training_id || null,
             checklist_items: Array.isArray(draft.checklist_items) ? draft.checklist_items : [],
             faq_items: Array.isArray(draft.faq_items) ? draft.faq_items : [],
@@ -476,9 +464,8 @@ export default function KnowledgeAuthor() {
     // Fetch existing data if editing
 
     const { data: relatedArticles = [], refetch: refetchRelated } = useRelatedArticles(id || '')
-    const { departments } = useDepartments(currentProperty?.id)
+    const { departments } = useDepartments()
     const { data: categories } = useCategories(formData.department_id || undefined)
-    const { data: properties } = useProperties()
     const { data: trainingModules } = useTrainingModules()
 
     // Duplicate detection and tag suggestions
@@ -600,28 +587,18 @@ export default function KnowledgeAuthor() {
     const VISIBILITY_OPTIONS: { value: KnowledgeVisibility; label: string; description: string }[] = [
         {
             value: 'all_properties' as KnowledgeVisibility,
-            label: t('editor.visibility.simple_all_hotels', 'Everyone in all hotels'),
-            description: t('editor.visibility.simple_all_hotels_desc', 'All active staff across all hotels can view this.')
-        },
-        {
-            value: 'property',
-            label: t('editor.visibility.simple_one_hotel', 'Everyone in one hotel'),
-            description: t('editor.visibility.simple_one_hotel_desc', 'All staff in one selected hotel can view this.')
+            label: t('editor.visibility.simple_org', 'Everyone in the organization'),
+            description: t('editor.visibility.simple_org_desc', 'Every active member can read this.')
         },
         {
             value: 'department',
-            label: t('editor.visibility.simple_team_one_hotel', 'One team in one hotel'),
-            description: t('editor.visibility.simple_team_one_hotel_desc', 'Only one team in one selected hotel can view this.')
-        },
-        {
-            value: 'group_department',
-            label: t('editor.visibility.simple_team_all_hotels', 'Same team in all hotels'),
-            description: t('editor.visibility.simple_team_all_hotels_desc', 'One team can view this across every hotel.')
+            label: t('editor.visibility.simple_team', 'One team'),
+            description: t('editor.visibility.simple_team_desc', 'Only members of one department can read this.')
         },
         {
             value: 'specific_departments',
-            label: t('editor.visibility.simple_custom', 'Custom teams'),
-            description: t('editor.visibility.simple_custom_desc', 'Pick specific teams from different hotels.')
+            label: t('editor.visibility.simple_teams', 'Several teams'),
+            description: t('editor.visibility.simple_teams_desc', 'Pick the departments that can read this.')
         },
         {
             value: 'role',
@@ -946,7 +923,7 @@ export default function KnowledgeAuthor() {
 
     const previewHtml = useMemo(() => {
         const raw = (editLang === 'en' ? formData.content : formData.content_ar) || ''
-        if (!raw.trim()) return `<p class="text-gray-400">${t('editor.empty_preview')}</p>`
+        if (!raw.trim()) return `<p class="text-ds-muted">${t('editor.empty_preview')}</p>`
         const isHtml = raw.trim().startsWith('<')
         const html = isHtml ? raw : (marked.parse(raw, { async: false }) as string)
         return transformMermaidCodeBlocks(html)
@@ -962,7 +939,7 @@ export default function KnowledgeAuthor() {
         if (primaryRole === 'staff' || primaryRole === 'learner') {
             setIsForbidden(true)
             toast.error('You do not have permission to create or edit articles.')
-            navigate('/knowledge')
+            navigate('/studio/articles')
         }
     }, [primaryRole, navigate])
 
@@ -1008,7 +985,7 @@ export default function KnowledgeAuthor() {
                             file_url: data.file_url || '',
                             storage_path: '',
                             content_type: data.content_type || 'document',
-                            visibility: (data.visibility || 'all_properties') as KnowledgeVisibility,
+                            visibility: normalizeVisibility(data.visibility),
                             scope_type: ((data as any).scope_type || 'organization') as any,
                             is_master_template: Boolean((data as any).is_master_template),
                             master_source_id: (data as any).master_source_id || null,
@@ -1016,7 +993,6 @@ export default function KnowledgeAuthor() {
                             featured: false,
                             department_id: data.department_id || null,
                             category_id: data.category_id || null,
-                            target_property_id: data.property_id || null,
                             specific_department_ids: accessIds,
                             linked_training_id: data.linked_training_id || null,
                             // Content Type Specific
@@ -1043,7 +1019,7 @@ export default function KnowledgeAuthor() {
                             ai_total_duration_ms: meta.ai_total_duration_ms,
                         })
 
-                        // Load Master SOP release notes and local property addendum
+                        // Load master release notes and the local addendum
                         const rawContentData = ((data as any).content_data || {}) as Record<string, any>
                         if (rawContentData.release_notes && typeof rawContentData.release_notes === 'string') {
                             setReleaseNotes(rawContentData.release_notes)
@@ -1067,7 +1043,7 @@ export default function KnowledgeAuthor() {
             // Smart validation: Auto-adjust visibility based on department selection
             if (field === 'department_id') {
                 // If department is set to None (null), reset visibility if it requires department
-                if (value === null && (updated.visibility === 'department' || updated.visibility === 'group_department')) {
+                if (value === null && updated.visibility === 'department') {
                     updated.visibility = 'all_properties' as KnowledgeVisibility
                 }
             }
@@ -1141,8 +1117,7 @@ export default function KnowledgeAuthor() {
 
     // Computed validation warnings
     const validationWarnings = {
-        departmentRequired: (formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id,
-        propertyIrrelevant: (formData.visibility === 'all_properties' || formData.visibility === 'group_department') && formData.target_property_id,
+        departmentRequired: formData.visibility === 'department' && !formData.department_id,
     }
 
     const selectedDepartmentName = useMemo(() => {
@@ -1150,33 +1125,15 @@ export default function KnowledgeAuthor() {
         return departments?.find(d => d.id === formData.department_id)?.name || null
     }, [departments, formData.department_id])
 
-    const selectedPropertyName = useMemo(() => {
-        if (formData.target_property_id) {
-            return properties?.find(p => p.id === formData.target_property_id)?.name || t('editor.selected_property', 'selected property')
-        }
-        return currentProperty?.name || t('editor.current_property', 'current property')
-    }, [currentProperty?.name, formData.target_property_id, properties, t])
-
     const visibilitySummary = useMemo(() => {
         switch (formData.visibility) {
             case 'all_properties':
-                return t('editor.visibility.summary_all_hotels', {
-                    defaultValue: 'Visible to all staff in all hotels.'
-                })
-            case 'property':
-                return t('editor.visibility.summary_property', {
-                    defaultValue: 'Visible to all staff in {{property}}.',
-                    property: selectedPropertyName
+                return t('editor.visibility.summary_org', {
+                    defaultValue: 'Visible to everyone in the organization.'
                 })
             case 'department':
-                return t('editor.visibility.summary_department', {
-                    defaultValue: 'Visible to {{department}} team in {{property}}.',
-                    department: selectedDepartmentName || t('editor.selected_team', 'selected team'),
-                    property: selectedPropertyName
-                })
-            case 'group_department':
-                return t('editor.visibility.summary_group_department', {
-                    defaultValue: 'Visible to {{department}} team in all hotels.',
+                return t('editor.visibility.summary_team', {
+                    defaultValue: 'Visible to the {{department}} team.',
                     department: selectedDepartmentName || t('editor.selected_team', 'selected team')
                 })
             case 'specific_departments':
@@ -1195,7 +1152,6 @@ export default function KnowledgeAuthor() {
         formData.specific_department_ids.length,
         formData.visibility,
         selectedDepartmentName,
-        selectedPropertyName,
         t
     ])
 
@@ -1217,7 +1173,7 @@ export default function KnowledgeAuthor() {
             // Interactive Checklist generation
             if (action === 'checklist') {
                 const items = await aiService.generateChecklist({
-                    title: formData.title || 'Hotel Standard Operating Procedure',
+                    title: formData.title || 'Standard Operating Procedure',
                     content: formData.content || formData.title,
                     language: aiLanguage,
                     count: 6
@@ -1235,7 +1191,7 @@ export default function KnowledgeAuthor() {
             // Operational FAQs generation
             if (action === 'faqs') {
                 const faqs = await aiService.generateFAQs({
-                    title: formData.title || 'Hotel Standard Operating Procedure',
+                    title: formData.title || 'Standard Operating Procedure',
                     content: formData.content || formData.title,
                     language: aiLanguage,
                     count: 4
@@ -1398,14 +1354,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             return
         }
 
-        if ((formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id) {
+        if (formData.visibility === 'department' && !formData.department_id) {
             toast.error(t('editor.alerts.dept_required'))
-            return
-        }
-
-        const rawPropertyId = formData.target_property_id || currentProperty?.id || null
-        if (formData.visibility === 'property' && !isUuid(rawPropertyId)) {
-            toast.error(t('editor.alerts.property_required', { defaultValue: 'Please select a specific property.' }))
             return
         }
 
@@ -1464,12 +1414,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         }
 
         try {
-            const normalizedPropertyId = formData.visibility === 'all_properties' ||
-                formData.visibility === 'group_department' ||
-                formData.visibility === 'specific_departments'
-                ? null
-                : (isUuid(rawPropertyId) ? rawPropertyId : null)
-
             const estimatedReadTime = formData.estimated_read_time ?? calculateEstimatedReadTime(formData.content)
             let savedArticleId: string | null = null
             let savedArticleData = null
@@ -1523,11 +1467,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 requires_acknowledgment: formData.requires_acknowledgment,
                 status: status,
                 organization_id: currentOrganization?.id || null,
-                hotel_id: currentHotel?.id || normalizedPropertyId || null,
                 brand_id: currentBrand?.id || null,
                 scope_type: formData.scope_type || 'organization',
                 is_master_template: isPlatformAdmin ? Boolean(formData.is_master_template) : false,
-                property_id: normalizedPropertyId,
                 department_id: isUuid(formData.department_id) ? formData.department_id : null,
                 category_id: isUuid(formData.category_id) ? formData.category_id : null,
                 linked_training_id: isUuid(formData.linked_training_id) ? formData.linked_training_id : null,
@@ -1579,7 +1521,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     status: status,
                     visibility: formData.visibility,
                     organization_id: currentOrganization?.id || null,
-                    hotel_id: currentHotel?.id || normalizedPropertyId || null,
                     brand_id: currentBrand?.id || null,
                     scope_type: formData.scope_type || 'organization',
                     is_master_template: isPlatformAdmin ? Boolean(formData.is_master_template) : false,
@@ -1867,16 +1808,15 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
     }
 
     return (
-        <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        <div className="mx-auto max-w-7xl space-y-6 pb-12">
             <UnsavedChangesDialog />
 
             {/* Restore Draft Prompt */}
             {!isEditing && showRestorePrompt && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                <div role="status" className="flex flex-col gap-3 rounded-[6px] border border-ds-border bg-ds-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2.5">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-                        <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                            Draft article restored from previous session
+                        <span className="text-sm text-ds-ink">
+                            We restored the draft you were writing last time.
                         </span>
                     </div>
                     <div className="flex gap-2">
@@ -1889,7 +1829,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             setShowRestorePrompt(false)
                             toast.success('Draft cleared')
                         }} className="text-xs">
-                            Clear Draft
+                            Start over
                         </Button>
                     </div>
                 </div>
@@ -1926,45 +1866,29 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 onNavigateToItem={handleNavigateToReadinessItem}
             />
 
-            {/* Master SOP Blueprint Banner */}
+            {/* Master article */}
             {formData.is_master_template && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
-                            <Crown className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-sm font-bold text-amber-950 dark:text-amber-200">
-                                    Corporate Master SOP Blueprint
-                                </h3>
-                                <Badge className="bg-amber-500 text-white text-[10px] h-4 py-0 font-mono font-bold">
-                                    Global Standard
-                                </Badge>
-                                {isEditing && (
-                                    <Badge variant="outline" className="text-[10px] h-4 py-0 font-mono border-amber-400 text-amber-800 dark:text-amber-300 font-semibold">
-                                        v{(formData as any).current_version || 1}.0
-                                    </Badge>
-                                )}
-                            </div>
-                            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">
-                                {isEditing && masterDeploymentCount !== null
-                                    ? `This Master SOP is currently distributed across ${masterDeploymentCount} hotel properties. Updating will notify property GMs to sync.`
-                                    : 'Published directly into the Platform Master Library for cross-property multi-tenant deployment.'}
-                            </p>
-                        </div>
+                <div className="flex flex-col gap-4 rounded-[6px] border border-ds-border bg-ds-surface px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-ds-ink">
+                            Master article
+                            {isEditing && <span className="ms-2 font-mono text-xs font-normal text-ds-muted">v{(formData as any).current_version || 1}</span>}
+                        </p>
+                        <p className="text-sm text-ds-muted">
+                            {isEditing && masterDeploymentCount !== null
+                                ? `Used by ${masterDeploymentCount} organization${masterDeploymentCount === 1 ? '' : 's'}. Publishing a change tells them an update is available.`
+                                : 'Published to the platform master library, ready to deploy to organizations.'}
+                        </p>
                     </div>
-
                     {isEditing && (
-                        <div className="sm:w-80 shrink-0">
-                            <Label className="text-[10px] font-bold text-amber-900 dark:text-amber-300 uppercase tracking-wider block mb-1">
-                                Revision Release Notes
-                            </Label>
+                        <div className="shrink-0 sm:w-80">
+                            <Label htmlFor="release-notes" className="mb-1 block text-xs font-medium text-ds-ink">What changed in this version</Label>
                             <Input
-                                placeholder="Explain what changed in this edition..."
+                                id="release-notes"
+                                placeholder="e.g. Updated the allergen escalation step"
                                 value={releaseNotes}
                                 onChange={e => setReleaseNotes(e.target.value)}
-                                className="h-8 text-xs bg-white/80 dark:bg-slate-900 border-amber-300"
+                                className="min-h-[40px] text-sm"
                             />
                         </div>
                     )}
@@ -1977,23 +1901,20 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 {/* Zone 2: Main Workspace Canvas (8 cols) */}
                 <div className="lg:col-span-8 space-y-5">
                     
-                    {/* Property Local Addendum (if inherited from Master SOP) */}
+                    {/* Local addendum (if inherited from a master article) */}
                     {formData.master_source_id && (
-                        <Card className="border-indigo-200 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-xs">
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm font-bold flex items-center gap-2 text-indigo-950 dark:text-indigo-200">
-                                    <Building className="h-4 w-4 text-indigo-600" />
-                                    <span>Property Local Addendum / ملحق المنشأة المحلي</span>
-                                </CardTitle>
-                                <p className="text-xs text-indigo-800/80 dark:text-indigo-300/80">
-                                    This document is inherited from a Corporate Master SOP. You can document property-specific extensions, localized emergency contacts, or floor layouts below. These local notes are preserved and never overwritten by upstream master syncs.
+                        <section aria-labelledby="local-addendum" className="space-y-3 rounded-[6px] border border-ds-border bg-ds-surface p-4">
+                            <div>
+                                <h2 id="local-addendum" className="text-sm font-semibold text-ds-ink">Local notes for this organization</h2>
+                                <p className="text-sm text-ds-muted">
+                                    This article comes from a master article. Add what is specific to your organization, such as extensions, muster points or floor layouts. Master updates never overwrite these notes.
                                 </p>
-                            </CardHeader>
-                            <CardContent className="space-y-3 pt-2">
+                            </div>
+                            <div className="space-y-3">
                                 <div>
-                                    <Label className="text-xs font-semibold text-foreground">Local Property Notes (English)</Label>
+                                    <Label className="text-xs font-medium text-ds-ink">English</Label>
                                     <Textarea
-                                        placeholder="e.g. For this property, Night Duty Manager extension is #4402. Muster point is West Courtyard."
+                                        placeholder="e.g. Night Duty Manager extension is #4402. Muster point is the West Courtyard."
                                         value={localAddendumEn}
                                         onChange={e => setLocalAddendumEn(e.target.value)}
                                         rows={3}
@@ -2001,7 +1922,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     />
                                 </div>
                                 <div>
-                                    <Label className="text-xs font-semibold text-foreground">ملحق المنشأة المحلي (بالعربية)</Label>
+                                    <Label className="text-xs font-medium text-ds-ink">العربية</Label>
                                     <Textarea
                                         dir="rtl"
                                         placeholder="مثال: لهذه المنشأة، تحويلة مدير الفترة الليلية #4402 ونقطة التجمع في الساحة الغربية."
@@ -2011,35 +1932,31 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         className="text-xs mt-1 bg-background font-arabic"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
+                            </div>
+                        </section>
                     )}
 
-                    {/* Focused 3-Tab Authoring Experience */}
+                    {/* Write / Checklists / Preview */}
                     <Tabs value={mainWorkspaceTab} onValueChange={(v) => setMainWorkspaceTab(v as 'content' | 'protocols' | 'preview')} className="space-y-4">
-                        <div className="flex items-center justify-between border-b pb-2">
-                            <TabsList className="h-9">
-                                <TabsTrigger value="content" className="text-xs h-7 px-3 gap-1.5 font-medium">
-                                    <FileText className="w-3.5 h-3.5 text-hotel-gold" />
-                                    <span>✍️ {t('editor.tabs.procedure', 'Procedure & Content')}</span>
+                        <div className="flex items-end justify-between border-b border-ds-border">
+                            <TabsList className="h-auto gap-1 rounded-none bg-transparent p-0">
+                                <TabsTrigger value="content" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                                    <span>{t('editor.tabs.write', 'Write')}</span>
                                 </TabsTrigger>
-                                <TabsTrigger value="protocols" className="text-xs h-7 px-3 gap-1.5 font-medium">
-                                    <CheckSquare className="w-3.5 h-3.5 text-hotel-gold" />
-                                    <span>📋 {t('editor.tabs.protocols', 'Operational Protocols')}</span>
+                                <TabsTrigger value="protocols" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                                    <span>{t('editor.tabs.checklists', 'Checklists & controls')}</span>
                                     {((formData.checklist_items?.length || 0) + (formData.critical_control_points?.length || 0) + (formData.service_benchmarks?.length || 0)) > 0 && (
-                                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ms-1">
+                                        <span className="ms-1.5 font-mono text-xs tabular-nums">
                                             {(formData.checklist_items?.length || 0) + (formData.critical_control_points?.length || 0) + (formData.service_benchmarks?.length || 0)}
-                                        </Badge>
+                                        </span>
                                     )}
                                 </TabsTrigger>
-                                <TabsTrigger value="preview" className="text-xs h-7 px-3 gap-1.5 font-medium">
-                                    <Eye className="w-3.5 h-3.5 text-hotel-gold" />
-                                    <span>👁️ {t('editor.tabs.preview', 'Live Interactive Preview')}</span>
+                                <TabsTrigger value="preview" className="min-h-[40px] rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
+                                    <span>{t('editor.tabs.preview_short', 'Preview')}</span>
                                 </TabsTrigger>
                             </TabsList>
 
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Clock className="w-3.5 h-3.5" />
+                            <div className="hidden pb-2 text-xs text-ds-muted sm:block">
                                 <span>{calculateEstimatedReadTime(formData.content) || 1} min read</span>
                             </div>
                         </div>
@@ -2079,31 +1996,26 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 onGenerate={generateWithAI}
                             />
 
-                            {/* Rich Text Editor Card */}
-                            <Card className="shadow-xs border-border bg-card">
-                                <CardHeader className="pb-3 border-b flex flex-row items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-sm font-bold text-foreground">
-                                            {editLang === 'ar' ? 'المحتوى التشغيلي بالعربية' : 'Operational Procedure Body'}
-                                        </h3>
-                                        <Badge variant="outline" className="text-[10px]">
-                                            {editLang === 'ar' ? 'العربية' : 'English'}
-                                        </Badge>
-                                    </div>
+                            {/* Article text */}
+                            <section aria-labelledby="article-body" className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <h2 id="article-body" className="text-sm font-semibold text-ds-ink">
+                                        {editLang === 'ar' ? 'النص بالعربية' : 'Article text'}
+                                    </h2>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={beautifyArticle}
                                         disabled={isGenerating || !formData.content}
-                                        className="h-7 text-xs text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/40 gap-1 font-medium"
+                                        className="min-h-[36px] gap-1 text-sm text-ds-ink-secondary hover:text-ds-ink"
                                     >
-                                        <Palette className="w-3.5 h-3.5 text-purple-600" />
-                                        <span>AI Beautify</span>
+                                        <Palette aria-hidden="true" className="h-4 w-4" />
+                                        <span>Tidy formatting with AI</span>
                                     </Button>
-                                </CardHeader>
-                                <CardContent className="pt-4">
+                                </div>
+                                <div>
                                     {editLang === 'ar' && (
-                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-hotel-navy dark:text-hotel-gold mb-2">
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-ds-ink mb-2">
                                             <Languages className="h-3.5 w-3.5" />
                                             {t('editor.editing_arabic_body', 'Editing the Arabic body (المحتوى العربي)')}
                                         </div>
@@ -2112,13 +2024,13 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         key={`rte-${editLang}`}
                                         value={editLang === 'en' ? formData.content : formData.content_ar}
                                         onChange={v => updateField(editLang === 'en' ? 'content' : 'content_ar', v)}
-                                        placeholder={t('editor.write_placeholder', 'Start typing the hotel operational procedure or policy standard here...')}
+                                        placeholder={t('editor.write_placeholder', 'Write the procedure step by step…')}
                                         minHeight={340}
                                         direction={editLang === 'ar' ? 'rtl' : 'ltr'}
                                         onPickMedia={pickMediaFromLibrary}
                                     />
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </section>
 
                             {/* Video Content Block (if video format or video url exists) */}
                             {(formData.content_type === 'video' || formData.video_url) && (
@@ -2150,12 +2062,12 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                         {/* TAB 3: Live Interactive Preview */}
                         <TabsContent value="preview" className="space-y-5 mt-0">
-                            <div ref={previewRef} className="space-y-8 min-h-[400px] p-6 border rounded-xl bg-card">
+                            <div ref={previewRef} className="min-h-[400px] space-y-8 rounded-[6px] border border-ds-border bg-ds-surface p-6">
                                 {/* Standard Article HTML Preview */}
                                 {previewHtml ? (
                                     <InlineErrorBoundary>
                                         <div
-                                            className="prose max-w-none text-foreground dark:text-slate-100"
+                                            className="prose max-w-none text-foreground"
                                             dir={editLang === 'ar' ? 'rtl' : 'ltr'}
                                             dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
                                         />
@@ -2169,9 +2081,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 {/* Live Video Preview */}
                                 {formData.video_url && (
                                     <div className="pt-6 border-t">
-                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-                                            <VideoIcon className="w-4 h-4 text-red-500" />
-                                            Video Demonstration
+                                        <h4 className="mb-3 text-sm font-semibold text-ds-ink">
+                                            Video
                                         </h4>
                                         <VideoPlayer videoUrl={formData.video_url} title={formData.title} />
                                     </div>
@@ -2180,9 +2091,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 {/* Live Interactive Checklist Preview */}
                                 {formData.checklist_items && formData.checklist_items.length > 0 && (
                                     <div className="pt-6 border-t">
-                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-                                            <CheckSquare className="w-4 h-4 text-orange-500" />
-                                            Interactive SOP Execution Checklist
+                                        <h4 className="mb-3 text-sm font-semibold text-ds-ink">
+                                            Checklist
                                         </h4>
                                         <ChecklistRenderer items={formData.checklist_items} />
                                     </div>
@@ -2191,9 +2101,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 {/* Live Interactive FAQ Accordion Preview */}
                                 {formData.faq_items && formData.faq_items.length > 0 && (
                                     <div className="pt-6 border-t">
-                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-                                            <HelpCircle className="w-4 h-4 text-yellow-500" />
-                                            Operational FAQs & Edge Cases
+                                        <h4 className="mb-3 text-sm font-semibold text-ds-ink">
+                                            Questions
                                         </h4>
                                         <FAQAccordion items={formData.faq_items} />
                                     </div>
@@ -2202,9 +2111,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 {/* Live Image Gallery Preview */}
                                 {formData.images && formData.images.length > 0 && (
                                     <div className="pt-6 border-t">
-                                        <h4 className="font-bold text-sm text-foreground mb-3 flex items-center gap-2">
-                                            <ImageIcon className="w-4 h-4 text-blue-500" />
-                                            Step-by-Step Visual Gallery
+                                        <h4 className="mb-3 text-sm font-semibold text-ds-ink">
+                                            Images
                                         </h4>
                                         <ImageGalleryRenderer images={formData.images} />
                                     </div>
@@ -2228,19 +2136,16 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 </div>
 
                 {/* Zone 3: Streamlined Inspector (Publishing, Media, Governance) */}
-                <div className="lg:col-span-4 space-y-4">
+                <div className="space-y-4 lg:sticky lg:top-20 lg:col-span-4 lg:self-start">
                     <AuthorInspector
                         activeTab={inspectorTab}
                         onActiveTabChange={setInspectorTab}
                         formData={formData}
                         onUpdateField={updateField}
                         departments={departments || []}
-                        properties={properties || []}
                         categories={categories || []}
                         trainingModules={trainingModules || []}
-                        currentProperty={currentProperty}
                         currentBrand={currentBrand}
-                        currentHotel={currentHotel}
                         isPlatformAdmin={isPlatformAdmin}
                         user={user}
                         visibilityOptions={VISIBILITY_OPTIONS}
@@ -2295,7 +2200,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     allowedTypes: mediaPickKindRef.current ? [mediaPickKindRef.current] : undefined,
                     multiple: false
                 }}
-                title={mediaPickKindRef.current === 'video' ? t('editor.select_video_title', 'Select Video from Hotel Library') : t('editor.select_media_title', 'Select Media from Hotel Library')}
+                title={mediaPickKindRef.current === 'video' ? t('editor.select_video_title', 'Select a video from the media library') : t('editor.select_media_title', 'Select Media from Hotel Library')}
             />
 
             {/* AI Knowledge Article & SOP Studio Modal */}

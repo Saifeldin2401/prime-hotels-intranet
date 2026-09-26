@@ -26,13 +26,13 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAccountActions } from '@/hooks/useAccountActions'
 import { PendingUserApprovals } from '@/components/admin/PendingUserApprovals'
-import { EmployeeTransferModal } from '@/components/directory/EmployeeTransferModal'
 import {
     Sheet,
     SheetContent
 } from '@/components/ui/sheet'
-import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, GraduationCap, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Building, Briefcase, Shield, ExternalLink } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, Search, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Mail, Building, Briefcase, Shield } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
@@ -79,7 +79,8 @@ export default function UserManagement() {
     enabled: !!currentOrganization?.id,
   })
 
-  const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100)
+  // A seat limit applies only when the plan sets one - never an assumed default.
+  const isSeatLimitReached = !isPlatformOperator && !!entitlements?.max_learners && (entitlements.usage?.learners ?? 0) >= entitlements.max_learners
 
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
@@ -90,7 +91,6 @@ export default function UserManagement() {
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<AppRole | ''>('staff')
-  const [invitePropertyId, setInvitePropertyId] = useState('')
   const [inviteDepartmentId, setInviteDepartmentId] = useState('')
 
   // Account action dialog state
@@ -101,8 +101,6 @@ export default function UserManagement() {
   const [suspendUntil, setSuspendUntil] = useState('')
   const [notifyUser, setNotifyUser] = useState(true)
   const [actionNote, setActionNote] = useState('')
-  const [transferModalOpen, setTransferModalOpen] = useState(false)
-  const [transferTargetUser, setTransferTargetUser] = useState<Profile | null>(null)
 
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
@@ -128,15 +126,9 @@ export default function UserManagement() {
           organization_memberships (
             id,
             organization_id,
-            hotel_id,
             department_id,
             role,
             is_primary,
-            hotel:hotels (
-              id,
-              name,
-              name_ar
-            ),
             department:departments (
               id,
               name,
@@ -162,17 +154,10 @@ export default function UserManagement() {
         const rolesList = [...new Set(orgMemberships.map((m: any) => membershipToAppRole(m.role)))]
         const primaryAppRole = rolesList[0] || 'learner'
 
-        const propMap = new Map<string, { id: string; name: string }>()
         const deptMap = new Map<string, { id: string; name: string }>()
 
         if (Array.isArray(p.organization_memberships)) {
           p.organization_memberships.forEach((m: any) => {
-            if (m.hotel?.id && m.hotel?.name) {
-              propMap.set(m.hotel.id, {
-                id: m.hotel.id,
-                name: isRTL && m.hotel.name_ar ? m.hotel.name_ar : m.hotel.name,
-              })
-            }
             if (m.department?.id && m.department?.name) {
               deptMap.set(m.department.id, {
                 id: m.department.id,
@@ -190,49 +175,26 @@ export default function UserManagement() {
           ...p,
           role: primaryAppRole,
           organizations: orgInfo,
-          properties: Array.from(propMap.values()),
           departments: Array.from(deptMap.values()),
         } as Profile
       })
     },
   })
 
-  const { data: properties } = useQuery({
-    queryKey: ['properties', 'invite', currentOrganization?.id],
-    queryFn: async () => {
-      if (!currentOrganization?.id) return []
-      const { data, error } = await supabase
-        .from('hotels')
-        .select('id, name, name_ar')
-        .eq('is_active', true)
-        .eq('is_deleted', false)
-        .eq('organization_id', currentOrganization.id)
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      return (data || []) as Array<{ id: string; name: string; name_ar?: string | null }>
-    },
-    enabled: !!currentOrganization?.id,
-  })
-
   const { data: departments } = useQuery({
-    queryKey: ['departments', 'invite', invitePropertyId, currentOrganization?.id],
+    queryKey: ['departments', 'invite', currentOrganization?.id],
     queryFn: async () => {
       if (!currentOrganization?.id) return []
-      let query = supabase
+      const query = supabase
         .from('departments')
-        .select('id, name, name_ar, property_id, hotel_id, organization_id')
+        .select('id, name, name_ar, organization_id')
         .eq('is_active', true)
         .eq('organization_id', currentOrganization.id)
         .order('name', { ascending: true })
-
-      if (invitePropertyId) {
-        query = query.or(`property_id.eq.${invitePropertyId},hotel_id.eq.${invitePropertyId}`)
-      }
 
       const { data, error } = await query
       if (error) throw error
-      return (data || []) as Array<{ id: string; name: string; name_ar?: string | null; property_id: string }>
+      return (data || []) as Array<{ id: string; name: string; name_ar?: string | null }>
     },
     enabled: !!currentOrganization?.id,
   })
@@ -396,7 +358,6 @@ export default function UserManagement() {
           provisioningMethod: 'invite',
           appUrl,
           organizationId: currentOrganization.id,
-          propertyIds: invitePropertyId ? [invitePropertyId] : [],
           departmentIds: inviteDepartmentId ? [inviteDepartmentId] : [],
         },
       })
@@ -439,7 +400,6 @@ export default function UserManagement() {
       setInviteDialogOpen(false)
       setInviteEmail('')
       setInviteRole('staff')
-      setInvitePropertyId('')
       setInviteDepartmentId('')
       refetch()
       refetchEntitlements()
@@ -458,7 +418,6 @@ export default function UserManagement() {
     if (!open) {
       setInviteEmail('')
       setInviteRole('staff')
-      setInvitePropertyId('')
       setInviteDepartmentId('')
     }
   }
@@ -631,22 +590,22 @@ export default function UserManagement() {
     switch (user.account_status) {
       case 'suspended':
         return (
-          <Badge variant="destructive" className="text-xs gap-1 border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold">
+          <Badge variant="destructive" className="text-xs gap-1 border-ds-danger/30 bg-ds-danger-soft text-ds-danger font-bold">
             <ShieldOff className="w-3 h-3" />
             {t('status.suspended')}
           </Badge>
         )
       case 'locked':
         return (
-          <Badge variant="outline" className="text-xs gap-1 border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+          <Badge variant="outline" className="text-xs gap-1 border-ds-warning/30 bg-ds-warning-soft text-ds-warning font-bold">
             <AlertTriangle className="w-3 h-3" />
             {t('status.locked')}
           </Badge>
         )
       default:
         return (
-          <Badge className="text-xs gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <Badge className="text-xs gap-1 border-ds-success/30 bg-ds-success-soft text-ds-success font-bold">
+            <span className="h-1.5 w-1.5 rounded-full bg-ds-success animate-pulse" />
             {t('status.active')}
           </Badge>
         )
@@ -660,7 +619,7 @@ export default function UserManagement() {
       case 'super_admin':
       case 'corporate_admin':
         return (
-          <Badge className="text-[11px] font-bold border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300">
+          <Badge className="text-[11px] font-bold border-ds-warning/30 bg-ds-warning-soft text-ds-warning">
             {roleKey ? ROLES[roleKey as AppRole]?.label || roleKey : 'Corporate Admin'}
           </Badge>
         )
@@ -668,13 +627,13 @@ export default function UserManagement() {
       case 'regional_hr':
       case 'property_hr':
         return (
-          <Badge className="text-[11px] font-bold border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400">
+          <Badge className="text-[11px] font-bold border-ds-accent/30 bg-ds-accent-soft text-ds-accent">
             {roleKey ? ROLES[roleKey as AppRole]?.label || roleKey : 'L&D Director'}
           </Badge>
         )
       case 'knowledge_manager':
         return (
-          <Badge className="text-[11px] font-bold border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <Badge className="text-[11px] font-bold border-ds-success/30 bg-ds-success-soft text-ds-success">
             {roleKey ? ROLES[roleKey as AppRole]?.label || roleKey : 'Knowledge Manager'}
           </Badge>
         )
@@ -705,7 +664,7 @@ export default function UserManagement() {
   }), [users])
 
   const seatUsage = entitlements?.usage?.learners ?? users?.length ?? 0
-  const maxSeats = entitlements?.max_learners ?? 100
+  const maxSeats = entitlements?.max_learners ?? 0
   const percentUsed = Math.min(100, Math.round((seatUsage / (maxSeats || 1)) * 100))
   const seatsAvailable = Math.max(0, maxSeats - seatUsage)
   const isNearSeatLimit = percentUsed >= 90
@@ -717,8 +676,8 @@ export default function UserManagement() {
   if (!currentOrganization?.id) {
     return (
       <div className="max-w-xl mx-auto py-16 px-4 text-center animate-in fade-in duration-300">
-        <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mb-4">
-          <Building className="h-7 w-7 text-amber-500" />
+        <div className="mx-auto w-14 h-14 rounded-2xl bg-ds-warning-soft border border-ds-warning/30 flex items-center justify-center mb-4">
+          <Building className="h-7 w-7 text-ds-warning" />
         </div>
         <h2 className="text-xl font-bold font-serif text-foreground">
           {t('no_tenant_selected_title', 'Tenant Organization Context Required')}
@@ -732,7 +691,7 @@ export default function UserManagement() {
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           {isPlatformUser && (
             <Link to="/platform/users">
-              <Button className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1.5">
+              <Button className="bg-ds-warning hover:bg-ds-warning text-ds-ink font-bold text-xs gap-1.5">
                 <Users className="h-3.5 w-3.5" />
                 <span>{t('go_to_global_directory', 'Go to Platform User Directory')}</span>
               </Button>
@@ -761,189 +720,98 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Executive Welcome & Operations Header */}
-      <div className="relative overflow-hidden rounded-[8px] border border-[#DDDBD4] dark:border-[#30404D] bg-[#15212E] p-6 sm:p-8 text-[#F4F2EC] shadow-none">
-        <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-[#86672C]/20 text-[#D4AF37] border border-[#86672C]/40 text-xs font-semibold px-2.5 py-0.5 rounded-[4px] flex items-center gap-1.5">
-                <Building className="h-3.5 w-3.5" />
-                <span>{isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}</span>
-              </Badge>
-              <Badge variant="outline" className="border-[#30404D] bg-[#1E2D3D] text-[#929CA5] text-xs font-medium px-2.5 py-0.5 rounded-[4px]">
-                <GraduationCap className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
-                <span>{t('academy_badge', 'Organization Academy & Team')}</span>
-              </Badge>
-              <span className="inline-flex items-center gap-1 rounded-[4px] border border-[#30404D] bg-[#1E2D3D] px-2.5 py-0.5 text-xs font-mono text-[#929CA5]">
-                {users?.length || 0} {t('members_count', 'Members')}
-              </span>
-            </div>
-
-            <h1 className="text-2xl font-bold tracking-tight text-[#F4F2EC] sm:text-3xl lg:text-4xl font-serif">
-              {t('academy_user_management_title', 'Academy Learners & Team Management')}
-            </h1>
-            <p className="text-xs text-[#929CA5] sm:text-sm font-normal max-w-2xl leading-relaxed">
-              {t('academy_user_management_desc', 'Manage learners, course instructors, department managers, and administrators for {{orgName}}.', { orgName: isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name })}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 sm:flex-nowrap">
+      <WorkspaceHeader
+        eyebrow={t('people.eyebrow', 'Organization')}
+        title={t('people.title', 'Team members')}
+        context={maxSeats
+          ? t('people.contextSeats', '{{count}} members · {{used}} of {{max}} seats used', { count: users?.length || 0, used: seatUsage, max: maxSeats })
+          : t('people.context', '{{count}} members', { count: users?.length || 0 })}
+        actions={
+          <>
             {isPlatformUser && (
-              <Link
-                to="/platform/users"
-                className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none transition-colors"
-                title="Open Global SaaS Platform User Directory"
-              >
-                <Shield className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
-                <span>{t('platform_directory_button', 'Platform Directory')}</span>
-                <ExternalLink className="ms-1 h-3 w-3 opacity-70" />
+              <Link to="/platform/users" className={headerActionClass.secondary}>
+                <Shield aria-hidden="true" className="h-4 w-4" />{t('platform_directory_button', 'Platform directory')}
               </Link>
             )}
-
-            <Link
-              data-tour="users-bulk-btn"
-              to="/admin/users/bulk"
-              className="inline-flex h-9 items-center justify-center rounded-[6px] border border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none transition-colors"
-            >
-              <Upload className="me-1.5 h-3.5 w-3.5 text-[#6BA8E5]" />
-              <span>{t('bulk_provisioning_btn', 'Bulk CSV Provisioning')}</span>
+            <Link data-tour="users-bulk-btn" to="/admin/users/bulk" className={headerActionClass.secondary}>
+              <Upload aria-hidden="true" className="h-4 w-4" />{t('people.bulk', 'Import from CSV')}
             </Link>
+            <button type="button" data-tour="users-invite-btn" onClick={() => setInviteDialogOpen(true)} disabled={isSeatLimitReached} className={`${headerActionClass.secondary} disabled:opacity-50`}>
+              <MailPlus aria-hidden="true" className="h-4 w-4" />{t('people.invite', 'Invite by email')}
+            </button>
+            <button type="button" data-tour="users-add-btn" onClick={openCreateForm} disabled={isSeatLimitReached} className={`${headerActionClass.primary} disabled:opacity-50`}>
+              <Plus aria-hidden="true" className="h-4 w-4" />{t('people.add', 'Add member')}
+            </button>
+          </>
+        }
+      />
 
-            <Button
-              data-tour="users-invite-btn"
-              variant="outline"
-              onClick={() => setInviteDialogOpen(true)}
-              disabled={isSeatLimitReached}
-              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to invite users.' : undefined}
-              className="h-9 rounded-[6px] border-[#30404D] bg-[#1E2D3D] px-3.5 text-xs font-medium text-[#F4F2EC] hover:bg-[#25384D] shadow-none"
-            >
-              <MailPlus className="me-1.5 h-3.5 w-3.5 text-[#B79A62]" />
-              <span>{t('invite_learner_btn', 'Invite Learner')}</span>
-            </Button>
-
-            <Button
-              data-tour="users-add-btn"
-              onClick={openCreateForm}
-              disabled={isSeatLimitReached}
-              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add members.' : undefined}
-              className="h-9 rounded-[6px] bg-[#86672C] hover:bg-[#6D5322] px-4 text-xs font-medium text-[#FFFFFF] shadow-none transition-colors"
-            >
-              <Plus className="me-1.5 h-3.5 w-3.5" />
-              <span>{t('add_member_btn', 'Add Member')}</span>
-            </Button>
-          </div>
+      {maxSeats > 0 && percentUsed >= 90 && (
+        <div role="status" className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-s-[3px] px-4 py-2.5 text-sm ${isSeatLimitReached ? 'border-ds-danger bg-ds-danger-soft text-ds-danger' : 'border-ds-warning bg-ds-warning-soft text-ds-ink'}`}>
+          <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0" />
+          <span className="font-semibold">
+            {isSeatLimitReached
+              ? t('people.seatsFull', 'All {{max}} seats are in use. New people cannot be added until seats are freed or the plan grows.', { max: maxSeats })
+              : t('people.seatsNear', '{{available}} seats left of {{max}}.', { available: seatsAvailable, max: maxSeats })}
+          </span>
         </div>
-
-        {/* Learner Seats Entitlement Quota Bar */}
-        <div className="mt-5 pt-4 border-t border-border/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D]">
-            <div className="text-[11px] text-muted-foreground font-medium flex items-center justify-between">
-              <span>{t('learner_seat_quota', 'Learner Seats')}</span>
-              <span className="font-mono font-bold text-foreground">{percentUsed}%</span>
-            </div>
-            <div className="w-full bg-muted rounded-full h-2 mt-2 overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  percentUsed >= 100
-                    ? 'bg-rose-500'
-                    : percentUsed >= 90
-                    ? 'bg-amber-500'
-                    : 'bg-emerald-500'
-                }`}
-                style={{ width: `${Math.min(100, percentUsed)}%` }}
-              />
-            </div>
-            <div className="text-[10px] text-muted-foreground mt-1.5 font-mono">
-              {t('seats_used', { used: seatUsage, max: maxSeats, defaultValue: `${seatUsage} / ${maxSeats} Seats Used` })} · {t('seats_available', { available: seatsAvailable, defaultValue: `${seatsAvailable} Available` })}
-            </div>
-          </div>
-
-          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
-            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.learners', 'Enrolled Learners')}</div>
-            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.learners}</div>
-          </div>
-
-          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
-            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.instructors', 'Instructors & Trainers')}</div>
-            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.instructors}</div>
-          </div>
-
-          <div className="p-3 rounded-[6px] bg-[#1E2D3D] border border-[#30404D] flex flex-col justify-center">
-            <div className="text-[11px] text-muted-foreground font-medium">{t('role_filters.admins', 'Academy Admins')}</div>
-            <div className="text-xl font-bold font-mono text-foreground mt-0.5">{roleCounts.admins}</div>
-          </div>
-        </div>
-
-        {isSeatLimitReached && (
-          <div className="mt-4 p-3 bg-rose-500/15 border border-rose-500/30 rounded-[6px] flex items-center gap-3 text-rose-700 dark:text-rose-300 text-xs">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
-            <span>
-              {t('seat_limit_reached_alert', { used: seatUsage, max: maxSeats, defaultValue: `Learner seat limit reached (${seatUsage} / ${maxSeats}). Upgrade subscription to invite or provision more learners.` })}
-            </span>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Pending User Approvals */}
       <PendingUserApprovals onCountChange={setPendingApprovalCount} />
 
-      {/* Role Category Tabs & Status Filter Controls */}
+      {/* Filters: role (underline tabs), status (chips), search */}
       <div className="space-y-3">
-        {/* Layer 1: Learning Role Filter Tabs (Academy Mental Model) */}
-        <div className="flex flex-wrap items-center gap-2 p-1 rounded-[8px] bg-muted/40 border border-border max-w-fit">
+        <div role="tablist" aria-label={t('people.roleFilter', 'Filter by role')} className="flex gap-1 overflow-x-auto border-b border-ds-border">
           {(['all', 'learners', 'instructors', 'admins'] as const).map((cat) => (
             <button
               key={cat}
+              type="button"
+              role="tab"
+              aria-selected={roleCategoryFilter === cat}
               onClick={() => setRoleCategoryFilter(cat)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] text-xs font-semibold transition-colors ${
-                roleCategoryFilter === cat
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
+              className={`-mb-px inline-flex min-h-[40px] shrink-0 items-center gap-1.5 border-b-2 px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent ${
+                roleCategoryFilter === cat ? 'border-ds-ink text-ds-ink' : 'border-transparent text-ds-muted hover:text-ds-ink'
               }`}
             >
-              <span>{t(`role_filters.${cat}`, cat === 'all' ? 'All Members' : cat === 'learners' ? 'Learners' : cat === 'instructors' ? 'Instructors' : 'Admins')}</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${roleCategoryFilter === cat ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold' : 'bg-muted text-muted-foreground'}`}>
-                {roleCounts[cat]}
-              </span>
+              {t(`role_filters.${cat}`, cat === 'all' ? 'Everyone' : cat === 'learners' ? 'Learners' : cat === 'instructors' ? 'Instructors' : 'Admins')}
+              <span className="font-mono text-xs tabular-nums">{roleCounts[cat]}</span>
             </button>
           ))}
         </div>
 
-        {/* Layer 2: Status Filter Pills */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {(['all', 'active', 'suspended', 'locked', 'inactive'] as const).map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-medium transition-colors ${
-                  statusFilter === status
-                    ? 'bg-foreground text-background font-bold shadow-xs'
-                    : 'bg-card text-muted-foreground border border-border/60 hover:text-foreground'
-                }`}
-              >
-                <span>{status === 'all' ? t('all_personnel', 'All Statuses') : t(`status.${status}`)}</span>
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${statusFilter === status ? 'bg-background/20 text-background font-bold' : 'bg-muted text-muted-foreground'}`}>
-                  {statusCounts[status]}
-                </span>
-              </button>
-            ))}
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div role="group" aria-label={t('people.statusFilter', 'Filter by status')} className="flex flex-wrap items-center gap-2">
+            {(['all', 'active', 'suspended', 'locked', 'inactive'] as const)
+              .filter((status) => status === 'all' || status === 'active' || statusCounts[status] > 0)
+              .map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  aria-pressed={statusFilter === status}
+                  onClick={() => setStatusFilter(status)}
+                  className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent ${
+                    statusFilter === status ? 'border-ds-ink bg-ds-ink text-ds-on-ink' : 'border-ds-border bg-ds-surface text-ds-ink hover:border-ds-border-strong'
+                  }`}
+                >
+                  {status === 'all' ? t('people.anyStatus', 'Any status') : t(`status.${status}`)}
+                  <span className="font-mono text-xs tabular-nums opacity-70">{statusCounts[status]}</span>
+                </button>
+              ))}
           </div>
 
-          {filteredUsers && filteredUsers.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={selectedUserIds.size === filteredUsers.length ? deselectAll : selectAllVisible}
-              className="text-xs font-semibold text-muted-foreground hover:text-foreground h-8"
-            >
-              {selectedUserIds.size === filteredUsers.length ? (
-                <><CheckSquare className="w-3.5 h-3.5 me-1.5 text-amber-500" />{t('bulk.deselect_all', 'Deselect All')}</>
-              ) : (
-                <><Square className="w-3.5 h-3.5 me-1.5" />{t('bulk.select_all', 'Select All Visible')}</>
-              )}
-            </Button>
-          )}
+          <div className="relative w-full lg:w-80">
+            <label htmlFor="people-search" className="sr-only">{t('search_placeholder', 'Search by name, email, or staff ID...')}</label>
+            <Search aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ds-muted" />
+            <input
+              id="people-search"
+              type="search"
+              placeholder={t('people.search', 'Name, email or staff ID')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="min-h-[40px] w-full rounded-md border border-ds-border bg-ds-surface ps-9 pe-3 text-sm text-ds-ink placeholder:text-ds-muted focus:border-ds-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+            />
+          </div>
         </div>
       </div>
 
@@ -957,315 +825,171 @@ export default function UserManagement() {
         />
       )}
 
-      {/* Academy Members Roster Table Card */}
-      <div className="rounded-[8px] border border-border bg-card p-4 sm:p-6 shadow-none">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/40">
-          <div>
-            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-amber-500" />
-              <span>{t('academy_badge', 'Academy & Team Roster')}</span>
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {filteredUsers?.length || 0} {t('members_count', 'members')} matching role and status filters. Click any row for slide-over details.
-            </p>
-          </div>
-
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder={t('search_placeholder', 'Search by name, email, or staff ID...')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-9 w-full ps-9 pe-3 rounded-[6px] border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-[#86672C]"
-            />
-          </div>
+      {/* Roster */}
+      {isLoading ? (
+        <div className="space-y-px overflow-hidden rounded-[6px] border border-ds-border" aria-busy="true">
+          {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-16 animate-pulse bg-ds-surface-subtle" />)}
         </div>
-
-        <div className="mt-4">
-
-
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-            </div>
-          ) : filteredUsers && filteredUsers.length > 0 ? (
-            <div data-tour="users-table" className="space-y-3">
-              {filteredUsers.map((user) => (
-                <div
+      ) : filteredUsers && filteredUsers.length > 0 ? (
+        <div data-tour="users-table" className="overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+          <div className="flex items-center gap-3 border-b border-ds-border px-4 py-2 text-xs text-ds-muted">
+            <button
+              type="button"
+              onClick={selectedUserIds.size === filteredUsers.length ? deselectAll : selectAllVisible}
+              aria-label={selectedUserIds.size === filteredUsers.length ? t('bulk.deselect_all', 'Deselect all') : t('bulk.select_all', 'Select all visible')}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-ds-surface-subtle"
+            >
+              {selectedUserIds.size === filteredUsers.length
+                ? <CheckSquare aria-hidden="true" className="h-4 w-4 text-ds-ink" />
+                : <Square aria-hidden="true" className="h-4 w-4" />}
+            </button>
+            <span>{t('people.showing', '{{count}} people', { count: filteredUsers.length })}</span>
+          </div>
+          <ul className="divide-y divide-ds-border">
+            {filteredUsers.map((user) => {
+              const selected = selectedUserIds.has(user.id)
+              const place = user.departments && user.departments.length > 0
+                ? user.departments.map((d) => d.name).join(', ')
+                : null
+              return (
+                <li
                   key={user.id}
-                  role="button"
-                  tabIndex={0}
-                  className={`group flex flex-col lg:flex-row lg:items-center justify-between p-4 rounded-2xl border transition-all duration-200 gap-4 cursor-pointer backdrop-blur-xl ${
-                    selectedUserIds.has(user.id)
-                      ? 'border-amber-500/50 bg-amber-500/[0.08] shadow-sm'
-                      : 'border-border/60 bg-card/60 hover:border-amber-500/40 hover:bg-card/90 hover:shadow-md'
-                  }`}
-                  onClick={() => setDetailUser(user)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setDetailUser(user)
-                    }
-                  }}
+                  className={`group flex items-center gap-3 px-4 py-3 ${selected ? 'bg-ds-accent-soft' : 'hover:bg-ds-surface-subtle'}`}
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    {/* Checkbox */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleUserSelection(user.id)
-                      }}
-                      aria-label="Select user"
-                      className="shrink-0 text-muted-foreground/60 hover:text-amber-500 transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => toggleUserSelection(user.id)}
+                    aria-label={t('people.select', 'Select {{name}}', { name: user.full_name || user.email })}
+                    aria-pressed={selected}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-ds-muted hover:text-ds-ink"
+                  >
+                    {selected ? <CheckSquare aria-hidden="true" className="h-4 w-4 text-ds-ink" /> : <Square aria-hidden="true" className="h-4 w-4" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailUser(user)}
+                    className="flex min-w-0 flex-1 items-center gap-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-accent"
+                  >
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarImage src={user.avatar_url || ''} className="object-cover" alt="" />
+                      <AvatarFallback className="bg-ds-surface-subtle text-xs font-semibold text-ds-ink">
+                        {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span className="truncate text-sm font-medium text-ds-ink">{user.full_name || t('no_name', 'Unnamed')}</span>
+                        {user.staff_id && <span className="font-mono text-xs text-ds-muted">{user.staff_id}</span>}
+                      </span>
+                      <span className="block truncate text-xs text-ds-muted">
+                        {[user.job_title, place].filter(Boolean).join(' · ')}
+                      </span>
+                    </span>
+                  </button>
+
+                  <span className="hidden shrink-0 md:block">{getRoleBadge(user.role)}</span>
+                  <span className="hidden w-24 shrink-0 text-end text-xs text-ds-muted lg:block">
+                    {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString() : t('people.neverSignedIn', 'Never signed in')}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {(user.account_status && user.account_status !== 'active') || !user.is_active ? getStatusBadge(user) : null}
+                    {user.force_password_reset && (
+                      <span className="hidden rounded-[3px] bg-ds-warning-soft px-1.5 py-0.5 text-[11px] font-medium text-ds-warning sm:inline">
+                        {t_ext('reset', 'Reset required')}
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-ds-muted hover:text-ds-ink"
+                      onClick={() => handleEdit(user)}
+                      aria-label={t('actions.edit', 'Edit user')}
                     >
-                      {selectedUserIds.has(user.id) ? (
-                        <CheckSquare className="w-5 h-5 text-amber-500" />
-                      ) : (
-                        <Square className="w-5 h-5" />
-                      )}
-                    </button>
-
-                    {/* Luxury Avatar */}
-                    <div className="relative shrink-0">
-                      <Avatar className="h-11 w-11 rounded-[6px] border border-border">
-                        <AvatarImage src={user.avatar_url || ''} className="object-cover" />
-                        <AvatarFallback className="bg-[#86672C]/10 text-[#86672C] dark:text-[#B79A62] font-semibold text-sm rounded-[6px]">
-                          {(user.full_name || user.email || '?').charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {user.is_active && (
-                        <span className="absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-background bg-emerald-500" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-bold text-foreground text-xs sm:text-sm capitalize group-hover:text-amber-500 transition-colors">
-                          {user.full_name || t('no_name', 'Unnamed Employee')}
-                        </p>
-                        {user.staff_id && (
-                          <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-muted/60 text-muted-foreground font-mono">
-                            {user.staff_id}
-                          </Badge>
-                        )}
-                        {getRoleBadge(user.role)}
-                        {(user.organizations || organizations.find(o => o.id === user.organization_id)) && (
-                          <Badge variant="outline" className="text-[10px] h-4 px-1.5 font-semibold border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 gap-1">
-                            <Building className="h-2.5 w-2.5" />
-                            {isRTL && (user.organizations as any)?.name_ar 
-                              ? (user.organizations as any).name_ar 
-                              : (user.organizations?.name || organizations.find(o => o.id === user.organization_id)?.name)}
-                          </Badge>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-mono text-[11px] text-muted-foreground/90">{user.email}</span>
-                        {user.job_title && (
-                          <>
-                            <span>•</span>
-                            <span className="text-muted-foreground font-medium">{user.job_title}</span>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                        {user.properties && user.properties.length > 0 ? (
-                          user.properties.map((p) => (
-                            <span
-                              key={p.id}
-                              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                            >
-                              <Building className="h-2.5 w-2.5 text-amber-500" />
-                              {p.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] text-muted-foreground">
-                            <Building className="h-2.5 w-2.5 text-amber-500" />
-                            {t('all_properties', 'All Properties')}
-                          </span>
-                        )}
-
-                        {user.departments && user.departments.length > 0 && (
-                          user.departments.map((d) => (
-                            <span
-                              key={d.id}
-                              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-background/50 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                            >
-                              <Briefcase className="h-2.5 w-2.5 text-blue-500" />
-                              {d.name}
-                            </span>
-                          ))
-                        )}
-
-                        {user.last_login_at && (
-                          <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1 ms-1">
-                            <Clock className="w-3 h-3 text-muted-foreground/60" />
-                            {new Date(user.last_login_at).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between lg:justify-end gap-2.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-border/40">
-                    <div className="flex items-center gap-2">
-                      {getStatusBadge(user)}
-
-                      {user.force_password_reset && (
-                        <Badge variant="outline" className="text-[10px] gap-1 border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
-                          <KeyRound className="w-3 h-3" />
-                          {t_ext('reset', 'Reset Required')}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 rounded-xl px-2.5 text-xs font-semibold text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setDetailUser(user)
-                        }}
-                      >
-                        <Eye className="w-3.5 h-3.5 me-1" />
-                        <span>{t('actions.view', 'Inspect')}</span>
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-xl text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleEdit(user)
-                        }}
-                        aria-label={t('actions.edit', 'Edit user')}
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </Button>
-
-                      {/* Account Actions Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl text-muted-foreground hover:text-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label={t('actions.more', 'More actions')}
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-2xl border-border/60 bg-card/95 backdrop-blur-xl shadow-xl" onClick={(e) => e.stopPropagation()}>
-                          {user.account_status === 'suspended' ? (
-                            <DropdownMenuItem onClick={() => openActionDialog(user, 'reactivate')} className="gap-2 text-xs font-semibold">
-                              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                              {t('account_actions.reactivate', 'Reactivate Account')}
-                            </DropdownMenuItem>
-                          ) : user.is_active && (
-                            <DropdownMenuItem onClick={() => openActionDialog(user, 'suspend')} className="gap-2 text-xs font-semibold text-rose-600">
-                              <ShieldOff className="w-4 h-4" />
-                              {t('account_actions.suspend', 'Suspend Account')}
-                            </DropdownMenuItem>
-                          )}
-
-                          {user.account_status === 'locked' && (
-                            <DropdownMenuItem onClick={() => openActionDialog(user, 'unlock')} className="gap-2 text-xs font-semibold">
-                              <Unlock className="w-4 h-4 text-blue-600" />
-                              {t('account_actions.unlock', 'Unlock Account')}
-                            </DropdownMenuItem>
-                          )}
-
-                          <DropdownMenuItem onClick={() => openActionDialog(user, 'force_password_reset')} className="gap-2 text-xs font-semibold">
-                            <KeyRound className="w-4 h-4 text-amber-600" />
-                            {t('account_actions.force_password_reset', 'Force Password Reset')}
+                      <Edit aria-hidden="true" className="h-4 w-4" />
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-ds-muted hover:text-ds-ink" aria-label={t('actions.more', 'More actions')}>
+                          <MoreVertical aria-hidden="true" className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {user.account_status === 'suspended' ? (
+                          <DropdownMenuItem onClick={() => openActionDialog(user, 'reactivate')} className="gap-2">
+                            <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+                            {t('account_actions.reactivate', 'Reactivate account')}
                           </DropdownMenuItem>
-
-                          {user.force_password_reset && (
-                            <DropdownMenuItem onClick={() => openActionDialog(user, 'cancel_password_reset')} className="gap-2 text-xs font-semibold">
-                              <XCircle className="w-4 h-4 text-muted-foreground" />
-                              {t('account_actions.cancel_password_reset', 'Cancel Password Reset')}
-                            </DropdownMenuItem>
-                          )}
-
-                          <DropdownMenuItem onClick={() => openActionDialog(user, 'resend_credentials')} className="gap-2 text-xs font-semibold">
-                            <MailPlus className="w-4 h-4 text-sky-600" />
-                            {t('account_actions.resend_credentials', 'Resend Credentials')}
+                        ) : user.is_active && (
+                          <DropdownMenuItem onClick={() => openActionDialog(user, 'suspend')} className="gap-2">
+                            <ShieldOff aria-hidden="true" className="h-4 w-4" />
+                            {t('account_actions.suspend', 'Suspend account')}
                           </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setTransferTargetUser(user)
-                              setTransferModalOpen(true)
-                            }}
-                            className="gap-2 text-xs font-semibold text-primary focus:text-primary"
-                          >
-                            <ArrowRightLeft className="w-4 h-4" />
-                            {t('transfer.action_title', 'Transfer Employee')}
+                        )}
+                        {user.account_status === 'locked' && (
+                          <DropdownMenuItem onClick={() => openActionDialog(user, 'unlock')} className="gap-2">
+                            <Unlock aria-hidden="true" className="h-4 w-4" />
+                            {t('account_actions.unlock', 'Unlock account')}
                           </DropdownMenuItem>
-
-                          <DropdownMenuSeparator />
-
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setUserToDelete(user)
-                              setDeleteConfirmOpen(true)
-                            }}
-                            className="gap-2 text-xs font-semibold text-rose-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            {t('bulk.deactivate', 'Deactivate')}
+                        )}
+                        <DropdownMenuItem onClick={() => openActionDialog(user, 'force_password_reset')} className="gap-2">
+                          <KeyRound aria-hidden="true" className="h-4 w-4" />
+                          {t('account_actions.force_password_reset', 'Require a new password')}
+                        </DropdownMenuItem>
+                        {user.force_password_reset && (
+                          <DropdownMenuItem onClick={() => openActionDialog(user, 'cancel_password_reset')} className="gap-2">
+                            <XCircle aria-hidden="true" className="h-4 w-4" />
+                            {t('account_actions.cancel_password_reset', 'Cancel password reset')}
                           </DropdownMenuItem>
-
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setUserToHardDelete(user)
-                              setHardDeleteConfirmOpen(true)
-                            }}
-                            className="gap-2 text-xs font-semibold text-rose-700 focus:text-rose-700"
-                          >
-                            <UserX className="w-4 h-4" />
-                            {t('bulk.hard_delete', 'Hard Delete')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={Users}
-              title={t('empty.title', 'No employees found')}
-              description={searchTerm ? t('empty.no_results', 'No users matching the query') : t('empty.description', 'Get started by inviting or creating staff accounts.')}
-              action={{
-                label: t('add_user', 'Add Employee'),
-                onClick: openCreateForm,
-                icon: Plus
-              }}
-            />
-          )}
+                        )}
+                        <DropdownMenuItem onClick={() => openActionDialog(user, 'resend_credentials')} className="gap-2">
+                          <MailPlus aria-hidden="true" className="h-4 w-4" />
+                          {t('account_actions.resend_credentials', 'Resend sign-in details')}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => { setUserToDelete(user); setDeleteConfirmOpen(true) }} className="gap-2 text-ds-danger focus:text-ds-danger">
+                          <Trash2 aria-hidden="true" className="h-4 w-4" />
+                          {t('bulk.deactivate', 'Deactivate')}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setUserToHardDelete(user); setHardDeleteConfirmOpen(true) }} className="gap-2 text-ds-danger focus:text-ds-danger">
+                          <UserX aria-hidden="true" className="h-4 w-4" />
+                          {t('bulk.hard_delete', 'Delete permanently')}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
         </div>
-      </div>
+      ) : (
+        <EmptyState
+          icon={Users}
+          title={searchTerm || statusFilter !== 'all' || roleCategoryFilter !== 'all' ? t('people.noMatch', 'Nobody matches these filters') : t('empty.title', 'No people yet')}
+          description={searchTerm || statusFilter !== 'all' || roleCategoryFilter !== 'all' ? t('people.noMatchBody', 'Try another role, status or search.') : t('empty.description', 'Invite colleagues or add them directly.')}
+          action={{
+            label: t('add_user', 'Add a person'),
+            onClick: openCreateForm,
+            icon: Plus
+          }}
+        />
+      )}
 
       {/* Slide-over User Profile Detail Drawer */}
       <Sheet open={!!detailUser} onOpenChange={(open) => !open && setDetailUser(null)}>
-        <SheetContent side="right" className="w-full sm:max-w-md p-0 overflow-y-auto bg-card/95 backdrop-blur-2xl border-s border-amber-500/20 shadow-2xl">
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 overflow-y-auto bg-card/95 backdrop-blur-2xl border-s border-ds-warning/30 shadow-2xl">
           {detailUser && (
             <div className="flex flex-col h-full">
               {/* Drawer Header Banner */}
-              <div className="relative p-6 border-b border-border/40 bg-gradient-to-br from-amber-500/10 via-card to-card/50">
+              <div className="relative p-6 border-b border-border/40">
                 <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16 rounded-2xl border-2 border-amber-500/40 shadow-md">
+                  <Avatar className="h-16 w-16 rounded-2xl border-2 border-ds-warning/30 shadow-md">
                     <AvatarImage src={detailUser.avatar_url || ''} className="object-cover" />
-                    <AvatarFallback className="bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold text-xl">
+                    <AvatarFallback className="bg-ds-warning-soft text-ds-warning font-bold text-xl">
                       {(detailUser.full_name || detailUser.email || '?').charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -1295,7 +1019,7 @@ export default function UserManagement() {
                 {/* Contact & Credentials */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Mail className="h-3.5 w-3.5 text-amber-500" />
+                    <Mail className="h-3.5 w-3.5 text-ds-warning" />
                     <span>Contact &amp; Account Identity</span>
                   </h4>
                   <div className="rounded-2xl border border-border/50 bg-background/50 p-4 space-y-2.5 text-xs">
@@ -1326,46 +1050,30 @@ export default function UserManagement() {
                   </div>
                 </div>
 
-                {/* Property & Department Scope */}
+                {/* Department */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Building className="h-3.5 w-3.5 text-blue-500" />
+                    <Building className="h-3.5 w-3.5 text-ds-accent" />
                     <span>Organizational Scope</span>
                   </h4>
                   <div className="rounded-2xl border border-border/50 bg-background/50 p-4 space-y-3 text-xs">
                     <div>
-                      <span className="text-muted-foreground block mb-1">{t('organization', 'Organization')}:</span>
+                      <span className="text-muted-foreground block mb-1">{t('users:organization', 'Organization')}:</span>
                       <Badge variant="secondary" className="text-xs font-semibold gap-1.5 py-1">
-                        <Building className="h-3.5 w-3.5 text-amber-500" />
+                        <Building className="h-3.5 w-3.5 text-ds-warning" />
                         {isRTL && (detailUser.organizations as any)?.name_ar 
                           ? (detailUser.organizations as any).name_ar 
-                          : (detailUser.organizations?.name || organizations.find(o => o.id === detailUser.organization_id)?.name || t('organization', 'Organization'))}
+                          : (detailUser.organizations?.name || organizations.find(o => o.id === detailUser.organization_id)?.name || t('users:organization', 'Organization'))}
                       </Badge>
                     </div>
 
                     <div>
-                      <span className="text-muted-foreground block mb-1">Assigned Properties:</span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {detailUser.properties && detailUser.properties.length > 0 ? (
-                          detailUser.properties.map(p => (
-                            <Badge key={p.id} variant="outline" className="text-[11px] border-amber-500/30 bg-amber-500/5 text-foreground">
-                              <Building className="h-3 w-3 me-1 text-amber-500" />
-                              {p.name}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-muted-foreground italic">{t('all_properties', 'All Properties')}</span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <span className="text-muted-foreground block mb-1">Assigned Departments:</span>
+                      <span className="text-muted-foreground block mb-1">{t('people.departments', 'Departments')}:</span>
                       <div className="flex flex-wrap gap-1.5">
                         {detailUser.departments && detailUser.departments.length > 0 ? (
                           detailUser.departments.map(d => (
-                            <Badge key={d.id} variant="outline" className="text-[11px] border-blue-500/30 bg-blue-500/5 text-foreground">
-                              <Briefcase className="h-3 w-3 me-1 text-blue-500" />
+                            <Badge key={d.id} variant="outline" className="text-[11px] border-ds-accent/30 bg-ds-accent-soft text-foreground">
+                              <Briefcase className="h-3 w-3 me-1 text-ds-accent" />
                               {d.name}
                             </Badge>
                           ))
@@ -1380,21 +1088,21 @@ export default function UserManagement() {
                 {/* Security Audit State if Suspended or Reset Required */}
                 {(detailUser.account_status === 'suspended' || detailUser.force_password_reset) && (
                   <div className="space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ds-danger flex items-center gap-1.5">
                       <ShieldAlert className="h-3.5 w-3.5" />
                       <span>Security Flag Telemetry</span>
                     </h4>
-                    <div className="rounded-2xl border border-rose-500/30 bg-rose-500/[0.06] p-4 space-y-2 text-xs">
+                    <div className="rounded-2xl border border-ds-danger/30 bg-ds-danger/[0.06] p-4 space-y-2 text-xs">
                       {detailUser.account_status === 'suspended' && (
                         <div>
-                          <span className="font-bold text-rose-600 block">Account Suspended</span>
+                          <span className="font-bold text-ds-danger block">Account Suspended</span>
                           {detailUser.suspend_reason && (
                             <p className="text-muted-foreground mt-0.5">{detailUser.suspend_reason}</p>
                           )}
                         </div>
                       )}
                       {detailUser.force_password_reset && (
-                        <div className="text-amber-700 dark:text-amber-400 font-semibold">
+                        <div className="text-ds-warning font-semibold">
                           Password reset is mandatory on next login session.
                         </div>
                       )}
@@ -1411,7 +1119,7 @@ export default function UserManagement() {
                     setDetailUser(null)
                     handleEdit(u)
                   }}
-                  className="w-full h-10 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold text-xs shadow-md shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500"
+                  className="w-full h-10 rounded-xl text-ds-on-ink font-bold text-xs shadow-md shadow-amber-500/20 bg-ds-ink"
                 >
                   <Edit className="h-4 w-4 me-1.5" />
                   <span>Edit Profile &amp; Permissions</span>
@@ -1428,9 +1136,9 @@ export default function UserManagement() {
                     className="h-9 rounded-xl text-xs font-semibold"
                   >
                     {detailUser.account_status === 'suspended' ? (
-                      <><ShieldCheck className="h-3.5 w-3.5 me-1 text-emerald-500" />Reactivate</>
+                      <><ShieldCheck className="h-3.5 w-3.5 me-1 text-ds-success" />Reactivate</>
                     ) : (
-                      <><ShieldOff className="h-3.5 w-3.5 me-1 text-rose-500" />Suspend</>
+                      <><ShieldOff className="h-3.5 w-3.5 me-1 text-ds-danger" />Suspend</>
                     )}
                   </Button>
 
@@ -1443,7 +1151,7 @@ export default function UserManagement() {
                     }}
                     className="h-9 rounded-xl text-xs font-semibold"
                   >
-                    <KeyRound className="h-3.5 w-3.5 me-1 text-amber-500" />
+                    <KeyRound className="h-3.5 w-3.5 me-1 text-ds-warning" />
                     <span>Reset Pass</span>
                   </Button>
                 </div>
@@ -1459,7 +1167,7 @@ export default function UserManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MailPlus className="w-5 h-5 text-hotel-gold" />
+              <MailPlus className="w-5 h-5 text-ds-brass" />
               {t('form.invite_user', 'Invite User')}
             </DialogTitle>
             <DialogDescription>
@@ -1474,8 +1182,8 @@ export default function UserManagement() {
           {currentOrganization && (
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-muted/40 border text-xs my-1">
               <span className="text-muted-foreground flex items-center gap-1.5">
-                <Building className="h-3.5 w-3.5 text-amber-500" />
-                {t('organization', 'Organization')}:
+                <Building className="h-3.5 w-3.5 text-ds-warning" />
+                {t('users:organization', 'Organization')}:
               </span>
               <Badge variant="secondary" className="font-semibold text-xs">
                 {isRTL && (currentOrganization as any).name_ar ? (currentOrganization as any).name_ar : currentOrganization.name}
@@ -1529,43 +1237,16 @@ export default function UserManagement() {
           </div>
 
           <div className="space-y-2 py-2">
-            <Label htmlFor="invite-property">{t('form.properties', 'Property')}</Label>
-            <select
-              id="invite-property"
-              value={invitePropertyId}
-              onChange={(e) => {
-                const nextPropertyId = e.target.value
-                setInvitePropertyId(nextPropertyId)
-                setInviteDepartmentId('')
-              }}
-              disabled={inviteUserMutation.isPending}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">{t('form.select_property', 'Select property (optional)')}</option>
-              {(properties || []).map((property) => (
-                <option key={property.id} value={property.id}>
-                  {isRTL && (property as any).name_ar ? (property as any).name_ar : property.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted-foreground">
-              {t('form.invite_property_description', 'Assign a property now or let the user select one during invite completion.')}
-            </p>
-          </div>
-
-          <div className="space-y-2 py-2">
             <Label htmlFor="invite-department">{t('form.departments', 'Department')}</Label>
             <select
               id="invite-department"
               value={inviteDepartmentId}
               onChange={(e) => setInviteDepartmentId(e.target.value)}
-              disabled={inviteUserMutation.isPending || !invitePropertyId}
+              disabled={inviteUserMutation.isPending}
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="">
-                {invitePropertyId
-                  ? t('form.select_department', 'Select department (optional)')
-                  : t('form.select_property_first', 'Select a property first')}
+                {t('form.select_department', 'Select department (optional)')}
               </option>
               {(departments || []).map((department) => (
                 <option key={department.id} value={department.id}>
@@ -1573,9 +1254,6 @@ export default function UserManagement() {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-muted-foreground">
-              {t('form.invite_department_description', 'Departments are filtered by the selected property.')}
-            </p>
           </div>
 
           <DialogFooter>
@@ -1635,12 +1313,12 @@ export default function UserManagement() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {actionType === 'suspend' && <ShieldOff className="w-5 h-5 text-red-600" />}
-              {actionType === 'reactivate' && <ShieldCheck className="w-5 h-5 text-green-600" />}
-              {actionType === 'force_password_reset' && <KeyRound className="w-5 h-5 text-amber-600" />}
-              {actionType === 'cancel_password_reset' && <XCircle className="w-5 h-5 text-gray-500" />}
-              {actionType === 'unlock' && <Unlock className="w-5 h-5 text-blue-600" />}
-              {actionType === 'resend_credentials' && <MailPlus className="w-5 h-5 text-sky-600" />}
+              {actionType === 'suspend' && <ShieldOff className="w-5 h-5 text-ds-danger" />}
+              {actionType === 'reactivate' && <ShieldCheck className="w-5 h-5 text-ds-success" />}
+              {actionType === 'force_password_reset' && <KeyRound className="w-5 h-5 text-ds-warning" />}
+              {actionType === 'cancel_password_reset' && <XCircle className="w-5 h-5 text-ds-muted" />}
+              {actionType === 'unlock' && <Unlock className="w-5 h-5 text-ds-accent" />}
+              {actionType === 'resend_credentials' && <MailPlus className="w-5 h-5 text-ds-accent" />}
               {actionType && t(`account_actions.${actionType}`)}
             </DialogTitle>
             <DialogDescription>
@@ -1651,7 +1329,7 @@ export default function UserManagement() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ds-muted">
               {actionType && t(`account_actions.confirm_${actionType === 'force_password_reset'
                 ? 'force_reset'
                 : actionType === 'cancel_password_reset'
@@ -1661,14 +1339,14 @@ export default function UserManagement() {
 
             {actionType === 'suspend' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-ds-ink mb-1">
                   {t('account_actions.suspend_reason')}
                 </label>
                 <textarea
                   value={suspendReason}
                   onChange={(e) => setSuspendReason(e.target.value)}
                   placeholder={t('account_actions.suspend_reason_placeholder')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-hotel-navy focus:border-hotel-navy resize-none"
+                  className="w-full px-3 py-2 border border-ds-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ds-brass focus:border-ds-brass resize-none"
                   rows={3}
                 />
               </div>
@@ -1676,12 +1354,12 @@ export default function UserManagement() {
 
             {actionType === 'suspend' && (
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-1">{t_ext('suspend_until_optional', 'Suspend Until (Optional)')}</Label>
+                <Label className="text-sm font-medium text-ds-ink mb-1">{t_ext('suspend_until_optional', 'Suspend Until (Optional)')}</Label>
                 <input
                   type="datetime-local"
                   value={suspendUntil}
                   onChange={(e) => setSuspendUntil(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-hotel-navy focus:border-hotel-navy"
+                  className="w-full px-3 py-2 border border-ds-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ds-brass focus:border-ds-brass"
                 />
               </div>
             )}
@@ -1692,28 +1370,28 @@ export default function UserManagement() {
                 <Label htmlFor="notify-user" className="text-sm">{t_ext('notify_user_about_this_action', 'Notify user about this action')}</Label>
               </div>
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-1">{t_ext('internal_note_optional', 'Internal Note (Optional)')}</Label>
+                <Label className="text-sm font-medium text-ds-ink mb-1">{t_ext('internal_note_optional', 'Internal Note (Optional)')}</Label>
                 <textarea
                   value={actionNote}
                   onChange={(e) => setActionNote(e.target.value)}
                   placeholder={t_ext('add_a_note_for_the_audit_trail', 'Add a note for the audit trail')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-hotel-navy focus:border-hotel-navy resize-none"
+                  className="w-full px-3 py-2 border border-ds-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ds-brass focus:border-ds-brass resize-none"
                   rows={2}
                 />
               </div>
             </div>
 
             {actionTargetUser?.account_status === 'suspended' && actionTargetUser?.suspend_reason && (
-              <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                <p className="text-xs font-medium text-red-700 mb-1">{t('account_actions.suspend_reason')}:</p>
-                <p className="text-sm text-red-600">{actionTargetUser.suspend_reason}</p>
+              <div className="bg-ds-danger-soft border border-ds-danger/30 rounded-md p-3">
+                <p className="text-xs font-medium text-ds-danger mb-1">{t('account_actions.suspend_reason')}:</p>
+                <p className="text-sm text-ds-danger">{actionTargetUser.suspend_reason}</p>
                 {actionTargetUser.suspended_at && (
-                  <p className="text-xs text-red-400 mt-1">
+                  <p className="text-xs text-ds-danger mt-1">
                     {t('account_actions.suspended_at')}: {new Date(actionTargetUser.suspended_at).toLocaleString()}
                   </p>
                 )}
                 {actionTargetUser.suspended_until && (
-                  <p className="text-xs text-red-400 mt-1">
+                  <p className="text-xs text-ds-danger mt-1">
                     {t_ext('suspended_until', 'Suspended until:')}{new Date(actionTargetUser.suspended_until).toLocaleString()}
                   </p>
                 )}
@@ -1722,17 +1400,17 @@ export default function UserManagement() {
 
             {actionNotesQuery.data && actionNotesQuery.data.length > 0 && (
               <div className="border rounded-md p-3">
-                <p className="text-xs font-medium text-gray-600 mb-2">{t_ext('recent_admin_notes', 'Recent Admin Notes')}</p>
+                <p className="text-xs font-medium text-ds-muted mb-2">{t_ext('recent_admin_notes', 'Recent Admin Notes')}</p>
                 <div className="space-y-2">
                   {actionNotesQuery.data.map((note: AccountActionNote) => (
-                    <div key={note.id} className="text-xs text-gray-600">
+                    <div key={note.id} className="text-xs text-ds-muted">
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{note.action.replace(/_/g, ' ')}</span>
                         <span>{new Date(note.created_at).toLocaleString()}</span>
                       </div>
-                      <div className="text-sm text-gray-700">{note.note}</div>
+                      <div className="text-sm text-ds-ink">{note.note}</div>
                       {note.created_by && (
-                        <div className="text-[10px] text-gray-500">
+                        <div className="text-[10px] text-ds-muted">
                           by {note.created_by.full_name || note.created_by.email}
                         </div>
                       )}
@@ -1765,15 +1443,6 @@ export default function UserManagement() {
         </DialogContent>
       </Dialog>
 
-      <EmployeeTransferModal
-        isOpen={transferModalOpen}
-        onClose={() => {
-          setTransferModalOpen(false)
-          setTransferTargetUser(null)
-        }}
-        user={transferTargetUser}
-        onSuccess={() => refetch()}
-      />
     </div>
   )
 }

@@ -10,7 +10,6 @@ export type MembershipRole =
   | 'organization_owner'
   | 'organization_admin'
   | 'brand_admin'
-  | 'hotel_admin'
   | 'department_manager'
   | 'training_manager'
   | 'knowledge_manager'
@@ -22,7 +21,6 @@ const MEMBERSHIP_TO_APP_ROLE: Record<MembershipRole, PlatformRole> = {
   organization_owner: 'administrator',
   organization_admin: 'administrator',
   brand_admin: 'administrator',
-  hotel_admin: 'training_manager',
   training_manager: 'training_manager',
   knowledge_manager: 'knowledge_manager',
   department_manager: 'author',

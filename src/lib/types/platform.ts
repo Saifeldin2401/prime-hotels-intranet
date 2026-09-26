@@ -52,8 +52,6 @@ export interface AccountContext {
     organization_name: string
     role: string
     brand_id: string | null
-    hotel_id: string | null
-    hotel_name: string | null
     department_id: string | null
     department_name: string | null
     is_active: boolean
@@ -102,7 +100,6 @@ export interface PlatformStats {
   activeOrganizations: number
   trialOrganizations: number
   suspendedOrganizations: number
-  totalHotels: number
   totalLearners: number
   totalMasterSops: number
   totalMasterCourses: number

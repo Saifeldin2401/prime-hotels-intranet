@@ -71,15 +71,14 @@ export default function PlatformAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('admin:customer_tenants', 'Customer Organizations')}
             </CardTitle>
-            <Building2 className="h-4 w-4 text-blue-500" />
+            <Building2 className="h-4 w-4 text-ds-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalOrganizations || 0}</div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 text-[10px]">
+              <Badge variant="outline" className="bg-ds-success-soft text-ds-success border-ds-success/30 text-[10px]">
                 {stats?.activeOrganizations || 0} Active
               </Badge>
-              <span>• {stats?.totalHotels || 0} Operating Hotels</span>
             </div>
           </CardContent>
         </Card>
@@ -90,13 +89,13 @@ export default function PlatformAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('admin:total_learners_across_tenants', 'Global Learners Trained')}
             </CardTitle>
-            <Users className="h-4 w-4 text-indigo-500" />
+            <Users className="h-4 w-4 text-ds-accent" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalLearners || 0}</div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-              <span>Across all subscribed hotel groups</span>
+              <TrendingUp className="h-3.5 w-3.5 text-ds-success" />
+              <span>Across all organizations</span>
             </div>
           </CardContent>
         </Card>
@@ -107,7 +106,7 @@ export default function PlatformAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('admin:master_content_assets', 'Master SOPs & Courses')}
             </CardTitle>
-            <BookOpen className="h-4 w-4 text-amber-500" />
+            <BookOpen className="h-4 w-4 text-ds-warning" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -126,12 +125,12 @@ export default function PlatformAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {t('admin:deployments_to_tenants', 'Master Deployments')}
             </CardTitle>
-            <Send className="h-4 w-4 text-emerald-500" />
+            <Send className="h-4 w-4 text-ds-success" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalDeployments || 0}</div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-ds-success" />
               <span>Active client sync streams</span>
             </div>
           </CardContent>
@@ -152,17 +151,17 @@ export default function PlatformAnalytics() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
-              <BookOpen className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+              <BookOpen className="h-5 w-5 text-ds-accent shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Standard Operating Procedures (SOPs) as a Service</p>
                 <p className="text-xs text-muted-foreground">
-                  Draft, maintain, and publish brand-level or department-level SOPs centrally and deploy to client hotels.
+                  Draft, maintain, and publish brand-level or department-level SOPs centrally and deploy to customer organizations.
                 </p>
               </div>
             </div>
 
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
-              <GraduationCap className="h-5 w-5 text-indigo-600 shrink-0 mt-0.5" />
+              <GraduationCap className="h-5 w-5 text-ds-accent shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Managed Hospitality Academy</p>
                 <p className="text-xs text-muted-foreground">
@@ -172,7 +171,7 @@ export default function PlatformAnalytics() {
             </div>
 
             <div className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
-              <Sparkles className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <Sparkles className="h-5 w-5 text-ds-warning shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-semibold">Audited Support & Impersonation Sessions</p>
                 <p className="text-xs text-muted-foreground">
@@ -202,13 +201,13 @@ export default function PlatformAnalytics() {
               label="Training completion (all tenants)"
               used={usage?.totals.training_completed ?? 0}
               limit={usage?.totals.training_records ?? 0}
-              colour="bg-emerald-600"
+              colour="bg-ds-success"
             />
             <Meter
               label="Background AI jobs — failed vs total"
               used={usage?.totals.ai_jobs_failed ?? 0}
               limit={usage?.totals.ai_jobs_total ?? 0}
-              colour="bg-rose-500"
+              colour="bg-ds-danger"
             />
             <div className="text-[10px] text-muted-foreground pt-1">
               {usage?.generated_at ? `Snapshot: ${new Date(usage.generated_at).toLocaleString()}` : ''}
@@ -232,7 +231,6 @@ export default function PlatformAnalytics() {
                 <th className="py-2 pe-3 font-semibold">Organization</th>
                 <th className="py-2 px-3 font-semibold">Plan</th>
                 <th className="py-2 px-3 font-semibold">Status</th>
-                <th className="py-2 px-3 font-semibold">Hotels</th>
                 <th className="py-2 px-3 font-semibold">Members</th>
                 <th className="py-2 px-3 font-semibold">Courses</th>
                 <th className="py-2 px-3 font-semibold">AI credits</th>
@@ -245,7 +243,6 @@ export default function PlatformAnalytics() {
                   <td className="py-2 pe-3 font-semibold">{o.name}</td>
                   <td className="py-2 px-3">{o.plan || '—'}</td>
                   <td className="py-2 px-3 capitalize">{o.lifecycle_status || '—'}</td>
-                  <td className="py-2 px-3 tabular-nums">{o.hotels} / {o.max_hotels}</td>
                   <td className="py-2 px-3 tabular-nums">{o.members} / {o.max_learners}</td>
                   <td className="py-2 px-3 tabular-nums">{o.courses}</td>
                   <td className="py-2 px-3 tabular-nums">{o.ai_credits_used} / {o.ai_credits_limit}</td>

@@ -4,7 +4,6 @@
  * API service for Knowledge Base operations.
  */
 
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import type {
     ContextualHelp,
@@ -22,7 +21,7 @@ import type {
 // ============================================================================
 
 // ============================================================================
-// SEARCH SYNONYMS - Map hotel jargon to full terms for better search
+// SEARCH SYNONYMS - Map hospitality jargon to full terms for better search
 // ============================================================================
 
 const SEARCH_SYNONYMS: Record<string, string[]> = {
@@ -99,7 +98,7 @@ function normalizeNamedJoin(value: RawKnowledgeJoin | null | undefined): { id: s
 }
 
 /**
- * Expand search query with synonyms for hotel jargon
+ * Expand search query with synonyms for hospitality jargon
  */
 export function expandSearchQuery(query: string): string[] {
     const normalizedQuery = query.toLowerCase().trim()
@@ -125,11 +124,12 @@ export function expandSearchQuery(query: string): string[] {
 // ============================================================================
 
 const ARTICLE_LIST_SELECT = `
-          id, title, description,
+          id, title, description, title_ar, description_ar, summary, summary_ar, sop_code,
           status, content_type,
+          published_at, last_reviewed_at, next_review_date,
           visibility,
-          property_id, department_id,
-          organization_id, brand_id, hotel_id,
+          department_id,
+          organization_id, brand_id,
           scope_type, is_master_template, master_source_id,
           requires_acknowledgment,
           created_by, last_published_by,
@@ -149,14 +149,13 @@ function toRealUuid(value?: string): string | null {
 
 // Fire-and-forget: records a zero-result KB search for content-gap analytics.
 // Never blocks or fails the search itself.
-function logFailedSearch(query: string, departmentId?: string, propertyId?: string): void {
+function logFailedSearch(query: string, departmentId?: string): void {
     supabase.auth.getUser()
         .then(({ data }) => supabase.from('search_logs').insert({
             user_id: data.user?.id || null,
             query,
             result_count: 0,
-            department_id: toRealUuid(departmentId),
-            property_id: toRealUuid(propertyId)
+            department_id: toRealUuid(departmentId)
         }))
         .then(({ error }) => {
             if (error) console.warn('Failed to log search miss:', error.message)
@@ -182,7 +181,6 @@ async function searchArticlesRanked(
         p_content_type: filters.content_type || null,
         p_status: filters.status || null,
         p_department_id: toRealUuid(filters.department_id),
-        p_property_id: toRealUuid(filters.property_id),
         p_requires_acknowledgment: filters.requires_acknowledgment ?? null,
         p_limit: pageSize,
         p_offset: from
@@ -199,7 +197,7 @@ async function searchArticlesRanked(
 
     if (rankedIds.length === 0) {
         if (page === 1) {
-            logFailedSearch(filters.query!, filters.department_id, filters.property_id)
+            logFailedSearch(filters.query!, filters.department_id)
         }
         return { articles: [], total, page, page_size: pageSize }
     }
@@ -274,9 +272,6 @@ export async function getArticles(
             query = query.eq('is_master_template', true)
         }
 
-        if (filters.hotel_id && filters.hotel_id !== 'undefined' && filters.hotel_id.length === 36) {
-            query = query.or(`hotel_id.is.null,hotel_id.eq.${filters.hotel_id}`)
-        }
         if (filters.brand_id && filters.brand_id !== 'undefined' && filters.brand_id.length === 36) {
             query = query.or(`brand_id.is.null,brand_id.eq.${filters.brand_id}`)
         }
@@ -284,10 +279,6 @@ export async function getArticles(
         // Validate department_id is a real UUID, not 'undefined' string
         if (filters.department_id && filters.department_id !== 'undefined' && filters.department_id.length === 36) {
             query = query.eq('department_id', filters.department_id)
-        }
-        // Validate property_id is a real UUID, not 'undefined' string
-        if (filters.property_id && filters.property_id !== 'undefined' && filters.property_id.length === 36) {
-            query = query.or(`property_id.is.null,property_id.eq.${filters.property_id}`)
         }
         if (filters.requires_acknowledgment !== undefined) {
             query = query.eq('requires_acknowledgment', filters.requires_acknowledgment)
@@ -378,7 +369,7 @@ export async function incrementViewCount(id: string): Promise<void> {
     if (error) console.warn('Failed to increment view count:', error.message)
 }
 
-export async function getFeaturedArticles(limit = 5, propertyId?: string, organizationId?: string): Promise<KnowledgeArticle[]> {
+export async function getFeaturedArticles(limit = 5, organizationId?: string): Promise<KnowledgeArticle[]> {
     try {
         let query = supabase
             .from('documents')
@@ -404,9 +395,6 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string, organi
             query = query.eq('is_master_template', true)
         }
 
-        if (isRealPropertyId(propertyId)) {
-            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
-        }
 
         const { data, error } = await query.limit(limit)
 
@@ -422,7 +410,7 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string, organi
     }
 }
 
-export async function getRecentArticles(limit = 10, propertyId?: string, organizationId?: string): Promise<KnowledgeArticle[]> {
+export async function getRecentArticles(limit = 10, organizationId?: string): Promise<KnowledgeArticle[]> {
     try {
         let query = supabase
             .from('documents')
@@ -448,9 +436,6 @@ export async function getRecentArticles(limit = 10, propertyId?: string, organiz
             query = query.eq('is_master_template', true)
         }
 
-        if (isRealPropertyId(propertyId)) {
-            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
-        }
 
         const { data, error } = await query.limit(limit)
 
@@ -470,7 +455,7 @@ export async function getRecentArticles(limit = 10, propertyId?: string, organiz
 // REQUIRED READING
 // ============================================================================
 
-export async function getRequiredReading(userId: string, propertyId?: string, organizationId?: string): Promise<RequiredReading[]> {
+export async function getRequiredReading(userId: string, organizationId?: string): Promise<RequiredReading[]> {
     try {
         // 1. Get published documents that require acknowledgment
         let requiredDocsQuery = supabase
@@ -487,9 +472,6 @@ export async function getRequiredReading(userId: string, propertyId?: string, or
             requiredDocsQuery = requiredDocsQuery.eq('is_master_template', true)
         }
 
-        if (isRealPropertyId(propertyId)) {
-            requiredDocsQuery = requiredDocsQuery.or(`property_id.is.null,property_id.eq.${propertyId}`)
-        }
 
         const { data: requiredDocs, error } = await requiredDocsQuery
 
@@ -547,7 +529,7 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
 // CONTEXTUAL HELP - Real Implementation
 // ============================================================================
 
-export async function getContextualHelp(triggerType: string, triggerValue: string, propertyId?: string, organizationId?: string): Promise<ContextualHelp[]> {
+export async function getContextualHelp(triggerType: string, triggerValue: string, organizationId?: string): Promise<ContextualHelp[]> {
     // Map trigger types to relevant content types
     const contentTypeMap: Record<string, string[]> = {
         'task': ['sop', 'guide', 'checklist'],
@@ -560,7 +542,7 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
 
     const relevantTypes = contentTypeMap[triggerType] || ['guide', 'reference']
 
-    const executeQuery = (propertyFilter?: { isNull?: boolean; value?: string }) => {
+    const executeQuery = () => {
         let q = (supabase.from('documents') as any)
             .select('id, title, description, content_type, status, current_version, view_count')
             .in('content_type', relevantTypes)
@@ -574,21 +556,10 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
             q = q.eq('is_master_template', true)
         }
 
-        if (propertyFilter?.value) {
-            q = q.eq('property_id', propertyFilter.value)
-        } else if (propertyFilter?.isNull) {
-            q = q.is('property_id', null)
-        }
-
         return q.order('view_count', { ascending: false }).limit(5)
     }
 
-    const scopedQueries = isRealPropertyId(propertyId)
-        ? [
-            executeQuery({ value: propertyId }),
-            executeQuery({ isNull: true })
-        ]
-        : [executeQuery()]
+    const scopedQueries = [executeQuery()]
 
     const scopedResults = await Promise.all(scopedQueries)
     const scopedDocs = []
@@ -810,19 +781,13 @@ export async function getCategories(departmentId?: string) {
     }
 }
 
-export async function getContentTypeCounts(propertyId?: string): Promise<Record<string, number>> {
+export async function getContentTypeCounts(): Promise<Record<string, number>> {
     try {
         // Count all visible, non-deleted documents (status can vary by role and RLS).
-        let query = supabase
+        const { data, error } = await supabase
             .from('documents')
             .select('content_type')
             .eq('is_deleted', false)
-
-        if (isRealPropertyId(propertyId)) {
-            query = query.or(`property_id.is.null,property_id.eq.${propertyId}`)
-        }
-
-        const { data, error } = await query
 
         if (error || !data) return {}
 
@@ -1059,7 +1024,6 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
         content_type: (typeof data.content_type === 'string' ? data.content_type.toLowerCase() : 'document') as KnowledgeArticle['content_type'],
         visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as KnowledgeArticle['visibility_scope'],
         organization_id: toOptionalString(data.organization_id),
-        hotel_id: toOptionalString(data.hotel_id),
         brand_id: toOptionalString(data.brand_id),
         scope_type: (data.scope_type || 'organization') as KnowledgeArticle['scope_type'],
         is_master_template: Boolean(data.is_master_template),

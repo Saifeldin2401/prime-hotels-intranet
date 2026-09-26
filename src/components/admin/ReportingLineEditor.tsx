@@ -20,14 +20,12 @@ interface ReportingLineEditorProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     employee: OrgTreeNode | null
-    propertyId?: string
 }
 
 export function ReportingLineEditor({
     open,
     onOpenChange,
-    employee,
-    propertyId
+    employee
 }: ReportingLineEditorProps) {
     const { t } = useTranslation(['admin', 'common'])
     const [newManagerId, setNewManagerId] = useState<string | null>(null)
@@ -116,7 +114,6 @@ export function ReportingLineEditor({
                         <ManagerSelect
                             value={newManagerId}
                             onChange={setNewManagerId}
-                            propertyId={propertyId}
                             excludeUserId={employee.id}
                             allowClear
                         />

@@ -452,21 +452,6 @@ async function resolveAssignmentTargets(
           .filter(Boolean) as TargetUser[],
       );
     }
-    case "property": {
-      if (!targetId) return [];
-      // Property (hotel) membership now lives on organization_memberships.hotel_id
-      // rather than a separate user_properties junction table.
-      const { data } = await supabase
-        .from("organization_memberships")
-        .select("profiles(id, email, full_name)")
-        .eq("hotel_id", targetId)
-        .eq("is_active", true);
-      return dedupe(
-        (data || [])
-          .map((u: any) => u.profiles)
-          .filter(Boolean) as TargetUser[],
-      );
-    }
     case "role": {
       if (!targetId || !orgId) return [];
       const { data } = await supabase

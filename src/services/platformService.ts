@@ -58,8 +58,7 @@ export interface MasterContentDiff {
 /** Shape returned by the get_platform_global_search RPC (every key is always present). */
 type SearchRow = { id: string; [key: string]: unknown }
 export interface PlatformGlobalSearchResult {
-  organizations: Array<{ id: string; name: string; slug: string; is_active: boolean; hotel_count: number }>
-  hotels: Array<{ id: string; name: string; city: string; organization_id: string; organization_name: string }>
+  organizations: Array<{ id: string; name: string; slug: string; is_active: boolean }>
   users: Array<{ id: string; full_name: string; email: string; primary_org?: string }>
   departments: SearchRow[]
   master_sops: Array<{ id: string; title: string; category: string; version: number }>
@@ -87,12 +86,6 @@ export const platformService = {
       const activeOrganizations = liveOrgs.filter(o => (o.lifecycle_status ?? (o.is_active ? 'active' : 'suspended')) === 'active').length
       const suspendedOrganizations = liveOrgs.filter(o => ['suspended', 'expired'].includes(o.lifecycle_status ?? '')).length
       const trialOrganizations = liveOrgs.filter(o => ['trial', 'prospect', 'onboarding'].includes(o.lifecycle_status ?? '')).length
-
-      // 2. Hotels count
-      const { count: totalHotels } = await supabase
-        .from('hotels')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_deleted', false)
 
       // 3. Learners / Memberships count
       const { count: totalLearners } = await supabase
@@ -162,7 +155,6 @@ export const platformService = {
         activeOrganizations,
         trialOrganizations,
         suspendedOrganizations,
-        totalHotels: totalHotels || 0,
         totalLearners: totalLearners || 0,
         totalMasterSops: totalMasterSops || 0,
         totalMasterCourses,
@@ -182,7 +174,6 @@ export const platformService = {
         activeOrganizations: 0,
         trialOrganizations: 0,
         suspendedOrganizations: 0,
-        totalHotels: 0,
         totalLearners: 0,
         totalMasterSops: 0,
         totalMasterCourses: 0,
@@ -212,12 +203,11 @@ export const platformService = {
     return (data || []) as SubscriptionPlan[]
   },
 
-  async getOrganizations(): Promise<(Organization & { hotelCount: number; userCount: number; subscription?: Subscription })[]> {
+  async getOrganizations(): Promise<(Organization & { userCount: number; subscription?: Subscription })[]> {
     const { data: orgs, error } = await supabase
       .from('organizations')
       .select(`
         *,
-        hotels:hotels(count),
         memberships:organization_memberships(count),
         subscriptions:subscriptions(
           id,
@@ -237,7 +227,6 @@ export const platformService = {
 
     return (orgs || []).map((o: any) => ({
       ...o,
-      hotelCount: o.hotels?.[0]?.count || 0,
       userCount: o.memberships?.[0]?.count || 0,
       subscription: o.subscriptions?.[0] ? {
         ...o.subscriptions[0],
@@ -252,7 +241,6 @@ export const platformService = {
     slug: string
     industry?: string
     planId?: string
-    maxHotels?: number
     maxLearners?: number
     maxStorageGb?: number
     maxAiCreditsMonthly?: number
@@ -261,7 +249,6 @@ export const platformService = {
     trialEndsAt?: string
     brandColors?: { primary: string; secondary: string; accent?: string }
     initialBrandName?: string
-    initialHotelName?: string
     initialAdminEmail?: string
     initialAdminName?: string
     actorId?: string
@@ -277,7 +264,6 @@ export const platformService = {
         is_deleted: false,
         lifecycle_status: (params.lifecycleStatus || 'active') as any,
         trial_ends_at: params.trialEndsAt || null,
-        max_hotels: params.maxHotels !== undefined ? params.maxHotels : 10,
         max_learners: params.maxLearners !== undefined ? params.maxLearners : 100,
         max_storage_gb: params.maxStorageGb !== undefined ? params.maxStorageGb : 50,
         max_ai_credits_monthly: params.maxAiCreditsMonthly !== undefined ? params.maxAiCreditsMonthly : 1000,
@@ -300,38 +286,13 @@ export const platformService = {
       })
     }
 
-    // Optional bootstrap: Create initial brand & hotel
+    // Optional bootstrap: create an initial brand
     if (params.initialBrandName?.trim()) {
-      const { data: brand } = await supabase
+      await supabase
         .from('brands')
         .insert({
           organization_id: org.id,
           name: params.initialBrandName.trim(),
-          is_active: true,
-          is_deleted: false
-        })
-        .select()
-        .single()
-
-      if (brand && params.initialHotelName?.trim()) {
-        await supabase
-          .from('hotels')
-          .insert({
-            organization_id: org.id,
-            brand_id: brand.id,
-            name: params.initialHotelName.trim(),
-            city: 'Riyadh',
-            is_active: true,
-            is_deleted: false
-          })
-      }
-    } else if (params.initialHotelName?.trim()) {
-      await supabase
-        .from('hotels')
-        .insert({
-          organization_id: org.id,
-          name: params.initialHotelName.trim(),
-          city: 'Riyadh',
           is_active: true,
           is_deleted: false
         })
@@ -348,7 +309,6 @@ export const platformService = {
         name: params.name,
         slug: params.slug,
         planId: params.planId,
-        maxHotels: params.maxHotels,
         maxLearners: params.maxLearners,
         lifecycleStatus: params.lifecycleStatus
       }
@@ -358,7 +318,6 @@ export const platformService = {
   },
 
   async updateOrganizationEntitlements(orgId: string, params: {
-    maxHotels?: number
     maxLearners?: number
     maxStorageGb?: number
     maxAiCreditsMonthly?: number
@@ -369,7 +328,6 @@ export const platformService = {
     const updateData: any = {
       updated_at: new Date().toISOString()
     }
-    if (params.maxHotels !== undefined) updateData.max_hotels = params.maxHotels
     if (params.maxLearners !== undefined) updateData.max_learners = params.maxLearners
     if (params.maxStorageGb !== undefined) updateData.max_storage_gb = params.maxStorageGb
     if (params.maxAiCreditsMonthly !== undefined) updateData.max_ai_credits_monthly = params.maxAiCreditsMonthly
@@ -1445,8 +1403,6 @@ export const platformService = {
         organization_id: string
         organization_name: string
         role: string
-        hotel_id?: string
-        hotel_name?: string
         department_id?: string
         department_name?: string
         is_active: boolean
@@ -1845,7 +1801,7 @@ export const platformService = {
     try {
       const { data } = await supabase
         .from('organization_memberships')
-        .select('*, organizations(id, name, name_ar), hotels(id, name), departments(id, name)')
+        .select('*, organizations(id, name, name_ar), departments(id, name)')
         .eq('user_id', userId)
       memberships = data || []
     } catch (err) {
@@ -1999,7 +1955,7 @@ export const platformService = {
   // ============================================================================
   async getPlatformGlobalSearch(query: string): Promise<PlatformGlobalSearchResult> {
     const empty: PlatformGlobalSearchResult = {
-      organizations: [], hotels: [], users: [], departments: [],
+      organizations: [], users: [], departments: [],
       master_sops: [], master_courses: [], tenant_sops: [], tenant_courses: [],
       assessments: [], question_banks: [],
     }
@@ -2095,7 +2051,6 @@ export const platformService = {
     orgId: string
     userId: string
     role: string
-    hotelId?: string | null
     departmentId?: string | null
     active?: boolean
   }): Promise<void> {
@@ -2103,7 +2058,6 @@ export const platformService = {
       p_org_id: params.orgId,
       p_user_id: params.userId,
       p_role: params.role,
-      p_hotel_id: params.hotelId ?? null,
       p_department_id: params.departmentId ?? null,
       p_active: params.active ?? true,
     })
@@ -2117,9 +2071,9 @@ export const platformService = {
     ai_credits: { used: number; limit: number }
     organizations: Array<{
       id: string; name: string; lifecycle_status: string | null; plan: string | null
-      hotels: number; members: number; courses: number; documents: number
+      members: number; courses: number; documents: number
       ai_credits_used: number; ai_credits_limit: number
-      max_hotels: number; max_learners: number
+      max_learners: number
       training_completion_pct: number | null
     }>
   }> {
@@ -2184,14 +2138,12 @@ export const platformService = {
   async getEffectiveEntitlements(orgId: string): Promise<{
     plan: string
     plan_code: string | null
-    max_hotels: number
     max_learners: number
     max_storage_gb: number
     ai_credits_monthly: number
     ai_credits_used: number
     plan_features: Record<string, any>
     usage: {
-      hotels: number
       learners: number
     }
   } | null> {
@@ -2207,7 +2159,6 @@ export const platformService = {
     org_id: string
     billing_period: string
     utilization: {
-      hotels: { used: number; max: number; pct: number }
       learners: { used: number; max: number; pct: number }
       storage: { used: number; max: number; pct: number; used_gb?: number; max_gb?: number }
       ai_credits: { used: number; max: number; pct: number }
@@ -2432,30 +2383,10 @@ export const platformService = {
       name: string
       lifecycle_status: string
     }
-    brands: Array<{
+    departments: Array<{
       id: string
       name: string
-      hotels: Array<{
-        id: string
-        name: string
-        city: string | null
-        member_count: number
-        departments: Array<{
-          id: string
-          name: string
-        }>
-      }>
-    }>
-    hotels: Array<{
-      id: string
-      name: string
-      city: string | null
-      brand_id: string | null
       member_count: number
-      departments: Array<{
-        id: string
-        name: string
-      }>
     }>
   } | null> {
     const { data, error } = await (supabase.rpc as any)('get_org_structure', { p_org_id: orgId })

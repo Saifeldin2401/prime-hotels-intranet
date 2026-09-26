@@ -18,7 +18,6 @@ interface UserInvitation {
   auth_user_id?: string | null;
   email: string;
   role: string;
-  property_id: string | null;
   department_id: string | null;
   invited_by: string;
   invited_at: string;
@@ -33,7 +32,6 @@ interface UserInvitation {
 interface CreateInvitationData {
   email: string;
   role: string;
-  propertyId?: string;
   departmentId?: string;
   metadata?: Record<string, unknown>;
 }
@@ -137,7 +135,6 @@ export function useInvitations(): UseInvitationsReturn {
           email: data.email.toLowerCase(),
           role: data.role,
           organizationId: currentOrganization?.id,
-          propertyIds: data.propertyId ? [data.propertyId] : [],
           departmentIds: data.departmentId ? [data.departmentId] : [],
           provisioningMethod: 'invite',
           appUrl,

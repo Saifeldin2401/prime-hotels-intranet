@@ -11,7 +11,6 @@ export interface ArticleSource {
 
 interface RAGSearchOptions {
   limit?: number
-  propertyId?: string | null
   departmentId?: string | null
   contentType?: string
 }
@@ -77,7 +76,7 @@ export async function searchHotelKnowledge(
   query: string,
   options: RAGSearchOptions = {}
 ): Promise<ArticleSource[]> {
-  const { limit = 5, propertyId, departmentId, contentType } = options
+  const { limit = 5, departmentId, contentType } = options
   const terms = extractSearchKeywords(query)
 
   if (terms.length === 0 && !query.trim()) return []
@@ -92,7 +91,6 @@ export async function searchHotelKnowledge(
       p_content_type: contentType || null,
       p_status: 'PUBLISHED',
       p_department_id: departmentId || null,
-      p_property_id: propertyId || null,
       p_limit: limit,
       p_offset: 0,
     })
@@ -134,10 +132,6 @@ export async function searchHotelKnowledge(
       .eq('status', 'PUBLISHED')
       .eq('knowledge_base_status', 'indexed')
       .eq('is_active_kb_version', true)
-
-    if (propertyId) {
-      fuzzyQuery = fuzzyQuery.or(`property_id.eq.${propertyId},property_id.is.null`)
-    }
 
     // Build ILIKE filters for each search word
     const orConditions = searchWords

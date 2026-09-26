@@ -11,7 +11,6 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import {
   Building2,
-  Building,
   Users,
   FolderTree,
   GraduationCap,
@@ -38,7 +37,7 @@ export function TenantOnboardingGuide() {
   const { t, i18n } = useTranslation(['nav', 'common', 'admin'])
   const isRtl = i18n.dir() === 'rtl'
   const navigate = useNavigate()
-  const { currentOrganization, availableHotels, isOrgAdmin, isPlatformAdmin } = useTenant()
+  const { currentOrganization, isOrgAdmin, isPlatformAdmin } = useTenant()
   const { primaryRole } = useAuth()
 
   const [departmentsCount, setDepartmentsCount] = useState<number>(0)
@@ -66,18 +65,15 @@ export function TenantOnboardingGuide() {
 
     async function checkReadiness() {
       try {
-        // 1. Departments count for hotels in this organization
-        const hotelIds = availableHotels.map((h) => h.id)
-        if (hotelIds.length > 0) {
-          const { count: deptCount } = await supabase
-            .from('departments')
-            .select('id', { count: 'exact', head: true })
-            .in('property_id', hotelIds)
-            .eq('is_active', true)
+        // 1. Departments in this organization
+        const { count: deptCount } = await supabase
+          .from('departments')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', orgId)
+          .eq('is_active', true)
 
-          if (isMounted && typeof deptCount === 'number') {
-            setDepartmentsCount(deptCount)
-          }
+        if (isMounted && typeof deptCount === 'number') {
+          setDepartmentsCount(deptCount)
         }
 
         // 2. Memberships count in current organization
@@ -110,7 +106,7 @@ export function TenantOnboardingGuide() {
     return () => {
       isMounted = false
     }
-  }, [orgId, availableHotels])
+  }, [orgId])
 
   // Only show to administrative and corporate management roles
   const canViewGuide = useMemo(() => {
@@ -137,19 +133,11 @@ export function TenantOnboardingGuide() {
         isCompleted: Boolean(currentOrganization?.name),
       },
       {
-        id: 'property',
-        titleKey: 'onboarding.step_property',
-        descKey: 'onboarding.step_property_desc',
-        icon: Building,
-        path: '/admin/properties',
-        isCompleted: availableHotels.length > 0,
-      },
-      {
         id: 'departments',
         titleKey: 'onboarding.step_departments',
         descKey: 'onboarding.step_departments_desc',
         icon: FolderTree,
-        path: '/admin/properties',
+        path: '/admin/structure?tab=departments',
         isCompleted: departmentsCount > 0,
       },
       {
@@ -165,11 +153,11 @@ export function TenantOnboardingGuide() {
         titleKey: 'onboarding.step_learning',
         descKey: 'onboarding.step_learning_desc',
         icon: GraduationCap,
-        path: '/studio',
+        path: '/studio/create',
         isCompleted: learningCount > 0,
       },
     ]
-  }, [currentOrganization, availableHotels, departmentsCount, membersCount, learningCount])
+  }, [currentOrganization, departmentsCount, membersCount, learningCount])
 
   const completedCount = steps.filter((s) => s.isCompleted).length
   const progressPercent = Math.round((completedCount / steps.length) * 100)
@@ -195,25 +183,25 @@ export function TenantOnboardingGuide() {
   }
 
   return (
-    <Card className="relative overflow-hidden border-hotel-gold/40 bg-gradient-to-br from-card via-card/95 to-hotel-gold/5 shadow-md">
-      <div className="pointer-events-none absolute -top-16 -end-16 h-48 w-48 rounded-full bg-hotel-gold/10 blur-2xl" />
+    <Card className="relative overflow-hidden border-ds-accent/40 /5 shadow-md">
+      <div className="pointer-events-none absolute -top-16 -end-16 h-48 w-48 rounded-full bg-ds-accent/10 blur-2xl" />
 
       <CardHeader className="p-4 sm:p-5 pb-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-hotel-gold/20 text-hotel-gold">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-ds-accent/20 text-ds-accent">
                 <Sparkles className="h-3.5 w-3.5" />
               </span>
               <CardTitle className="text-base sm:text-lg font-serif font-bold text-foreground">
                 {t('onboarding.title', 'Organization Workspace Setup')}
               </CardTitle>
               {isAllComplete ? (
-                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs">
+                <Badge className="bg-ds-success-soft text-ds-success border-ds-success/30 text-xs">
                   {t('onboarding.all_set', 'Workspace Ready!')}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-hotel-gold/40 text-hotel-gold text-xs font-semibold">
+                <Badge variant="outline" className="border-ds-accent/40 text-ds-accent text-xs font-semibold">
                   {completedCount}/{steps.length} {t('onboarding.completed', 'Completed')}
                 </Badge>
               )}
@@ -275,8 +263,8 @@ export function TenantOnboardingGuide() {
                   className={cn(
                     'relative flex flex-col justify-between rounded-xl border p-3.5 transition-all duration-200',
                     step.isCompleted
-                      ? 'border-emerald-500/30 bg-emerald-500/5 hover:border-emerald-500/50'
-                      : 'border-border/70 bg-card hover:border-hotel-gold/50 hover:shadow-xs'
+                      ? 'border-ds-success/30 bg-ds-success-soft hover:border-ds-success/30'
+                      : 'border-border/70 bg-card hover:border-ds-accent/50 hover:shadow-xs'
                   )}
                 >
                   <div className="space-y-2">
@@ -285,14 +273,14 @@ export function TenantOnboardingGuide() {
                         className={cn(
                           'flex h-8 w-8 items-center justify-center rounded-lg',
                           step.isCompleted
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                            ? 'bg-ds-success-soft text-ds-success'
                             : 'bg-muted text-foreground'
                         )}
                       >
                         <StepIcon className="h-4 w-4" />
                       </div>
                       {step.isCompleted ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <CheckCircle2 className="h-4 w-4 text-ds-success" />
                       ) : (
                         <Circle className="h-4 w-4 text-muted-foreground/40" />
                       )}
@@ -317,7 +305,7 @@ export function TenantOnboardingGuide() {
                         'w-full justify-between h-7 px-2 text-[11px] font-medium active:scale-[0.98]',
                         step.isCompleted
                           ? 'text-muted-foreground hover:text-foreground'
-                          : 'border-hotel-gold/40 text-foreground hover:bg-hotel-gold/10'
+                          : 'border-ds-accent/40 text-foreground hover:bg-ds-accent/10'
                       )}
                     >
                       <span>

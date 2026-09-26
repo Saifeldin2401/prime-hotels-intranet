@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { WorkspaceHeader, headerActionClass } from '@/ui'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,7 +40,6 @@ import {
   GraduationCap,
   Send,
   Sparkles,
-  Building,
   Check,
   RefreshCw,
   Eye,
@@ -50,7 +49,6 @@ import {
   AlertCircle,
   Search,
   FileText,
-  Crown,
   BellRing,
   ShieldCheck
 } from 'lucide-react'
@@ -496,144 +494,74 @@ export default function MasterContentLibrary() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={t('admin:global_master_library', 'Global Training & SOP Master Library')}
-        description={t(
-          'admin:global_master_library_desc',
-          'Platform-controlled master repository of hotel standard operating procedures, luxury service courses, and compliance curricula deployable across customer tenants.'
-        )}
+      <WorkspaceHeader
+        eyebrow={t('admin:masterLib.eyebrow', 'Platform')}
+        title={t('admin:masterLib.title', 'Master library')}
+        context={t('admin:masterLib.context', 'Articles and courses you maintain once and deploy to {{count}} organizations.', { count: organizations.length })}
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={loadData} disabled={isLoading}>
-              <RefreshCw className={`h-4 w-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
-              {t('common:refresh', 'Refresh')}
-            </Button>
+          <>
+            <button type="button" onClick={loadData} disabled={isLoading} className={headerActionClass.secondary} aria-label={t('common:refresh', 'Refresh')}>
+              <RefreshCw aria-hidden="true" className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
             {activeTab === 'sops' ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/studio/articles/new?isMaster=true')}
-                  className="gap-1.5 shadow-2xs font-semibold text-xs border-amber-300/80 bg-amber-50/50 hover:bg-amber-100/70 text-amber-950 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800"
-                >
-                  <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                  <span>Open Full Studio</span>
-                </Button>
-                <Button
-                  onClick={() => setIsCreateSopOpen(true)}
-                  className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold text-xs h-9"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('admin:create_master_sop', 'New Master SOP')}
-                </Button>
-              </div>
+              <>
+                <button type="button" onClick={() => navigate('/studio/articles/new?isMaster=true')} className={`${headerActionClass.secondary} hidden sm:inline-flex`}>
+                  {t('admin:masterLib.writeInStudio', 'Write in Studio')}
+                </button>
+                <button type="button" onClick={() => setIsCreateSopOpen(true)} className={headerActionClass.primary}>
+                  <Plus aria-hidden="true" className="h-4 w-4" />{t('admin:masterLib.newArticle', 'New master article')}
+                </button>
+              </>
             ) : activeTab === 'courses' ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate('/studio/courses/new?view=builder&master=true')}
-                  className="gap-1.5 shadow-2xs font-semibold text-xs border-indigo-300/80 bg-indigo-50/50 hover:bg-indigo-100/70 text-indigo-950 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-800"
-                >
-                  <Crown className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>{t('admin:open_training_builder', 'Open Training Builder')}</span>
-                </Button>
-                <Button
-                  onClick={() => setIsCreateCourseOpen(true)}
-                  className="bg-hotel-navy hover:bg-hotel-navy/90 text-white gap-1.5 shadow-sm font-semibold text-xs h-9"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('admin:create_master_course', 'New Master Course')}
-                </Button>
-              </div>
+              <>
+                <button type="button" onClick={() => navigate('/studio/courses/new?view=builder&master=true')} className={`${headerActionClass.secondary} hidden sm:inline-flex`}>
+                  {t('admin:masterLib.buildInStudio', 'Build in Studio')}
+                </button>
+                <button type="button" onClick={() => setIsCreateCourseOpen(true)} className={headerActionClass.primary}>
+                  <Plus aria-hidden="true" className="h-4 w-4" />{t('admin:masterLib.newCourse', 'New master course')}
+                </button>
+              </>
             ) : null}
-          </div>
+          </>
         }
       />
 
-      {/* KPI Stats Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border shadow-sm bg-card hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t('admin:master_sops', 'Master SOPs')}
-              </p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">{masterSops.length}</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Platform Standard Operating Procedures</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-              <BookOpen className="h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm bg-card hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t('admin:master_courses', 'Master Courses')}
-              </p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">{masterCourses.length}</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Enterprise Curricula & Modules</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-              <GraduationCap className="h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm bg-card hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t('admin:total_deployments', 'Total Deployments')}
-              </p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">{allDeployments.length}</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Cloned across client tenants</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <Send className="h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border shadow-sm bg-card hover:shadow-md transition-shadow">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {t('admin:connected_tenants', 'Client Tenants')}
-              </p>
-              <h3 className="text-2xl font-bold mt-1 text-foreground">{organizations.length}</h3>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Organizations receiving sync</p>
-            </div>
-            <div className="h-12 w-12 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
-              <Building className="h-6 w-6" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {(() => {
+        const behind = allDeployments.filter((d) => d.has_update_available || d.current_master_version > d.deployed_version).length
+        return behind > 0 ? (
+          <div className="flex flex-col gap-3 rounded-[6px] border border-ds-warning/30 bg-ds-warning-soft px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ds-ink">
+              {t('admin:masterLib.behind', '{{count}} deployments are running an older version than the master.', { count: behind })}
+            </p>
+            <button type="button" onClick={() => { setActiveTab('deployments'); setComplianceFilter('pending') }} className="text-sm font-semibold text-ds-ink underline-offset-4 hover:underline">
+              {t('admin:masterLib.review', 'Review updates')}
+            </button>
+          </div>
+        ) : null
+      })()}
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)}>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-          <TabsList className="grid grid-cols-3 w-full sm:w-auto min-w-[380px]">
-            <TabsTrigger value="sops" className="gap-2 text-xs">
+          <TabsList className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-ds-border bg-transparent p-0 sm:w-auto">
+            <TabsTrigger value="sops" className="min-h-[40px] gap-2 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
               <BookOpen className="h-4 w-4" />
-              <span>{t('admin:master_sops', 'Master SOPs')}</span>
-              <Badge variant="secondary" className="ms-1 text-[10px] py-0 px-1.5">
+              <span>{t('admin:masterLib.articles', 'Articles')}</span>
+              <Badge variant="secondary" className="ms-1 font-mono text-[11px] tabular-nums py-0 px-1.5">
                 {masterSops.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="courses" className="gap-2 text-xs">
+            <TabsTrigger value="courses" className="min-h-[40px] gap-2 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
               <GraduationCap className="h-4 w-4" />
-              <span>{t('admin:master_courses', 'Master Courses')}</span>
-              <Badge variant="secondary" className="ms-1 text-[10px] py-0 px-1.5">
+              <span>{t('admin:masterLib.courses', 'Courses')}</span>
+              <Badge variant="secondary" className="ms-1 font-mono text-[11px] tabular-nums py-0 px-1.5">
                 {masterCourses.length}
               </Badge>
             </TabsTrigger>
-            <TabsTrigger value="deployments" className="gap-2 text-xs">
+            <TabsTrigger value="deployments" className="min-h-[40px] gap-2 rounded-none border-b-2 border-transparent px-3 text-sm text-ds-muted data-[state=active]:border-ds-ink data-[state=active]:bg-transparent data-[state=active]:text-ds-ink data-[state=active]:shadow-none">
               <Layers className="h-4 w-4" />
-              <span>{t('admin:deployments_tracker', 'Compliance Radar')}</span>
-              <Badge variant="secondary" className="ms-1 text-[10px] py-0 px-1.5">
+              <span>{t('admin:masterLib.deployments', 'Deployments')}</span>
+              <Badge variant="secondary" className="ms-1 font-mono text-[11px] tabular-nums py-0 px-1.5">
                 {allDeployments.length}
               </Badge>
             </TabsTrigger>
@@ -686,7 +614,7 @@ export default function MasterContentLibrary() {
                             <div>
                               <div className="font-semibold text-foreground flex items-center gap-2">
                                 <span>{sop.title}</span>
-                                <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] py-0 h-4">
+                                <Badge className="bg-ds-warning-soft text-ds-warning border-ds-warning/30 text-[10px] py-0 h-4">
                                   Global Master
                                 </Badge>
                               </div>
@@ -700,14 +628,14 @@ export default function MasterContentLibrary() {
                                     Not yet deployed
                                   </Badge>
                                 ) : (
-                                  <Badge variant="outline" className="text-[10px] py-0 h-4 border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50">
+                                  <Badge variant="outline" className="text-[10px] py-0 h-4 border-ds-border bg-ds-surface-subtle">
                                     Deployed to {depList.length} {depList.length === 1 ? 'hotel' : 'hotels'}
                                     {pendingCount > 0 ? (
-                                      <span className="text-amber-600 dark:text-amber-400 font-bold ms-1">
+                                      <span className="text-ds-warning font-bold ms-1">
                                         • {pendingCount} update pending
                                       </span>
                                     ) : (
-                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium ms-1">
+                                      <span className="text-ds-success font-medium ms-1">
                                         • 100% in sync
                                       </span>
                                     )}
@@ -727,7 +655,7 @@ export default function MasterContentLibrary() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="default" className="text-xs capitalize bg-emerald-600">
+                            <Badge variant="default" className="text-xs capitalize bg-ds-success">
                               {sop.status || 'Published'}
                             </Badge>
                           </TableCell>
@@ -737,7 +665,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => navigate(`/knowledge/edit/${sop.id}?isMaster=true`)}
-                                className="h-8 px-2.5 text-xs gap-1 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                                className="h-8 px-2.5 text-xs gap-1 text-ds-accent hover:text-ds-accent hover:bg-ds-accent-soft"
                                 title="Open in Full Authoring Studio"
                               >
                                 <FileText className="h-3.5 w-3.5" />
@@ -759,7 +687,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => setVersionBumpItem({ type: 'sop', item: sop })}
-                                className="h-8 px-2.5 text-xs gap-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                                className="h-8 px-2.5 text-xs gap-1 text-ds-warning hover:text-ds-warning hover:bg-ds-warning-soft"
                                 title="Publish New Revision"
                               >
                                 <Sparkles className="h-3.5 w-3.5" />
@@ -769,7 +697,7 @@ export default function MasterContentLibrary() {
                               <Button
                                 size="sm"
                                 onClick={() => handleOpenDeploy('sop', sop)}
-                                className="h-8 px-3 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm"
+                                className="h-8 px-3 text-xs gap-1.5 bg-ds-ink hover:bg-ds-ink/90 text-ds-on-ink font-semibold shadow-sm"
                               >
                                 <Send className="h-3.5 w-3.5" />
                                 {t('admin:deploy_to_tenants', 'Deploy')}
@@ -818,7 +746,7 @@ export default function MasterContentLibrary() {
                             <div>
                               <div className="font-semibold text-foreground flex items-center gap-2">
                                 <span>{course.title}</span>
-                                <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 h-4">
+                                <Badge className="bg-ds-accent-soft text-ds-accent border-ds-accent/30 text-[10px] py-0 h-4">
                                   Global Master
                                 </Badge>
                               </div>
@@ -849,7 +777,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => navigate(`/studio/courses/${course.id}?view=builder&master=true`)}
-                                className="h-8 px-2.5 text-xs gap-1 text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50"
+                                className="h-8 px-2.5 text-xs gap-1 text-ds-accent hover:text-ds-accent hover:bg-ds-accent-soft"
                                 title={t('admin:edit_in_builder', 'Edit in Training Builder')}
                               >
                                 <GraduationCap className="h-3.5 w-3.5" />
@@ -860,7 +788,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => navigate(`/learn/player/${course.id}`)}
-                                className="h-8 px-2.5 text-xs gap-1 text-slate-700 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                                className="h-8 px-2.5 text-xs gap-1 text-ds-ink hover:text-ds-ink hover:bg-ds-surface-subtle"
                                 title={t('admin:preview_player', 'Player Preview')}
                               >
                                 <Eye className="h-3.5 w-3.5" />
@@ -871,7 +799,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => setVersionBumpItem({ type: 'course', item: course })}
-                                className="h-8 px-2.5 text-xs gap-1 text-amber-700 hover:text-amber-800 hover:bg-amber-50"
+                                className="h-8 px-2.5 text-xs gap-1 text-ds-warning hover:text-ds-warning hover:bg-ds-warning-soft"
                                 title="Publish New Revision"
                               >
                                 <Sparkles className="h-3.5 w-3.5" />
@@ -882,7 +810,7 @@ export default function MasterContentLibrary() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleOpenDeploy('course', course)}
-                                className="h-8 px-3 text-xs gap-1.5 text-indigo-700 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-950/50 font-semibold"
+                                className="h-8 px-3 text-xs gap-1.5 text-ds-accent hover:bg-ds-accent-soft font-semibold"
                                 title={t('admin:deploy_content_only', 'Copy master content into tenant(s)')}
                               >
                                 <Send className="h-3.5 w-3.5" />
@@ -892,7 +820,7 @@ export default function MasterContentLibrary() {
                               <Button
                                 size="sm"
                                 onClick={() => openAssign(course)}
-                                className="h-8 px-3 text-xs gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold shadow-sm"
+                                className="h-8 px-3 text-xs gap-1.5 bg-ds-ink hover:bg-ds-ink/90 text-ds-on-ink font-semibold shadow-sm"
                                 title={t('admin:assign_to_tenants_title', 'Assign to tenant users & track progress')}
                               >
                                 <GraduationCap className="h-3.5 w-3.5" />
@@ -936,7 +864,7 @@ export default function MasterContentLibrary() {
                         <h4 className="text-2xl font-bold text-foreground mt-1">{alignmentRate}%</h4>
                         <Progress value={alignmentRate} className="h-1.5 mt-2 w-36" />
                       </div>
-                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-xl bg-ds-success-soft text-ds-success flex items-center justify-center">
                         <ShieldCheck className="h-5 w-5" />
                       </div>
                     </CardContent>
@@ -946,10 +874,10 @@ export default function MasterContentLibrary() {
                     <CardContent className="p-4 flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Synced Deployments</p>
-                        <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{inSync}</h4>
+                        <h4 className="text-2xl font-bold text-ds-success mt-1">{inSync}</h4>
                         <p className="text-[11px] text-muted-foreground mt-1">Properties running current standards</p>
                       </div>
-                      <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-xl bg-ds-success-soft text-ds-success flex items-center justify-center">
                         <CheckCircle2 className="h-5 w-5" />
                       </div>
                     </CardContent>
@@ -959,10 +887,10 @@ export default function MasterContentLibrary() {
                     <CardContent className="p-4 flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Pending Upstream Updates</p>
-                        <h4 className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{pending}</h4>
+                        <h4 className="text-2xl font-bold text-ds-warning mt-1">{pending}</h4>
                         <p className="text-[11px] text-muted-foreground mt-1">Properties with unapplied revisions</p>
                       </div>
-                      <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-xl bg-ds-warning-soft text-ds-warning flex items-center justify-center">
                         <BellRing className="h-5 w-5" />
                       </div>
                     </CardContent>
@@ -997,18 +925,18 @@ export default function MasterContentLibrary() {
                         onClick={() => setComplianceFilter('pending')}
                         className={cn(
                           "px-2.5 py-1 rounded font-medium transition-all text-xs flex items-center gap-1",
-                          complianceFilter === 'pending' ? "bg-amber-500/15 text-amber-900 dark:text-amber-300 font-bold" : "text-muted-foreground hover:text-foreground"
+                          complianceFilter === 'pending' ? "bg-ds-warning-soft text-ds-warning font-bold" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         <span>Pending ({pending})</span>
-                        {pending > 0 && <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />}
+                        {pending > 0 && <span className="h-2 w-2 rounded-full bg-ds-warning animate-pulse" />}
                       </button>
                       <button
                         type="button"
                         onClick={() => setComplianceFilter('synced')}
                         className={cn(
                           "px-2.5 py-1 rounded font-medium transition-all text-xs",
-                          complianceFilter === 'synced' ? "bg-emerald-500/15 text-emerald-900 dark:text-emerald-300 font-bold" : "text-muted-foreground hover:text-foreground"
+                          complianceFilter === 'synced' ? "bg-ds-success-soft text-ds-success font-bold" : "text-muted-foreground hover:text-foreground"
                         )}
                       >
                         In Sync ({inSync})
@@ -1055,12 +983,12 @@ export default function MasterContentLibrary() {
                                   <Badge variant="outline" className="capitalize text-xs flex items-center gap-1 w-fit">
                                     {dep.content_type === 'document_sop' ? (
                                       <>
-                                        <BookOpen className="h-3 w-3 text-blue-600" />
+                                        <BookOpen className="h-3 w-3 text-ds-accent" />
                                         <span>SOP</span>
                                       </>
                                     ) : (
                                       <>
-                                        <GraduationCap className="h-3 w-3 text-indigo-600" />
+                                        <GraduationCap className="h-3 w-3 text-ds-accent" />
                                         <span>Course</span>
                                       </>
                                     )}
@@ -1078,13 +1006,13 @@ export default function MasterContentLibrary() {
                                 </TableCell>
                                 <TableCell>
                                   {hasUpdate ? (
-                                    <Badge className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs gap-1">
+                                    <Badge className="bg-ds-warning hover:bg-ds-warning text-ds-ink font-bold text-xs gap-1">
                                       <BellRing className="h-3 w-3 animate-bounce" />
                                       Update Available
                                     </Badge>
                                   ) : (
-                                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs gap-1">
-                                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                                    <Badge variant="secondary" className="bg-ds-success-soft text-ds-success border-ds-success/30 text-xs gap-1">
+                                      <CheckCircle2 className="h-3 w-3 text-ds-success" />
                                       In Sync
                                     </Badge>
                                   )}
@@ -1105,18 +1033,18 @@ export default function MasterContentLibrary() {
                                       variant="outline"
                                       disabled={sendingReminderId === dep.id}
                                       onClick={() => handleSendReminder(dep.id, dep.target_organization?.name || 'Customer Organization')}
-                                      className="h-7 text-xs gap-1 text-amber-800 hover:text-amber-900 border-amber-300 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/50"
+                                      className="h-7 text-xs gap-1 text-ds-warning hover:text-ds-warning border-ds-warning/30 hover:bg-ds-warning-soft"
                                       title="Send Sync Notification to Tenant Admins"
                                     >
                                       {sendingReminderId === dep.id ? (
                                         <RefreshCw className="h-3 w-3 animate-spin" />
                                       ) : (
-                                        <BellRing className="h-3 w-3 text-amber-600" />
+                                        <BellRing className="h-3 w-3 text-ds-warning" />
                                       )}
                                       <span className="hidden sm:inline">Remind</span>
                                     </Button>
                                   ) : (
-                                    <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium inline-flex items-center gap-1">
+                                    <span className="text-[11px] text-ds-success font-medium inline-flex items-center gap-1">
                                       <CheckCircle2 className="h-3 w-3" />
                                       <span>Aligned</span>
                                     </span>
@@ -1142,16 +1070,16 @@ export default function MasterContentLibrary() {
       {selectedItemToDeploy && (
         <Dialog open={!!selectedItemToDeploy} onOpenChange={(open) => !isDeploying && setSelectedItemToDeploy(null)}>
           <DialogContent className="sm:max-w-[620px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-6 pb-4">
+            <div className="text-ds-on-ink p-6 pb-4 bg-ds-ink">
               <DialogHeader>
-                <div className="flex items-center gap-2 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-1">
+                <div className="flex items-center gap-2 text-ds-accent text-xs font-semibold uppercase tracking-wider mb-1">
                   <Send className="h-4 w-4" />
                   <span>{t('admin:batch_deployment', 'Batch Master Deployment')}</span>
                 </div>
                 <DialogTitle className="text-lg font-bold text-white">
                   Deploying: {selectedItemToDeploy.item.title}
                 </DialogTitle>
-                <DialogDescription className="text-slate-300 text-xs mt-0.5">
+                <DialogDescription className="text-ds-muted text-xs mt-0.5">
                   Select customer tenant organizations to deploy dedicated local copies tracked by platform version sync.
                 </DialogDescription>
               </DialogHeader>
@@ -1177,7 +1105,7 @@ export default function MasterContentLibrary() {
                     </Button>
                   </div>
 
-                  <div className="max-h-64 overflow-y-auto space-y-2 pe-1 border rounded-lg p-2 bg-slate-50/50">
+                  <div className="max-h-64 overflow-y-auto space-y-2 pe-1 border rounded-lg p-2 bg-ds-surface-subtle">
                     {filteredOrganizations.length === 0 ? (
                       <div className="py-8 text-center text-xs text-muted-foreground">
                         No customer organizations match your filter.
@@ -1236,28 +1164,28 @@ export default function MasterContentLibrary() {
                   </div>
 
                   {/* Execution Log Terminal */}
-                  <div className="bg-slate-950 text-slate-100 rounded-lg p-3 font-mono text-[11px] max-h-56 overflow-y-auto space-y-1 border border-slate-800">
-                    <div className="text-slate-400 pb-1 border-b border-slate-800 flex items-center justify-between">
+                  <div className="bg-ds-ink text-ds-muted rounded-lg p-3 font-mono text-[11px] max-h-56 overflow-y-auto space-y-1 border border-ds-border-strong">
+                    <div className="text-ds-muted pb-1 border-b border-ds-border-strong flex items-center justify-between">
                       <span>DEPLOYMENT EXECUTION LOG</span>
                       <span>{deploymentLogs.length} events</span>
                     </div>
                     {deploymentLogs.map((log, idx) => (
                       <div key={idx} className="flex items-center gap-2">
-                        <span className="text-slate-500">[{log.timestamp}]</span>
+                        <span className="text-ds-muted">[{log.timestamp}]</span>
                         {log.status === 'in_progress' ? (
-                          <span className="text-yellow-400">⏳</span>
+                          <span className="text-ds-warning">⏳</span>
                         ) : log.status === 'success' ? (
-                          <span className="text-emerald-400">✓</span>
+                          <span className="text-ds-success">✓</span>
                         ) : (
-                          <span className="text-rose-400">✗</span>
+                          <span className="text-ds-danger">✗</span>
                         )}
                         <span
                           className={
                             log.status === 'success'
-                              ? 'text-emerald-300'
+                              ? 'text-ds-success'
                               : log.status === 'error'
-                              ? 'text-rose-300'
-                              : 'text-slate-300'
+                              ? 'text-ds-danger'
+                              : 'text-ds-muted'
                           }
                         >
                           {log.message}
@@ -1290,7 +1218,7 @@ export default function MasterContentLibrary() {
                   size="sm"
                   onClick={() => setSelectedItemToDeploy(null)}
                   disabled={isDeploying}
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
+                  className="w-full bg-ds-ink hover:bg-ds-ink text-white text-xs font-semibold"
                 >
                   {isDeploying ? 'Deploying...' : 'Done'}
                 </Button>
@@ -1306,13 +1234,13 @@ export default function MasterContentLibrary() {
       {assignItem && (
         <Dialog open={!!assignItem} onOpenChange={(open) => !isAssigning && !open && setAssignItem(null)}>
           <DialogContent className="sm:max-w-[640px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 p-4">
+            <div className="p-4">
               <DialogHeader>
                 <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
                   <GraduationCap className="h-4 w-4" />
                   {t('admin:assign_master_course', 'Assign Master Course to Tenants')}
                 </DialogTitle>
-                <DialogDescription className="text-indigo-200 text-xs mt-0.5">
+                <DialogDescription className="text-ds-accent text-xs mt-0.5">
                   {assignItem.title} — {t('admin:assign_master_course_desc', 'deploys the course into each tenant if needed, then assigns it to their learners. Audited.')}
                 </DialogDescription>
               </DialogHeader>
@@ -1364,7 +1292,6 @@ export default function MasterContentLibrary() {
                         <SelectItem value="instructor">Instructor</SelectItem>
                         <SelectItem value="department_manager">Department Manager</SelectItem>
                         <SelectItem value="training_manager">Training Manager</SelectItem>
-                        <SelectItem value="hotel_admin">Hotel Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1386,9 +1313,9 @@ export default function MasterContentLibrary() {
                     <div key={r.org_id} className="flex items-center justify-between p-2.5">
                       <span className="font-medium">{r.org_name}</span>
                       {r.assigned ? (
-                        <span className="text-emerald-600 flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> {r.recipient_count} assigned</span>
+                        <span className="text-ds-success flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> {r.recipient_count} assigned</span>
                       ) : (
-                        <span className="text-rose-600 flex items-center gap-1" title={r.error}><AlertCircle className="h-3.5 w-3.5" /> {r.error || 'skipped'}</span>
+                        <span className="text-ds-danger flex items-center gap-1" title={r.error}><AlertCircle className="h-3.5 w-3.5" /> {r.error || 'skipped'}</span>
                       )}
                     </div>
                   ))}
@@ -1443,7 +1370,7 @@ export default function MasterContentLibrary() {
                 size="sm"
                 onClick={handleConfirmAssign}
                 disabled={isAssigning || assignOrgIds.length === 0}
-                className="text-xs rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-1.5"
+                className="text-xs rounded-xl bg-ds-ink hover:bg-ds-ink/90 text-ds-on-ink font-bold gap-1.5"
               >
                 {isAssigning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 {t('admin:assign_now', 'Assign to')} {assignOrgIds.length || ''} {t('admin:tenants_lc', 'tenant(s)')}
@@ -1713,7 +1640,7 @@ export default function MasterContentLibrary() {
         <Dialog open={!!versionBumpItem} onOpenChange={() => setVersionBumpItem(null)}>
           <DialogContent className="sm:max-w-[480px]">
             <DialogHeader>
-              <div className="flex items-center gap-2 text-amber-600">
+              <div className="flex items-center gap-2 text-ds-warning">
                 <Sparkles className="h-5 w-5" />
                 <DialogTitle>Publish Upstream Master Revision</DialogTitle>
               </div>
@@ -1722,10 +1649,10 @@ export default function MasterContentLibrary() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-2 text-xs text-amber-900">
+            <div className="p-4 bg-ds-warning-soft border border-ds-warning/30 rounded-lg space-y-2 text-xs text-ds-warning">
               <div className="flex items-center justify-between font-mono font-bold">
                 <span>Current Version: v{versionBumpItem.item.current_version || (versionBumpItem.item.blueprint as any)?.version || 1}.0</span>
-                <span className="text-amber-700">➔ New Version: v{(versionBumpItem.item.current_version || (versionBumpItem.item.blueprint as any)?.version || 1) + 1}.0</span>
+                <span className="text-ds-warning">➔ New Version: v{(versionBumpItem.item.current_version || (versionBumpItem.item.blueprint as any)?.version || 1) + 1}.0</span>
               </div>
               <p className="text-[11px] opacity-90">
                 Customer organizations with deployed copies will see an &quot;Update Available 🔔&quot; badge in their Training & SOP library, allowing local managers to review changes and sync.
@@ -1740,7 +1667,7 @@ export default function MasterContentLibrary() {
                 size="sm"
                 onClick={handleConfirmVersionBump}
                 disabled={isBumpingVersion}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5"
+                className="bg-ds-warning hover:bg-ds-warning text-white font-semibold text-xs gap-1.5"
               >
                 {isBumpingVersion ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                 Publish Revision & Flag Tenants

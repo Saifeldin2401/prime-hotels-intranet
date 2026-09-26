@@ -1,4 +1,4 @@
-﻿import { memo, useCallback, useState, useEffect } from 'react';
+import { memo, useCallback, useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
@@ -36,25 +36,37 @@ interface LoginViewProps {
 }
 
 function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }: LoginViewProps) {
-  const { t } = useTranslation('auth');
-  const { signIn, user } = useAuth();
+  const { t, i18n } = useTranslation('auth');
+  const { signIn, signInWithGoogle, user } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [searchParams] = useSearchParams();
   const isTimeoutRedirect = searchParams.get('reason') === 'timeout';
+  const errorParam = searchParams.get('error');
+  const emailParam = searchParams.get('email');
+  const isNotRegistered = errorParam === 'not_registered';
 
-  const [email, setEmail] = useState(() => safeLocalStorage.getItem('remembered_email') || '');
+  const [email, setEmail] = useState(() => searchParams.get('email') || safeLocalStorage.getItem('remembered_email') || '');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(() => {
     const isRemembered = safeLocalStorage.getItem(REMEMBER_ME_KEY) === 'true';
     const hasSavedEmail = safeLocalStorage.hasItem('remembered_email');
     return isRemembered || hasSavedEmail;
   });
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    if (searchParams.get('error') === 'not_registered') {
+      const emailP = searchParams.get('email');
+      return emailP
+        ? t('errors.not_registered', { email: emailP, defaultValue: `This account (${emailP}) is not registered in our system. Please contact your hotel administrator to get access.` })
+        : t('errors.not_registered_generic', { defaultValue: 'This account is not registered in our system. Please contact your hotel administrator to get access.' });
+    }
+    return null;
+  });
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
   const [emailValid, setEmailValid] = useState<boolean | null>(() => {
-    const savedEmail = safeLocalStorage.getItem('remembered_email');
-    if (savedEmail) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(savedEmail);
+    const initialEmail = searchParams.get('email') || safeLocalStorage.getItem('remembered_email');
+    if (initialEmail) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(initialEmail);
     }
     return null;
   });
@@ -65,6 +77,41 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
   const [loginSuccess, setLoginSuccess] = useState(false);
 
   const passwordStrength = usePasswordStrength(password);
+
+  const lastLoginRaw = safeLocalStorage.getItem('altus_last_login');
+  const rememberedEmail = safeLocalStorage.getItem('remembered_email');
+  
+  const lastLoginTime = useMemo(() => {
+    if (!lastLoginRaw) return null;
+    try {
+      const diffMs = Date.now() - new Date(lastLoginRaw).getTime();
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      const rtf = new Intl.RelativeTimeFormat(i18n.language || 'en', { numeric: 'auto' });
+      if (diffDays > 0) return rtf.format(-diffDays, 'day');
+      if (diffHours > 0) return rtf.format(-diffHours, 'hour');
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      return rtf.format(-diffMinutes || 0, 'minute');
+    } catch {
+      return null;
+    }
+  }, [lastLoginRaw, i18n.language]);
+
+  // Set not_registered error if present in search params
+  useEffect(() => {
+    if (isNotRegistered) {
+      const msg = emailParam
+        ? t('errors.not_registered', { email: emailParam, defaultValue: `This account (${emailParam}) is not registered in our system. Please contact your hotel administrator to get access.` })
+        : t('errors.not_registered_generic', { defaultValue: 'This account is not registered in our system. Please contact your hotel administrator to get access.' });
+      setError(msg);
+      setErrorType('auth');
+      if (emailParam) {
+        setEmail(emailParam);
+        setEmailValid(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailParam));
+      }
+    }
+  }, [isNotRegistered, emailParam, t]);
 
   // Check remaining attempts on mount and email change
   useEffect(() => {
@@ -194,6 +241,8 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           safeSessionStorage.setItem('altus_session_active', 'true');
         }
 
+        safeLocalStorage.setItem('altus_last_login', new Date().toISOString());
+
         setLoginSuccess(true);
       } catch (_err) {
         setErrorType('network');
@@ -205,7 +254,27 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
     [email, password, rememberMe, signIn, t]
   );
 
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      setError(null);
+      setGoogleLoading(true);
+      const { error: googleError } = await signInWithGoogle();
+      if (googleError) {
+        setError(googleError.message || t('errors.network_error'));
+        setErrorType('auth');
+        setGoogleLoading(false);
+      }
+    } catch (_err) {
+      setError(t('errors.network_error'));
+      setErrorType('network');
+      setGoogleLoading(false);
+    }
+  }, [signInWithGoogle, t]);
+
   const getErrorIcon = useCallback(() => {
+    if (isNotRegistered) {
+      return <ShieldAlert className="h-4 w-4 shrink-0 text-ds-danger" aria-hidden="true" />;
+    }
     switch (errorType) {
       case 'network':
         return <WifiOff className="h-4 w-4 shrink-0 text-ds-warning" aria-hidden="true" />;
@@ -215,10 +284,10 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
       default:
         return <AlertCircle className="h-4 w-4 shrink-0 text-ds-danger" aria-hidden="true" />;
     }
-  }, [errorType]);
+  }, [errorType, isNotRegistered]);
 
-  // Show transition state on authentication success
-  if (loginSuccess || user) {
+  // Show transition state on authentication success (only if not an unregistered rejection)
+  if (!isNotRegistered && (loginSuccess || user)) {
     return (
       <LazyMotion features={domAnimation}>
         <m.div
@@ -226,8 +295,23 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center py-8 text-center"
         >
-          <div className="w-14 h-14 rounded-full bg-ds-success-soft text-ds-success flex items-center justify-center mb-4 border border-ds-success/20">
-            <CheckCircle2 className="h-7 w-7" />
+          <div className="relative mb-4">
+            <div className="w-14 h-14 rounded-full bg-ds-success-soft text-ds-success flex items-center justify-center border border-ds-success/20 relative z-10">
+              <CheckCircle2 className="h-7 w-7" />
+            </div>
+            {[...Array(8)].map((_, i) => (
+              <m.div
+                key={i}
+                className="absolute left-1/2 top-1/2 w-1.5 h-1.5 rounded-full bg-ds-brass"
+                initial={{ x: "-50%", y: "-50%", opacity: 1 }}
+                animate={{
+                  x: `calc(-50% + ${Math.cos((i * 45 * Math.PI) / 180) * 45}px)`,
+                  y: `calc(-50% + ${Math.sin((i * 45 * Math.PI) / 180) * 45}px)`,
+                  opacity: 0,
+                }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+              />
+            ))}
           </div>
           <h3 className="text-lg font-semibold text-ds-ink">
             {t('welcome_back', { defaultValue: 'Welcome Back' })}
@@ -251,8 +335,21 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
         className="space-y-4"
         aria-label={t('sign_in_title', { defaultValue: 'Sign in' })}
       >
+        {/* Last Login Indicator */}
+        {rememberedEmail && lastLoginRaw && lastLoginTime && (
+          <m.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="flex items-center gap-2 text-[11px] text-ds-muted mb-2 px-1"
+          >
+            <Clock className="w-3 h-3" />
+            <span>{t('last_login_indicator', { time: lastLoginTime, defaultValue: `Last signed in {{time}}` })}</span>
+          </m.div>
+        )}
+
         {/* Email Field */}
-        <div>
+        <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}>
           <FloatingInput
             id="email"
             type="email"
@@ -267,10 +364,10 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
             valid={emailValid}
             autoComplete="email"
           />
-        </div>
+        </m.div>
 
         {/* Password Field */}
-        <div>
+        <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.17 }}>
           <PasswordField
             value={password}
             onChange={handlePasswordChange}
@@ -286,7 +383,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
             isCapsLockOn={capsLockOn}
             isFocused={focusedField === 'password'}
           />
-        </div>
+        </m.div>
 
         {/* Session Timeout Expiration Notice */}
         <AnimatePresence>
@@ -330,7 +427,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
         </AnimatePresence>
 
         {/* Remember Me & Forgot Password */}
-        <div className="flex items-center justify-between pt-1">
+        <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.23 }} className="flex items-center justify-between pt-1">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -355,7 +452,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           >
             {t('forgot_password.title', { defaultValue: 'Forgot password?' })}
           </button>
-        </div>
+        </m.div>
 
         {/* Error Alert Box */}
         <AnimatePresence mode="wait">
@@ -376,8 +473,18 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
             >
               <div className="mt-0.5 shrink-0">{getErrorIcon()}</div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-ds-ink">{t('errors.title')}</p>
+                <p className="font-semibold text-ds-ink">
+                  {isNotRegistered
+                    ? t('errors.not_registered_title', { defaultValue: 'Account Not Registered' })
+                    : t('errors.title')}
+                </p>
                 <p className="text-xs text-ds-ink-secondary mt-0.5 leading-relaxed">{error}</p>
+
+                {isNotRegistered && (
+                  <p className="text-[11px] text-ds-muted mt-2 pt-2 border-t border-ds-danger/20 leading-relaxed">
+                    {t('errors.not_registered_hint', { defaultValue: 'Only authorized hotel staff and learners with an active account can access PRIME Connect.' })}
+                  </p>
+                )}
 
                 {/* Self-service account unlock button if lockout triggered */}
                 {errorType === 'lockout' && onUnlockAccount && (
@@ -397,19 +504,20 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
         </AnimatePresence>
 
         {/* Primary CTA Button: Altus Connect Brass Treatment (48-52px, restrained radius, strong contrast) */}
-        <div className="pt-2">
+        <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.29 }} whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.01 }} className="pt-2">
           <Button
             type="submit"
-            className="w-full h-12 bg-ds-brass hover:bg-ds-accent-hover text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-brass focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed border-none cursor-pointer"
+            className="w-full h-12 bg-ds-brass hover:bg-ds-accent-hover text-white font-medium text-sm rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-brass focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed border-none cursor-pointer relative overflow-hidden group"
             disabled={loading || emailValid === false}
           >
+            <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
             {loading ? (
-              <div className="flex items-center gap-2 justify-center">
+              <div className="flex items-center gap-2 justify-center z-10 relative">
                 <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
                 <span className="font-medium text-white">{t('logging_in', { defaultValue: 'Signing in...' })}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 justify-center">
+              <div className="flex items-center gap-2 justify-center z-10 relative">
                 <span className="font-medium text-white">{t('sign_in_button', { defaultValue: 'Sign in' })}</span>
                 <ArrowRight
                   className={cn(
@@ -418,19 +526,75 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
                   )}
                   aria-hidden="true"
                 />
+                <kbd className="text-[10px] opacity-60 hidden sm:inline-flex items-center justify-center w-5 h-5 rounded border border-white/30 font-mono">↵</kbd>
               </div>
             )}
           </Button>
-        </div>
+        </m.div>
+
+        {/* Divider */}
+        <m.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.32 }}
+          className="relative flex items-center justify-center pt-1 pb-0.5"
+        >
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-ds-border" />
+          </div>
+          <span className="relative px-3 bg-white text-[11px] font-medium text-ds-muted uppercase tracking-wider">
+            {t('or_continue_with', { defaultValue: 'Or continue with' })}
+          </span>
+        </m.div>
+
+        {/* Google Sign-In Button */}
+        <m.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+        >
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading || googleLoading}
+            className="w-full h-11 bg-white hover:bg-slate-50/80 border border-ds-border hover:border-ds-border-strong text-ds-ink font-medium text-xs rounded-lg shadow-2xs transition-all flex items-center justify-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-brass cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-ds-brass" />
+            ) : (
+              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.87c2.26-2.09 3.67-5.17 3.67-9.15z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.87-3.05c-1.08.72-2.45 1.16-4.06 1.16-3.13 0-5.78-2.11-6.73-4.96H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.25C.45 8.24 0 10.06 0 12s.45 3.76 1.25 5.39l4.02-3.15z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.61l4.02 3.15c.95-2.85 3.6-4.96 6.73-4.96z"
+                />
+              </svg>
+            )}
+            <span>{t('continue_with_google', { defaultValue: 'Continue with Google' })}</span>
+          </button>
+        </m.div>
 
         {/* Enterprise Security Verification Note */}
-        <div className="pt-4 border-t border-ds-border/60 flex items-center justify-between text-[11px] text-ds-muted">
+        <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }} className="pt-3 border-t border-ds-border/60 flex items-center justify-between text-[11px] text-ds-muted">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-ds-brass shrink-0" aria-hidden="true" />
-            <span>Enterprise 256-bit SSL</span>
+            <span>{t('security_badge.ssl', { defaultValue: 'Enterprise 256-bit SSL' })}</span>
           </div>
-          <span className="text-ds-muted/80">KSA Cloud Compliant</span>
-        </div>
+          <span className="text-ds-muted/80">{t('security_badge.ksa_compliant', { defaultValue: 'KSA Cloud Compliant' })}</span>
+        </m.div>
       </m.form>
     </LazyMotion>
   );

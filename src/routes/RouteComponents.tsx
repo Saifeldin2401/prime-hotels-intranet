@@ -12,7 +12,7 @@ import {
     getSpaRedirectFromSearch,
 } from '@/lib/authRedirect'
 import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { safeLocalStorage } from '@/lib/storage'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
     Navigate,
@@ -43,12 +43,30 @@ export const RootLayout = () => {
 }
 
 export const RootIndex = () => {
-    const { user, loading } = useAuth()
+    const { user, loading, signOut } = useAuth()
     const account = useAccountContext()
     const location = useLocation()
 
+    const isRegisteredUser =
+        account.isPlatformOperator ||
+        account.tenantMemberships.length > 0 ||
+        Boolean(account.primaryOrganizationId)
+
+    // Unregistered users (e.g. external Google accounts not invited/provisioned by an admin)
+    // are immediately signed out and redirected to /login with not_registered notice.
+    useEffect(() => {
+        if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+            safeSessionStorage.removeItem('altus_session_active')
+            safeLocalStorage.removeItem('altus_active_tenant_id')
+            if (user?.id) {
+                safeLocalStorage.removeItem(`active_tenant_id_${user.id}`)
+            }
+            void signOut()
+        }
+    }, [user, account.loading, account.resolveFailed, isRegisteredUser, signOut])
+
     const destination = useMemo(() => {
-        if (!user) return null
+        if (!user || !isRegisteredUser) return null
 
         // guardrail-ok: retired landing URLs are recognised here so they never win over the account-aware home
         const GENERIC = new Set(['', '/', '/dashboard', '/home', '/home/learner', '/learn'])
@@ -82,7 +100,7 @@ export const RootIndex = () => {
         }
 
         return account.recommendedDestination ?? '/learn'
-    }, [user, location.search, account.recommendedDestination, account.isPlatformOperator, account.activePlatformSession, account.isMultiOrg])
+    }, [user, isRegisteredUser, location.search, account.recommendedDestination, account.isPlatformOperator, account.activePlatformSession, account.isMultiOrg])
 
     useEffect(() => {
         if (user && getAuthFlowRedirectPath()) {
@@ -94,7 +112,12 @@ export const RootIndex = () => {
         return <PageSkeleton />
     }
 
-    if (user && destination) {
+    if (user && !account.loading && !account.resolveFailed && !isRegisteredUser) {
+        const unregEmail = user.email ? encodeURIComponent(user.email) : ''
+        return <Navigate to={`/login?error=not_registered${unregEmail ? `&email=${unregEmail}` : ''}`} replace />
+    }
+
+    if (user && isRegisteredUser && destination) {
         return <Navigate to={destination} replace />
     }
 

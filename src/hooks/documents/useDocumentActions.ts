@@ -1,6 +1,5 @@
-import { useProperty } from '@/contexts/PropertyContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
-import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Document } from '@/lib/types'
@@ -10,25 +9,15 @@ import { getUserFriendlyErrorMessage } from './errors'
 export function useCreateDocument() {
   const queryClient = useQueryClient()
   const { user, primaryRole } = useAuth()
-  const { currentProperty, propertyIds } = useProperty()
+  const { currentOrganization } = useTenant()
 
   return useMutation({
     mutationFn: async (document: Partial<Document> & { title: string }) => {
       if (!user) throw new Error('User must be authenticated')
 
-      const resolvedPropertyId = isRealPropertyId(document.property_id)
-        ? document.property_id
-        : (
-          isRealPropertyId(currentProperty?.id)
-            ? currentProperty.id
-            : (propertyIds[0] ?? null)
-        )
-
-      const resolvedVisibility = document.visibility ?? (resolvedPropertyId ? 'property' : 'all_properties')
-
-      if (!resolvedPropertyId && resolvedVisibility !== 'all_properties') {
-        throw new Error('A valid property_id is required for non-global documents')
-      }
+      if (!currentOrganization?.id) throw new Error('No organization selected')
+      // Documents are organization-wide unless narrowed to a department or role.
+      const resolvedVisibility = document.visibility ?? 'all_properties'
 
       const canAutoPublish = ['administrator', 'super_admin', 'knowledge_manager', 'training_manager', 'regional_admin', 'regional_hr', 'corporate_admin'].includes(primaryRole || '')
       const now = new Date().toISOString()
@@ -37,7 +26,7 @@ export function useCreateDocument() {
         .from('documents')
         .insert({
           ...document,
-          property_id: resolvedPropertyId,
+          organization_id: currentOrganization.id,
           visibility: resolvedVisibility,
           created_by: user.id,
           status: canAutoPublish ? 'PUBLISHED' : 'DRAFT',
@@ -70,16 +59,6 @@ export function useUpdateDocument() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Document> & { id: string }) => {
-      if (updates.property_id !== undefined) {
-        if (updates.property_id === null) {
-          if (updates.visibility && updates.visibility !== 'all_properties') {
-            throw new Error('property_id can only be cleared for global documents')
-          }
-        } else if (!isRealPropertyId(updates.property_id)) {
-          throw new Error('A valid property_id is required when updating document scope')
-        }
-      }
-
       const { data, error } = await supabase
         .from('documents')
         .update({

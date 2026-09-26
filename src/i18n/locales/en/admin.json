@@ -1,9 +1,10 @@
 {
   "organization": {
+    "label": "Organization",
     "title": "Organizational Control Center",
     "description": "Manage reporting structures, employee assignments, and organizational hierarchy",
     "search_employees": "Search employees...",
-    "all_properties": "Consolidated (Cluster)",
+    "all_properties": "Whole organization",
     "tab_orgchart": "Org Chart",
     "tab_assignments": "Assignments",
     "tab_pending": "Pending Changes",
@@ -737,7 +738,14 @@
       "reset": "Reset to Defaults",
       "export": "Export Config",
       "copied": "Configuration copied to clipboard",
-      "saved_success": "Platform settings updated and applied across all active AI agents."
+      "saved_success": "Platform settings updated and applied across all active AI agents.",
+      "reset_short": "Reset to defaults",
+      "save_short": "Save"
+    },
+    "title_short": "AI course generation",
+    "description_short": "Which models write and illustrate courses, what they may spend, and the quality bar a course must pass.",
+    "telemetry": {
+      "none": "No AI usage has been logged yet."
     }
   },
   "brand_divisions": "Brand Portfolios & Divisions",
@@ -831,6 +839,20 @@
   "org_identity_desc": "Manage your organization name, Arabic title, and enterprise identifiers.",
   "org_name": "Organization Name (English)",
   "org_name_ar": "Organization Name (Arabic)",
+  "org_column": "Organization",
+  "plan_and_domain": "Plan & Domain",
+  "hotel_quota": "Hotel Quota",
+  "learner_seats": "Learner Seats",
+  "storage_and_ai": "Storage & AI",
+  "total_organizations": "Total Organizations",
+  "managed_properties": "Managed Hotels",
+  "provisioned_seats": "Provisioned Seats",
+  "subscription_tiers": "Subscription Tiers",
+  "actively_operational": "{{count}} actively operational",
+  "across_all_tenants": "Across all customer organizations",
+  "active_learners_managers": "Active learners & managers",
+  "available_tiers": "{{count}} Available",
+  "quotas": "Quotas",
   "brand_styling": "Brand & Dynamic Theme",
   "org_settings_saved": "Organization branding and settings updated successfully.",
   "upgrade_entitlements": "Upgrade Entitlements",
@@ -1032,5 +1054,338 @@
     "detach_tenant_label": "Deactivate customer tenant memberships (full migration to platform staff)",
     "detach_tenant_desc": "The user will become dedicated internal platform staff and will no longer be listed as an active customer tenant member.",
     "toast_promote_success": "User successfully promoted to platform operator"
-  }
+  },
+  "overview": {
+    "eyebrow": "Organization",
+    "title": "Organization overview",
+    "needsAttention": "{{count}} setup items need attention",
+    "allSet": "Setup is complete. Nothing is blocking your teams.",
+    "invite": "Invite people",
+    "errorTitle": "Setup checks could not be loaded",
+    "errorHint": "Check your connection and try again.",
+    "clearTitle": "Nothing is blocking your teams",
+    "clearBody": "Everyone is placed, every hotel has an admin and every department has a manager.",
+    "unnamed": "Unnamed",
+    "showAll": "Show all {{count}}",
+    "showLess": "Show fewer",
+    "manage": "Manage the organization",
+    "missing": {
+      "hotel_and_department": "No hotel or department",
+      "hotel": "No hotel",
+      "department": "No department"
+    },
+    "areas": {
+      "people": "People",
+      "peopleHint": "Members, roles and access",
+      "structure": "Hotels & departments",
+      "structureHint": "{{brands}} brands · {{hotels}} hotels",
+      "settings": "Settings",
+      "settingsHint": "Profile, branding and policies",
+      "audit": "Audit",
+      "auditHint": "Who changed what, and when"
+    },
+    "gaps": {
+      "unplaced_member": {
+        "title": "People not placed in a hotel or department",
+        "body": "They miss training assigned by hotel or department, and no manager follows them up.",
+        "action": "Place"
+      },
+      "expired_invitation": {
+        "title": "Invitations that expired",
+        "body": "These people never joined. Resend or cancel the invitation.",
+        "action": "Resend"
+      },
+      "pending_invitation": {
+        "title": "Invitations waiting to be accepted",
+        "body": "Sent but not accepted yet.",
+        "action": "View"
+      },
+      "hotel_without_admin": {
+        "title": "Hotels without a hotel admin",
+        "body": "Nobody at these hotels can place new staff or manage their teams.",
+        "action": "Assign admin"
+      },
+      "department_without_manager": {
+        "title": "Departments without a manager",
+        "body": "Overdue training in these departments has no one to follow it up.",
+        "action": "Assign manager"
+      },
+      "missing_logo": {
+        "title": "No organization logo",
+        "body": "Certificates, emails and the sign-in page show the Altus mark instead of yours.",
+        "action": "Add logo"
+      }
+    }
+  },
+  "exceptions": {
+    "eyebrow": "Altus platform",
+    "title": "Exceptions",
+    "count": "{{count}} items need an operator",
+    "none": "All organizations and operations are healthy.",
+    "statistics": "Platform statistics",
+    "organizations": "Organizations",
+    "errorTitle": "Exceptions could not be loaded",
+    "errorHint": "Check your connection and operator permissions, then try again.",
+    "clearTitle": "Nothing needs an operator",
+    "clearBody": "No failed jobs, suspended organizations, billing problems or open sessions.",
+    "noOrganization": "No organization",
+    "endsOn": "Ends {{date}}",
+    "startedAt": "started {{date}}",
+    "failed_job": {
+      "title": "Failed jobs in the last 7 days",
+      "body": "AI course generation that did not finish. Retry or inspect the error.",
+      "action": "Open operations"
+    },
+    "suspended_organization": {
+      "title": "Suspended organizations",
+      "body": "Their members cannot sign in to learn.",
+      "action": "Review"
+    },
+    "subscription_problem": {
+      "title": "Billing problems",
+      "body": "Subscriptions that are past due, unpaid or cancelled.",
+      "action": "Review"
+    },
+    "organization_without_admin": {
+      "title": "Organizations without an admin",
+      "body": "Nobody in the organization can invite people or change settings.",
+      "action": "Assign admin"
+    },
+    "trial_ending": {
+      "title": "Trials ending within 14 days",
+      "body": "Agree a plan before access changes.",
+      "action": "Review plan"
+    },
+    "active_session": {
+      "title": "Open operator sessions inside organizations",
+      "body": "Break-glass access in progress. Every action is audited.",
+      "action": "View audit"
+    }
+  },
+  "auditTimeline": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "action": {
+      "create": "created",
+      "update": "updated",
+      "delete": "deleted",
+      "login": "signed in",
+      "logout": "signed out",
+      "publish": "published",
+      "approve": "approved",
+      "reject": "rejected",
+      "assign": "assigned",
+      "invite": "invited",
+      "export": "exported",
+      "view": "viewed",
+      "role_change": "changed the role of",
+      "other": "changed"
+    },
+    "entity": {
+      "user": "a person",
+      "membership": "a membership",
+      "document": "an article",
+      "course": "a course",
+      "quiz": "a quiz",
+      "certificate": "a certificate",
+      "assignment": "an assignment",
+      "organization": "the organization",
+      "settings": "settings",
+      "hotel": "a hotel",
+      "department": "a department"
+    },
+    "system": "System",
+    "csv": {
+      "when": "When",
+      "who": "Who",
+      "action": "Action",
+      "entity": "Entity",
+      "entityId": "Entity ID",
+      "ip": "IP address",
+      "details": "Details"
+    },
+    "period": {
+      "today": "Today",
+      "7days": "7 days",
+      "30days": "30 days",
+      "90days": "90 days",
+      "all": "All time"
+    },
+    "eyebrow": "Organization",
+    "title": "Audit trail",
+    "summary": "{{count}} recorded actions in this period",
+    "export": "Export what is shown",
+    "periodLabel": "Period",
+    "entityLabel": "What changed",
+    "allEntities": "Everything",
+    "searchLabel": "Search actions",
+    "searchPlaceholder": "Search actions",
+    "clear": "Clear search",
+    "errorTitle": "The audit trail could not be loaded",
+    "errorHint": "Check your connection and try again. Audit access requires the audit permission for this organization.",
+    "emptyTitle": "No recorded actions in this period",
+    "emptyBody": "Try a longer period or clear the filters. Changes to people, content and settings are recorded here automatically.",
+    "details": "Details",
+    "loading": "Loading…",
+    "older": "Show older actions"
+  },
+  "fleet": {
+    "filterLabel": "Filter organizations by status",
+    "all": "All organizations",
+    "active": "Active",
+    "trial": "On trial",
+    "suspended": "Suspended",
+    "noMatch": "No organizations match “{{q}}”",
+    "noMatchHint": "Clear the search or choose another status.",
+    "plan": "Plan",
+    "hotels": "Hotels",
+    "members": "Members",
+    "noPlan": "No plan",
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "onboarding": "Onboarding",
+      "prospect": "Prospect",
+      "renewal": "Renewal",
+      "suspended": "Suspended",
+      "archived": "Archived"
+    },
+    "suspend": "Suspend",
+    "reactivate": "Reactivate",
+    "suspendTitle": "Suspend {{name}}?",
+    "reactivateTitle": "Reactivate {{name}}?",
+    "suspendBody": "All {{count}} members lose access immediately. Their data is kept and access returns when you reactivate.",
+    "reactivateBody": "Members regain access immediately."
+  },
+  "structure": {
+    "eyebrow": "Organization",
+    "title": "Hotels & departments",
+    "context": "{{org}} · {{brands}} brands · {{hotels}} hotels",
+    "tab_structure": "Structure",
+    "tab_people": "People & placement",
+    "tab_reporting": "Reporting lines",
+    "tab_profile": "Profile & plan"
+  },
+  "settingsPage": {
+    "eyebrow": "Organization",
+    "title": "Settings",
+    "context": "Applies to everyone in {{org}}. Changes save as soon as you make them.",
+    "sections": "Sections",
+    "plan": "Plan & limits",
+    "none": "There are no organization settings to change yet.",
+    "advanced": "Advanced ({{count}})",
+    "section": {
+      "general": "General",
+      "security": "Sign-in & security",
+      "notifications": "Notifications",
+      "branding": "Branding",
+      "hr": "People records",
+      "operations": "Operations"
+    },
+    "hint": {
+      "general": "Language, time zone and defaults for your organization.",
+      "security": "How people sign in and how long sessions last.",
+      "notifications": "Which emails and alerts your people receive.",
+      "branding": "Logo and colours on certificates, emails and sign-in.",
+      "hr": "Retention and consent for personal records.",
+      "operations": "Other organization-wide behaviour."
+    }
+  },
+  "masterLib": {
+    "eyebrow": "Platform",
+    "title": "Master library",
+    "context": "Articles and courses you maintain once and deploy to {{count}} organizations.",
+    "writeInStudio": "Write in Studio",
+    "newArticle": "New master article",
+    "buildInStudio": "Build in Studio",
+    "newCourse": "New master course",
+    "behind": "{{count}} deployments are running an older version than the master.",
+    "review": "Review updates",
+    "articles": "Articles",
+    "courses": "Courses",
+    "deployments": "Deployments"
+  },
+  "invites": {
+    "eyebrow": "People",
+    "title": "Invitations",
+    "context": "{{count}} waiting to be accepted.",
+    "contextNone": "No invitations are waiting.",
+    "invite": "Invite someone",
+    "search": "Search by email or role",
+    "noMatch": "No invitations match",
+    "noMatchBody": "Try a different email or role.",
+    "emptyTitle": "No invitations yet",
+    "emptyBody": "Invite colleagues by email. They choose their own password when they accept.",
+    "waiting": "Waiting to be accepted",
+    "expired": "Expired",
+    "accepted": "Joined",
+    "cancelled": "Cancelled",
+    "resend": "Resend",
+    "cancel": "Cancel",
+    "seatLimit": "All {{max}} seats are in use ({{current}} people). Ask your platform administrator for more seats before inviting anyone else."
+  },
+  "piiLog": {
+    "eyebrow": "Organization",
+    "title": "Personal data access",
+    "context": "Every time someone opened, changed or exported personal data. Review anything unexpected.",
+    "export": "Export CSV",
+    "summary": "{{accesses}} accesses by {{people}} people",
+    "highRisk": "{{count}} high-risk",
+    "unreviewed": "{{count}} not yet reviewed",
+    "anyRecord": "Any record",
+    "anyAction": "Any action",
+    "emptyTitle": "No access recorded",
+    "emptyFiltered": "Nothing matches these filters.",
+    "emptyBody": "When someone opens personal data it will be listed here.",
+    "reviewed": "Reviewed",
+    "needsReview": "Needs review",
+    "details": "Details",
+    "markReviewed": "Mark reviewed",
+    "remove": "Remove entry"
+  },
+  "dataExport": {
+    "eyebrow": "Organization",
+    "title": "Export your data",
+    "context": "A complete copy of what {{org}} holds in Altus Connect, as one JSON file.",
+    "contents": "What the file contains",
+    "note": "The file includes personal data. Store it securely and share it only with people entitled to see it.",
+    "last": "Downloaded at {{time}}",
+    "working": "Preparing the archive…",
+    "download": "Download archive",
+    "done": "Archive downloaded",
+    "failed": "The archive could not be created. Try again.",
+    "item": {
+      "structure": "Organization structure",
+      "people": "People",
+      "content": "Content",
+      "assignments": "Assignments",
+      "progress": "Progress and completions",
+      "certificates": "Certificates"
+    },
+    "itemBody": {
+      "structure": "The organization, its hotels and departments.",
+      "people": "Every membership with role, hotel and department.",
+      "content": "Courses, quizzes and knowledge articles.",
+      "assignments": "Who was asked to complete what, and by when.",
+      "progress": "Current progress and the full completion history.",
+      "certificates": "Every certificate issued, with its verification code."
+    }
+  },
+  "platformPeople": {
+    "title": "People",
+    "context": "{{operators}} platform operators · {{learners}} people across {{orgs}} organizations.",
+    "addOperator": "Add operator",
+    "operators": "Platform operators",
+    "customers": "Customer members"
+  },
+  "hotelsPage": {
+    "search": "Name, city or address",
+    "count": "{{count}} hotels",
+    "noMatch": "No hotels match",
+    "noMatchBody": "Try another search or filter."
+  },
+  "inbound_emails": "Inbound email",
+  "inbound_emails_desc": "Email received by Altus Connect through the Resend inbound webhook.",
+  "no_inbound_emails": "No inbound email yet.",
+  "inbound_empty_body": "Email sent to the platform inbound address appears here."
 }

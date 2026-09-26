@@ -287,7 +287,7 @@ export function getEventTourSequence(eventId: string, context: TourSequenceConte
         {
           id: 'event_training_player',
           targetSelector: '[data-tour="training-search-input"]',
-          route: '/studio',
+          route: '/studio/courses',
           titleKey: 'wizard.event_tours.training.player.title',
           descriptionKey: 'wizard.event_tours.training.player.desc',
           categoryKey: 'wizard.categories.workspace',
@@ -296,7 +296,7 @@ export function getEventTourSequence(eventId: string, context: TourSequenceConte
         {
           id: 'event_training_pass_score',
           targetSelector: '[data-tour="training-workflow-steps"]',
-          route: '/studio',
+          route: '/studio/courses',
           titleKey: 'wizard.event_tours.training.pass_score.title',
           descriptionKey: 'wizard.event_tours.training.pass_score.desc',
           categoryKey: 'wizard.categories.governance',
@@ -707,7 +707,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'admin_training_create_btn',
         targetSelector: '[data-tour="training-create-course-btn"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.admin.create_course.title',
         descriptionKey: 'wizard.tour.admin.create_course.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -716,7 +716,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'admin_training_assign_btn',
         targetSelector: '[data-tour="training-assign-wizard-btn"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.admin.assign_team.title',
         descriptionKey: 'wizard.tour.admin.assign_team.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -785,7 +785,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_workflow_steps',
         targetSelector: '[data-tour="training-workflow-steps"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.workflow.title',
         descriptionKey: 'wizard.tour.training_mgr.workflow.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -794,7 +794,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_search_toolbar',
         targetSelector: '[data-tour="training-search-toolbar"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.search.title',
         descriptionKey: 'wizard.tour.training_mgr.search.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -803,7 +803,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_create_btn',
         targetSelector: '[data-tour="training-create-course-btn"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.create_btn.title',
         descriptionKey: 'wizard.tour.training_mgr.create_btn.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -812,7 +812,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_assign_btn',
         targetSelector: '[data-tour="training-assign-wizard-btn"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.assign_btn.title',
         descriptionKey: 'wizard.tour.training_mgr.assign_btn.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -821,7 +821,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_nav_requests',
         targetSelector: '[data-tour="nav-requests"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.requests.title',
         descriptionKey: 'wizard.tour.training_mgr.requests.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -830,7 +830,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'training_nav_knowledge',
         targetSelector: '[data-tour="nav-knowledge"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.training_mgr.knowledge.title',
         descriptionKey: 'wizard.tour.training_mgr.knowledge.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -848,7 +848,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'header_role_guide',
         targetSelector: '[data-tour="role-guide-button"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.common.guide_button.title',
         descriptionKey: 'wizard.tour.common.guide_button.desc',
         categoryKey: 'wizard.categories.help',
@@ -857,7 +857,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'header_user_profile',
         targetSelector: '[data-tour="user-menu"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.common.user_menu.title',
         descriptionKey: 'wizard.tour.common.user_menu.desc',
         categoryKey: 'wizard.categories.role',
@@ -1013,7 +1013,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'dept_training_workflow',
         targetSelector: '[data-tour="training-workflow-steps"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.dept_mgr.training_monitor.title',
         descriptionKey: 'wizard.tour.dept_mgr.training_monitor.desc',
         categoryKey: 'wizard.categories.workspace',
@@ -1118,7 +1118,7 @@ export function getTourSequenceForRole(context: TourSequenceContext): OnPageTour
       {
         id: 'learner_training_search',
         targetSelector: '[data-tour="training-search-input"]',
-        route: '/studio',
+        route: '/studio/courses',
         titleKey: 'wizard.tour.learner.course_search.title',
         descriptionKey: 'wizard.tour.learner.course_search.desc',
         categoryKey: 'wizard.categories.workspace',

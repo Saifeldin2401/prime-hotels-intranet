@@ -40,7 +40,6 @@ import { uploadVideoWithCompression } from '@/editor/utils/videoUpload'
 import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
 import { useMedia } from '@/hooks/useMedia'
-import { useProperties } from '@/hooks/useProperties'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
@@ -1201,9 +1200,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
     const [isUploading, setIsUploading] = useState(false)
     
     // Get user's primary property for media uploads
-    const { data: properties } = useProperties()
-    const primaryProperty = properties?.[0]
-    const { uploadFile } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false })
+    const { uploadFile } = useMedia({ autoFetch: false })
 
     const handleFileUpload = useCallback((files: FileList | null) => {
         if (!files) return
@@ -1219,7 +1216,6 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                 await uploadFile(file, {
                     title: file.name.replace(/\.[^/.]+$/, ''),
                     category: 'knowledgebase',
-                    property_id: primaryProperty?.id,
                 })
                 
                 // Add to local state
@@ -1239,7 +1235,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
         })
 
         setIsUploading(false)
-    }, [images, onChange, uploadFile, primaryProperty?.id])
+    }, [images, onChange, uploadFile])
 
     const updateImage = (id: string, caption: string) => {
         onChange(images.map(img =>

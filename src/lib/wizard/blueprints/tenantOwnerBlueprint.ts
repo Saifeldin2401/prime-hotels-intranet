@@ -2,13 +2,12 @@
 
 export const tenantOwnerBlueprint: RoleBlueprint = {
   roleId: 'tenant_owner',
-  roleName: 'Organization & Property Owner',
+  roleName: 'Organization Owner',
   roleLevel: 'tenant',
   headlineKey: 'wizard.blueprints.tenant_owner.headline',
   summaryKey: 'wizard.blueprints.tenant_owner.summary',
   youCanKeys: [
     'wizard.blueprints.tenant_owner.can.branding',
-    'wizard.blueprints.tenant_owner.can.properties',
     'wizard.blueprints.tenant_owner.can.leadership',
     'wizard.blueprints.tenant_owner.can.compliance',
     'wizard.blueprints.tenant_owner.can.billing'
@@ -24,13 +23,6 @@ export const tenantOwnerBlueprint: RoleBlueprint = {
       descriptionKey: 'wizard.tasks.tenant_owner.branding.desc',
       actionRoute: '/admin/organization',
       actionKey: 'wizard.actions.setup_branding'
-    },
-    {
-      id: 'task_owner_properties',
-      titleKey: 'wizard.tasks.tenant_owner.properties.title',
-      descriptionKey: 'wizard.tasks.tenant_owner.properties.desc',
-      actionRoute: '/admin/properties',
-      actionKey: 'wizard.actions.view_properties'
     },
     {
       id: 'task_owner_invite_admins',
@@ -56,7 +48,6 @@ export const tenantOwnerBlueprint: RoleBlueprint = {
   ],
   capabilities: [
     { moduleKey: 'wizard.modules.org_settings', level: 'manage', descriptionKey: 'wizard.caps.owner.settings' },
-    { moduleKey: 'wizard.modules.properties', level: 'manage', descriptionKey: 'wizard.caps.owner.properties' },
     { moduleKey: 'wizard.modules.user_management', level: 'manage', descriptionKey: 'wizard.caps.owner.users' },
     { moduleKey: 'wizard.modules.compliance', level: 'manage', descriptionKey: 'wizard.caps.owner.compliance' },
     { moduleKey: 'wizard.modules.approvals', level: 'manage', descriptionKey: 'wizard.caps.owner.approvals' }

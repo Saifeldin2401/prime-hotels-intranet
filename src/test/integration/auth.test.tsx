@@ -6,7 +6,7 @@ describe('Authentication Critical Path', () => {
   it('should handle successful login', async () => {
     const mockClient = createMockSupabaseClient()
     const mockUser = createMockUserContext('staff')
-    
+
     mockClient.auth.signInWithPassword.mockResolvedValue({
       data: {
         user: { id: mockUser.profile.id, email: mockUser.profile.email },
@@ -30,7 +30,7 @@ describe('Authentication Critical Path', () => {
 
   it('should handle login failure', async () => {
     const mockClient = createMockSupabaseClient()
-    
+
     mockClient.auth.signInWithPassword.mockResolvedValue({
       data: { user: null, session: null },
       error: { message: 'Invalid credentials', code: 'invalid_credentials' }
@@ -48,7 +48,7 @@ describe('Authentication Critical Path', () => {
   it('should maintain session after login', async () => {
     const mockClient = createMockSupabaseClient()
     const mockSession = { access_token: 'token', refresh_token: 'refresh' }
-    
+
     mockClient.auth.getSession.mockResolvedValue({
       data: { session: mockSession },
       error: null
@@ -66,25 +66,13 @@ describe('Role-Based Access Control', () => {
     expect(staff.userRoles).toHaveLength(1)
     expect(staff.userRoles[0].role).toBe('staff')
   })
-
-  it('should allow property managers to access property-scoped data', () => {
-    const manager = createMockUserContext('property_manager', 1)
-    expect(manager.currentRole).toBe('property_manager')
-    expect(manager.properties).toHaveLength(1)
-  })
-
-  it('should allow regional admins to access multiple properties', () => {
-    const admin = createMockUserContext('regional_admin', 3)
-    expect(admin.currentRole).toBe('regional_admin')
-    expect(admin.properties).toHaveLength(3)
-  })
 })
 
 describe('Database Query Patterns', () => {
   it('should construct proper profile queries', () => {
     const mockClient = createMockSupabaseClient()
     const userId = 'test-user-id'
-    
+
     mockClient.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -103,10 +91,10 @@ describe('Database Query Patterns', () => {
     expect(mockClient.from).toHaveBeenCalledWith('profiles')
   })
 
-  it('should handle property-scoped queries', () => {
+  it('should handle department-scoped queries', () => {
     const mockClient = createMockSupabaseClient()
-    const propertyId = 'test-property-id'
-    
+    const departmentId = 'test-department-id'
+
     mockClient.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -115,7 +103,7 @@ describe('Database Query Patterns', () => {
 
     mockClient.from('tasks')
       .select('*')
-      .eq('property_id', propertyId)
+      .eq('department_id', departmentId)
 
     expect(mockClient.from).toHaveBeenCalledWith('tasks')
   })
@@ -124,7 +112,7 @@ describe('Database Query Patterns', () => {
 describe('Error Handling', () => {
   it('should handle network errors gracefully', async () => {
     const mockClient = createMockSupabaseClient()
-    
+
     mockClient.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       then: vi.fn((onFulfilled: any, onRejected: any) => {
@@ -139,7 +127,7 @@ describe('Error Handling', () => {
 
   it('should handle permission denied errors', async () => {
     const mockClient = createMockSupabaseClient()
-    
+
     mockClient.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -155,5 +143,56 @@ describe('Error Handling', () => {
       .single()
 
     expect(result.error?.code).toBe('PGRST301')
+  })
+})
+
+describe('Unregistered OAuth User Access Control', () => {
+  it('correctly identifies an unregistered user with no tenant memberships or platform operator status', () => {
+    const unregAccount = {
+      isPlatformOperator: false,
+      tenantMemberships: [],
+      primaryOrganizationId: null,
+      loading: false,
+      resolveFailed: false,
+    }
+
+    const isRegistered =
+      unregAccount.isPlatformOperator ||
+      unregAccount.tenantMemberships.length > 0 ||
+      Boolean(unregAccount.primaryOrganizationId)
+
+    expect(isRegistered).toBe(false)
+  })
+
+  it('correctly identifies registered tenant member or platform operator', () => {
+    const tenantUser = {
+      isPlatformOperator: false,
+      tenantMemberships: [{ organization_id: 'e0000000-0000-0000-0000-000000000001', role: 'learner' }],
+      primaryOrganizationId: 'e0000000-0000-0000-0000-000000000001',
+      loading: false,
+      resolveFailed: false,
+    }
+
+    const isTenantUserRegistered =
+      tenantUser.isPlatformOperator ||
+      tenantUser.tenantMemberships.length > 0 ||
+      Boolean(tenantUser.primaryOrganizationId)
+
+    expect(isTenantUserRegistered).toBe(true)
+
+    const operatorUser = {
+      isPlatformOperator: true,
+      tenantMemberships: [],
+      primaryOrganizationId: null,
+      loading: false,
+      resolveFailed: false,
+    }
+
+    const isOperatorRegistered =
+      operatorUser.isPlatformOperator ||
+      operatorUser.tenantMemberships.length > 0 ||
+      Boolean(operatorUser.primaryOrganizationId)
+
+    expect(isOperatorRegistered).toBe(true)
   })
 })

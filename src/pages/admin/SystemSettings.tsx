@@ -1,4 +1,4 @@
-import { PageHeader } from '@/components/layout/PageHeader'
+import { PageHeader } from '@/ui/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Skeleton, WorkspaceHeader } from '@/ui'
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     general: { label: 'General', icon: <Settings className="w-4 h-4" />, description: 'Core application settings' },
@@ -84,16 +85,16 @@ function SettingRow({
     }
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between py-4 px-4 border-b last:border-0 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between py-4 px-4 gap-3">
             <div className="flex-1 min-w-0 pe-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="text-sm font-semibold text-ds-ink">
                         {formatKey(setting.key)}
                     </span>
                     {setting.is_override ? (
                         <div className="flex items-center gap-1.5">
-                            <Badge variant="outline" className="text-[10px] text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700">
-                                Tenant Override
+                            <Badge variant="outline" className="text-[10px] text-ds-warning bg-ds-warning-soft border-ds-warning/30">
+                                Changed from the default
                             </Badge>
                             {onReset && (
                                 <Button
@@ -103,29 +104,31 @@ function SettingRow({
                                     onClick={() => onReset(setting.key)}
                                     title="Revert to system default"
                                 >
-                                    <RotateCcw className="w-3 h-3" /> Revert
+                                    <RotateCcw className="w-3 h-3" /> Use default
                                 </Button>
                             )}
                         </div>
                     ) : (
-                        <Badge variant="outline" className="text-[10px] text-slate-500 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                            Default
-                        </Badge>
+                        <span className="text-[11px] text-ds-muted">Default</span>
                     )}
                 </div>
                 {setting.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">{setting.description}</p>
                 )}
                 {parseError && (
-                    <p className="text-xs font-medium text-rose-500 mt-1">{parseError}</p>
+                    <p className="text-xs font-medium text-ds-danger mt-1">{parseError}</p>
                 )}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
                 {isBool ? (
-                    <Switch
-                        checked={setting.value as boolean}
-                        onCheckedChange={(checked) => onUpdate(setting.key, checked)}
-                    />
+                    <label className="inline-flex min-h-[44px] items-center gap-2 text-sm text-ds-ink">
+                        <Switch
+                            checked={setting.value as boolean}
+                            onCheckedChange={(checked) => onUpdate(setting.key, checked)}
+                            aria-label={formatKey(setting.key)}
+                        />
+                        {setting.value ? 'On' : 'Off'}
+                    </label>
                 ) : isObject ? (
                     <div className="flex flex-col gap-2 w-full sm:w-80">
                         <textarea
@@ -136,10 +139,10 @@ function SettingRow({
                                 setParseError(null)
                             }}
                             rows={3}
-                            className="w-full text-xs font-mono p-2 border rounded-md bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-hotel-gold resize-y"
+                            className="w-full text-xs font-mono p-2 border rounded-md bg-ds-surface-subtle border-ds-border focus:outline-none focus:ring-1 focus:ring-ds-brass resize-y"
                         />
                         {isDirty && (
-                            <Button size="sm" variant="default" className="h-7 text-xs gap-1 self-end bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleSave}>
+                            <Button size="sm" variant="default" className="h-7 text-xs gap-1 self-end bg-ds-ink hover:bg-ds-ink-secondary text-white" onClick={handleSave}>
                                 <Save className="w-3.5 h-3.5" />
                                 Save Changes
                             </Button>
@@ -157,7 +160,7 @@ function SettingRow({
                             className="w-full sm:w-48 text-sm h-9"
                         />
                         {isDirty && (
-                            <Button size="sm" variant="default" className="h-9 gap-1 bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleSave}>
+                            <Button size="sm" variant="default" className="h-9 gap-1 bg-ds-ink hover:bg-ds-ink-secondary text-white" onClick={handleSave}>
                                 <Save className="w-3.5 h-3.5" />
                                 Save
                             </Button>
@@ -174,84 +177,90 @@ export default function SystemSettings() {
     const { t } = useTranslation(['admin', 'common'])
     const { groupedSettings, isLoading, updateSetting, resetSetting } = useSystemSettings()
 
-    const handleUpdate = (key: string, value: unknown) => {
-        updateSetting.mutate({ key, value })
-    }
+    const handleUpdate = (key: string, value: unknown) => updateSetting.mutate({ key, value })
+    const handleReset = (key: string) => resetSetting.mutate(key)
 
-    const handleReset = (key: string) => {
-        resetSetting.mutate(key)
-    }
+    // Only sections that actually contain settings this organization may change.
+    const sections = Object.keys(CATEGORY_META)
+        .map((cat) => ({ cat, list: (groupedSettings[cat] || []).filter((st) => !PLATFORM_EXCLUSIVE_KEYS.has(st.key)) }))
+        .filter((sec) => sec.list.length > 0)
 
-    const categories = Object.keys(CATEGORY_META)
+    const sectionTitle = (cat: string) => t(`admin:settingsPage.section.${cat}`, CATEGORY_META[cat].label)
+    const sectionHint = (cat: string) => t(`admin:settingsPage.hint.${cat}`, CATEGORY_META[cat].description)
 
     return (
-        <div className="space-y-6">
-            <PageHeader
-                title={t('admin:system_settings', 'Tenant Settings & Preferences')}
-                description={
-                    currentOrganization?.name
-                        ? `Operational configuration, policies, and overrides for ${currentOrganization.name}`
-                        : 'Configure organization operational policies and settings'
-                }
+        <div className="mx-auto max-w-6xl space-y-8">
+            <WorkspaceHeader
+                eyebrow={t('admin:settingsPage.eyebrow', 'Organization')}
+                title={t('admin:settingsPage.title', 'Settings')}
+                context={currentOrganization?.name
+                    ? t('admin:settingsPage.context', 'Applies to everyone in {{org}}. Changes save as soon as you make them.', { org: currentOrganization.name })
+                    : null}
             />
 
-            {/* Tenant Subscription & Entitlements Overview */}
-            <SubscriptionEntitlementsCard />
-
             {isLoading ? (
-                <div className="flex justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]" aria-busy="true">
+                    <Skeleton variant="card" className="h-40" />
+                    <Skeleton variant="card" className="h-96" />
                 </div>
             ) : (
-                <Tabs defaultValue="general" className="space-y-4">
-                    <TabsList className="flex flex-wrap h-auto gap-1">
-                        {categories.map((cat) => {
-                            const meta = CATEGORY_META[cat]
-                            const rawList = groupedSettings[cat] || []
-                            const filteredList = rawList.filter(s => !PLATFORM_EXCLUSIVE_KEYS.has(s.key))
-                            if (filteredList.length === 0) return null
+                <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)]">
+                    {/* Section index */}
+                    <nav aria-label={t('admin:settingsPage.sections', 'Sections')} className="hidden lg:block">
+                        <ul className="sticky top-20 space-y-0.5 border-s border-ds-border">
+                            {sections.map(({ cat }) => (
+                                <li key={cat}>
+                                    <a href={`#settings-${cat}`} className="-ms-px flex min-h-[36px] items-center border-s-2 border-transparent ps-4 text-sm text-ds-muted hover:border-ds-border-strong hover:text-ds-ink">
+                                        {sectionTitle(cat)}
+                                    </a>
+                                </li>
+                            ))}
+                            <li>
+                                <a href="#settings-plan" className="-ms-px flex min-h-[36px] items-center border-s-2 border-transparent ps-4 text-sm text-ds-muted hover:border-ds-border-strong hover:text-ds-ink">
+                                    {t('admin:settingsPage.plan', 'Plan & limits')}
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    <div className="min-w-0 space-y-12">
+                        {sections.length === 0 && (
+                            <p className="text-sm text-ds-muted">{t('admin:settingsPage.none', 'There are no organization settings to change yet.')}</p>
+                        )}
+                        {sections.map(({ cat, list }) => {
+                            const simple = list.filter((st) => typeof st.value !== 'object' || st.value === null)
+                            const advanced = list.filter((st) => typeof st.value === 'object' && st.value !== null)
                             return (
-                                <TabsTrigger key={cat} value={cat} className="gap-1.5">
-                                    {meta.icon}
-                                    {meta.label}
-                                    <Badge variant="secondary" className="text-[10px] ms-1 px-1.5">{filteredList.length}</Badge>
-                                </TabsTrigger>
+                                <section key={cat} id={`settings-${cat}`} aria-labelledby={`settings-${cat}-title`} className="scroll-mt-20 space-y-3">
+                                    <div>
+                                        <h2 id={`settings-${cat}-title`} className="text-lg font-semibold text-ds-ink">{sectionTitle(cat)}</h2>
+                                        <p className="text-sm text-ds-muted">{sectionHint(cat)}</p>
+                                    </div>
+                                    {simple.length > 0 && (
+                                        <div className="divide-y divide-ds-border overflow-hidden rounded-[6px] border border-ds-border bg-ds-surface">
+                                            {simple.map((st) => <SettingRow key={st.id || st.key} setting={st} onUpdate={handleUpdate} onReset={handleReset} />)}
+                                        </div>
+                                    )}
+                                    {advanced.length > 0 && (
+                                        <details className="group rounded-[6px] border border-ds-border bg-ds-surface">
+                                            <summary className="flex min-h-[44px] cursor-pointer items-center px-4 text-sm font-medium text-ds-ink">
+                                                {t('admin:settingsPage.advanced', 'Advanced ({{count}})', { count: advanced.length })}
+                                            </summary>
+                                            <div className="divide-y divide-ds-border border-t border-ds-border">
+                                                {advanced.map((st) => <SettingRow key={st.id || st.key} setting={st} onUpdate={handleUpdate} onReset={handleReset} />)}
+                                            </div>
+                                        </details>
+                                    )}
+                                </section>
                             )
                         })}
-                    </TabsList>
 
-                    {categories.map((cat) => {
-                        const meta = CATEGORY_META[cat]
-                        const rawList = groupedSettings[cat] || []
-                        const settingsList = rawList.filter(s => !PLATFORM_EXCLUSIVE_KEYS.has(s.key))
-                        if (settingsList.length === 0) return null
-                        return (
-                            <TabsContent key={cat} value={cat}>
-                                <Card>
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-center gap-2">
-                                            {meta.icon}
-                                            <div>
-                                                <CardTitle className="text-base">{meta.label}</CardTitle>
-                                                <CardDescription className="text-xs">{meta.description}</CardDescription>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        {settingsList.map((s) => (
-                                            <SettingRow
-                                                key={s.id || s.key}
-                                                setting={s}
-                                                onUpdate={handleUpdate}
-                                                onReset={handleReset}
-                                            />
-                                        ))}
-                                    </CardContent>
-                                </Card>
-                            </TabsContent>
-                        )
-                    })}
-                </Tabs>
+                        <section id="settings-plan" aria-labelledby="settings-plan-title" className="scroll-mt-20 space-y-3">
+                            <h2 id="settings-plan-title" className="text-lg font-semibold text-ds-ink">{t('admin:settingsPage.plan', 'Plan & limits')}</h2>
+                            <SubscriptionEntitlementsCard />
+                        </section>
+                    </div>
+                </div>
             )}
         </div>
     )

@@ -25,18 +25,12 @@ interface ReportingChainNode {
 }
 
 // Fetch entire organizational hierarchy
-export function useOrgHierarchy(propertyId?: string) {
+export function useOrgHierarchy() {
     return useQuery({
-        queryKey: ['org-hierarchy', propertyId],
+        queryKey: ['org-hierarchy'],
         queryFn: async () => {
-            const normalizedPropertyId = propertyId && propertyId !== 'all'
-                ? propertyId
-                : null
             const { data, error } = await supabase
-                .rpc('get_org_hierarchy', {
-                    p_root_user_id: null,
-                    p_property_id: normalizedPropertyId
-                })
+                .rpc('get_org_hierarchy', { p_root_user_id: null })
 
             if (error) throw error
             return data as OrgNode[]
@@ -62,28 +56,20 @@ export function useReportingChain(employeeId: string) {
 }
 
 // Fetch all potential managers for assignment dropdown
-export function usePotentialManagers(propertyId?: string, excludeUserId?: string) {
+export function usePotentialManagers(excludeUserId?: string) {
     return useQuery({
-        queryKey: ['potential-managers', propertyId, excludeUserId],
+        queryKey: ['potential-managers', excludeUserId],
         queryFn: async () => {
-            const normalizedPropertyId = propertyId && propertyId !== 'all'
-                ? propertyId
-                : undefined
             let query = supabase
                 .from('profiles')
                 .select(`
           id,
           full_name,
           job_title,
-          organization_memberships(role, hotel_id, is_active)
+          organization_memberships(role, is_active)
         `)
                 .eq('is_active', true)
                 .order('full_name')
-
-            // Filter by property if specified
-            if (normalizedPropertyId) {
-                query = query.not('organization_memberships', 'is', null).eq('organization_memberships.hotel_id', normalizedPropertyId)
-            }
 
             // Exclude the user being edited (can't report to self)
             if (excludeUserId) {

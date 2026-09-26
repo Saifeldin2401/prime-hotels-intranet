@@ -111,11 +111,19 @@ export function shouldSuppressAuthenticatedAppState(
   hash = '',
   storedPath?: string,
 ): boolean {
-  if (hasAuthRecoveryParams(search, hash)) {
+  const currentPath = normalizePathname(pathname)
+
+  // Recovery params (token_hash, recovery/invite type) should only suppress authenticated
+  // state when on dedicated recovery routes (/reset-password, /complete-invite).
+  // Normal sign-in routes (/login, /) with OAuth callback codes must NOT be suppressed.
+  const isDedicatedRecoveryPath =
+    currentPath === '/reset-password' || currentPath.startsWith('/reset-password/') ||
+    currentPath === '/complete-invite' || currentPath.startsWith('/complete-invite/')
+
+  if (isDedicatedRecoveryPath && hasAuthRecoveryParams(search, hash)) {
     return true
   }
 
-  const currentPath = normalizePathname(pathname)
   const activeFlow = readStoredAuthFlowState()
   if (!activeFlow) return false
 

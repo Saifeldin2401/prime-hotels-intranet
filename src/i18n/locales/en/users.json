@@ -176,5 +176,25 @@
     "no_members_match": "No members match the selected role and status filters.",
     "learner_role_badge": "Learner",
     "trainer_role_badge": "Training Manager",
-    "admin_role_badge": "Tenant Admin"
+    "admin_role_badge": "Tenant Admin",
+    "people": {
+        "eyebrow": "Organization",
+        "title": "Team members",
+        "contextSeats": "{{count}} members · {{used}} of {{max}} seats used",
+        "context": "{{count}} members",
+        "bulk": "Import from CSV",
+        "invite": "Invite by email",
+        "add": "Add member",
+        "seatsFull": "All {{max}} seats are in use. New people cannot be added until seats are freed or the plan grows.",
+        "seatsNear": "{{available}} seats left of {{max}}.",
+        "roleFilter": "Filter by role",
+        "statusFilter": "Filter by status",
+        "anyStatus": "Any status",
+        "search": "Name, email or staff ID",
+        "showing": "{{count}} people",
+        "select": "Select {{name}}",
+        "neverSignedIn": "Never signed in",
+        "noMatch": "Nobody matches these filters",
+        "noMatchBody": "Try another role, status or search."
+    }
 }

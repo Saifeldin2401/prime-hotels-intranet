@@ -36,19 +36,19 @@ export default function NotificationBatches() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed': return 'bg-green-100 text-green-800'
-            case 'processing': return 'bg-blue-100 text-blue-800'
-            case 'failed': return 'bg-red-100 text-red-800'
-            default: return 'bg-gray-100 text-gray-800'
+            case 'completed': return 'bg-ds-success-soft text-ds-success'
+            case 'processing': return 'bg-ds-accent-soft text-ds-accent'
+            case 'failed': return 'bg-ds-danger-soft text-ds-danger'
+            default: return 'bg-ds-surface-subtle text-ds-ink'
         }
     }
 
     const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'completed': return <CheckCircle2 className="w-4 h-4 text-green-600" />
-            case 'processing': return <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-            case 'failed': return <AlertCircle className="w-4 h-4 text-red-600" />
-            default: return <Clock className="w-4 h-4 text-gray-600" />
+            case 'completed': return <CheckCircle2 className="w-4 h-4 text-ds-success" />
+            case 'processing': return <Loader2 className="w-4 h-4 text-ds-accent animate-spin" />
+            case 'failed': return <AlertCircle className="w-4 h-4 text-ds-danger" />
+            default: return <Clock className="w-4 h-4 text-ds-muted" />
         }
     }
 
@@ -120,7 +120,7 @@ export default function NotificationBatches() {
                                                 </div>
                                                 <Progress value={((batch.processed_count + batch.failed_count) / batch.total_count) * 100} className="h-2" />
                                                 {batch.failed_count > 0 && (
-                                                    <p className="text-xs text-red-500">{batch.failed_count} {t_ext('failed', 'failed')}</p>
+                                                    <p className="text-xs text-ds-danger">{batch.failed_count} {t_ext('failed', 'failed')}</p>
                                                 )}
                                             </div>
                                         </TableCell>

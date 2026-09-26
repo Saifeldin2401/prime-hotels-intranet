@@ -23,6 +23,9 @@ export class WizardService {
       })
 
       if (error) {
+        if ((error as any).code === '42501' || (error as any).message?.includes('permission denied')) {
+          return null
+        }
         console.error('[WizardService] getOrCreateProgress error:', error)
         // Fallback: direct select if RPC fails or permissions difference
         const { data: selectData, error: selectErr } = await supabase

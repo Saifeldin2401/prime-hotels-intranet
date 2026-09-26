@@ -57,7 +57,6 @@ interface TrackerGroup {
   lastTouchedAt: string | null
   locationLabel: string
   overdueModules: number
-  propertyName: string
   records: TrackerRecord[]
   totalModules: number
   userId: string
@@ -506,8 +505,6 @@ export function EmployeeProgressTracker({
                             </div>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
                               <span>{group.departmentName || t('noDept')}</span>
-                              <span className="text-slate-300">·</span>
-                              <span>{group.propertyName || '-'}</span>
                             </div>
                             {/* Compact stat chips — only non-zero */}
                             <div className="mt-0.5 flex flex-wrap gap-1.5">
